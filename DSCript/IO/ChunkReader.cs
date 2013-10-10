@@ -8,6 +8,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
+using DSCript;
+using DSCript.Methods;
+
 namespace DSCript.IO
 {
     public static class ChunkReaderExtensions
@@ -92,20 +95,6 @@ namespace DSCript.IO
         }
 
         [Browsable(false)]
-        public string Magic2Str(uint magic)
-        {
-            return (magic > 255)
-                ? new string(new char[]{
-                    (char)(magic & 0x000000FF),
-                    (char)((magic & 0x0000FF00) >> 8),
-                    (char)((magic & 0x00FF0000) >> 16),
-                    (char)((magic & 0xFF000000) >> 24)})
-                    : (magic == 0)
-                        ? "Unified Packager"
-                        : magic.ToString("X");
-        }
-
-        [Browsable(false)]
         public void ReadChunks(int s, int i, uint baseOffset)
         {
             Chunk[s].Subs.Insert(i, new SubChunkBlock(i, Chunk[s]));
@@ -142,7 +131,7 @@ namespace DSCript.IO
             //     "{4}, " +
             //     "{5}, " +
             //     "{6:X}, " +
-            //     "{7}", Magic2Str(c.Magic), c.Offset, c.Unk1, c.StrLen, c.Unk2, c.Unk3, c.Size, c.Description);
+            //     "{7}", Chunks.Magic2Str(c.Magic), c.Offset, c.Unk1, c.StrLen, c.Unk2, c.Unk3, c.Size, c.Description);
 
             this.Seek(baseOffset + c.Offset, SeekOrigin.Begin);
 

@@ -21,7 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\libDSC.xml</DocumentationFile>
+    <DocumentationFile>doc\dscript.xml</DocumentationFile>
     <FileAlignment>512</FileAlignment>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
@@ -45,12 +45,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="WindowsBase" />
     <Reference Include="Xceed.Wpf.Toolkit">
       <HintPath>..\..\..\..\Libs\ExtendedWPFToolkit\Xceed.Wpf.Toolkit.dll</HintPath>
     </Reference>
@@ -63,6 +68,9 @@
     <Compile Include="IO\ChunkReader.cs" />
     <Compile Include="IO\ChunkTypes.cs" />
     <Compile Include="IO\SubChunkBlock.cs" />
+    <Compile Include="Methods\Chunks.cs" />
+    <Compile Include="Methods\Nodes.cs" />
+    <Compile Include="Object\NodeTag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

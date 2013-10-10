@@ -217,8 +217,8 @@
         </Menu.Background>
 
         <MenuItem Name="file" Header="File">
-          <MenuItem Name="open"  Header="Open" Click="open_Click" />
-          <MenuItem Name="close" Header="Close" Click="close_Click" />
+          <MenuItem Name="open"  Header="Open" />
+          <MenuItem Name="close" Header="Close" />
         </MenuItem>
       </Menu>
     </DockPanel>
