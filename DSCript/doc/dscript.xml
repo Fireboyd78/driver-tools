@@ -1,0 +1,775 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>libDSC</name>
+    </assembly>
+    <members>
+        <member name="P:DSCript.IO.ChunkReader.Position">
+            <summary> Gets or sets the position of the cursor in the FileStream. </summary>
+        </member>
+        <member name="T:DSCript.IO.CTypes">
+            <summary>
+            An enumeration for holding values of every possible type within a CHUNK file
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.UNKNOWN">
+            <summary>
+            A type representing an unknown value (Note: This is used by tools only!)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CHUNK">
+            <summary>
+            [CHNK] - The header for a CHUNK block
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MODEL_PACKAGE_PC">
+            <summary>
+            [MDPC] - A block that contains various models and textures
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MODEL_PACKAGE_PC_X">
+            <summary>
+            [MDXN] - A block that contains various models and textures (new format found in DPL and DSF)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.UNIFIED_PACKAGE">
+            <summary>
+            [0x0] - A block that acts as a unifiable package for various data types
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VEHICLE_HIERARCHY">
+            <summary>
+            [UPVH] - A block that contains vehicle hierarchy information
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.STANDALONE_TEXTURES">
+            <summary>
+            [UPST] - A block that contains standalone texture IDs
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.BUILD_INFO">
+            <summary>
+            [BINF] - A block that contains developer export information
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MODEL_CONTAINER">
+            <summary>
+            [MODL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.GPU_SHADER">
+            <summary>
+            [GPUS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.DPL_MISSION_UNKNOWN_MRRD">
+            <summary>
+            [MRRD] - No research has been done on this format (some sort of flags table?)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.EXPORTED_MISSION_ROOT">
+            <summary>
+            [EPMR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOL_SYSTEM_INIT_CHUNKER">
+            <summary>
+            [SSIC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOL_SYSTEM_LOOKUP">
+            <summary>
+            [SSLP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_VEHICLE_STRING_COLLECTION_TABLE">
+            <summary>
+            [VSCT] - No research has been done on this format (may not be for strings?)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_CHARACTER_STRING_COLLECTION">
+            <summary>
+            [CSCT] - No research has been done on this format (may not be for strings?)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_SOUND_BANK">
+            <summary>
+            [SSBK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_ANIMATION_CHUNK">
+            <summary>
+            [ANMC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_GAME_SOUND_CHUNK">
+            <summary>
+            [SGSC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_GAME_SOUND_BANK">
+            <summary>
+            [SGSB] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_CHARACTER_CHUNK">
+            <summary>
+            [CHAC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_LOCALE_CHUNK">
+            <summary>
+            [LOCC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_LOCALE_TEXT">
+            <summary>
+            [LOCT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_LITTER_CHUNK">
+            <summary>
+            [LTCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_LITTER_DATA">
+            <summary>
+            [LTDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_PARTICLE_CHUNK">
+            <summary>
+            [PTCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_PARTICLE_DATA">
+            <summary>
+            [PTDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_SKY_CLOUD_CHUNK">
+            <summary>
+            [SPCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_SKY_CLOUD_DATA">
+            <summary>
+            [SPDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLED_VEHICLE_CHUNK">
+            <summary>
+            [VEHC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VO3_HANDLING_DATA">
+            <summary>
+            [VO3D] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CHARACTER_SPOOL_CHUNK">
+            <summary>
+            [CHAR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CHARACTER_SPOOL_INDEX">
+            <summary>
+            [CHAI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.NON_RENDERER_DATA">
+            <summary>
+            [NONR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_PACKAGE">
+            <summary>
+            [PCKG] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.UID_LOOKUP">
+            <summary>
+            [UIDL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLABLE_ITEM">
+            <summary>
+            [SPOI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLABLE_ITEM_LOOKUP">
+            <summary>
+            [SPOL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPOOLABLE_DATA_TAKEARIDE">
+            <summary>
+            [SDFD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ANIMATION_INDEX">
+            <summary>
+            [AIDX] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ANIMATION_CLIPS">
+            <summary>
+            [ACLP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.GLOBAL_SUPER_REGION">
+            <summary>
+            [GESR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.PHYSICS_MODEL_DATA">
+            <summary>
+            [GEPM] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.PHYSICS_MODEL_LOOKUP_DATA">
+            <summary>
+            [PMLD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.WATER_INSTANCE_DATA">
+            <summary>
+            [GWTR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.BUILDING_INSTANCE_DATA">
+            <summary>
+            [GEBI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SPLINE_ROAD_DATA">
+            <summary>
+            [GERD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.AI_EXPORT">
+            <summary>
+            [AIEX] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ANIMATED_OBJECT_DATA">
+            <summary>
+            [ANOD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.PROP_DATA_CONTAINER">
+            <summary>
+            [GEPD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.PROP_HIERARCHY_INFORMATION">
+            <summary>
+            [HRDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REGION">
+            <summary>
+            [GEIR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.WATER_REGION_DATA">
+            <summary>
+            [GWRD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REGION_TERRAIN_DATA">
+            <summary>
+            [GRTD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.BUILDING_ROUTEFIND_DATA">
+            <summary>
+            [GEBR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.BROADPHASE_DATA">
+            <summary>
+            [JNR!] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ATTRACTOR_DATA">
+            <summary>
+            [ATRD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REGION_SCENEDATA_DATA">
+            <summary>
+            [SCND] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.OCCLUDER_GAME_DATA">
+            <summary>
+            [OGCD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.EXTERNAL_FILE_LINK_INTERNAL">
+            <summary>
+            [IRCT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.INTERIOR_LIGHTING_DATA">
+            <summary>
+            [ISHM] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MISSION_EDITOR_MODEL_INFO">
+            <summary>
+            [PINF] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MISSION_EDITOR_MODEL_DATA">
+            <summary>
+            [PIND] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MISSION_EDITOR_STRINGS">
+            <summary>
+            [PINS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.GRANDIOSE_LOOKUP">
+            <summary>
+            [GEGL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SUPER_REGION_INFO">
+            <summary>
+            [GESI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOOKUP_HEADER">
+            <summary>
+            [GILH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SUPER_REGION_LOOKUP">
+            <summary>
+            [GSIL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REGION_LOOKUP">
+            <summary>
+            [GRIL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.INTERIOR_LOOKUP_INFO">
+            <summary>
+            [IRLU] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REGIONAL_AREA">
+            <summary>
+            [PCSL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.GLOBAL_REGION">
+            <summary>
+            [GEGR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SCENE_DATA">
+            <summary>
+            [IRDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.GADGET_LOOKUP">
+            <summary>
+            [GLUT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.WORMS_DATA">
+            <summary>
+            [WORM] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.PROP_DATA">
+            <summary>
+            [PROP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ATTRACTOR_SUPER_REGION_DATA">
+            <summary>
+            [ASRD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.EXPORTED_MISSION">
+            <summary>
+            [EM__] - A block that contains relevant mission data
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.MISSION_SUMMARY">
+            <summary>
+            [EMMS] - A block that contains data in which the game should handle this mission, such as what city to play in (SPECIAL THANKS: Janujeq)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.EXPORTED_MISSION_OBJECTS">
+            <summary>
+            [EMOB] - A block used to place objects in the mission (SPECIAL THANKS: Janujeq)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.EXPORTED_MISSION_PROP_HANDLES">
+            <summary>
+            [EMPR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_DATA">
+            <summary>
+            [LELD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_STRING_COLLECTION">
+            <summary>
+            [LESC] - A block containing strings for mission script data
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_SOUND_BANK">
+            <summary>
+            [LESB] - A list of sound IDs to use specific sounds in the mission
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_ACTORS_CHUNK">
+            <summary>
+            [LEAC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_ACTOR_DEFINITIONS">
+            <summary>
+            [LEAD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_NODES_CHUNK">
+            <summary>
+            [LENC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_NODE_DEFINITIONS_TABLE">
+            <summary>
+            [LEND] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_PROPERTIES_TABLE">
+            <summary>
+            [LEPR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_ACTOR_SET_TABLE">
+            <summary>
+            [LEAS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_WIRE_COLLECTIONS">
+            <summary>
+            [LEWC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_SCRIPT_COUNTERS">
+            <summary>
+            [LECO] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_UNKNOWN_LEPS">
+            <summary>
+            [LEPS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_UNKNOWN_LENE">
+            <summary>
+            [LENE] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_UNKNOWN_FING">
+            <summary>
+            [FING] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.LOGIC_EXPORT_UNKNOWN_LEAT">
+            <summary>
+            [LEAT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.EXTRA_CHARACTER_DATA_PACKAGE">
+            <summary>
+            [UPXD] - A block that contains character model and texture data.
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SKELETON_PACKAGE">
+            <summary>
+            [UPCB] - A block that contains character skeletons for the male and female models
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REFLECTIONS_MENU_DATA_PACKAGE">
+            <summary>
+            [RMDP] - A block that holds data pertaining to the GUI (main menu, pause menu, etc)
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.REFLECTIONS_MENU_DATA_CHUNK">
+            <summary>
+            [RMDL] - A block that contains data for handling all GUI-related data
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.FONT_CONTAINER">
+            <summary>
+            [FONT] - A block that holds data pertaining to the fonts
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.FONT_DATA">
+            <summary>
+            [FBNK] - A block that contains textures used for the fonts
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_CHUNK">
+            <summary>
+            [DRSP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_TEXTURE">
+            <summary>
+            [TEXC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_TEXTURE_UID">
+            <summary>
+            [UIDC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_TEXTURE_DDS">
+            <summary>
+            [DXTC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_MATERIAL_CONTAINER">
+            <summary>
+            [MACO] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_MATERIAL_HEADER">
+            <summary>
+            [MAHE] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_MATERIAL_XML">
+            <summary>
+            [MATX] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_MATERIAL_RENDER_METHOD_HEADER">
+            <summary>
+            [MARH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RESOURCE_MATERIAL_RENDER_METHOD_PARAMETER">
+            <summary>
+            [MARP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SUBMODEL_CHUNK">
+            <summary>
+            [SBMC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SUBMODEL_HEADER">
+            <summary>
+            [SBBH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_VERTEX_CHUNK">
+            <summary>
+            [VXCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_VERTEX_HEADER">
+            <summary>
+            [VXHD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_VERTEX_DEPENDENCIES">
+            <summary>
+            [VXDP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_VERTEX_BUFFER">
+            <summary>
+            [VXDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_VERTEX_DECLARATION">
+            <summary>
+            [VCDL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_INDEX_CHUNK">
+            <summary>
+            [IXCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_INDEX_HEADER">
+            <summary>
+            [IXHD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_INDEX_DEPENDENCIES">
+            <summary>
+            [IXDP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.POOLED_INDEX_BUFFER">
+            <summary>
+            [IXDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.RENDERER_DATA_UIDS">
+            <summary>
+            [MDID] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ANIMATION_GRAPH">
+            <summary>
+            [AGRA] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.PEDESTRIAN_MESH_DATA">
+            <summary>
+            [PDMD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CITY_LOCKING_ENTRY">
+            <summary>
+            [CTYE] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CITY_LOCKING_SPLINES">
+            <summary>
+            [CTYS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CITY_LOCKING_ROADS">
+            <summary>
+            [CTYR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.AMBIENT_VOLUME_DATA">
+            <summary>
+            [AMBV] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.BILLBOARD_INFO">
+            <summary>
+            [BILL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.HEIGHT_INFO">
+            <summary>
+            [HINF] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.ADVERTISING_HEADER">
+            <summary>
+            [ADVH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.COMMENTARY_ROOT">
+            <summary>
+            [CMRT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.COMMENTARY_COMMON_CONTAINER">
+            <summary>
+            [CMCC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.COMMENTARY_MISSION_DATA">
+            <summary>
+            [CMMS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CUTSCENES_ROOT">
+            <summary>
+            [CUTR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.CUTSCENES_DATA">
+            <summary>
+            [CUTS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SHADER_PARAM_SET_ROOT">
+            <summary>
+            [SPSR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SHADER_PARAM_SET">
+            <summary>
+            [SPSS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.SHADER_PARAM_SET_PARAMS">
+            <summary>
+            [SPSP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VEHICLE_SOUND_ROOT">
+            <summary>
+            [VSRT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VEHICLE_COMMON_SOUND_HEADER">
+            <summary>
+            [VSCH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VEHICLE_SOUND_HEADER">
+            <summary>
+            [VSVH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VEHICLE_SOUND_BANK">
+            <summary>
+            [SBAK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.VEHICLE_GRANULAR_BANK">
+            <summary>
+            [GRBK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.IO.CTypes.DM_WMK_INFO">
+            <summary>
+            [DMWK] - This format may be leftover from development. It serves an unknown purpose in 'dngvehicles.sp' in Driver: San Francisco.
+            </summary>
+        </member>
+        <member name="M:DSCript.Methods.Chunks.ByteAlignPadding(System.UInt32,DSCript.Methods.Chunks.ByteAlignOptions)">
+            <summary>
+            Returns an unsigned integer representing the number of bytes to be inserted for proper byte-aligned padding.
+            This method uses an enumeration to define byte-alignment for common values. See each options documentation for more information.
+            </summary>
+            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
+            <param name="align">How much padding should be applied</param>
+            <returns>The number of bytes that should be inserted for proper byte-aligned padding</returns>
+        </member>
+        <member name="F:DSCript.Methods.Chunks.ByteAlignOptions.BYTE_ALIGN_16">
+            <summary>
+            Aligns data to 16-bytes (e.g. 0x384 > 0x390)
+            </summary>
+        </member>
+        <member name="F:DSCript.Methods.Chunks.ByteAlignOptions.BYTE_ALIGN_32">
+            <summary>
+            Aligns data to 32-bytes (e.g. 0x384 > 0x3A0)
+            </summary>
+        </member>
+        <member name="F:DSCript.Methods.Chunks.ByteAlignOptions.BYTE_ALIGN_512">
+            <summary>
+            Aligns data to 512-bytes (e.g. 0x384 > 0x400)
+            </summary>
+        </member>
+        <member name="F:DSCript.Methods.Chunks.ByteAlignOptions.BYTE_ALIGN_4096">
+            <summary>
+            Aligns data to 4096-bytes (e.g. 0x384 > 0x1000)
+            </summary>
+        </member>
+    </members>
+</doc>
