@@ -37,7 +37,10 @@
             this.mn_View = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_View_Models = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_View_Textures = new System.Windows.Forms.ToolStripMenuItem();
+            this.PackList = new System.Windows.Forms.ListBox();
             this.MeshList = new System.Windows.Forms.ListBox();
+            this.mn_Tools = new System.Windows.Forms.ToolStripMenuItem();
+            this.mn_Tools_ExportOBJ = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -45,7 +48,8 @@
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mn_File,
-            this.mn_View});
+            this.mn_View,
+            this.mn_Tools});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(704, 24);
@@ -66,25 +70,25 @@
             // mn_File_Open
             // 
             this.mn_File_Open.Name = "mn_File_Open";
-            this.mn_File_Open.Size = new System.Drawing.Size(152, 22);
+            this.mn_File_Open.Size = new System.Drawing.Size(115, 22);
             this.mn_File_Open.Text = "Open ...";
             // 
             // mn_File_Save
             // 
             this.mn_File_Save.Enabled = false;
             this.mn_File_Save.Name = "mn_File_Save";
-            this.mn_File_Save.Size = new System.Drawing.Size(152, 22);
+            this.mn_File_Save.Size = new System.Drawing.Size(115, 22);
             this.mn_File_Save.Text = "Save";
             // 
             // mn_sep
             // 
             this.mn_sep.Name = "mn_sep";
-            this.mn_sep.Size = new System.Drawing.Size(149, 6);
+            this.mn_sep.Size = new System.Drawing.Size(112, 6);
             // 
             // mn_File_Exit
             // 
             this.mn_File_Exit.Name = "mn_File_Exit";
-            this.mn_File_Exit.Size = new System.Drawing.Size(152, 22);
+            this.mn_File_Exit.Size = new System.Drawing.Size(115, 22);
             this.mn_File_Exit.Text = "Exit";
             // 
             // mn_View
@@ -101,20 +105,42 @@
             this.mn_View_Models.Name = "mn_View_Models";
             this.mn_View_Models.Size = new System.Drawing.Size(152, 22);
             this.mn_View_Models.Text = "Models";
-            this.mn_View_Models.Click += new System.EventHandler(this.mn_View_Models_Click);
             // 
             // mn_View_Textures
             // 
             this.mn_View_Textures.Name = "mn_View_Textures";
-            this.mn_View_Textures.Size = new System.Drawing.Size(118, 22);
+            this.mn_View_Textures.Size = new System.Drawing.Size(152, 22);
             this.mn_View_Textures.Text = "Textures";
+            // 
+            // PackList
+            // 
+            this.PackList.BackColor = System.Drawing.SystemColors.ScrollBar;
+            this.PackList.Location = new System.Drawing.Point(12, 40);
+            this.PackList.Name = "PackList";
+            this.PackList.Size = new System.Drawing.Size(108, 433);
+            this.PackList.TabIndex = 1;
             // 
             // MeshList
             // 
-            this.MeshList.Location = new System.Drawing.Point(12, 40);
+            this.MeshList.BackColor = System.Drawing.SystemColors.Menu;
+            this.MeshList.Location = new System.Drawing.Point(126, 40);
             this.MeshList.Name = "MeshList";
             this.MeshList.Size = new System.Drawing.Size(167, 433);
-            this.MeshList.TabIndex = 1;
+            this.MeshList.TabIndex = 2;
+            // 
+            // mn_Tools
+            // 
+            this.mn_Tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.mn_Tools_ExportOBJ});
+            this.mn_Tools.Name = "mn_Tools";
+            this.mn_Tools.Size = new System.Drawing.Size(48, 20);
+            this.mn_Tools.Text = "Tools";
+            // 
+            // mn_Tools_ExportOBJ
+            // 
+            this.mn_Tools_ExportOBJ.Name = "mn_Tools_ExportOBJ";
+            this.mn_Tools_ExportOBJ.Size = new System.Drawing.Size(152, 22);
+            this.mn_Tools_ExportOBJ.Text = "Export to .OBJ";
             // 
             // MainGui
             // 
@@ -123,6 +149,7 @@
             this.BackColor = System.Drawing.SystemColors.ControlDarkDark;
             this.ClientSize = new System.Drawing.Size(704, 482);
             this.Controls.Add(this.MeshList);
+            this.Controls.Add(this.PackList);
             this.Controls.Add(this.menuStrip1);
             this.DoubleBuffered = true;
             this.MainMenuStrip = this.menuStrip1;
@@ -147,7 +174,10 @@
         private System.Windows.Forms.ToolStripMenuItem mn_View;
         private System.Windows.Forms.ToolStripMenuItem mn_View_Models;
         private System.Windows.Forms.ToolStripMenuItem mn_View_Textures;
+        public System.Windows.Forms.ListBox PackList;
         public System.Windows.Forms.ListBox MeshList;
+        private System.Windows.Forms.ToolStripMenuItem mn_Tools;
+        private System.Windows.Forms.ToolStripMenuItem mn_Tools_ExportOBJ;
     }
 }
 

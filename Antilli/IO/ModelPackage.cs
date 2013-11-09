@@ -71,8 +71,8 @@ namespace Antilli.IO
                 public MeshCollection MeshCollection { get; set; }
             }
 
-            public int UID { get; set; }
-            public int Handle { get; set; }
+            public uint UID { get; set; }
+            public uint Handle { get; set; }
 
             /// <summary>An unknown int relatively offset @ 0x18</summary>
             public int Unknown18 { get; set; }
@@ -154,7 +154,7 @@ namespace Antilli.IO
                 Vertices = new List<Vertex>();
                 Faces = new List<TriangleFace>();
 
-                for (int v = 0; v < Data.VCount; v++)
+                for (int v = 0; v <= Data.VCount; v++)
                     Vertices.Add(vertexBuffer[v + Data.VIndex + Data.VOffset]);
 
                 for (int i = 0; i < Data.TCount; i++)
@@ -469,8 +469,8 @@ namespace Antilli.IO
                 for (int i = 0; i < Groups.Capacity; i++)
                 {
                     ModelGroup group = new ModelGroup() {
-                        UID = f.ReadInt32(),
-                        Handle = f.ReadInt32()
+                        UID = f.ReadUInt32(),
+                        Handle = f.ReadUInt32()
                     };
 
                     // skip float padding

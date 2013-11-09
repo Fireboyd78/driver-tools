@@ -33,7 +33,7 @@ namespace Antilli
         /// <summary>Gets or sets the chunk file used to retrieve data for models/textures</summary>
         ChunkReader ChunkFile { get; set; }
 
-        ModelPackagePC ModelPackage { get; set; }
+        List<ModelPackage> ModelPackages { get; set; }
 
         /// <summary>Checks to see if a chunk file is currently opened</summary>
         public bool FileOpened
@@ -52,6 +52,9 @@ namespace Antilli
                 mn_File_Save.Click += (o, e) => { SaveFile();  };
                 mn_File_Exit.Click += (o, e) => { Application.Exit(); };
 
+                mn_View_Models.Click += (o, e) => { PopulateLists(); };
+
+                mn_Tools_ExportOBJ.Click += (o, e) => { SaveOBJFile(); };
             }
             catch (Exception e)
             {
@@ -59,7 +62,30 @@ namespace Antilli
             }
         }
 
+        public void SaveOBJFile()
+        {
+            int idx = PackList.SelectedIndex;
+            if (idx >= 0 && ModelPackages[idx] != null)
+            {
+                SaveFileDialog file = new SaveFileDialog() {
+                    CheckPathExists = true,
+                    Filter = "Wavefront .OBJ|*.obj",
+                    ValidateNames = true,
+                    OverwritePrompt = true,
+                    AddExtension = true,
+                    DefaultExt = ".obj"
+                };
 
+                DialogResult result = file.ShowDialog();
+
+                if (result == DialogResult.OK)
+                {
+                    //MessageBox.Show(String.Format("I would be creating the file '{0}' right about now...", file.FileName));
+
+                    OBJExporter.ExportOBJ(file.FileName, ModelPackages[idx]);
+                }
+            }
+        }
 
         /// <summary>Opens a dialog to select a chunk file</summary>
         public void ChooseFile()
@@ -76,10 +102,37 @@ namespace Antilli
             if (result == DialogResult.OK)
             {
                 ChunkFile = new ChunkReader(file.FileName);
+                ModelPackages = new List<ModelPackage>();
 
-                ModelPackage = new ModelPackagePC(ChunkFile.Chunk.FirstOrNull(CTypes.MODEL_PACKAGE_PC));
+                ChunkBlock mChunk = ChunkFile.Chunk[0];
 
-                ModelPackage.Read(ChunkFile);
+                PackList.Items.Clear();
+                MeshList.Items.Clear();
+
+                if (mChunk.Subs[0].Magic != 0x0)
+                {
+                    for (int c = (mChunk.Subs.Count / 2); c < mChunk.Subs.Count; c++)
+                    {
+                        ModelPackagePC model = new ModelPackagePC(mChunk.Subs[c]);
+                        model.Read(ChunkFile);
+
+                        ModelPackages.Add(model);
+                    }
+                }
+                else
+                {
+                    ChunkBlock chunk = ChunkFile.Chunk[1];
+                    SubChunkBlock models = chunk.Subs[(chunk.Subs.Count - 1)];
+
+                    ModelPackagePC model = new ModelPackagePC(models);
+                    model.Read(ChunkFile);
+
+                    ModelPackages.Add(model);
+                }
+
+                PopulateLists();
+
+                PackList.SelectedIndex = 0;
             }
         }
 
@@ -89,14 +142,28 @@ namespace Antilli
             throw new NotImplementedException();
         }
 
-        private void mn_View_Models_Click(object sender, EventArgs e)
+        private void PopulateLists()
         {
-            if (ModelPackage != null)
+            if (ModelPackages != null)
             {
                 Console.WriteLine("Adding items.");
 
-                foreach (ModelPackage.ModelGroup group in ModelPackage.Groups)
-                    MeshList.Items.Add(group.UID);
+                PackList.SelectedIndexChanged += (o, ee) => {
+                    MeshList.Items.Clear();
+
+                    for (int i = 0; i < ModelPackages[PackList.SelectedIndex].Groups.Count; i++)
+                        MeshList.Items.Add(ModelPackages[PackList.SelectedIndex].Groups[i].UID.ToString("X"));
+                };
+
+                if (ModelPackages.Count != 1)
+                {
+                    for (int i = 0; i < ModelPackages.Count; i++)
+                        PackList.Items.Add(i + 1);
+
+                    return;
+                }
+
+                PackList.Items.Add("1");
             }
         }
     }

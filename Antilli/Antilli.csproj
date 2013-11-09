@@ -68,6 +68,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IO\OBJExporter.cs" />
     <Compile Include="Vectors.cs" />
     <None Include="IO\MDPCData.cs" />
     <None Include="IO\MDXNData.cs" />
