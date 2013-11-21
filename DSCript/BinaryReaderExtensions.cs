@@ -28,8 +28,18 @@ namespace System.IO
             return b;
         }
 
+        public static string ReadString(this BinaryReader f, int length)
+        {
+            return Encoding.UTF8.GetString(f.ReadBytes(length));
+        }
+
+        public static string ReadUnicodeString(this BinaryReader f, int length)
+        {
+            return Encoding.Unicode.GetString(f.ReadBytes(length));
+        }
+
         public static string ReadCString(this BinaryReader f)
-        {   
+        {
             if (f.PeekByte() == 0x0) return "";
 
             StringBuilder str = new StringBuilder();

@@ -14,53 +14,14 @@ using DSCript.IO;
 
 namespace Antilli.IO
 {
-    public enum MDPCTypes : uint
-    {
-        Type0 = 0x00,
-        Type1 = 0x01,
-        Type2 = 0x02,
-        Type3 = 0x03,
-        Type4 = 0x04,
-        Type5 = 0x05,
-        Type6 = 0x06,
-        Type7 = 0x07,
-        Type8 = 0x08,
-        Type9 = 0x09,
-        Type10 = 0x0A,
-        Type11 = 0x0B,
-        Type12 = 0x0C,
-        Type13 = 0x0D,
-        Type14 = 0x0E,
-
-        Type29 = 0x1D,
-        Type30 = 0x1E,
-        Type35 = 0x23,
-
-        Type40 = 0x28,
-        Type44 = 0x2C,
-        Type45 = 0x2D,
-
-        Type52 = 0x34,
-        Type53 = 0x35,
-        Type56 = 0x38,
-        Type57 = 0x39,
-        Type59 = 0x3B,
-
-        Type60 = 0x3C,
-        Type61 = 0x3D,
-        Type62 = 0x3E,
-
-        Type255 = 0xFF,
-
-        Unknown
-    }
-
     public abstract class ModelPackage
     {
         public class ModelGroup
         {
             public class Entry
             {
+                public int ID { get; set; }
+
                 public ModelGroup Parent { get; set; }
 
                 public uint Offset { get; set; }
@@ -493,7 +454,9 @@ namespace Antilli.IO
 
                     for (int k = 0; k < group.Groups.Capacity; k++)
                     {
-                        ModelGroup.Entry entry = new ModelGroup.Entry();
+                        ModelGroup.Entry entry = new ModelGroup.Entry() {
+                            ID = k
+                        };
 
                         entry.Offset = f.ReadUInt32();
 
@@ -592,35 +555,10 @@ namespace Antilli.IO
         /// <param name="modelPackage">The Block representing the Model Package's data</param>
         public ModelPackagePC(SubChunkBlock modelPackage)
         {
-            if (modelPackage.Type != CTypes.MODEL_PACKAGE_PC)
+            if (modelPackage.Type != ChunkType.ModelPackagePC)
                 throw new Exception("This is not a ModelPackage and cannot be loaded.");
 
             Block = modelPackage;
-        }
-    }
-
-    /// <summary>A class representing the model format found in Driver: Parallel Lines</summary>
-    public sealed class ModelPackageX : ModelPackage
-    {
-        public override uint Magic
-        {
-            get
-            {
-                return 0x1;
-            }
-        }
-
-        /// <summary>An unknown uint relatively offset @ 0x4</summary>
-        public uint Unknown04 { get; set; }
-
-        /// <summary>Creates a new instance of the ModelPackageX class to allow reading/manipulation of Driver: Parallel Lines models</summary>
-        /// <param name="modelPackageX">The Block representing the Model Package's data</param>
-        public ModelPackageX(SubChunkBlock modelPackageX)
-        {
-            if (modelPackageX.Type != CTypes.MODEL_PACKAGE_PC_X)
-                throw new Exception("This is not a ModelPackageX and cannot be loaded.");
-
-            Block = modelPackageX;
         }
     }
 }

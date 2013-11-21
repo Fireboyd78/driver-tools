@@ -13,32 +13,17 @@ namespace DSCript.IO
 {
     public static class ChunkReaderExtensions
     {
-        public static void Seek(this ChunkReader i, long offset, SeekOrigin origin)
+        public static ChunkType ReadType(this ChunkReader i)
         {
-            i.Stream.Seek(offset, origin);
+            return (ChunkType)i.Reader.ReadUInt32();
         }
 
-        public static CTypes ReadType(this ChunkReader i)
-        {
-            return (CTypes)i.Reader.ReadUInt32();
-        }
-
-        public static bool CheckIfType(this ChunkReader i, CTypes type)
+        public static bool CheckIfType(this ChunkReader i, ChunkType type)
         {
             return (i.Reader.ReadUInt32() == (uint)type) ? true : false;
         }
 
-        public static string ReadString(this ChunkReader i, int length)
-        {
-            return Encoding.UTF8.GetString(i.Reader.ReadBytes(length));
-        }
-
-        public static string ReadUnicodeString(this ChunkReader i, int length)
-        {
-            return Encoding.Unicode.GetString(i.Reader.ReadBytes(length));
-        }
-
-        public static SubChunkBlock FirstOrNull(this ChunkReader i, CTypes type)
+        public static SubChunkBlock FirstOrNull(this ChunkReader i, ChunkType type)
         {
             return i.FirstOrNull((uint)type);
         }
@@ -55,7 +40,7 @@ namespace DSCript.IO
             return null;
         }
 
-        public static ChunkBlock GetBlockChildOrNull(this ChunkReader i, SubChunkBlock subChunk)
+        public static ChunkBlockOld GetBlockChildOrNull(this ChunkReader i, SubChunkBlock subChunk)
         {
             int si = i.Chunk.FindIndex((c) => c.BaseOffset == subChunk.BaseOffset);
 

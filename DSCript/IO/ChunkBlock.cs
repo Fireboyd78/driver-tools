@@ -8,9 +8,9 @@ using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 
 namespace DSCript.IO
 {
-    public sealed class ChunkBlock : Block
+    public sealed class ChunkBlockOld : BlockOld
     {
-        public const CTypes Magic = CTypes.CHUNK;
+        public const ChunkType Magic = ChunkType.Chunk;
 
         public uint SubCount { get; set; }
         public const uint Version = 0x3;
@@ -22,9 +22,9 @@ namespace DSCript.IO
             get { return (Parent == null) ? true : false; }
         }
 
-        public ChunkBlock(int id, uint offset) : this(id, offset, null) { }
+        public ChunkBlockOld(int id, uint offset) : this(id, offset, null) { }
 
-        public ChunkBlock(int id, uint offset, SubChunkBlock parent)
+        public ChunkBlockOld(int id, uint offset, SubChunkBlock parent)
         {
             ID = id;
             BaseOffset = offset;

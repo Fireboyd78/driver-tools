@@ -14,7 +14,7 @@ namespace DSCript.IO
         [Browsable(false)]
         public MemoryStream Buffer { get; set; }
 
-        public Block Parent { get; set; }
+        public BlockOld Parent { get; set; }
 
         public CTypes Type { get; private set; }
         public uint Size { get; set; }

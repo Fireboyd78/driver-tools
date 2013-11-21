@@ -10,7 +10,7 @@ using Xceed.Wpf.Toolkit.PropertyGrid.Editors;
 
 namespace DSCript.IO
 {
-    public sealed class SubChunkBlock : Block
+    public sealed class SubChunkBlock : BlockOld
     {
         internal const string subChunkInfo = "Sub-Chunk Information";
 
@@ -19,15 +19,15 @@ namespace DSCript.IO
         [Category(subChunkInfo)]
         [PropertyOrder(10)]
         [Description("An enumeration from DSCript describing this type of sub-chunk")]
-        public CTypes Type
+        public ChunkType Type
         {
             get
             {
-                return (Enum.IsDefined(typeof(CTypes), Magic)) ? (CTypes)Magic : CTypes.UNKNOWN;
+                return (Enum.IsDefined(typeof(ChunkType), Magic)) ? (ChunkType)Magic : ChunkType.Unknown;
             }
         }
 
-        [Category(Block.blockInfo)]
+        [Category(BlockOld.blockInfo)]
         [PropertyOrder(3)]
         [DisplayName("Magic")]
         [Description("The sub-chunk type identifier")]
@@ -74,7 +74,7 @@ namespace DSCript.IO
         public string Description { get; set; }
 
         [Browsable(false)]
-        public SubChunkBlock(int id, ChunkBlock parent)
+        public SubChunkBlock(int id, ChunkBlockOld parent)
         {
             ID = id;
             Parent = parent;

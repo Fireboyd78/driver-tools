@@ -761,22 +761,22 @@ namespace Zartex
         {
             switch (subChunk.Type)
             {
-            case CTypes.EXPORTED_MISSION_OBJECTS:
+            case ChunkType.ExportedMissionObjects:
                 GenerateExportedMissionObjects();
                 break;
-            case CTypes.LOGIC_EXPORT_STRING_COLLECTION:
+            case ChunkType.LogicExportStringCollection:
                 GenerateStringCollection();
                 break;
-            case CTypes.LOGIC_EXPORT_ACTOR_SET_TABLE:
+            case ChunkType.LogicExportActorSetTable:
                 GenerateActorSetTable();
                 break;
-            case CTypes.LOGIC_EXPORT_ACTORS_CHUNK:
+            case ChunkType.LogicExportActorsChunk:
                 GenerateActors();
                 break;
-            case CTypes.LOGIC_EXPORT_NODES_CHUNK:
+            case ChunkType.LogicExportNodesChunk:
                 GenerateLogicNodes();
                 break;
-            case CTypes.LOGIC_EXPORT_WIRE_COLLECTIONS:
+            case ChunkType.LogicExportWireCollections:
                 GenerateWireCollection();
                 break;
             default:

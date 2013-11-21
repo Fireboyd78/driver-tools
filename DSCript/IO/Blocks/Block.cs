@@ -8,7 +8,7 @@ using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 
 namespace DSCript.IO
 {
-    public class Block
+    public class BlockOld
     {
         protected const string blockInfo = "Block Information";
 
@@ -21,7 +21,7 @@ namespace DSCript.IO
         [PropertyOrder(2)]
         [Description("The parent that holds this block")]
         [ExpandableObject]
-        public Block Parent { get; set; }
+        public BlockOld Parent { get; set; }
 
         [Category(blockInfo)]
         [PropertyOrder(4)]
@@ -34,7 +34,7 @@ namespace DSCript.IO
         [Description("The size of the block within the file")]
         public uint Size { get; set; }
 
-        public Block()
+        public BlockOld()
         {
             ID = 0;
             Parent = null;

@@ -350,7 +350,7 @@ The locale file {4}.",
             {
                 f.Seek(logicData.BaseOffset, SeekOrigin.Begin);
 
-                ChunkBlock LogicData = ChunkFile.GetBlockChildOrNull(logicData);
+                ChunkBlockOld LogicData = ChunkFile.GetBlockChildOrNull(logicData);
 
                 SubChunkBlock Definitions = LogicData.Subs[0];
                 SubChunkBlock Properties = LogicData.Subs[1];
@@ -658,12 +658,12 @@ The locale file {4}.",
         {
             ChunkFile = new ChunkReader(filename);
 
-            SubChunkBlock missionObjects    = ChunkFile.FirstOrNull(CTypes.EXPORTED_MISSION_OBJECTS);
-            SubChunkBlock actorSetTable     = ChunkFile.FirstOrNull(CTypes.LOGIC_EXPORT_ACTOR_SET_TABLE);
-            SubChunkBlock stringCollection  = ChunkFile.FirstOrNull(CTypes.LOGIC_EXPORT_STRING_COLLECTION);
-            SubChunkBlock wireCollection    = ChunkFile.FirstOrNull(CTypes.LOGIC_EXPORT_WIRE_COLLECTIONS);
-            SubChunkBlock actors            = ChunkFile.FirstOrNull(CTypes.LOGIC_EXPORT_ACTORS_CHUNK);
-            SubChunkBlock logicNodes        = ChunkFile.FirstOrNull(CTypes.LOGIC_EXPORT_NODES_CHUNK);
+            SubChunkBlock missionObjects    = ChunkFile.FirstOrNull(ChunkType.ExportedMissionObjects);
+            SubChunkBlock actorSetTable     = ChunkFile.FirstOrNull(ChunkType.LogicExportActorSetTable);
+            SubChunkBlock stringCollection  = ChunkFile.FirstOrNull(ChunkType.LogicExportStringCollection);
+            SubChunkBlock wireCollection    = ChunkFile.FirstOrNull(ChunkType.LogicExportWireCollections);
+            SubChunkBlock actors            = ChunkFile.FirstOrNull(ChunkType.LogicExportActorsChunk);
+            SubChunkBlock logicNodes        = ChunkFile.FirstOrNull(ChunkType.LogicExportNodesChunk);
 
             LoadExportedMissionObjects(missionObjects);
             LoadActorSetTable(actorSetTable);

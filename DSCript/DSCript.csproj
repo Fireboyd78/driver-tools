@@ -62,16 +62,29 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="IO\Spooling.old.cs" />
+    <Compile Include="BinaryReaderExtensions.cs" />
+    <Compile Include="Chunks\Block.cs" />
+    <Compile Include="Chunks\BlockData.cs" />
+    <Compile Include="Chunks\BlockDataEventArgs.cs" />
+    <Compile Include="Chunks\BlockType.cs" />
+    <Compile Include="Chunks\ChunkBlock.cs" />
+    <Compile Include="Chunks\ChunkEntry.cs" />
+    <Compile Include="Chunks\BlockEditor.cs" />
+    <Compile Include="Chunks\MagicConverter.cs" />
+    <Compile Include="Extensions\System\IO\StreamExtensions.cs" />
+    <Compile Include="Extensions\System\StringExtensions.cs" />
+    <Compile Include="Extensions\System\Text\StringBuilderExtensions.cs" />
     <Compile Include="IO\Blocks\Block.cs" />
-    <Compile Include="IO\Blocks\BlockData.cs" />
-    <Compile Include="IO\Blocks\SubChunkBlockExtensions.cs" />
+    <None Include="IO\Blocks\BlockData.cs" />
+    <Compile Include="IO\SubChunkBlockExtensions.cs" />
     <Compile Include="IO\ChunkBlock.cs" />
+    <Compile Include="Chunks\ChunkFile.cs" />
     <Compile Include="IO\ChunkReader.cs" />
     <Compile Include="IO\ChunkReaderExtensions.cs" />
-    <Compile Include="IO\ChunkTypes.cs" />
+    <Compile Include="Chunks\ChunkTypes.cs" />
     <Compile Include="IO\SubChunkBlock.cs" />
     <Compile Include="Log\Log.cs" />
-    <Compile Include="Methods\Chunks.cs" />
+    <Compile Include="Chunks\Chunk.cs" />
     <Compile Include="Methods\Nodes.cs" />
     <Compile Include="Object\NodeTag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

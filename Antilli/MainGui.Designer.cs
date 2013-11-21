@@ -37,10 +37,12 @@
             this.mn_View = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_View_Models = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_View_Textures = new System.Windows.Forms.ToolStripMenuItem();
-            this.PackList = new System.Windows.Forms.ListBox();
-            this.MeshList = new System.Windows.Forms.ListBox();
             this.mn_Tools = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_Tools_ExportOBJ = new System.Windows.Forms.ToolStripMenuItem();
+            this.PackList = new System.Windows.Forms.ListBox();
+            this.MeshList = new System.Windows.Forms.ListBox();
+            this.ViewerElement = new System.Windows.Forms.Integration.ElementHost();
+            this.Viewer = new Antilli.ModelViewer();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -52,7 +54,7 @@
             this.mn_Tools});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(704, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(859, 24);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -103,30 +105,14 @@
             // mn_View_Models
             // 
             this.mn_View_Models.Name = "mn_View_Models";
-            this.mn_View_Models.Size = new System.Drawing.Size(152, 22);
+            this.mn_View_Models.Size = new System.Drawing.Size(118, 22);
             this.mn_View_Models.Text = "Models";
             // 
             // mn_View_Textures
             // 
             this.mn_View_Textures.Name = "mn_View_Textures";
-            this.mn_View_Textures.Size = new System.Drawing.Size(152, 22);
+            this.mn_View_Textures.Size = new System.Drawing.Size(118, 22);
             this.mn_View_Textures.Text = "Textures";
-            // 
-            // PackList
-            // 
-            this.PackList.BackColor = System.Drawing.SystemColors.ScrollBar;
-            this.PackList.Location = new System.Drawing.Point(12, 40);
-            this.PackList.Name = "PackList";
-            this.PackList.Size = new System.Drawing.Size(108, 433);
-            this.PackList.TabIndex = 1;
-            // 
-            // MeshList
-            // 
-            this.MeshList.BackColor = System.Drawing.SystemColors.Menu;
-            this.MeshList.Location = new System.Drawing.Point(126, 40);
-            this.MeshList.Name = "MeshList";
-            this.MeshList.Size = new System.Drawing.Size(167, 433);
-            this.MeshList.TabIndex = 2;
             // 
             // mn_Tools
             // 
@@ -139,15 +125,47 @@
             // mn_Tools_ExportOBJ
             // 
             this.mn_Tools_ExportOBJ.Name = "mn_Tools_ExportOBJ";
-            this.mn_Tools_ExportOBJ.Size = new System.Drawing.Size(152, 22);
+            this.mn_Tools_ExportOBJ.Size = new System.Drawing.Size(147, 22);
             this.mn_Tools_ExportOBJ.Text = "Export to .OBJ";
+            // 
+            // PackList
+            // 
+            this.PackList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.PackList.BackColor = System.Drawing.SystemColors.ScrollBar;
+            this.PackList.Location = new System.Drawing.Point(12, 40);
+            this.PackList.Name = "PackList";
+            this.PackList.Size = new System.Drawing.Size(108, 433);
+            this.PackList.TabIndex = 1;
+            // 
+            // MeshList
+            // 
+            this.MeshList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.MeshList.BackColor = System.Drawing.SystemColors.Menu;
+            this.MeshList.Location = new System.Drawing.Point(126, 40);
+            this.MeshList.Name = "MeshList";
+            this.MeshList.Size = new System.Drawing.Size(167, 433);
+            this.MeshList.TabIndex = 2;
+            // 
+            // ViewerElement
+            // 
+            this.ViewerElement.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.ViewerElement.Location = new System.Drawing.Point(307, 40);
+            this.ViewerElement.Name = "ViewerElement";
+            this.ViewerElement.Size = new System.Drawing.Size(540, 433);
+            this.ViewerElement.TabIndex = 3;
+            this.ViewerElement.Child = this.Viewer;
             // 
             // MainGui
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlDarkDark;
-            this.ClientSize = new System.Drawing.Size(704, 482);
+            this.ClientSize = new System.Drawing.Size(859, 486);
+            this.Controls.Add(this.ViewerElement);
             this.Controls.Add(this.MeshList);
             this.Controls.Add(this.PackList);
             this.Controls.Add(this.menuStrip1);
@@ -178,6 +196,8 @@
         public System.Windows.Forms.ListBox MeshList;
         private System.Windows.Forms.ToolStripMenuItem mn_Tools;
         private System.Windows.Forms.ToolStripMenuItem mn_Tools_ExportOBJ;
+        private System.Windows.Forms.Integration.ElementHost ViewerElement;
+        private ModelViewer Viewer;
     }
 }
 

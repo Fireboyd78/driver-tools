@@ -9,6 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace Antilli
 {
@@ -17,8 +20,16 @@ namespace Antilli
         public double U { get; set; }
         public double V { get; set; }
 
+        public System.Windows.Point ToPoint()
+        {
+            return new System.Windows.Point(U, V);
+        }
+
+        /// <summary>Creates a <see cref="Vector2T"/> with the values initialized to 0.0</summary>
         public Vector2T()
         {
+            U = 0.0;
+            V = 0.0;
         }
 
         public Vector2T(double u, double v)
@@ -34,8 +45,41 @@ namespace Antilli
         public double Y { get; set; }
         public double Z { get; set; }
 
+        public Point3D ToPoint3D()
+        {
+            return ToPoint3D(false);
+        }
+
+        public Point3D ToPoint3D(bool negX)
+        {
+            return ToPoint3D(negX, new Point3D(0.0, 0.0, 0.0));
+        }
+
+        public Point3D ToPoint3D(bool negX, Point3D blendWeights)
+        {
+            return new Point3D(
+                    ((negX) ? -X : X + (blendWeights.X * 1.0)),
+                    (Z + (blendWeights.Z * 1.0)),
+                    (Y + (blendWeights.Y * 1.0))
+                );
+        }
+
+        public Vector3D ToVector3D()
+        {
+            return ToVector3D(false);
+        }
+
+        public Vector3D ToVector3D(bool negX)
+        {
+            return new Vector3D((negX) ? -X : X, Z, Y);
+        }
+
+        /// <summary>Creates a <see cref="Vector3"/> with the values initialized to 0.0</summary>
         public Vector3()
         {
+            X = 0.0;
+            Y = 0.0;
+            Z = 0.0;
         }
 
         public Vector3(double x, double y, double z)
@@ -53,8 +97,18 @@ namespace Antilli
         public double Z { get; set; }
         public double W { get; set; }
 
+        public Point4D ToPoint4D()
+        {
+            return new Point4D(X, Y, Z, W);
+        }
+
+        /// <summary>Creates a <see cref="Vector4"/> with the values initialized to 0.0</summary>
         public Vector4()
         {
+            X = 0.0;
+            Y = 0.0;
+            Z = 0.0;
+            W = 0.0;
         }
 
         public Vector4(double x, double y, double z, double w)
@@ -74,7 +128,7 @@ namespace Antilli
         public double A { get; set; }
 
         /// <summary>Returns a <see cref="System.Drawing.Color"/> based on the values in this vector. All values will be capped at 255 to prevent errors.</summary>
-        public Color ColorFromARGB
+        public System.Drawing.Color ColorFromARGB
         {
             get
             {
@@ -83,11 +137,11 @@ namespace Antilli
                 int b = (int)Math.Round(B * 255.0);
                 int a = (int)Math.Round(A * 255.0);
 
-                return Color.FromArgb(
-                    (a > 255) ? 255 : a,
-                    (r > 255) ? 255 : r,
-                    (g > 255) ? 255 : g,
-                    (b > 255) ? 255 : b
+                return System.Drawing.Color.FromArgb(
+                    a < 255 ? a : 255,
+                    r < 255 ? r : 255,
+                    g < 255 ? g : 255,
+                    b < 255 ? b : 255 
                     );
             }
         }
@@ -114,10 +168,9 @@ namespace Antilli
             A = a;
         }
 
-
         /// <summary>Creates a <see cref="Vector4C"/> based on the given <see cref="System.Drawing.Color"/>.</summary>
         /// <param name="color">The color that will be converted</param>
-        public Vector4C(Color color)
+        public Vector4C(System.Drawing.Color color)
         {
             R = color.R / 255.0;
             G = color.G / 255.0;

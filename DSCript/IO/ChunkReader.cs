@@ -20,7 +20,7 @@ namespace DSCript.IO
 
         public bool IsLoaded { get; private set; }
 
-        public List<ChunkBlock> Chunk { get; set; }
+        public List<ChunkBlockOld> Chunk { get; set; }
 
         /// <summary> Gets or sets the position of the cursor in the FileStream. </summary>
         public long Position
@@ -55,10 +55,10 @@ namespace DSCript.IO
             {
                 // Descriptions are found at the very end of chunks
                 // So add up the total size of the chunk (including offsets) to find it
-                this.Seek(baseOffset + (subChunk.Offset + subChunk.Size), SeekOrigin.Begin);
+                Reader.Seek(baseOffset + (subChunk.Offset + subChunk.Size), SeekOrigin.Begin);
 
                 // Descriptions are simple strings without a terminator - this is why StrLen is important!
-                subChunk.Description = this.ReadString(subChunk.StrLen);
+                subChunk.Description = Reader.ReadString(subChunk.StrLen);
             }
             else
             {
@@ -67,11 +67,11 @@ namespace DSCript.IO
             }
 
             // Now we seek to the beginning of the data
-            this.Seek(baseOffset + subChunk.Offset, SeekOrigin.Begin);
+            Reader.Seek(baseOffset + subChunk.Offset, SeekOrigin.Begin);
 
             // We need to see if the data is in fact a nested chunk
             // So check to see if this is another Chunk so we can recurse through it
-            if (this.CheckIfType(CTypes.CHUNK))
+            if (this.CheckIfType(ChunkType.Chunk))
             {
                 // Since Chunks begin with 'CHNK', it's safe to assume we have found a nested chunk!
                 // We'll gather the data from it in a similar fashion to the one that is currently on hold
@@ -84,14 +84,14 @@ namespace DSCript.IO
 
                 // For each chunk (nested or not) within the file, we add it to the master chunk list
                 // So add this one at the very end
-                Chunk.Insert(ss, new ChunkBlock(ss, subBaseOffset, subChunk));
+                Chunk.Insert(ss, new ChunkBlockOld(ss, subBaseOffset, subChunk));
 
                 // Collect the rest of the data
                 Chunk[ss].Size = Reader.ReadUInt32();
                 Chunk[ss].SubCount = Reader.ReadUInt32();
 
                 // Skip version, it's pointless to read it
-                this.Seek(0x4, SeekOrigin.Current);
+                Reader.Seek(0x4, SeekOrigin.Current);
 
                 // Now we see how many entries are present
                 // If there's multiple entries, we can use a loop to grab them
@@ -103,7 +103,7 @@ namespace DSCript.IO
                     ReadChunks(ss, 0, subBaseOffset);
             }
             // Seek back to the list. Lather, rinse, repeat!
-            this.Seek(holdPosition, SeekOrigin.Begin);
+            Reader.Seek(holdPosition, SeekOrigin.Begin);
         }
 
         public ChunkReader(string filename)
@@ -119,7 +119,7 @@ namespace DSCript.IO
                 Timer.Start();
 
                 // Error checking: Make sure this is actually a chunk file and not some imitator
-                if (!this.CheckIfType(CTypes.CHUNK))
+                if (!this.CheckIfType(ChunkType.Chunk))
                 {
                     Console.WriteLine("Sorry, this is not a chunk file!");
                     Timer.Stop();
@@ -127,14 +127,14 @@ namespace DSCript.IO
                     goto done;
                 }
 
-                Chunk = new List<ChunkBlock>();
-                Chunk.Insert(0, new ChunkBlock(0, 0x0));
+                Chunk = new List<ChunkBlockOld>();
+                Chunk.Insert(0, new ChunkBlockOld(0, 0x0));
 
                 Chunk[0].Size = Reader.ReadUInt32();
                 Chunk[0].SubCount = Reader.ReadUInt32();
 
                 // Error checking: Again, make sure this is actually a chunk file...
-                if (Reader.ReadUInt32() != ChunkBlock.Version)
+                if (Reader.ReadUInt32() != ChunkBlockOld.Version)
                 {
                     Console.WriteLine("Sorry, this chunk file version is unsupported!");
                     Timer.Stop();

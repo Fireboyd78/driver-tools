@@ -18,7 +18,7 @@ namespace DSCript.Methods
         public static TreeViewItem GenerateTreeNode(SubChunkBlock chunk)
         {
             return new TreeViewItem {
-                Header = Chunks.Magic2Str(chunk.Magic),
+                Header = MagicConverter.ToString(chunk.Magic),
                 Tag = new NodeTag(chunk)
             };
         }

@@ -13,14 +13,14 @@ namespace DSCript.IO
 {
     public static class ChunkBlockExtensions
     {
-        public static SubChunkBlock FirstOrNull(this ChunkBlock i, CTypes type)
+        public static SubChunkBlock FirstOrNull(this ChunkBlockOld i, ChunkType type)
         {
             int si = i.Subs.FindIndex((c) => c.Magic == (uint)type);
 
             return (si != -1) ? i.Subs[si] : null;
         }
 
-        public static SubChunkBlock FirstOrNull(this List<ChunkBlock> i, CTypes type)
+        public static SubChunkBlock FirstOrNull(this List<ChunkBlockOld> i, ChunkType type)
         {
             for (int k = 0; k < i.Count; k++)
             {

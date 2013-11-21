@@ -1,0 +1,76 @@
+﻿<UserControl x:Class="Antilli.ModelViewer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:h="http://helixtoolkit.codeplex.com"
+             mc:Ignorable="d"
+             d:DesignHeight="400"
+             d:DesignWidth="500"
+             BorderBrush="#FF320000">
+
+  <h:HelixViewport3D
+            Name="VP3D"
+            FontSize="12"
+            CameraInfo="abc"
+            CameraRotationMode="Turntable"
+            CameraInertiaFactor="0.93"
+            CoordinateSystemVerticalPosition="Bottom"
+            CoordinateSystemHorizontalPosition="Right"
+            DebugInfo=""
+            ForceCursor="True"
+            Grid.Row="1"
+            Grid.ColumnSpan="1"
+            Grid.RowSpan="1"
+            InfiniteSpin="False"
+            InfoBackground="#7BFFF6C5"
+            InfoForeground="Black"
+            IsHeadLightEnabled="False"
+            IsManipulationEnabled="False"
+            RotateAroundMouseDownPoint="False"
+            ShowCameraInfo="False"
+            ShowCameraTarget="False"
+            ShowCoordinateSystem="True"
+            ShowFieldOfView="False"
+            ShowFrameRate="False"
+            ShowTriangleCountInfo="False"
+            ShowViewCube="True"
+            Status="No Model Loaded!"
+            SubTitle="Default"
+            Title="Antilli"
+            TextBrush="#FFFFEC00"
+            TitleSize="12"
+            ViewCubeBackText="L"
+            ViewCubeFrontText="R"
+            ViewCubeLeftText="B"
+            ViewCubeRightText="F"
+            ViewCubeOpacity="0.5"
+            ViewCubeHeight="80"
+            ViewCubeWidth="80"
+            ViewCubeVerticalPosition="Center"
+            ViewCubeHorizontalPosition="Right">
+
+    <h:HelixViewport3D.Camera>
+      <PerspectiveCamera x:Name="ViewCam"/>
+    </h:HelixViewport3D.Camera>
+
+    <ModelVisual3D>
+      <ModelVisual3D.Content>
+        <Model3DGroup>
+          <AmbientLight x:Name="AmbientLight" Color="Gray">
+          </AmbientLight>
+          <DirectionalLight x:Name="MainLight" Color="White"/>
+        </Model3DGroup>
+      </ModelVisual3D.Content>
+    </ModelVisual3D>
+
+    <ModelVisual3D x:Name="Models"/>
+
+  </h:HelixViewport3D>
+  <UserControl.Background>
+        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="#FF383838" Offset="0.75" />
+            <GradientStop Color="#FF101010" Offset="1" />
+        </LinearGradientBrush>
+    </UserControl.Background>
+</UserControl>
