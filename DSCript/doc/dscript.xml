@@ -45,6 +45,14 @@
             Commits all changes made to the buffer and applies them to the Block's data.
             </summary>
         </member>
+        <member name="M:System.StringColumn.SplitColumn(System.String,System.Int32)">
+            <summary>
+            Formats a delimited string using the "|" character into a split column with the specified distance.
+            </summary>
+            <param name="format">The delimited string that contains a "|" delimiter which defines where the split column should be.</param>
+            <param name="column">The column where everything after the delimiter should go.</param>
+            <returns></returns>
+        </member>
         <member name="M:System.Text.StringBuilderExtensions.AppendLines(System.Text.StringBuilder,System.Int32)">
             <summary>
             Appends a definitive amount of new lines to the end of the current <see cref="T:System.Text.StringBuilder"/> object.
@@ -452,62 +460,62 @@
         </member>
         <member name="F:DSCript.ChunkType.ExportedMissionChunk">
             <summary>
-            [EM__] - A block that contains relevant mission data
+            [EM__] - Exported mission data for Driver: Parallel Lines
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.MissionSummary">
             <summary>
-            [EMMS] - A block that contains data in which the game should handle this mission, such as what city to play in (SPECIAL THANKS: Janujeq)
+            [EMMS] - A block that contains data in which the game should handle this mission, such as what city to play in.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.ExportedMissionObjects">
             <summary>
-            [EMOB] - A block used to place objects in the mission (SPECIAL THANKS: Janujeq)
+            [EMOB] - Contains data for positioning objects and defining actors in a mission.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.ExportedMissionPropHandles">
             <summary>
-            [EMPR] - No research has been done on this format
+            [EMPR] - Unknown. Possibly deprecated.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportData">
             <summary>
-            [LELD] - No research has been done on this format
+            [LELD] - Contains all of the logic data (definitions, properties, etc).
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportStringCollection">
             <summary>
-            [LESC] - A block containing strings for mission script data
+            [LESC] - Contains strings associated with the logic data.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportSoundBank">
             <summary>
-            [LESB] - A list of sound IDs to use specific sounds in the mission
+            [LESB] - Contains sound id's to be used in the logic data.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportActorsChunk">
             <summary>
-            [LEAC] - No research has been done on this format
+            [LEAC] - Contains actor definitions and properties.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportActorDefinitions">
             <summary>
-            [LEAD] - No research has been done on this format
+            [LEAD] - Contains definitions for characters, vehicles, weapons, etc. to be used in the mission.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportNodesChunk">
             <summary>
-            [LENC] - No research has been done on this format
+            [LENC] - Contains logic node definitions and properties.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportNodeDefinitionsTable">
             <summary>
-            [LEND] - No research has been done on this format
+            [LEND] - Contains definitions for mission logic.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportPropertiesTable">
             <summary>
-            [LEPR] - No research has been done on this format
+            [LEPR] - Contains properties associated with each definition.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportActorSetTable">
@@ -517,7 +525,7 @@
         </member>
         <member name="F:DSCript.ChunkType.LogicExportWireCollections">
             <summary>
-            [LEWC] - No research has been done on this format
+            [LEWC] - Contains wires that link logic nodes together.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.LogicExportScriptCounters">
@@ -527,22 +535,22 @@
         </member>
         <member name="F:DSCript.ChunkType.UnknownLogicExportLEPS">
             <summary>
-            [LEPS] - No research has been done on this format
+            [LEPS] - Unknown purpose in Driver: Parallel Lines.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.UnknownLogicExportLENE">
             <summary>
-            [LENE] - No research has been done on this format
+            [LENE] - Unknown purpose in Driver: Parallel Lines.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.UnknownLogicExportFING">
             <summary>
-            [FING] - No research has been done on this format
+            [FING] - Unknown purpose in Driver: Parallel Lines.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.UnknownLogicExportLEAT">
             <summary>
-            [LEAT] - No research has been done on this format
+            [LEAT] - Unknown purpose in Driver: Parallel Lines.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.ExtraCharacterData">
@@ -552,7 +560,7 @@
         </member>
         <member name="F:DSCript.ChunkType.CharacterSkeletons">
             <summary>
-            [UPCB] - A block that contains character skeletons for the male and female models
+            [UPCB] - A block that contains character skeletons for the male and female models.
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.ReflectionsMenuDataPackage">

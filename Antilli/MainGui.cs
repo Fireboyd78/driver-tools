@@ -75,6 +75,7 @@ namespace Antilli
                 GeometryModel3D model = new GeometryModel3D(mesh, material);
 
                 Viewer.Models.Content = model;
+
             }
             catch (Exception e)
             {
