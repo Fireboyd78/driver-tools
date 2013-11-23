@@ -12,7 +12,7 @@ using DSCript.Methods;
 
 namespace DSCript
 {
-    public sealed class ChunkFile
+    public sealed class ChunkFile : IDisposable
     {
         public string Filename { get; private set; }
 
@@ -41,6 +41,27 @@ namespace DSCript
                 File.Delete(TempFilename);
         }
         #endregion
+
+        public void Dispose()
+        {
+            if (Chunks != null)
+            {
+                for (int i = 0; i < Chunks.Count; i++)
+                    Chunks[i] = null;
+
+                Chunks.Clear();
+            }
+
+            if (BlockData != null)
+            {
+                for (int i = 0; i < BlockData.Count; i++)
+                    BlockData[i] = null;
+
+                BlockData.Clear();
+            }
+
+            DestroyTempFile();
+        }
 
         public FileStream GetStream()
         {

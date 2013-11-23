@@ -91,6 +91,7 @@
     <Compile Include="IO\VVSFile.cs" />
     <Compile Include="IO\MDPCTypes.cs" />
     <Compile Include="IO\OBJExporter.cs" />
+    <Compile Include="IO\VVVFile.cs" />
     <Compile Include="Models\IndexData.cs" />
     <Compile Include="Models\MDPCTypes.cs" />
     <Compile Include="Models\Mesh.cs" />
@@ -104,7 +105,7 @@
     <Compile Include="ModelViewer.xaml.cs">
       <DependentUpon>ModelViewer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Vectors.cs" />
+    <Compile Include="Models\Vectors.cs" />
     <None Include="IO\MDPCData.cs" />
     <None Include="IO\MDXNData.cs" />
     <None Include="IO\PCMPData.cs" />

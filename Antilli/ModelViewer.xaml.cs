@@ -30,14 +30,14 @@ namespace Antilli
         bool headlight          = false;
         bool infiniteSpin       = false;
 
-        int FOVDefault          = 45;
+        int FOVDefault          = 70;
         int FOVAlt              = 70;
 
         Point3D dCamPos         = new Point3D(-4, 7, 2);
         Vector3D dLookdir       = new Vector3D(4, -7, -2);
 
-        Vector3D dLightDir      = new Vector3D(1, -1, 6);
-        Color dLightColor       = Color.FromRgb(150, 150, 150);
+        //Vector3D dLightDir      = new Vector3D(-1, 2, 6);
+        //Color dLightColor       = Color.FromRgb(230, 230, 230);
 
         double dNearPDist       = 0.125;
         double dFarPDist        = 100000;
@@ -84,6 +84,8 @@ namespace Antilli
 
                 debug = value;
 
+                VP3D.ViewCubeVerticalPosition = (debug) ? VerticalAlignment.Center : VerticalAlignment.Top;
+
                 SetDebugInfo("Debug mode {0}.", (debug) ? "enabled" : "disabled");
             }
         }
@@ -113,6 +115,9 @@ namespace Antilli
 
                     if (infiniteSpin)
                         VP3D.CameraController.StartSpin(new Vector(120.0, 0.0), new Point(0, 0), new Point3D(0, 0, 0));
+
+                    VP3D.PanGesture = new MouseGesture((infiniteSpin) ? MouseAction.None : MouseAction.LeftClick);
+                    VP3D.RotateGesture = new MouseGesture((infiniteSpin) ? MouseAction.None : MouseAction.RightClick);
 
                     SetDebugInfo("Infinite spin {0}.", (infiniteSpin) ? "enabled" : "disabled");
                 }
@@ -155,8 +160,11 @@ namespace Antilli
             ViewCam.NearPlaneDistance   = dNearPDist;
             ViewCam.FarPlaneDistance    = dFarPDist;
 
-            MainLight.Direction         = dLightDir;
-            MainLight.Color             = dLightColor;
+            VP3D.PanGesture             = new MouseGesture(MouseAction.LeftClick);
+            VP3D.ChangeLookAtGesture    = new MouseGesture(MouseAction.None);
+
+            //MainLight.Direction         = dLightDir;
+            //MainLight.Color             = dLightColor;
 
             InfiniteSpin                = false;
             Headlight                   = false;
@@ -193,6 +201,10 @@ namespace Antilli
             InitializeComponent();
 
             ResetToDefaults(true);
+
+            Loaded += (o, e) => {
+                InfiniteSpin = true;
+            };
 
             KeyDown += (o, e) => {
                 switch (e.Key)

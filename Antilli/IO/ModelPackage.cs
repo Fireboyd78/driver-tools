@@ -103,16 +103,16 @@ namespace Antilli.IO
 
         public class Mesh
         {
-            public IList<Vertex> Vertices { get; set; }
+            public IList<VertexOld> Vertices { get; set; }
             public IList<TriangleFace> Faces { get; set; }
 
             public MeshEntry Data { get; set; }
 
-            public Mesh(MeshEntry data, IList<Vertex> vertexBuffer, IList<int> indexBuffer)
+            public Mesh(MeshEntry data, IList<VertexOld> vertexBuffer, IList<int> indexBuffer)
             {
                 Data = data;
 
-                Vertices = new List<Vertex>();
+                Vertices = new List<VertexOld>();
                 Faces = new List<TriangleFace>();
 
                 for (int v = 0; v <= Data.VCount; v++)
@@ -173,11 +173,11 @@ namespace Antilli.IO
                 }
             }
 
-            public IList<Vertex> Buffer { get; set; }
+            public IList<VertexOld> Buffer { get; set; }
 
             /// <summary>Provides direct-access to the buffer for retrieving data. Indexes cannot be set.</summary>
             /// <param name="idx">Index into buffer</param>
-            public Vertex this[int idx]
+            public VertexOld this[int idx]
             {
                 get
                 {
@@ -187,7 +187,7 @@ namespace Antilli.IO
 
             public VertexData()
             {
-                Buffer = new List<Vertex>();
+                Buffer = new List<VertexOld>();
             }
         }
 
@@ -332,7 +332,7 @@ namespace Antilli.IO
                     {
                     case FVFType.Vertex12:
                         {
-                            Vertex vert = new Vertex();
+                            VertexOld vert = new VertexOld();
 
                             vert.Position.X = f.ReadSingle();
                             vert.Position.Y = f.ReadSingle();

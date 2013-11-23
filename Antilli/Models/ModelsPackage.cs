@@ -9,6 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 using DSCript;
 
@@ -39,11 +42,7 @@ namespace Antilli.Models
                 Vertex vertex = Vertices[v + mesh.BaseVertexIndex + mesh.MinIndex].Copy();
 
                 if (useBlendWeights)
-                {
-                    vertex.Position.X += vertex.BlendWeights.X * 1.0;
-                    vertex.Position.Y += vertex.BlendWeights.Y * 1.0;
-                    vertex.Position.Z += vertex.BlendWeights.Z * 1.0;
-                }
+                    Point3D.Add(vertex.Positions, (Vector3D.Multiply(vertex.BlendWeights, 1.0)));
             }
 
             for (int i = 0; i < mesh.PrimitiveCount; i++)
@@ -104,8 +103,10 @@ namespace Antilli.Models
                 uint indicesSize = f.ReadUInt32();
                 uint indicesOffset = f.ReadUInt32();
 
-                if (f.ReadUInt32() != 0x1)
-                    DSC.Log("Unknown face type check failed, errors may occur.");
+                uint unkFaceType = f.ReadUInt32();
+
+                /*if (unkFaceType != 0x1)
+                    DSC.Log("Unknown face type check failed, errors may occur.");*/
 
                 uint fvfOffset = f.ReadUInt32();
 
@@ -129,7 +130,7 @@ namespace Antilli.Models
                 for (int i = 0; i < nIndices; i++)
                     Indices.Buffer[i] = f.ReadUInt16();
 
-                DSC.Log("Finished reading {0} index entries.", nIndices);
+                //--DSC.Log("Finished reading {0} index entries.", nIndices);
 
                 /* ------------------------------
                  * Read vertices
@@ -141,7 +142,7 @@ namespace Antilli.Models
                 for (int i = 0; i < nVerts; i++)
                     Vertices.Buffer[i] = new Vertex(f.ReadBytes(vertLength), Vertices.VertexType);
 
-                DSC.Log("Finished reading {0} vertex entries.", nVerts);
+                //--DSC.Log("Finished reading {0} vertex entries.", nVerts);
 
                 // To collect the data for our meshes, we will read everything backwards:
                 // - 1) Meshes
@@ -284,8 +285,6 @@ namespace Antilli.Models
                         }                        
                     }
                 }
-
-                //--Console.WriteLine("Done!");
             }
         }
 

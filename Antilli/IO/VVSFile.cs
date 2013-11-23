@@ -21,20 +21,17 @@ namespace Antilli.IO
     {
         public override void LoadModels()
         {
-            ChunkBlock root = File.Chunks[0];
+            ChunkBlock root = ChunkFile.Chunks[0];
 
             Models = new List<ModelsPackage>(root.Entries.Count / 2);
 
             for (int i = root.Entries.Count / 2; i < root.Entries.Count; i++)
-                Models.Add(new ModelsPackage(File.GetBlockData(root.Entries[i])));
+                Models.Add(new ModelsPackage(ChunkFile.GetBlockData(root.Entries[i])));
 
             DSC.Log("Loaded {0} VVS models!", Models.Count);
         }
 
-        public VVSFile(string filename)
-        {
-            File = new ChunkFile(filename);
-            LoadModels();
-        }
+        // Call the default constructor
+        public VVSFile(string filename) : base(filename) { }
     }
 }

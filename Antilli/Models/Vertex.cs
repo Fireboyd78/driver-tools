@@ -8,6 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 using Antilli;
 
@@ -17,23 +20,23 @@ namespace Antilli.Models
     {
         public FVFType VertexType { get; private set; }
 
-        Vector3 _blendWeights;
+        Vector3D _blendWeights;
         double _unknown = -1.0;
 
         /// <summary>Gets or sets the position of the vertex.</summary>
-        public Vector3 Position { get; set; }
+        public Point3D Positions { get; set; }
 
         /// <summary>Gets or sets the normals of the vertex.</summary>
-        public Vector3 Normals { get; set; }
+        public Vector3D Normals { get; set; }
 
         /// <summary>Gets or sets the UV mapping of the vertex.</summary>
-        public Vector2T UVMap { get; set; }
+        public Point UVs { get; set; }
 
-        /// <summary>Gets or sets the RGBA specular color of the vertex.</summary>
-        public Vector4C Specular { get; set; }
+        /// <summary>Gets or sets the RGBA diffuse color of the vertex.</summary>
+        public Color Diffuse { get; set; }
 
         /// <summary>Gets or sets the blending weights of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
-        public Vector3 BlendWeights
+        public Vector3D BlendWeights
         {
             get { return _blendWeights; }
             set
@@ -58,6 +61,11 @@ namespace Antilli.Models
             }
         }
 
+        public static Point3D Tween(Point3D positions, Vector3D weights, double tweenFactor)
+        {
+            return Point3D.Add(positions, Vector3D.Multiply(weights, tweenFactor));
+        }
+
         /// <summary>
         /// Returns the byte-array representing this <see cref="Vertex"/> in its compiled form.
         /// </summary>
@@ -66,21 +74,21 @@ namespace Antilli.Models
         {
             byte[] bytes = new byte[(int)VertexType];
 
-            Array.Copy(BitConverter.GetBytes((float)Position.X), 0, bytes, 0, 4);
-            Array.Copy(BitConverter.GetBytes((float)Position.Y), 0, bytes, 4, 4);
-            Array.Copy(BitConverter.GetBytes((float)Position.Z), 0, bytes, 8, 4);
+            Array.Copy(BitConverter.GetBytes((float)Positions.X), 0, bytes, 0, 4);
+            Array.Copy(BitConverter.GetBytes((float)Positions.Y), 0, bytes, 4, 4);
+            Array.Copy(BitConverter.GetBytes((float)Positions.Z), 0, bytes, 8, 4);
 
             Array.Copy(BitConverter.GetBytes((float)Normals.X), 0, bytes, 12, 4);
             Array.Copy(BitConverter.GetBytes((float)Normals.Y), 0, bytes, 16, 4);
             Array.Copy(BitConverter.GetBytes((float)Normals.Z), 0, bytes, 20, 4);
 
-            Array.Copy(BitConverter.GetBytes((float)UVMap.U), 0, bytes, 24, 4);
-            Array.Copy(BitConverter.GetBytes((float)UVMap.V), 0, bytes, 28, 4);
+            Array.Copy(BitConverter.GetBytes((float)UVs.X), 0, bytes, 24, 4);
+            Array.Copy(BitConverter.GetBytes((float)UVs.Y), 0, bytes, 28, 4);
 
-            Array.Copy(BitConverter.GetBytes((float)Specular.A), 0, bytes, 32, 4);
-            Array.Copy(BitConverter.GetBytes((float)Specular.R), 0, bytes, 36, 4);
-            Array.Copy(BitConverter.GetBytes((float)Specular.G), 0, bytes, 40, 4);
-            Array.Copy(BitConverter.GetBytes((float)Specular.B), 0, bytes, 44, 4);
+            Array.Copy(BitConverter.GetBytes((float)Diffuse.A), 0, bytes, 32, 4);
+            Array.Copy(BitConverter.GetBytes((float)Diffuse.R), 0, bytes, 36, 4);
+            Array.Copy(BitConverter.GetBytes((float)Diffuse.G), 0, bytes, 40, 4);
+            Array.Copy(BitConverter.GetBytes((float)Diffuse.B), 0, bytes, 44, 4);
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
             {
@@ -109,14 +117,14 @@ namespace Antilli.Models
 
             VertexType = vertexType;
 
-            Position = new Vector3();
-            Normals  = new Vector3();
-            UVMap    = new Vector2T();
-            Specular = new Vector4C();
+            Positions = new Point3D();
+            Normals  = new Vector3D();
+            UVs    = new Point();
+            Diffuse = Color.FromArgb(255, 0, 0, 0);
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
             {
-                _blendWeights = new Vector3();
+                _blendWeights = new Vector3D();
 
                 if (VertexType == FVFType.Vertex16)
                     _unknown = 0.0;
@@ -135,16 +143,16 @@ namespace Antilli.Models
 
             VertexType = vertexType;
 
-            Position = vertex.Position;
+            Positions = vertex.Positions;
             Normals  = vertex.Normals;
-            UVMap    = vertex.UVMap;
-            Specular = vertex.Specular;
+            UVs    = vertex.UVs;
+            Diffuse = vertex.Diffuse;
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
             {
                 _blendWeights = (vertex.BlendWeights != null)
                     ? vertex.BlendWeights
-                    : new Vector3();
+                    : new Vector3D();
 
                 if (VertexType == FVFType.Vertex16)
                     _unknown = (vertex.Unknown != -1.0)
@@ -167,41 +175,44 @@ namespace Antilli.Models
 
             using (MemoryStream f = new MemoryStream(vertexBuffer, 0, vertexBuffer.Length))
             {
-                Position = new Vector3() {
+                // IMPORTANT NOTE: The Y & Z Axes are flipped and the X axis is negated!
+                // For UV coordinates, the V axis is negated.
+
+                Positions = new Point3D() {
+                    X = -f.ReadSingle(),
+                    Z = f.ReadSingle(),
+                    Y = f.ReadSingle()
+                };
+
+                Normals = new Vector3D() {
                     X = f.ReadSingle(),
-                    Y = f.ReadSingle(),
-                    Z = f.ReadSingle()
+                    Z = f.ReadSingle(),
+                    Y = f.ReadSingle()
                 };
 
-                Normals = new Vector3() {
+                UVs = new Point() {
                     X = f.ReadSingle(),
-                    Y = f.ReadSingle(),
-                    Z = f.ReadSingle()
-                };
-
-                UVMap = new Vector2T() {
-                    U = f.ReadSingle(),
-                    V = f.ReadSingle()
-                };
-
-                Specular = new Vector4C() {
-                    A = f.ReadSingle(),
-                    R = f.ReadSingle(),
-                    G = f.ReadSingle(),
-                    B = f.ReadSingle()
+                    Y = -f.ReadSingle()
                 };
 
                 if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
                 {
-                    BlendWeights = new Vector3() {
-                        X = f.ReadSingle(),
-                        Y = f.ReadSingle(),
-                        Z = f.ReadSingle()
+                    BlendWeights = new Vector3D() {
+                        X = -f.ReadSingle(),
+                        Z = f.ReadSingle(),
+                        Y = f.ReadSingle()
                     };
-
-                    if (VertexType == FVFType.Vertex16)
-                        Unknown = f.ReadSingle();
                 }
+
+                Diffuse = Color.FromArgb(
+                    (byte)Math.Round(f.ReadSingle() * 255.0),
+                    (byte)Math.Round(f.ReadSingle() * 255.0),
+                    (byte)Math.Round(f.ReadSingle() * 255.0),
+                    (byte)Math.Round(f.ReadSingle() * 255.0)
+                );
+
+                if (VertexType == FVFType.Vertex16)
+                    Unknown = f.ReadSingle();
             }
         }
     }

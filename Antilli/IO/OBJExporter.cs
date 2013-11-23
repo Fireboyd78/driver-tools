@@ -30,7 +30,7 @@ namespace Antilli.IO
         const string unknown2 = "UNKNOWN2";
         const string undefined = "UNDEFINED";
 
-        public static void ExportOBJ(string filename, ModelsPackage modelPackage)
+        public static void ExportOBJ(string filename, ModelsPackage modelPackage, PartsGroup partBasedOn)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -40,14 +40,104 @@ namespace Antilli.IO
 
             var verts = modelPackage.Vertices.Buffer;
 
+            int i = 0;
+
+            int startIndex = 0;
+
+            foreach (PartsGroup part in modelPackage.Parts)
+            {
+                int g = 0;
+
+                MeshGroup group = part.Parts[g].Group;
+
+                while (g < part.Parts.Count && part.Parts[g].Group == null)
+                {
+                    if (g + 1 > part.Parts.Count)
+                        break;
+
+                    group = part.Parts[g++].Group;
+                }
+
+                if (group != null && ((partBasedOn != null && part.UID == partBasedOn.UID) || partBasedOn == null))
+                {
+                    string groupIdentifier = undefined;
+
+                    switch (g)
+                    {
+                    case 0:
+                        groupIdentifier = highLod; break;
+                    case 1:
+                        groupIdentifier = medLod; break;
+                    case 2:
+                        groupIdentifier = lowLod; break;
+                    case 3:
+                        groupIdentifier = unknown1; break;
+                    case 4:
+                        groupIdentifier = vLowLod; break;
+                    case 5:
+                        groupIdentifier = shadow; break;
+                    case 6:
+                        groupIdentifier = unknown2; break;
+                    }
+
+                    foreach (IndexedPrimitive prim in group.Meshes)
+                    {
+                        DriverModel3D model = new DriverModel3D(modelPackage, prim);
+
+                        int nVerts = 0;
+
+                        for (int vx = 0; vx < model.Positions.Count; vx++)
+                        {
+                            sb.AppendFormat("v {0:F4} {1:F4} {2:F4}", model.Positions[vx].X, model.Positions[vx].Y, model.Positions[vx].Z).AppendLine();
+                            nVerts++;
+                        }
+
+                        sb.AppendLine();
+
+                        for (int vn = 0; vn < model.Normals.Count; vn++)
+                            sb.AppendFormat("vn {0:F4} {1:F4} {2:F4}", model.Normals[vn].X, model.Normals[vn].Y, model.Normals[vn].Z).AppendLine();
+
+                        sb.AppendLine();
+
+                        for (int vt = 0; vt < model.TextureCoordinates.Count; vt++)
+                            sb.AppendFormat("vt {0:F4} {1:F4} 0.0000", model.TextureCoordinates[vt].X, model.TextureCoordinates[vt].Y).AppendLine();
+
+                        sb.AppendLine();
+
+                        sb.AppendFormat("g Mesh{0}_{1}", groupIdentifier, (i++ + 1)).AppendLine();
+                        sb.AppendLine("s 1");
+
+                        for (int t = 0; t < model.TriangleIndices.Count; t += 3)
+                        {
+                            sb.AppendFormat("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
+                                model.TriangleIndices[t] + 1 + startIndex,
+                                model.TriangleIndices[t + 1] + 1 + startIndex,
+                                model.TriangleIndices[t + 2] + 1 + startIndex).AppendLine();
+                        }
+
+                        startIndex += nVerts;
+
+                        sb.AppendLines(2);
+                    }
+                }
+            }
+
+            using (StreamWriter f = new StreamWriter(filename))
+            {
+                f.Write(sb.ToString());
+            }
+
+            DSCript.DSC.Log("Successfully exported {0}!", filename);
+
+            /*
             sb.AppendFormat("# TOTAL VERTICES: {0}", verts.Length).AppendLines(2);
 
             for (int v = 0; v < verts.Length; v++)
             {
                 sb.AppendFormat("v {0:F4} {1:F4} {2:F4}",
-                    verts[v].Position.X,
-                    verts[v].Position.Y,
-                    verts[v].Position.Z).AppendLine();
+                    verts[v].Positions.X,
+                    verts[v].Positions.Y,
+                    verts[v].Positions.Z).AppendLine();
             }
 
             sb.AppendLine();
@@ -65,8 +155,8 @@ namespace Antilli.IO
             for (int vt = 0; vt < verts.Length; vt++)
             {
                 sb.AppendFormat("vt {0:F4} {1:F4} 0.0000",
-                    verts[vt].UVMap.U,
-                    -verts[vt].UVMap.V).AppendLine();
+                    verts[vt].UVs.X,
+                    -verts[vt].UVs.Y).AppendLine();
             }
 
             sb.AppendLine();
@@ -144,7 +234,7 @@ namespace Antilli.IO
                 f.Write(sb.ToString());
             }
 
-            DSCript.DSC.Log("Successfully exported {0}!", filename);
+            DSCript.DSC.Log("Successfully exported {0}!", filename);*/
         }
 
 

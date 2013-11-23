@@ -8,11 +8,153 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
+using HelixToolkit.Wpf;
+
 namespace Antilli.Models
 {
+    /* ================= New ======================== */
+    public class DriverModel3D
+    {
+        static Color[] colors = {
+                                Color.FromArgb(255, 255, 128, 128),
+                                Color.FromArgb(255, 128, 255, 128),
+                                Color.FromArgb(255, 128, 128, 255),
+                                Color.FromArgb(255, 128, 32, 32),
+                                Color.FromArgb(255, 32, 128, 32),
+                                Color.FromArgb(255, 32, 32, 128),
+                                Color.FromArgb(255, 128, 255, 32),
+                                Color.FromArgb(255, 32, 128, 255),
+                                Color.FromArgb(255, 255, 128, 32),
+                                Color.FromArgb(255, 128, 128, 255),
+                                Color.FromArgb(255, 128, 255, 255),
+                                Color.FromArgb(255, 128, 255, 128),
+                                Color.FromArgb(255, 32, 255, 255),
+                                Color.FromArgb(255, 255, 32, 255),
+                                Color.FromArgb(255, 255, 255, 255),
+                                Color.FromArgb(255, 32, 32, 32),
+                                Color.FromArgb(255, 31, 41, 76),
+                                Color.FromArgb(255, 41, 76, 31),
+                                Color.FromArgb(255, 76, 41, 31),
+                                Color.FromArgb(255, 76, 31, 41),
+                                Color.FromArgb(255, 76, 31, 76),
+                                Color.FromArgb(255, 31, 76, 76),
+                                Color.FromArgb(255, 31, 76, 31),
+                            };
+
+        public Point3DCollection BlendedPositions { get; set; }
+        public Point3DCollection Positions { get; set; }
+        public Vector3DCollection Normals { get; set; }
+        public PointCollection TextureCoordinates { get; set; }
+        public Int32Collection TriangleIndices { get; set; }
+
+        public Material Material { get; set; }
+
+        public static implicit operator GeometryModel3D(DriverModel3D model)
+        {
+            return model.ToGeometry();
+        }
+
+        public GeometryModel3D ToGeometry()
+        {
+            return ToGeometry(false);
+        }
+
+        public GeometryModel3D ToGeometry(bool useBlendWeights)
+        {
+            MeshGeometry3D mesh = new MeshGeometry3D() {
+                Positions = (useBlendWeights) ? BlendedPositions : Positions,
+                Normals = Normals,
+                TextureCoordinates = TextureCoordinates,
+                TriangleIndices = TriangleIndices
+            };
+
+            //-- Generate a random color
+            // int colorIdx = new Random((int)DateTime.Now.ToBinary() * TriangleIndices.Count).Next(0, colors.Length);
+            // Random random = new Random((int)DateTime.Now.ToBinary() / Positions.Count * (TriangleIndices.Count / 2));
+            // 
+            // Color mixColor = Color.FromArgb(
+            //         255,
+            //         (byte)random.Next(random.Next(0, 254), 255),
+            //         (byte)random.Next(random.Next(0, 254), 255),
+            //         (byte)random.Next(random.Next(0, 254), 255)
+            //     );
+            // 
+            // SolidColorBrush matColor = new SolidColorBrush(Color.Add(colors[colorIdx], mixColor));
+
+            SolidColorBrush matColor = new SolidColorBrush(Color.FromArgb(255, 180, 180, 180));
+            DiffuseMaterial material = new DiffuseMaterial(matColor);
+
+            return new GeometryModel3D() {
+                Geometry = mesh,
+                Material = material,
+                BackMaterial = material
+            };
+        }
+
+        public DriverModel3D(ModelsPackage modelsPackage, IndexedPrimitive primitive)
+        {
+            Vertex[] vertices = modelsPackage.Vertices.Buffer;
+            ushort[] indices = modelsPackage.Indices.Buffer;
+
+            int nVerts = vertices.Length;
+
+            Positions = new Point3DCollection(nVerts);
+            Normals = new Vector3DCollection(nVerts);
+            TextureCoordinates = new PointCollection(nVerts);
+
+            if (modelsPackage.Vertices.VertexType != FVFType.Vertex12)
+                BlendedPositions = new Point3DCollection(nVerts);
+
+            for (int v = 0; v <= primitive.NumVertices; v++)
+            {
+                Vertex vertex = vertices[v + primitive.BaseVertexIndex + primitive.MinIndex];
+
+                Positions.Add(vertex.Positions);
+                Normals.Add(vertex.Normals);
+                TextureCoordinates.Add(vertex.UVs);
+
+                if (BlendedPositions != null)
+                    BlendedPositions.Add(Vertex.Tween(vertex.Positions, vertex.BlendWeights, 1.0));
+            }
+
+            TriangleIndices = new Int32Collection();
+
+            for (int i = 0; i < primitive.PrimitiveCount; i++)
+            {
+                int idx = primitive.StartIndex;
+                int vIdx = primitive.BaseVertexIndex;
+
+                int i0, i1, i2;
+
+                if (i % 2 == 1.0)
+                {
+                    i0 = indices[idx + i];
+                    i1 = indices[idx + (i + 1)];
+                    i2 = indices[idx + (i + 2)];
+                }
+                else
+                {
+                    i0 = indices[idx + (i + 2)];
+                    i1 = indices[idx + (i + 1)];
+                    i2 = indices[idx + i];
+                }
+
+                if ((i0 != i1) && (i0 != i2) && (i1 != i2))
+                {
+                    TriangleIndices.Add(i0 - primitive.MinIndex);
+                    TriangleIndices.Add(i1 - primitive.MinIndex);
+                    TriangleIndices.Add(i2 - primitive.MinIndex);
+                }
+            }
+        }
+    }
+
+
+    /* ================= Old ======================== */
     public class Mesh
     {
         public List<Vertex> Vertices { get; set; }
@@ -31,11 +173,7 @@ namespace Antilli.Models
                 Vertex vertex = Vertices[v + mesh.BaseVertexIndex + mesh.MinIndex].Copy();
 
                 if (useBlendWeights)
-                {
-                    vertex.Position.X += vertex.BlendWeights.X * 1.0;
-                    vertex.Position.Y += vertex.BlendWeights.Y * 1.0;
-                    vertex.Position.Z += vertex.BlendWeights.Z * 1.0;
-                }
+                    Point3D.Add(vertex.Positions, (Vector3D.Multiply(vertex.BlendWeights, 1.0)));
 
                 vertices.Add(vertex);
             }
@@ -74,9 +212,9 @@ namespace Antilli.Models
 
             foreach (Vertex v in Vertices)
             {
-                vertices.Add(v.Position.ToPoint3D());
-                normals.Add(v.Normals.ToVector3D());
-                texCoords.Add(v.UVMap.ToPoint());
+                vertices.Add(v.Positions);
+                normals.Add(v.Normals);
+                texCoords.Add(v.UVs);
             }
 
             foreach (TriangleFace t in Faces)

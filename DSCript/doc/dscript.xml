@@ -78,6 +78,11 @@
             A type representing an unknown value (Note: This is used by tools only!)
             </summary>
         </member>
+        <member name="F:DSCript.ChunkType.ChunkRoot">
+            <summary>
+            A type representing a root chunk block (Note: This is used by tools only!)
+            </summary>
+        </member>
         <member name="F:DSCript.ChunkType.Chunk">
             <summary>
             [CHNK] - The header for a CHUNK block

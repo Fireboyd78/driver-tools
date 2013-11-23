@@ -179,7 +179,7 @@ namespace Antilli
         }
     }
 
-    public class Vertex
+    public class VertexOld
     {
         /// <summary>Gets or sets the position of the vertex</summary>
         public Vector3 Position { get; set; }
@@ -193,8 +193,8 @@ namespace Antilli
         /// <summary>Gets or sets the specular color of the vertex (RGBA)</summary>
         public Vector4C Specular { get; set; }
 
-        /// <summary>Creates a new <see cref="Vertex"/> with the values initialized to 0.0.</summary>
-        public Vertex()
+        /// <summary>Creates a new <see cref="VertexOld"/> with the values initialized to 0.0.</summary>
+        public VertexOld()
         {
             Position = new Vector3(0.0, 0.0, 0.0);
             Normals = new Vector3(0.0, 0.0, 0.0);
@@ -203,7 +203,7 @@ namespace Antilli
         }
     }
 
-    public class Vertex15 : Vertex
+    public class Vertex15 : VertexOld
     {
         /// <summary>Gets or sets the blending weights of the vertex</summary>
         public Vector3 BlendWeights { get; set; }

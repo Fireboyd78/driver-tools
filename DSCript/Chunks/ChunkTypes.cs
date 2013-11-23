@@ -32,6 +32,11 @@ namespace DSCript
         Unknown = 0xFFFFFFFF,
 
         /// <summary>
+        /// A type representing a root chunk block (Note: This is used by tools only!)
+        /// </summary>
+        ChunkRoot = 0x7FFFFFFF,
+
+        /// <summary>
         /// [CHNK] - The header for a CHUNK block
         /// </summary>
         Chunk = 0x4B4E4843,

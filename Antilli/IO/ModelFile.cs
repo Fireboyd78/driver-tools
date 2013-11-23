@@ -14,36 +14,67 @@ using Antilli.Models;
 
 namespace Antilli.IO
 {
-    public class ModelFile
+    public interface IModelFile
     {
-        public ChunkFile File { get; set; }
+        ChunkFile ChunkFile { get; set; }
+        List<ModelsPackage> Models { get; set; }
+
+        void LoadModels();
+    }
+
+    public class ModelFile : IModelFile, IDisposable
+    {
+        public ChunkFile ChunkFile { get; set; }
 
         public List<ModelsPackage> Models { get; set; }
+
+        public virtual void Dispose()
+        {
+            if (ChunkFile != null)
+                ChunkFile.Dispose();
+
+            if (Models != null)
+            {
+                for (int i = 0; i < Models.Count; i++)
+                    Models[i] = null;
+
+                Models.Clear();
+            }
+        }
 
         public virtual void LoadModels()
         {
             Models = new List<ModelsPackage>();
 
-            for (int i = 0; i < File.Chunks.Count; i++)
+            for (int i = 0; i < ChunkFile.Chunks.Count; i++)
             {
-                for (int k = 0; k < File.Chunks[i].Entries.Count; k++)
+                for (int k = 0; k < ChunkFile.Chunks[i].Entries.Count; k++)
                 {
-                    if (Chunk.CheckType(File.Chunks[i].Entries[k].Magic, ChunkType.ModelPackagePC))
-                        Models.Add(new ModelsPackage(File.GetBlockData(File.Chunks[i].Entries[k])));
+                    if (Chunk.CheckType(ChunkFile.Chunks[i].Entries[k].Magic, ChunkType.ModelPackagePC))
+                        Models.Add(new ModelsPackage(ChunkFile.GetBlockData(ChunkFile.Chunks[i].Entries[k])));
                 }
             }
 
-            DSC.Log("{0} models loaded.", Models.Count);
+            if (Models.Count >= 1)
+                DSC.Log("{0} models loaded.", Models.Count);
+            else                
+                Models = null;
+        }
+
+        protected virtual void LoadFile(string filename)
+        {
+            ChunkFile = new ChunkFile(filename);
+            LoadModels();
         }
 
         protected ModelFile()
-        {   
+        {
+            // This allows inheritance and disallows blank constructors.
         }
 
         public ModelFile(string filename)
         {
-            File = new ChunkFile(filename);
-            LoadModels();
+            LoadFile(filename);
         }
     }
 }

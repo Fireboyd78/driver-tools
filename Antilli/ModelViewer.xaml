@@ -35,9 +35,9 @@
             ShowFrameRate="False"
             ShowTriangleCountInfo="False"
             ShowViewCube="True"
-            Status="No Model Loaded!"
-            SubTitle="Default"
-            Title="Antilli"
+            Status=""
+            SubTitle=""
+            Title="3D"
             TextBrush="#FFFFEC00"
             TitleSize="12"
             ViewCubeBackText="L"
@@ -47,7 +47,7 @@
             ViewCubeOpacity="0.5"
             ViewCubeHeight="80"
             ViewCubeWidth="80"
-            ViewCubeVerticalPosition="Center"
+            ViewCubeVerticalPosition="Top"
             ViewCubeHorizontalPosition="Right">
 
     <h:HelixViewport3D.Camera>
@@ -57,9 +57,11 @@
     <ModelVisual3D>
       <ModelVisual3D.Content>
         <Model3DGroup>
-          <AmbientLight x:Name="AmbientLight" Color="Gray">
-          </AmbientLight>
-          <DirectionalLight x:Name="MainLight" Color="White"/>
+          <AmbientLight x:Name="AmbientLight" Color="#404040"/>
+          <DirectionalLight Color="#707070" Direction="-1.5,0.5,0.8"/>
+          <DirectionalLight Color="#707070" Direction="1.5,0.5,0.8"/>
+          <DirectionalLight Color="#707070" Direction="0,-0.5,1"/>
+          <!--<DirectionalLight x:Name="MainLight" Color="White"/>-->
         </Model3DGroup>
       </ModelVisual3D.Content>
     </ModelVisual3D>

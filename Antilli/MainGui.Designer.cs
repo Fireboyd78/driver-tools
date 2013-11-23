@@ -41,6 +41,7 @@
             this.mn_Tools_ExportOBJ = new System.Windows.Forms.ToolStripMenuItem();
             this.PackList = new System.Windows.Forms.ListBox();
             this.MeshList = new System.Windows.Forms.ListBox();
+            this.ShowDamage = new System.Windows.Forms.CheckBox();
             this.ViewerElement = new System.Windows.Forms.Integration.ElementHost();
             this.Viewer = new Antilli.ModelViewer();
             this.menuStrip1.SuspendLayout();
@@ -148,6 +149,20 @@
             this.MeshList.Size = new System.Drawing.Size(167, 433);
             this.MeshList.TabIndex = 2;
             // 
+            // ShowDamage
+            // 
+            this.ShowDamage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.ShowDamage.AutoSize = true;
+            this.ShowDamage.Enabled = false;
+            this.ShowDamage.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.75F);
+            this.ShowDamage.ForeColor = System.Drawing.SystemColors.Control;
+            this.ShowDamage.Location = new System.Drawing.Point(307, 479);
+            this.ShowDamage.Name = "ShowDamage";
+            this.ShowDamage.Size = new System.Drawing.Size(106, 19);
+            this.ShowDamage.TabIndex = 4;
+            this.ShowDamage.Text = "Show damage";
+            this.ShowDamage.UseVisualStyleBackColor = false;
+            // 
             // ViewerElement
             // 
             this.ViewerElement.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -164,7 +179,8 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlDarkDark;
-            this.ClientSize = new System.Drawing.Size(859, 486);
+            this.ClientSize = new System.Drawing.Size(859, 512);
+            this.Controls.Add(this.ShowDamage);
             this.Controls.Add(this.ViewerElement);
             this.Controls.Add(this.MeshList);
             this.Controls.Add(this.PackList);
@@ -198,6 +214,7 @@
         private System.Windows.Forms.ToolStripMenuItem mn_Tools_ExportOBJ;
         private System.Windows.Forms.Integration.ElementHost ViewerElement;
         private ModelViewer Viewer;
+        private System.Windows.Forms.CheckBox ShowDamage;
     }
 }
 

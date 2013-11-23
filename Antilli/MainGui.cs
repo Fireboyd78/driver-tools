@@ -34,15 +34,30 @@ namespace Antilli
             AntilliMain();
         }
 
-        ModelFile ModelFile { get; set; }
+        bool useBlendWeights = false;
+        string title = "";
 
-        List<ModelsPackage> ModelPackages
+        IModelFile _modelFile;
+
+        public IModelFile ModelFile
+        {
+            get { return _modelFile; }
+            set
+            {
+                if (_modelFile != null)
+                    ((ModelFile)_modelFile).Dispose();
+
+                _modelFile = value;
+            }
+        }
+
+        public List<ModelsPackage> ModelPackages
         {
             get { return ModelFile.Models; }
         }
 
-        ChunkFile ChunkFile { get; set; }
-        List<ModelPackage> MPackages { get; set; }
+        public ChunkFile ChunkFile { get; set; }
+        public List<ModelPackage> MPackages { get; set; }
 
         /// <summary>Checks to see if a chunk file is currently opened</summary>
         public bool FileOpened
@@ -55,6 +70,8 @@ namespace Antilli
             // Capture exceptions
             try
             {
+                title = Text;
+
                 // Setup events
                 mn_File_Open.Click += (o, e) => { ChooseFile(); };
                 mn_File_Save.Click += (o, e) => { SaveFile();  };
@@ -64,13 +81,44 @@ namespace Antilli
 
                 mn_Tools_ExportOBJ.Click += (o, e) => { SaveOBJFile(); };
 
+                PackList.SelectedIndexChanged += (o, e) => {
+                    if (ModelFile.Models != null)
+                    {
+                        MeshList.Items.Clear();
+
+                        int idx = PackList.SelectedIndex;
+
+                        if (ModelFile.Models[idx].Parts.Count > 0)
+                        {
+                            for (int i = 0; i < ModelFile.Models[idx].Parts.Count; i++)
+                            {
+                                long uid = ModelFile.Models[idx].Parts[i].UID;
+
+                                if (!MeshList.Items.Contains(uid))
+                                    MeshList.Items.Add(uid);
+                            }
+
+                            MeshList.SelectedIndex = 0;
+                        }
+                        else
+                            MeshList.Items.Add("N/A");
+                    }
+                };
+
+                MeshList.SelectedIndexChanged += (o, e) => { DrawMeshes(); };
+
+                ShowDamage.CheckedChanged += (o, e) => {
+                    useBlendWeights = (ShowDamage.Checked) ? true : false;
+                    DrawMeshes();
+                };
+
                 MeshBuilder box = new MeshBuilder();
 
                 box.AddBox(new Point3D(0, 0, 0), 1, 1, 1);
 
                 MeshGeometry3D mesh = box.ToMesh();
 
-                Material material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(255, 128, 0, 0)));
+                Material material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(255, 255, 0, 0)));
 
                 GeometryModel3D model = new GeometryModel3D(mesh, material);
 
@@ -83,28 +131,18 @@ namespace Antilli
             }
         }
 
-        public void SaveOBJFile()
+        public void DrawMeshes()
         {
-            SaveFileDialog file = new SaveFileDialog() {
-                CheckPathExists = true,
-                Filter = "Wavefront .OBJ|*.obj",
-                ValidateNames = true,
-                OverwritePrompt = true,
-                AddExtension = true,
-                DefaultExt = ".obj"
-            };
-            
-            DialogResult result = file.ShowDialog();
-            
-            if (result == DialogResult.OK)
+            if (ModelFile.Models != null)
             {
-                //MessageBox.Show(String.Format("I would be creating the file '{0}' right about now...", file.FileName));
-            
-                //OBJExporter.ExportOBJ(file.FileName, ModelPackages[idx]);
+                int modelIdx = PackList.SelectedIndex;
+                int partIdx = MeshList.SelectedIndex;
+
+                LoadMeshParts(ModelFile.Models[modelIdx], ModelFile.Models[modelIdx].Parts.Find((p) => p.UID == (long)MeshList.Items[partIdx]));
             }
         }
 
-        public void ExportModelPackage(ModelsPackage modelsPackage)
+        public void SaveOBJFile()
         {
             SaveFileDialog file = new SaveFileDialog() {
                 AddExtension = true,
@@ -119,7 +157,12 @@ namespace Antilli
             DialogResult result = file.ShowDialog();
 
             if (result == DialogResult.OK)
-                OBJExporter.ExportOBJ(file.FileName, modelsPackage);
+            {
+                int modelIdx = PackList.SelectedIndex;
+                int partIdx = MeshList.SelectedIndex;
+
+                OBJExporter.ExportOBJ(file.FileName, ModelFile.Models[modelIdx], ModelFile.Models[modelIdx].Parts.Find((p) => p.UID == (long)MeshList.Items[partIdx]));
+            }
         }
 
         /// <summary>Opens a dialog to select a chunk file</summary>
@@ -136,19 +179,42 @@ namespace Antilli
 
             if (result == DialogResult.OK)
             {
+                IModelFile modelFile = null;
+
+                Cursor = Cursors.WaitCursor;
+
                 switch (Path.GetExtension(file.FileName))
                 {
                 case ".vvs":
-                    ModelFile = new VVSFile(file.FileName); break;
+                    modelFile = new VVSFile(file.FileName); break;
+                case ".vvv":
+                    modelFile = new VVVFile(file.FileName); break;
                 default:
-                    ModelFile = new ModelFile(file.FileName); break;
+                    modelFile = new ModelFile(file.FileName); break;
                 }
-
-                //ExportModelPackage(ModelFile.Models[0]);
 
                 bool useOldMethod = false;
 
-                if (useOldMethod)
+                if (!useOldMethod)
+                {
+                    if (modelFile.Models != null)
+                    {
+                        ModelFile = modelFile;
+
+                        Text = String.Format("{0} - {1}", title, file.FileName);
+
+                        if (ModelFile.Models.Count > 0)
+                            LoadModels();
+                    }
+                    else
+                    {
+                        MessageBox.Show("No models found!", "Antilli", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                        ((ModelFile)modelFile).Dispose();
+                    }
+
+                    DSC.Log("Memory usage: {0:N}MB", GC.GetTotalMemory(true) / 1048576.0);
+                }
+                else // Use old method
                 {
                     ModelsPackage mpak = ModelFile.Models[2];
 
@@ -166,9 +232,9 @@ namespace Antilli
 
                     foreach (Models.Vertex v in mpak.Vertices.Buffer)
                     {
-                        vertices.Add(v.Position.ToPoint3D());
-                        normals.Add(v.Normals.ToVector3D());
-                        coords.Add(v.UVMap.ToPoint());
+                        vertices.Add(v.Positions);
+                        normals.Add(v.Normals);
+                        coords.Add(v.UVs);
                     }
 
                     foreach (PartsGroup part in mpak.Parts)
@@ -201,44 +267,22 @@ namespace Antilli
                         BackMaterial = mat
                     };
                 }
-                else
-                {
-                    if (PackList.Items.Count > 0)
-                        PackList.Items.Clear();
-                    if (MeshList.Items.Count > 0)
-                        MeshList.Items.Clear();
 
-                    for (int i = 0; i < ModelFile.Models.Count; i++)
-                        PackList.Items.Add(String.Format("Model Package {0}", i));
-
-                    PackList.SelectedIndexChanged += (o, e) => {
-                        MeshList.Items.Clear();
-
-                        int idx = PackList.SelectedIndex;
-
-                        for (int i = 0; i < ModelFile.Models[idx].Parts.Count; i++)
-                        {
-                            long uid = ModelFile.Models[idx].Parts[i].UID;
-
-                            if (!MeshList.Items.Contains(uid))
-                                MeshList.Items.Add(uid);
-                        }
-
-                        MeshList.SelectedIndex = 0;
-                    };
-
-                    MeshList.SelectedIndexChanged += (o, e) => {
-                        int modelIdx = PackList.SelectedIndex;
-                        int partIdx = MeshList.SelectedIndex;
-
-                        LoadMeshParts(ModelFile.Models[modelIdx], ModelFile.Models[modelIdx].Parts.Find((p) => p.UID == (long)MeshList.Items[partIdx]));
-                    };
-
-                    PackList.SelectedIndex = 0;
-
-                    //LoadMeshParts(ModelFile.Models[2]);
-                }
+                Cursor = Cursors.Default;
             }
+        }
+
+        public void LoadModels()
+        {
+            if (PackList.Items.Count > 0)
+                PackList.Items.Clear();
+            if (MeshList.Items.Count > 0)
+                MeshList.Items.Clear();
+
+            for (int i = 0; i < ModelFile.Models.Count; i++)
+                PackList.Items.Add(String.Format("Model Package {0}", i));
+
+            PackList.SelectedIndex = 0;
         }
 
         public void LoadMeshParts(ModelsPackage modelPackage)
@@ -251,34 +295,6 @@ namespace Antilli
             Model3DGroup models = new Model3DGroup();
 
             Viewer.Models.Content = models;
-
-            Color[] colors = {
-                                Color.FromArgb(255, 255, 128, 128),
-                                Color.FromArgb(255, 128, 255, 128),
-                                Color.FromArgb(255, 128, 128, 255),
-                                Color.FromArgb(255, 128, 32, 32),
-                                Color.FromArgb(255, 32, 128, 32),
-                                Color.FromArgb(255, 32, 32, 128),
-                                Color.FromArgb(255, 128, 255, 32),
-                                Color.FromArgb(255, 32, 128, 255),
-                                Color.FromArgb(255, 255, 128, 32),
-                                Color.FromArgb(255, 128, 128, 255),
-                                Color.FromArgb(255, 128, 255, 255),
-                                Color.FromArgb(255, 128, 255, 128),
-                                Color.FromArgb(255, 32, 255, 255),
-                                Color.FromArgb(255, 255, 32, 255),
-                                Color.FromArgb(255, 255, 255, 255),
-                                Color.FromArgb(255, 32, 32, 32),
-                                Color.FromArgb(255, 31, 41, 76),
-                                Color.FromArgb(255, 41, 76, 31),
-                                Color.FromArgb(255, 76, 41, 31),
-                                Color.FromArgb(255, 76, 31, 41),
-                                Color.FromArgb(255, 76, 31, 76),
-                                Color.FromArgb(255, 31, 76, 76),
-                                Color.FromArgb(255, 31, 76, 31),
-                            };
-
-            int colorIdx = 0;
 
             foreach (PartsGroup part in modelPackage.Parts)
             {
@@ -296,69 +312,18 @@ namespace Antilli
 
                 if (group != null && ((partBasedOn != null && part.UID == partBasedOn.UID) || partBasedOn == null))
                 {
-                    //int colorIdx = new Random((int)DateTime.Now.ToBinary()).Next(0, colors.Length);
-
                     foreach (IndexedPrimitive prim in group.Meshes)
                     {
-                        Mesh mesh = Mesh.Create(modelPackage, prim, false);
-
-                        int nVertices = mesh.Vertices.Count;
-
-                        //Vector3DCollection normals = new Vector3DCollection(nVertices);
-
-                        MeshBuilder meshBuilder = new MeshBuilder(true, false);
-
-                        for (int t = 0; t < mesh.Faces.Count; t++)
-                        {
-                            int i0, i1, i2;
-
-                            i0 = mesh.Faces[t].P1 + prim.BaseVertexIndex;
-                            i1 = mesh.Faces[t].P2 + prim.BaseVertexIndex;
-                            i2 = mesh.Faces[t].P3 + prim.BaseVertexIndex;
-
-                            Models.Vertex v1 = modelPackage.Vertices[i0];
-                            Models.Vertex v2 = modelPackage.Vertices[i1];
-                            Models.Vertex v3 = modelPackage.Vertices[i2];
-
-                            List<Point3D> positions = new List<Point3D>(nVertices) {
-                                v1.Position.ToPoint3D(true),
-                                v2.Position.ToPoint3D(true),
-                                v3.Position.ToPoint3D(true)
-                            };
-
-                            List<Vector3D> normals = new List<Vector3D>(nVertices) {
-                                v1.Normals.ToVector3D(),
-                                v2.Normals.ToVector3D(),
-                                v3.Normals.ToVector3D()
-                            };
-
-                            List<System.Windows.Point> coords = new List<System.Windows.Point>(nVertices) {
-                                v1.UVMap.ToPoint(),
-                                v2.UVMap.ToPoint(),
-                                v3.UVMap.ToPoint()
-                            };
-
-                            meshBuilder.AddTriangleStrip(positions, normals, coords);
-                        }
-
-                        MeshGeometry3D geometry = meshBuilder.ToMesh();
-
-                       //int idx = (colorIdx % 3 == 0.0) 
-                       //             ? colorIdx++
-                       //             : new Random((int)DateTime.Now.ToBinary() * new Random((int)DateTime.Now.ToBinary()).Next(21, 100 * colorIdx)).Next(0, colors.Length);
-
-                        Material material = new DiffuseMaterial(new SolidColorBrush(colors[(colorIdx < colors.Length) ? colorIdx++ : colorIdx = 0])) {
-                            AmbientColor = Color.FromArgb(255, 128, 128, 128)
-                        };
-
-                        models.Children.Add(new GeometryModel3D() {
-                            Geometry        = geometry,
-                            Material        = material,
-                            BackMaterial    = material
-                        });   
+                        DriverModel3D model = new DriverModel3D(modelPackage, prim);
+                        models.Children.Add(model.ToGeometry(useBlendWeights));
                     }
                 }
             }
+
+            ShowDamage.Enabled = (modelPackage.Vertices.VertexType == FVFType.Vertex15 && modelPackage.Parts.Count > 0) ? true : false;
+            Viewer.VP3D.ZoomExtents();
+            Viewer.VP3D.Camera.LookAt(new Point3D(0, 0 , Viewer.Models.Content.Bounds.SizeZ / 2.0), 0.0);
+            Viewer.VP3D.CameraController.Zoom(-0.15);
         }
 
         /// <summary>Not implemented!</summary>
@@ -366,30 +331,5 @@ namespace Antilli
         {
             throw new NotImplementedException();
         }
-
-        // private void PopulateLists()
-        // {
-        //     if (ModelPackages != null)
-        //     {
-        //         Console.WriteLine("Adding items.");
-        // 
-        //         PackList.SelectedIndexChanged += (o, ee) => {
-        //             MeshList.Items.Clear();
-        // 
-        //             for (int i = 0; i < ModelPackages[PackList.SelectedIndex].Groups.Count; i++)
-        //                 MeshList.Items.Add(ModelPackages[PackList.SelectedIndex].Groups[i].UID.ToString("X"));
-        //         };
-        // 
-        //         if (ModelPackages.Count != 1)
-        //         {
-        //             for (int i = 0; i < ModelPackages.Count; i++)
-        //                 PackList.Items.Add(i + 1);
-        // 
-        //             return;
-        //         }
-        // 
-        //         PackList.Items.Add("1");
-        //     }
-        // }
     }
 }

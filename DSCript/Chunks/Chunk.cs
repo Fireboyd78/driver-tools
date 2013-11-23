@@ -29,6 +29,16 @@ namespace DSCript
             return (magic == (uint)type) ? true : false;
         }
 
+        public static ChunkType GetChunkType(this ChunkEntry @this)
+        {
+            return (Enum.IsDefined(typeof(ChunkType), @this.Magic)) ? (ChunkType)@this.Magic : ChunkType.Unknown;
+        }
+
+        public static ChunkType GetChunkType(this ChunkBlock @this)
+        {
+            return (@this.HasParent) ? @this.Parent.GetChunkType() : ChunkType.ChunkRoot;
+        }
+
         /// <summary>
         /// An enumeration with common values used to calculate byte-alignment.
         /// </summary>
