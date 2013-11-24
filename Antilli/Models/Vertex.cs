@@ -185,7 +185,7 @@ namespace Antilli.Models
                 };
 
                 Normals = new Vector3D() {
-                    X = f.ReadSingle(),
+                    X = -f.ReadSingle(),
                     Z = f.ReadSingle(),
                     Y = f.ReadSingle()
                 };

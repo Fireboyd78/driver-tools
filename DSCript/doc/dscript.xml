@@ -53,6 +53,13 @@
             <param name="column">The column where everything after the delimiter should go.</param>
             <returns></returns>
         </member>
+        <member name="M:System.Text.StringBuilderExtensions.AppendFormat2(System.Text.StringBuilder,System.String,System.Object[])">
+            <summary>
+            This extension method forces the 'en-US' culture while formatting lines. See the default AppendFormat for more info.
+            </summary>
+            <param name="format">A composite format string</param>
+            <param name="args">An array of objects to format.</param>
+        </member>
         <member name="M:System.Text.StringBuilderExtensions.AppendLines(System.Text.StringBuilder,System.Int32)">
             <summary>
             Appends a definitive amount of new lines to the end of the current <see cref="T:System.Text.StringBuilder"/> object.

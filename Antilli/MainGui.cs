@@ -73,13 +73,13 @@ namespace Antilli
                 title = Text;
 
                 // Setup events
-                mn_File_Open.Click += (o, e) => { ChooseFile(); };
-                mn_File_Save.Click += (o, e) => { SaveFile();  };
-                mn_File_Exit.Click += (o, e) => { Application.Exit(); };
+                mn_File_Open.Click += (o, e) => OpenFile();
+                mn_File_Save.Click += (o, e) => SaveFile();
+                mn_File_Exit.Click += (o, e) => Application.Exit();
 
-                mn_View_Models.Click += (o, e) => { /* PopulateLists(); */ };
+                //mn_View_Models.Click += (o, e) => PopulateLists();
 
-                mn_Tools_ExportOBJ.Click += (o, e) => { SaveOBJFile(); };
+                mn_Tools_ExportOBJ.Click += (o, e) => SaveOBJFile();
 
                 PackList.SelectedIndexChanged += (o, e) => {
                     if (ModelFile.Models != null)
@@ -105,23 +105,28 @@ namespace Antilli
                     }
                 };
 
-                MeshList.SelectedIndexChanged += (o, e) => { DrawMeshes(); };
+                MeshList.SelectedIndexChanged += (o, e) => DrawMeshes();
 
                 ShowDamage.CheckedChanged += (o, e) => {
                     useBlendWeights = (ShowDamage.Checked) ? true : false;
                     DrawMeshes();
                 };
 
+                ShowDamage.EnabledChanged += (o, e) => {
+                    if (!ShowDamage.Enabled && ShowDamage.Checked)
+                        ShowDamage.Checked = false;
+                };
+
                 MeshBuilder box = new MeshBuilder();
-
-                box.AddBox(new Point3D(0, 0, 0), 1, 1, 1);
-
+                
+                box.AddBox(new Point3D(0, 0, 0), 1.5, 1.5, 1.5);
+                
                 MeshGeometry3D mesh = box.ToMesh();
-
-                Material material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(255, 255, 0, 0)));
-
+                
+                Material material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(255, 180, 180, 180)));
+                
                 GeometryModel3D model = new GeometryModel3D(mesh, material);
-
+                
                 Viewer.Models.Content = model;
 
             }
@@ -138,137 +143,7 @@ namespace Antilli
                 int modelIdx = PackList.SelectedIndex;
                 int partIdx = MeshList.SelectedIndex;
 
-                LoadMeshParts(ModelFile.Models[modelIdx], ModelFile.Models[modelIdx].Parts.Find((p) => p.UID == (long)MeshList.Items[partIdx]));
-            }
-        }
-
-        public void SaveOBJFile()
-        {
-            SaveFileDialog file = new SaveFileDialog() {
-                AddExtension = true,
-                CheckPathExists = true,
-                DefaultExt = ".obj",
-                Filter = "Wavefront .OBJ|*.obj",
-                OverwritePrompt = true,
-                RestoreDirectory = true,
-                ValidateNames = true
-            };
-
-            DialogResult result = file.ShowDialog();
-
-            if (result == DialogResult.OK)
-            {
-                int modelIdx = PackList.SelectedIndex;
-                int partIdx = MeshList.SelectedIndex;
-
-                OBJExporter.ExportOBJ(file.FileName, ModelFile.Models[modelIdx], ModelFile.Models[modelIdx].Parts.Find((p) => p.UID == (long)MeshList.Items[partIdx]));
-            }
-        }
-
-        /// <summary>Opens a dialog to select a chunk file</summary>
-        public void ChooseFile()
-        {
-            OpenFileDialog file = new OpenFileDialog() {
-                CheckFileExists = true,
-                CheckPathExists = true,
-                Filter = "All supported formats|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk|Any file|*.*",
-                ValidateNames = true,
-            };
-
-            DialogResult result = file.ShowDialog();
-
-            if (result == DialogResult.OK)
-            {
-                IModelFile modelFile = null;
-
-                Cursor = Cursors.WaitCursor;
-
-                switch (Path.GetExtension(file.FileName))
-                {
-                case ".vvs":
-                    modelFile = new VVSFile(file.FileName); break;
-                case ".vvv":
-                    modelFile = new VVVFile(file.FileName); break;
-                default:
-                    modelFile = new ModelFile(file.FileName); break;
-                }
-
-                bool useOldMethod = false;
-
-                if (!useOldMethod)
-                {
-                    if (modelFile.Models != null)
-                    {
-                        ModelFile = modelFile;
-
-                        Text = String.Format("{0} - {1}", title, file.FileName);
-
-                        if (ModelFile.Models.Count > 0)
-                            LoadModels();
-                    }
-                    else
-                    {
-                        MessageBox.Show("No models found!", "Antilli", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                        ((ModelFile)modelFile).Dispose();
-                    }
-
-                    DSC.Log("Memory usage: {0:N}MB", GC.GetTotalMemory(true) / 1048576.0);
-                }
-                else // Use old method
-                {
-                    ModelsPackage mpak = ModelFile.Models[2];
-
-                    Material mat = new DiffuseMaterial() {
-                        Brush = new SolidColorBrush(Color.FromArgb(255, 128, 128, 128))
-                    };
-
-                    int nVertices = mpak.Vertices.Buffer.Length;
-
-                    Point3DCollection vertices = new Point3DCollection(nVertices);
-                    Vector3DCollection normals = new Vector3DCollection(nVertices);
-                    PointCollection coords = new PointCollection(nVertices);
-
-                    Int32Collection indices = new Int32Collection();
-
-                    foreach (Models.Vertex v in mpak.Vertices.Buffer)
-                    {
-                        vertices.Add(v.Positions);
-                        normals.Add(v.Normals);
-                        coords.Add(v.UVs);
-                    }
-
-                    foreach (PartsGroup part in mpak.Parts)
-                    {
-                        MeshGroup group = part.Parts[0].Group;
-
-                        foreach (IndexedPrimitive prim in group.Meshes)
-                        {
-                            Mesh mesh = Mesh.Create(mpak, prim, false);
-
-                            for (int t = 0; t < mesh.Faces.Count; t++)
-                            {
-                                indices.Add(mesh.Faces[t].P1 + prim.BaseVertexIndex);
-                                indices.Add(mesh.Faces[t].P2 + prim.BaseVertexIndex);
-                                indices.Add(mesh.Faces[t].P3 + prim.BaseVertexIndex);
-                            }
-                        }
-                    }
-
-                    MeshGeometry3D geometry = new MeshGeometry3D() {
-                        Positions = vertices,
-                        Normals = normals,
-                        TextureCoordinates = coords,
-                        TriangleIndices = indices
-                    };
-
-                    Viewer.Models.Content = new GeometryModel3D() {
-                        Geometry = geometry,
-                        Material = mat,
-                        BackMaterial = mat
-                    };
-                }
-
-                Cursor = Cursors.Default;
+                LoadMeshParts(ModelFile.Models[modelIdx], (long)MeshList.Items[partIdx]);
             }
         }
 
@@ -287,10 +162,10 @@ namespace Antilli
 
         public void LoadMeshParts(ModelsPackage modelPackage)
         {
-            LoadMeshParts(modelPackage, null);
+            LoadMeshParts(modelPackage, -1);
         }
 
-        public void LoadMeshParts(ModelsPackage modelPackage, PartsGroup partBasedOn)
+        public void LoadMeshParts(ModelsPackage modelPackage, long uid)
         {
             Model3DGroup models = new Model3DGroup();
 
@@ -298,20 +173,17 @@ namespace Antilli
 
             foreach (PartsGroup part in modelPackage.Parts)
             {
-                int g = 0;
+                if (uid != -1 && part.UID != uid)
+                    continue;
 
-                MeshGroup group = part.Parts[g].Group;
-
-                while (g < part.Parts.Count && part.Parts[g].Group == null)
+                // Load the "HIGH" mesh only until object selecting is implemented
+                for (int g = 0; g < 1 /*part.Parts.Count*/; g++)
                 {
-                    if (g + 1 > part.Parts.Count)
-                        break;
+                    MeshGroup group = part.Parts[g].Group;
 
-                    group = part.Parts[g++].Group;
-                }
+                    if (group == null)
+                        continue;
 
-                if (group != null && ((partBasedOn != null && part.UID == partBasedOn.UID) || partBasedOn == null))
-                {
                     foreach (IndexedPrimitive prim in group.Meshes)
                     {
                         DriverModel3D model = new DriverModel3D(modelPackage, prim);
@@ -321,9 +193,88 @@ namespace Antilli
             }
 
             ShowDamage.Enabled = (modelPackage.Vertices.VertexType == FVFType.Vertex15 && modelPackage.Parts.Count > 0) ? true : false;
-            Viewer.VP3D.ZoomExtents();
-            Viewer.VP3D.Camera.LookAt(new Point3D(0, 0 , Viewer.Models.Content.Bounds.SizeZ / 2.0), 0.0);
-            Viewer.VP3D.CameraController.Zoom(-0.15);
+
+            if (!ShowDamage.Checked)
+            {
+                Viewer.VP3D.ZoomExtents();
+                Viewer.VP3D.Camera.LookAt(new Point3D(0, 0, Viewer.Models.Content.Bounds.SizeZ / 2.0), 0.0);
+                Viewer.VP3D.CameraController.Zoom(-0.15);
+            }
+        }
+
+        static OpenFileDialog openFile = new OpenFileDialog() {
+            CheckFileExists = true,
+            CheckPathExists = true,
+            Filter = "All supported formats|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk|Any file|*.*",
+            ValidateNames = true,
+        };
+
+        static SaveFileDialog saveFile = new SaveFileDialog() {
+            AddExtension = true,
+            CheckPathExists = true,
+            DefaultExt = ".obj",
+            Filter = "Wavefront .OBJ|*.obj",
+            OverwritePrompt = true,
+            RestoreDirectory = true,
+            ValidateNames = true
+        };
+
+        public void SaveOBJFile()
+        {
+            DialogResult result = saveFile.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                int modelIdx = PackList.SelectedIndex;
+                int partIdx = MeshList.SelectedIndex;
+
+                OBJFile.Export(saveFile.FileName, ModelFile.Models[modelIdx], (long)MeshList.Items[partIdx]);
+            }
+        }
+
+        /// <summary>Opens a dialog to select a chunk file</summary>
+        public void OpenFile()
+        {
+            DialogResult result = openFile.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                IModelFile modelFile = null;
+
+                Cursor = Cursors.WaitCursor;
+
+                switch (Path.GetExtension(openFile.FileName))
+                {
+                case ".vvs":
+                    modelFile = new VVSFile(openFile.FileName);
+                    break;
+                case ".vvv":
+                    modelFile = new VVVFile(openFile.FileName);
+                    break;
+                default:
+                    modelFile = new ModelFile(openFile.FileName);
+                    break;
+                }
+
+                if (modelFile.Models != null)
+                {
+                    ModelFile = modelFile;
+
+                    Text = String.Format("{0} - {1}", title, openFile.FileName);
+
+                    if (ModelFile.Models.Count > 0)
+                        LoadModels();
+                }
+                else
+                {
+                    MessageBox.Show("No models found!", "Antilli", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    ((ModelFile)modelFile).Dispose();
+                }
+
+                DSC.Log("Memory usage: {0:N}MB", GC.GetTotalMemory(true) / 1048576.0);
+                
+                Cursor = Cursors.Default;
+            }
         }
 
         /// <summary>Not implemented!</summary>

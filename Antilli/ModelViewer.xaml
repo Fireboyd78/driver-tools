@@ -58,9 +58,9 @@
       <ModelVisual3D.Content>
         <Model3DGroup>
           <AmbientLight x:Name="AmbientLight" Color="#404040"/>
-          <DirectionalLight Color="#707070" Direction="-1.5,0.5,0.8"/>
-          <DirectionalLight Color="#707070" Direction="1.5,0.5,0.8"/>
-          <DirectionalLight Color="#707070" Direction="0,-0.5,1"/>
+          <DirectionalLight Color="#707070" Direction="-1.5,0.5,-0.8"/>
+          <DirectionalLight Color="#707070" Direction="1.5,0.5,-0.8"/>
+          <DirectionalLight Color="#707070" Direction="0,-0.5,-1"/>
           <!--<DirectionalLight x:Name="MainLight" Color="White"/>-->
         </Model3DGroup>
       </ModelVisual3D.Content>
