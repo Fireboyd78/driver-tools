@@ -35,6 +35,18 @@ namespace Antilli
 
             _title = Text;
 
+            Load += (o, e) => {
+                string dir = DSC.Configuration.GetDirectory("DRIV3R");
+
+                if (!Directory.Exists(dir))
+                {
+                    MessageBoxEx.Show(String.Format("\"{0}\" does not exist, please correct this in DSCript.ini and try again.", dir),
+                        MessageBoxExFlags.ErrorBoxOK);
+
+                    Application.Exit();
+                }
+            };
+
             AntilliMain();
         }
 
@@ -78,8 +90,6 @@ namespace Antilli
 
                     export.ShowDialog();
                 };
-
-                Console.WriteLine(Settings.Configuration["Models"]);
             }
             catch (Exception e)
             {
