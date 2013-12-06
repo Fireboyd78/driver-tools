@@ -49,8 +49,7 @@
   <ItemGroup>
     <Reference Include="FreeImageNET, Version=3.15.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\FreeImage\Wrapper\FreeImage.NET\cs\Bin\FreeImageNET.dll</HintPath>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
+      <HintPath>..\Libraries\FreeImage.NET\FreeImageNET.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
@@ -71,7 +70,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="IO\Spooling.old.cs" />
+    <None Include="IO\Blocks\BlockData.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Extensions\System\IO\BinaryReaderExtensions.cs" />
     <Compile Include="Chunks\Block.cs" />
@@ -89,8 +88,9 @@
     <Compile Include="Extensions\System\Text\StringBuilderExtensions.cs" />
     <Compile Include="Extensions\System\Windows\Forms\MessageBoxEx.cs" />
     <Compile Include="INIFile.cs" />
-    <Compile Include="IO\Blocks\Block.cs" />
-    <None Include="IO\Blocks\BlockData.cs" />
+    <Compile Include="IO\Blocks\Block.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="IO\SubChunkBlockExtensions.cs" />
     <Compile Include="IO\ChunkBlock.cs" />
     <Compile Include="Chunks\ChunkFile.cs" />
@@ -100,7 +100,6 @@
     <Compile Include="IO\SubChunkBlock.cs" />
     <Compile Include="Log\Log.cs" />
     <Compile Include="Chunks\Chunk.cs" />
-    <Compile Include="Methods\Nodes.cs" />
     <Compile Include="Object\NodeTag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

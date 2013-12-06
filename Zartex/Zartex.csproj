@@ -125,7 +125,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MissionObjects\ExportedMissionObjects.cs" />
+    <Compile Include="MissionObjects\ContainerBlock.cs" />
     <Compile Include="Vector.cs" />
     <Compile Include="PropertySorter.cs" />
     <Compile Include="TypeConverters.cs" />
