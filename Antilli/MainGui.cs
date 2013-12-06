@@ -115,19 +115,6 @@ namespace Antilli
             ValidateNames = true
         };
 
-        //public void SaveOBJFile()
-        //{
-        //    DialogResult result = saveFile.ShowDialog();
-        //
-        //    if (result == DialogResult.OK)
-        //    {
-        //        int modelIdx = PackList.SelectedIndex;
-        //        int partIdx = MeshList.SelectedIndex;
-        //
-        //        OBJFile.Export(saveFile.FileName, ModelFile.Models[modelIdx], (long)MeshList.Items[partIdx]);
-        //    }
-        //}
-
         /// <summary>Opens a dialog to select a chunk file</summary>
         public void OpenFile()
         {
