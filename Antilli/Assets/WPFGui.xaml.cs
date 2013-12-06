@@ -18,7 +18,6 @@ using HelixToolkit.Wpf;
 
 using DSCript;
 using DSCript.IO;
-using DSCript.Methods;
 
 using Antilli.IO;
 using Antilli.Models;
