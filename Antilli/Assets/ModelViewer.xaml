@@ -5,8 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:h="http://helixtoolkit.codeplex.com"
              mc:Ignorable="d"
-             d:DesignHeight="400"
-             d:DesignWidth="500">
+             d:DesignHeight="400" Width="600">
 
   <UserControl.Resources>
     <ResourceDictionary>
@@ -32,33 +31,27 @@
   </UserControl.Style>
 
   <Grid>
-    <h:HelixViewport3D Name="VP3D"
-            FontSize="12"
-            CameraRotationMode="Turntable"
-            CameraInertiaFactor="0.93"
-            DebugInfo=""
-            ForceCursor="True"
-            Grid.ColumnSpan="1"
-            Grid.RowSpan="1"
-            InfiniteSpin="False"
-            InfoBackground="#7BFFF6C5"
-            InfoForeground="Black"
-            IsHeadLightEnabled="False"
-            IsManipulationEnabled="False"
-            RotateAroundMouseDownPoint="False"
-            ShowCoordinateSystem="True"
-            ShowViewCube="True"
-            Status=""
-            SubTitle=""
-            Title=""
-            TextBrush="#FFFFEC00"
-            TitleSize="12"
-            ViewCubeBackText="L"
-            ViewCubeFrontText="R"
-            ViewCubeLeftText="B"
-            ViewCubeRightText="F"
-            ViewCubeVerticalPosition="Top"
-            ViewCubeHorizontalPosition="Left" CoordinateSystemLabelForeground="#FFC8C8C8" MinimumFieldOfView="45" ShowCameraTarget="False" CoordinateSystemHorizontalPosition="Right" CoordinateSystemHeight="35" ViewCubeHeight="60" CoordinateSystemWidth="90" Margin="0,0,135,0">
+    <h:HelixViewport3D Name="VP3D" ForceCursor="True" Grid.ColumnSpan="1" Grid.RowSpan="1" Margin="0,0,135,0" FontSize="12"
+                       CameraRotationMode="Turntable"
+                       CameraInertiaFactor="0.93"
+                       CoordinateSystemHorizontalPosition="Right"
+                       CoordinateSystemLabelForeground="#FFC8C8C8"
+                       CoordinateSystemHeight="35"
+                       CoordinateSystemWidth="90"
+                       InfoBackground="#7BFFF6C5"
+                       InfoForeground="Black"
+                       IsManipulationEnabled="False"
+                       RotateAroundMouseDownPoint="False"
+                       ShowCameraTarget="False"
+                       ShowCoordinateSystem="True"
+                       TextBrush="#FFFFEC00"
+                       ViewCubeBackText="L"
+                       ViewCubeFrontText="R"
+                       ViewCubeLeftText="B"
+                       ViewCubeRightText="F"
+                       ViewCubeVerticalPosition="Top"
+                       ViewCubeHorizontalPosition="Left"
+                       ViewCubeHeight="60">
 
       <h:HelixViewport3D.Camera>
         <PerspectiveCamera x:Name="ViewCam"/>

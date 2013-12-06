@@ -105,8 +105,8 @@ namespace Antilli.Models
 
                 uint unkMagic = f.ReadUInt16();
 
-                if (unkMagic != (uint)Type)
-                    DSC.Log("Unknown magic check failed, errors may occur.");
+                if (unkMagic != (uint)PackageType)
+                    DSC.Log("Unknown magic check failed - wanted {0}, got {1}", (uint)PackageType, unkMagic);
 
                 // Skip junk
                 f.Seek(0x28, SeekOrigin.Begin);

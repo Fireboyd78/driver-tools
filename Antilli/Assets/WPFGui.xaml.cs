@@ -96,6 +96,8 @@ namespace Antilli
             if (ModelPackages == null || PackageIndex == -1)
                 return;
 
+            nullModels = 0;
+
             MeshList.Items.Clear();
 
             ModelPackage modelPackage = ModelPackages[PackageIndex];
@@ -107,7 +109,12 @@ namespace Antilli
                     long uid = group.UID;
 
                     if (!MeshList.Items.Contains(uid))
-                        MeshList.Items.Add(uid);
+                    {
+                        if (group.Parts[0].Group != null)
+                            MeshList.Items.Add(uid);
+                        else
+                            nullModels += 1;
+                    }
                 }
             }
             else
@@ -118,10 +125,13 @@ namespace Antilli
             MeshList.SelectedIndex = 0;
         }
 
-        public void LoadMeshes()
+        public void LoadMeshes(bool zoomExtents = true)
         {
             if (ModelPackages == null || SelectedMeshUID == -1)
                 return;
+
+            foreach (ToggleButton lodType in LODTypes.Keys)
+                lodType.IsEnabled = false;
 
             Model3DGroup models = new Model3DGroup();
 
@@ -130,12 +140,25 @@ namespace Antilli
                 if (SelectedMeshUID != part.UID)
                     continue;
 
-                Model3DGroup partModels = new Model3DGroup();
+                for (int p = 0; p < part.Parts.Count; p++)
+                {
+                    PartDefinition partDef = part.Parts[p];
 
-                MeshGroup group = part.Parts[int.Parse(CurrentLOD.Tag.ToString())].Group;
+                    if (partDef.Group != null)
+                        foreach (KeyValuePair<ToggleButton, int> lod in LODTypes)
+                            if (lod.Value == p)
+                            {
+                                lod.Key.IsEnabled = true;
+                                break;
+                            }
+                }
+
+                MeshGroup group = part.Parts[LODTypes[CurrentLOD]].Group;
 
                 if (group == null)
                     continue;
+
+                Model3DGroup partModels = new Model3DGroup();
 
                 foreach (IndexedPrimitive prim in group.Meshes)
                 {
@@ -164,7 +187,7 @@ namespace Antilli
         public void ToggleDamage()
         {
             DriverModel3D.UseBlendWeights = (Viewer.ShowDamage.IsChecked ?? false);
-            LoadMeshes();
+            LoadMeshes(false);
         }
 
         public ToggleButton _currentLOD;
@@ -183,15 +206,30 @@ namespace Antilli
             }
         }
 
+        static Dictionary<ToggleButton, int> LODTypes = new Dictionary<ToggleButton, int>();
+        static int nullModels = 0;
+
         public WPFGui()
         {
             InitializeComponent();
 
-            PackList.SelectionChanged += (o, e) => PopulateMeshList();
+            PackList.SelectionChanged += (o, e) => {
+                PopulateMeshList();
+
+                if (nullModels > 0)
+                    DSC.Log("{0} null models were skipped.", nullModels);
+            };
+
             MeshList.SelectionChanged += (o, e) => LoadMeshes();
 
             Viewer.ShowDamage.Checked += (o, e) => ToggleDamage();
             Viewer.ShowDamage.Unchecked += (o, e) => ToggleDamage();
+
+            LODTypes.Add(LODHigh, 0);
+            LODTypes.Add(LODMedium, 1);
+            LODTypes.Add(LODLow, 2);
+            LODTypes.Add(LODVeryLow, 4);
+            LODTypes.Add(LODShadow, 5);
 
             LODHigh.Checked    += (o, e) => { CurrentLOD = LODHigh; };
             LODMedium.Checked  += (o, e) => { CurrentLOD = LODMedium; };

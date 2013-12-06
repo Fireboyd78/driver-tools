@@ -36,9 +36,6 @@ namespace Antilli
         //Vector3D dLightDir      = new Vector3D(-1, 2, 6);
         //Color dLightColor       = Color.FromRgb(230, 230, 230);
 
-        double dNearPDist       = 0.125;
-        double dFarPDist        = 300000;
-
         Vector3D zUp           = new Vector3D(0, 0, 1);
         Vector3D zDown         = new Vector3D(0, 0, -1);
 

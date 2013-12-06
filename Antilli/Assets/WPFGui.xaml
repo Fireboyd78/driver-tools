@@ -31,11 +31,11 @@
     <Label Content="Rendering Options" HorizontalAlignment="Left" Margin="10,0,0,58" Style="{DynamicResource LabelListBoxHeader}" Width="245" VerticalAlignment="Bottom"/>
     <Border Background="{StaticResource atDark_bgLight}" BorderThickness="1" Margin="10,0,0,10" Height="49" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="245" />
     <Label Content="Level of Detail:" Margin="16,0,0,32" Foreground="#FFC8C8C8" Height="23" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="89"/>
-    <ToggleButton x:Name="LODHigh" Content="H" Width="20" Height="20" Margin="110,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="High" Tag="0"/>
-    <ToggleButton x:Name="LODMedium" Content="M" Width="20" Height="20" Margin="138,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Medium" Tag="1"/>
-    <ToggleButton x:Name="LODLow" Content="L" Width="20" Height="20" Margin="166,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Low" Tag="2"/>
-    <ToggleButton x:Name="LODVeryLow" Content="VL" Width="20" Height="20" Margin="194,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Very Low" Tag="4"/>
-    <ToggleButton x:Name="LODShadow" Content="S" Width="20" Height="20" Margin="222,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Shadow" Tag="5"/>
+    <ToggleButton x:Name="LODHigh" Content="H" Width="20" Height="20" Margin="110,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="High"/>
+    <ToggleButton x:Name="LODMedium" Content="M" Width="20" Height="20" Margin="138,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Medium"/>
+    <ToggleButton x:Name="LODLow" Content="L" Width="20" Height="20" Margin="166,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Low"/>
+    <ToggleButton x:Name="LODVeryLow" Content="VL" Width="20" Height="20" Margin="194,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Very Low"/>
+    <ToggleButton x:Name="LODShadow" Content="S" Width="20" Height="20" Margin="222,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Shadow"/>
 
   </Grid>
 </UserControl>

@@ -77,6 +77,11 @@
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
               <Setter Property="Background" Value="#28FFFFFF"/>
+              <Setter Property="BorderBrush" Value="{StaticResource atDark_fg}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Foreground" Value="#16FFFFFF"/>
+              <Setter Property="BorderBrush" Value="#16FFFFFF"/>
             </Trigger>
             <MultiTrigger>
               <MultiTrigger.Conditions>

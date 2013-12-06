@@ -45,6 +45,14 @@ namespace Antilli
 
                     Application.Exit();
                 }
+
+                string models = Settings.Configuration.GetDirectory("Models");
+                string textures = Settings.Configuration.GetDirectory("Textures");
+
+                if (!Directory.Exists(models))
+                    Directory.CreateDirectory(models);
+                if (!Directory.Exists(textures))
+                    Directory.CreateDirectory(textures);
             };
 
             AntilliMain();
