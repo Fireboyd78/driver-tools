@@ -45,6 +45,35 @@
             Commits all changes made to the buffer and applies them to the Block's data.
             </summary>
         </member>
+        <member name="P:DSCript.BlockEditor.BlockData">
+            <summary>
+            The block data currently being edited by this <see cref="T:DSCript.BlockEditor"/>
+            </summary>
+        </member>
+        <member name="P:DSCript.BlockEditor.Stream">
+            <summary>
+            The memory stream representing the buffer.
+            </summary>
+        </member>
+        <member name="P:DSCript.BlockEditor.Reader">
+            <summary>
+            A <see cref="T:System.IO.BinaryReader"/> based off of the memory stream representing the buffer.
+            </summary>
+        </member>
+        <member name="P:DSCript.BlockEditor.Writer">
+            <summary>
+            A <see cref="T:System.IO.BinaryWriter"/> based off of the memory stream representing the buffer.
+            </summary>
+        </member>
+        <member name="M:System.Drawing.BitmapExtensions.ToBitmapSource(System.Drawing.Bitmap)">
+            <summary>
+            Converts a <see cref="T:System.Drawing.Bitmap"/> into a WPF <see cref="T:System.Windows.Media.Imaging.BitmapSource"/>.
+            </summary>
+            <remarks>Uses GDI to do the conversion. Hence the call to the marshalled DeleteObject.
+            </remarks>
+            <param name="source">The source bitmap.</param>
+            <returns>A BitmapSource</returns>
+        </member>
         <member name="M:System.StringColumn.SplitColumn(System.String,System.Int32)">
             <summary>
             Formats a delimited string using the "|" character into a split column with the specified distance.
@@ -65,6 +94,39 @@
             Appends a definitive amount of new lines to the end of the current <see cref="T:System.Text.StringBuilder"/> object.
             </summary>
             <param name="count">Number of lines to be inserted</param>
+        </member>
+        <member name="T:System.IO.INIFile">
+            <summary>
+            Represents a class used to read/write key values to/from INI files.
+            </summary>
+        </member>
+        <member name="M:System.IO.INIFile.ReadValue(System.String,System.String)">
+            <summary>
+            Reads a key value from the specified section.
+            </summary>
+            <param name="section">The section to retrieve the key value from.</param>
+            <param name="key">The key value to retrieve.</param>
+            <returns>The key value from the specified section, otherwise returns a blank string.</returns>
+        </member>
+        <member name="M:System.IO.INIFile.WriteValue(System.String,System.String,System.String)">
+            <summary>
+            Writes a key value to the specified section.
+            </summary>
+            <param name="section">The section to write the key value to.</param>
+            <param name="key">The key to write to.</param>
+            <param name="value">The value to write.</param>
+            <returns>True if successful, False if the operation failed.</returns>
+        </member>
+        <member name="M:System.IO.INIFile.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.IO.INIFile"/> class, used to read and write key values to/from INI files.
+            </summary>
+            <param name="path">The path to the INI file.</param>
+        </member>
+        <member name="P:System.IO.INIFile.Path">
+            <summary>
+            Gets or sets the path to the <see cref="T:System.IO.INIFile"/>.
+            </summary>
         </member>
         <member name="M:DSCript.ChunkFile.GetBlockData(DSCript.ChunkEntry)">
             <summary>
@@ -863,6 +925,21 @@
             <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
             <param name="align">How much padding should be applied</param>
             <returns>The byte-aligned offset</returns>
+        </member>
+        <member name="F:DSCript.Chunk.BytePaddingType.PaddingType1">
+            <summary>
+            Specifies the padding type used in DRIV3R (0xDECO15A1)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.BytePaddingType.PaddingType2">
+            <summary>
+            Specifies the padding type used in Driver: Parallel Lines and Driver: San Francisco (0x3E)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.BytePaddingType.Custom">
+            <summary>
+            Specifies a custom padding type as defined in <see cref="P:DSCript.Chunk.PaddingBytes"/>.
+            </summary>
         </member>
         <member name="T:DSCript.Chunk.ByteAlignment">
             <summary>

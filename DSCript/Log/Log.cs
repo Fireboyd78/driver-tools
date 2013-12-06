@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DSCript
 {
-    public static class DSC
+    public static partial class DSC
     {
         public static void Log(object str)
         {

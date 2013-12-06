@@ -32,7 +32,7 @@ namespace Antilli.IO
             if (models.GetChunkType() != ChunkType.ModelPackagePC)
                 return;
 
-            if (root.Entries.Count > 2)
+            if (root.Entries.Count >= 2)
             {
                 for (int i = 0; i < root.Entries.Count - 1; i++)
                 {
@@ -44,8 +44,8 @@ namespace Antilli.IO
                 throw new Exception("VVV file isn't well-formed!");
             
             // VVV files only have one model package defined
-            Models = new List<ModelsPackage>(1) {
-                new ModelsPackage(ChunkFile.GetBlockData(models))
+            Models = new List<ModelPackage>(1) {
+                new ModelPackagePC(ChunkFile.GetBlockData(models))
             };
             
             DSC.Log("VVV file loaded successfully!", Models.Count);

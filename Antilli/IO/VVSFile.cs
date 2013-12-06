@@ -23,10 +23,10 @@ namespace Antilli.IO
         {
             ChunkBlock root = ChunkFile.Chunks[0];
 
-            Models = new List<ModelsPackage>(root.Entries.Count / 2);
+            Models = new List<ModelPackage>(root.Entries.Count / 2);
 
             for (int i = root.Entries.Count / 2; i < root.Entries.Count; i++)
-                Models.Add(new ModelsPackage(ChunkFile.GetBlockData(root.Entries[i])));
+                Models.Add(new ModelPackagePC(ChunkFile.GetBlockData(root.Entries[i])));
 
             DSC.Log("Loaded {0} VVS models!", Models.Count);
         }

@@ -1,0 +1,41 @@
+﻿<UserControl x:Class="Antilli.WPFGui"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:at="clr-namespace:Antilli"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="875">
+
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Resources.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Grid x:Name="GUI">
+    <Grid.Background>
+      <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#FF232323" Offset="0.75" />
+        <GradientStop Color="#FF101010" Offset="1" />
+      </LinearGradientBrush>
+    </Grid.Background>
+
+    <at:ModelViewer x:Name="Viewer" Margin="260,10,10,10"/>
+    <ListBox x:Name="PackList" HorizontalAlignment="Left" Margin="10,35,0,90" Width="120"/>
+    <ListBox x:Name="MeshList" HorizontalAlignment="Left" Margin="135,35,0,90" Width="120"/>
+    <Label Content="Model Packages" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120" Style="{StaticResource LabelListBoxHeader}"/>
+    <Label Content="Model Groups" HorizontalAlignment="Left" Margin="135,10,0,0" VerticalAlignment="Top" Width="120" Style="{StaticResource LabelListBoxHeader}"/>
+    <Label Content="Rendering Options" HorizontalAlignment="Left" Margin="10,0,0,58" Style="{DynamicResource LabelListBoxHeader}" Width="245" VerticalAlignment="Bottom"/>
+    <Border Background="{StaticResource atDark_bgLight}" BorderThickness="1" Margin="10,0,0,10" Height="49" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="245" />
+    <Label Content="Level of Detail:" Margin="16,0,0,32" Foreground="#FFC8C8C8" Height="23" VerticalAlignment="Bottom" HorizontalAlignment="Left" Width="89"/>
+    <ToggleButton x:Name="LODHigh" Content="H" Width="20" Height="20" Margin="110,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="High" Tag="0"/>
+    <ToggleButton x:Name="LODMedium" Content="M" Width="20" Height="20" Margin="138,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Medium" Tag="1"/>
+    <ToggleButton x:Name="LODLow" Content="L" Width="20" Height="20" Margin="166,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Low" Tag="2"/>
+    <ToggleButton x:Name="LODVeryLow" Content="VL" Width="20" Height="20" Margin="194,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Very Low" Tag="4"/>
+    <ToggleButton x:Name="LODShadow" Content="S" Width="20" Height="20" Margin="222,0,0,33" HorizontalAlignment="Left" VerticalAlignment="Bottom" ToolTip="Shadow" Tag="5"/>
+
+  </Grid>
+</UserControl>

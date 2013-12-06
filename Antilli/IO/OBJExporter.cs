@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
@@ -18,6 +19,12 @@ using Antilli.Models;
 
 namespace Antilli.IO
 {
+    public enum ExportResult
+    {
+        Success = 0,
+        Failed = 1
+    }
+
     /*-------------------------------------------------------------------
      * 
      * Some code borrowed from here:
@@ -27,25 +34,56 @@ namespace Antilli.IO
     public static class OBJFile
     {
         static Dictionary<int, string> LODTypes = new Dictionary<int, string>(8) {
-            { 0, "HIGH"      },
-            { 1, "MEDIUM"    },
-            { 2, "LOW"       },
-            { 3, "VERYLOW"   },
-            { 4, "HYPERLOW"  },
+            { 0, "H"      },
+            { 1, "M"    },
+            { 2, "L"       },
+            { 3, "UNKNOWN1"   },
+            { 4, "VL"  },
             { 5, "SHADOW"    },
-            { 6, "UNKNOWN"   },
+            { 6, "UNKNOWN2"   },
             {-1, "UNDEFINED" },
         };
 
-        public static void Export(string exportFile, ModelsPackage modelPackage, long uid)
+        static string GenTitle()
         {
+            return String.Format(
+@"# Driver Model .OBJ Exporter v0.6489b by CarLuver69
+# Exported: {0}" + "\r\n", DateTime.Now);
+        }
+
+        public static ExportResult Export(string path, string filename, ModelPackage modelPackage, long uid, bool exportMaterials)
+        {
+            if (modelPackage.Meshes.Count < 1)
+            {
+                MessageBoxEx.Show("There are no models to export!", "OBJ Exporter", MessageBoxExFlags.ErrorBoxOK);
+                return ExportResult.Failed;
+            }
+
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            StringBuilder sbMtl = new StringBuilder();
+
+            if (exportMaterials)
+                sbMtl.AppendLine(GenTitle());
+            else
+                sbMtl = null;
+
+            if (exportMaterials)
+                sbMtl.AppendLine(GenTitle());
+            else
+                sbMtl = null;
+
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("# Driver Model .OBJ Exporter v0.3516b by CarLuver69");
-            sb.AppendFormat("# Exported: {0}", DateTime.Now).AppendLines(2);
+            sb.AppendLine(GenTitle());
+
+            sb.AppendFormat("mtllib {0}.mtl", filename).AppendLines(2);
 
             int startIndex = 0;
             int modelIdx = 0;
+
+            List<PCMPMaterial> materials = new List<PCMPMaterial>();
 
             foreach (PartsGroup part in modelPackage.Parts)
             {
@@ -69,6 +107,8 @@ namespace Antilli.IO
 
                     Int32Collection indices = new Int32Collection();
 
+                    StringBuilder faces = new StringBuilder();
+
                     int tIdx = 0;
 
                     for (int m = 0; m < group.Meshes.Count; m++)
@@ -76,6 +116,8 @@ namespace Antilli.IO
                         IndexedPrimitive prim = group.Meshes[m];
 
                         DriverModel3D model = new DriverModel3D(modelPackage, prim);
+
+                        int mtlIdx = prim.MaterialId + 1;
 
                         int vCount = model.Positions.Count;
                         int tCount = model.TriangleIndices.Count;
@@ -87,11 +129,66 @@ namespace Antilli.IO
                             coords.Add(model.TextureCoordinates[v]);
                         }
 
+                        //for (int t = 0; t < tCount; t += 3)
+                        //{
+                        //    indices.Add(model.TriangleIndices[t] + tIdx);
+                        //    indices.Add(model.TriangleIndices[t + 1] + tIdx);
+                        //    indices.Add(model.TriangleIndices[t + 2] + tIdx);
+                        //}
+
+                        bool isSharedTexture = (prim.TextureFlag == ((uint)modelPackage.PackageType) || prim.TextureFlag == 0xFFFD || prim.TextureFlag == 0) ? false : true;
+
+                        string mtlName = String.Format("{0}_{1}",
+                                (isSharedTexture)
+                                    ? "shared_mat"
+                                    : "mat", mtlIdx);
+
+                        PCMPMaterial material = (!isSharedTexture)
+                            ? modelPackage.MaterialData.Materials[prim.MaterialId]
+                            : ModelPackage.GlobalTextures[prim.MaterialId];
+
+                        if (exportMaterials && !materials.Contains(material))
+                        {
+                            string ddsName = (isSharedTexture)
+                                    ? String.Format("shared_{0}", mtlIdx)
+                                    : String.Format("{0}_{1}", uid, mtlIdx);
+
+                            sbMtl.AppendFormat2(
+@"newmtl {0}
+    Ns 10.0000
+    Ni 1.5000
+    d 1.0000
+    Tr 0.0000
+    Tf 1.0000 1.0000 1.0000
+    illum 2
+    Ka 0.0000 0.0000 0.0000
+    Kd 0.0000 0.0000 0.0000
+    Ks 0.0000 0.0000 0.0000
+    Ke 0.0000 0.0000 0.0000
+    map_Ka {1}_1_1.dds
+    map_Kd {1}_1_1.dds", mtlName, ddsName).AppendLines(2);
+
+                            for (int s = 0; s < material.SubMaterials.Count; s++)
+                            {
+                                int texIdx = 1;
+
+                                DSC.Log("material {0} - submaterial {1} - has {2} textures", mtlIdx, s + 1, material.SubMaterials.Count);
+
+                                foreach (PCMPTextureInfo texture in material.SubMaterials[s].Textures)
+                                    texture.ExportFile(String.Format(@"{0}\{1}_{2}_{3}.dds", path, ddsName, s + 1, texIdx++));
+                            }
+
+                            materials.Add(material);
+                        }
+
+                        faces.AppendFormat("usemtl {0}", mtlName).AppendLine();
+
                         for (int t = 0; t < tCount; t += 3)
                         {
-                            indices.Add(model.TriangleIndices[t] + tIdx);
-                            indices.Add(model.TriangleIndices[t + 1] + tIdx);
-                            indices.Add(model.TriangleIndices[t + 2] + tIdx);
+                            faces.AppendFormat("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
+                                ((model.TriangleIndices[t] + tIdx + 1) + startIndex),
+                                ((model.TriangleIndices[t + 1] + tIdx + 1) + startIndex),
+                                ((model.TriangleIndices[t + 2] + tIdx + 1) + startIndex)).AppendLine();
                         }
 
                         tIdx += vCount;
@@ -115,16 +212,18 @@ namespace Antilli.IO
 
                     sb.AppendLine();
 
-                    sb.AppendFormat2("g Mesh{0}_{1}_{2}", modelIdx, g + 1, lodType).AppendLine();
+                    sb.AppendFormat2("g {0}_{1:D2}_{2}", uid, modelIdx, lodType).AppendLine();
                     sb.AppendLine("s 1");
 
-                    for (int t = 0; t < nTris; t += 3)
-                    {
-                        sb.AppendFormat2("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                            indices[t] + 1 + startIndex,
-                            indices[t + 1] + 1 + startIndex,
-                            indices[t + 2] + 1 + startIndex).AppendLine();
-                    }
+                    sb.Append(faces.ToString());
+
+                    //for (int t = 0; t < nTris; t += 3)
+                    //{
+                    //    sb.AppendFormat2("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
+                    //        indices[t] + 1 + startIndex,
+                    //        indices[t + 1] + 1 + startIndex,
+                    //        indices[t + 2] + 1 + startIndex).AppendLine();
+                    //}
 
                     sb.AppendLine();
 
@@ -180,10 +279,20 @@ namespace Antilli.IO
                 }
             }
 
-            using (StreamWriter f = new StreamWriter(exportFile))
+            string filePath = String.Format(@"{0}\{1}.obj", path, filename);
+
+            if (sbMtl != null)
+            {
+                string mtlFilePath = String.Format(@"{0}\{1}.mtl", path, filename);
+
+                using (StreamWriter f = new StreamWriter(mtlFilePath, false, Encoding.Default, sbMtl.Length))
+                    f.Write(sbMtl.ToString());
+            }
+
+            using (StreamWriter f = new StreamWriter(filePath, false, Encoding.Default, sb.Length))
                 f.Write(sb.ToString());
 
-            MessageBox.Show(String.Format("Successfully exported {0}!", exportFile), "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+            return ExportResult.Success;
         }
     }
 }

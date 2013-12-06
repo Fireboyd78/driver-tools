@@ -24,6 +24,7 @@
     <DocumentationFile>doc\dscript.xml</DocumentationFile>
     <FileAlignment>512</FileAlignment>
     <NoWarn>1591</NoWarn>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -44,6 +45,11 @@
     <DelaySign>false</DelaySign>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FreeImageNET, Version=3.15.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\FreeImage\Wrapper\FreeImage.NET\cs\Bin\FreeImageNET.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -51,6 +57,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
@@ -63,7 +70,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="IO\Spooling.old.cs" />
-    <Compile Include="BinaryReaderExtensions.cs" />
+    <Compile Include="Config.cs" />
+    <Compile Include="Extensions\System\IO\BinaryReaderExtensions.cs" />
     <Compile Include="Chunks\Block.cs" />
     <Compile Include="Chunks\BlockData.cs" />
     <Compile Include="Chunks\BlockDataEventArgs.cs" />
@@ -72,9 +80,13 @@
     <Compile Include="Chunks\ChunkEntry.cs" />
     <Compile Include="Chunks\BlockEditor.cs" />
     <Compile Include="Chunks\MagicConverter.cs" />
+    <Compile Include="Extensions\System\NativeMethods.cs" />
+    <Compile Include="Extensions\System\Drawing\BitmapExtensions.cs" />
     <Compile Include="Extensions\System\IO\StreamExtensions.cs" />
     <Compile Include="Extensions\System\StringExtensions.cs" />
     <Compile Include="Extensions\System\Text\StringBuilderExtensions.cs" />
+    <Compile Include="Extensions\System\Windows\Forms\MessageBoxEx.cs" />
+    <Compile Include="INIFile.cs" />
     <Compile Include="IO\Blocks\Block.cs" />
     <None Include="IO\Blocks\BlockData.cs" />
     <Compile Include="IO\SubChunkBlockExtensions.cs" />
@@ -90,6 +102,12 @@
     <Compile Include="Object\NodeTag.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="DSCript.ini">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

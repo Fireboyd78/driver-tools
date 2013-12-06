@@ -29,7 +29,7 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -40,6 +40,7 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <NoWarn>1591</NoWarn>
     <DocumentationFile>doc\antilli.xml</DocumentationFile>
+    <FileAlignment>4096</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -53,7 +54,8 @@
   <ItemGroup>
     <Reference Include="FreeImageNET, Version=3.15.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Libraries\FreeImage.NET\FreeImageNET.dll</HintPath>
+      <HintPath>..\..\FreeImage\Wrapper\FreeImage.NET\cs\Bin\FreeImageNET.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
     <Reference Include="HelixToolkit.Wpf, Version=2013.1.31.1, Culture=neutral, PublicKeyToken=52aa3500039caf0d, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -87,29 +89,39 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\WPFExport.xaml.cs">
+      <DependentUpon>WPFExport.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Cache.cs" />
+    <Compile Include="Config.cs" />
+    <Compile Include="ExportOBJ.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ExportOBJ.Designer.cs">
+      <DependentUpon>ExportOBJ.cs</DependentUpon>
+    </Compile>
     <Compile Include="IO\ModelFile.cs" />
+    <Compile Include="IO\VGTFile.cs" />
     <Compile Include="IO\VVSFile.cs" />
     <Compile Include="IO\MDPCTypes.cs" />
     <Compile Include="IO\OBJExporter.cs" />
     <Compile Include="IO\VVVFile.cs" />
+    <Compile Include="MeshItem.cs" />
+    <Compile Include="Models\D3DPRIMITIVETYPE.cs" />
     <Compile Include="Models\IndexData.cs" />
     <Compile Include="Models\MDPCTypes.cs" />
     <Compile Include="Models\Mesh.cs" />
     <Compile Include="Models\MeshGroup.cs" />
-    <Compile Include="Models\ModelsPackage.cs" />
+    <Compile Include="Models\ModelPackage.cs" />
+    <Compile Include="Models\PartDefinition.cs" />
     <Compile Include="Models\PartsGroup.cs" />
-    <Compile Include="Models\MeshInfo.cs" />
-    <Compile Include="Models\TriangleFace.cs" />
+    <Compile Include="Models\IndexedPrimitive.cs" />
+    <Compile Include="Models\MaterialData.cs" />
     <Compile Include="Models\Vertex.cs" />
     <Compile Include="Models\VertexData.cs" />
-    <Compile Include="ModelViewer.xaml.cs">
+    <Compile Include="Assets\ModelViewer.xaml.cs">
       <DependentUpon>ModelViewer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Models\Vectors.cs" />
-    <None Include="IO\MDPCData.cs" />
-    <None Include="IO\MDXNData.cs" />
-    <None Include="IO\PCMPData.cs" />
-    <Compile Include="IO\ModelPackage.cs" />
     <Compile Include="MainGui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -118,8 +130,19 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Assets\Resources.xaml.cs">
+      <DependentUpon>Resources.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Assets\WPFGui.xaml.cs">
+      <DependentUpon>WPFGui.xaml</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="ExportOBJ.resx">
+      <DependentUpon>ExportOBJ.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainGui.resx">
       <DependentUpon>MainGui.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -173,7 +196,19 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="ModelViewer.xaml">
+    <Page Include="Assets\ModelViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\Resources.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\WPFExport.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\WPFGui.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -29,13 +29,13 @@ namespace Antilli.Models
         Type13 = 0x0D,
         Type14 = 0x0E,
 
-        Type29 = 0x1D,
+        VehicleGlobals = 0x1D,
         Type30 = 0x1E,
         Type35 = 0x23,
 
         Type40 = 0x28,
         Type44 = 0x2C,
-        Type45 = 0x2D,
+        VehiclePackage = 0x2D,
 
         Type52 = 0x34,
         Type53 = 0x35,
@@ -47,7 +47,7 @@ namespace Antilli.Models
         Type61 = 0x3D,
         Type62 = 0x3E,
 
-        Type255 = 0xFF,
+        VehicleStandard = 0xFF,
 
         Unknown
     }

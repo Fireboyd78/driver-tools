@@ -22,7 +22,54 @@ namespace DSCript
         /// </summary>
         public static ByteAlignment FilePadding = ByteAlignment.ByteAlign4096;
 
-        public static byte[] PaddingBytes = { 0xA1, 0x15, 0xC0, 0xDE };
+        public enum BytePaddingType : int
+        {
+            /// <summary>
+            /// Specifies the padding type used in DRIV3R (0xDECO15A1)
+            /// </summary>
+            PaddingType1 = 0,
+
+            /// <summary>
+            /// Specifies the padding type used in Driver: Parallel Lines and Driver: San Francisco (0x3E)
+            /// </summary>
+            PaddingType2 = 1,
+
+            /// <summary>
+            /// Specifies a custom padding type as defined in <see cref="PaddingBytes"/>.
+            /// </summary>
+            Custom = 2
+        }
+
+        public static BytePaddingType PaddingType = BytePaddingType.PaddingType1;
+
+        static byte[] _paddingBytes = { 0x00, 0x00, 0x00, 0x00 };
+        static byte[][] _paddingByteTypes = {
+                                               new byte[4] { 0xA1, 0x15, 0xC0, 0xDE },
+                                               new byte[4] { 0x3E, 0x3E, 0x3E, 0x3E }
+                                           };
+
+        public static byte[] PaddingBytes
+        {
+            get
+            {
+                switch (PaddingType)
+                {
+                case BytePaddingType.PaddingType2:
+                    return _paddingByteTypes[1];
+                case BytePaddingType.Custom:
+                    return _paddingBytes;
+                default:
+                    return _paddingByteTypes[0];
+                }
+            }
+            set
+            {
+                if (value.Length > 4)
+                    throw new IndexOutOfRangeException("Too many bytes specified!");
+
+                _paddingBytes = value;
+            }
+        }
        
         public static bool CheckType(uint magic, ChunkType type)
         {

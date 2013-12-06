@@ -13,14 +13,16 @@ namespace Antilli.Models
 {
     public class MeshGroup
     {
+        public PartDefinition Parent { get; set; }
+
         public uint Offset { get; private set; }
 
         public List<IndexedPrimitive> Meshes { get; set; }
 
-        public MeshGroup(uint meshesOffset, int count)
+        public MeshGroup(uint meshesOffset, int nMeshes)
         {
             Offset = meshesOffset;
-            Meshes = new List<IndexedPrimitive>(count);
+            Meshes = new List<IndexedPrimitive>(nMeshes);
         }
     }
 }

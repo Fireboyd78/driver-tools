@@ -39,11 +39,8 @@
             this.mn_View_Textures = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_Tools = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_Tools_ExportOBJ = new System.Windows.Forms.ToolStripMenuItem();
-            this.PackList = new System.Windows.Forms.ListBox();
-            this.MeshList = new System.Windows.Forms.ListBox();
-            this.ShowDamage = new System.Windows.Forms.CheckBox();
-            this.ViewerElement = new System.Windows.Forms.Integration.ElementHost();
-            this.Viewer = new Antilli.ModelViewer();
+            this.ElementHostGUI = new System.Windows.Forms.Integration.ElementHost();
+            this.WPFGui = new Antilli.WPFGui();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -55,6 +52,7 @@
             this.mn_Tools});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
+            this.menuStrip1.Padding = new System.Windows.Forms.Padding(6, 2, 0, 0);
             this.menuStrip1.Size = new System.Drawing.Size(859, 24);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
@@ -67,7 +65,7 @@
             this.mn_sep,
             this.mn_File_Exit});
             this.mn_File.Name = "mn_File";
-            this.mn_File.Size = new System.Drawing.Size(37, 20);
+            this.mn_File.Size = new System.Drawing.Size(37, 22);
             this.mn_File.Text = "File";
             // 
             // mn_File_Open
@@ -100,7 +98,7 @@
             this.mn_View_Models,
             this.mn_View_Textures});
             this.mn_View.Name = "mn_View";
-            this.mn_View.Size = new System.Drawing.Size(44, 20);
+            this.mn_View.Size = new System.Drawing.Size(44, 22);
             this.mn_View.Text = "View";
             // 
             // mn_View_Models
@@ -120,7 +118,7 @@
             this.mn_Tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mn_Tools_ExportOBJ});
             this.mn_Tools.Name = "mn_Tools";
-            this.mn_Tools.Size = new System.Drawing.Size(48, 20);
+            this.mn_Tools.Size = new System.Drawing.Size(48, 22);
             this.mn_Tools.Text = "Tools";
             // 
             // mn_Tools_ExportOBJ
@@ -129,50 +127,15 @@
             this.mn_Tools_ExportOBJ.Size = new System.Drawing.Size(147, 22);
             this.mn_Tools_ExportOBJ.Text = "Export to .OBJ";
             // 
-            // PackList
+            // ElementHostGUI
             // 
-            this.PackList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.PackList.BackColor = System.Drawing.SystemColors.ScrollBar;
-            this.PackList.Location = new System.Drawing.Point(12, 40);
-            this.PackList.Name = "PackList";
-            this.PackList.Size = new System.Drawing.Size(108, 433);
-            this.PackList.TabIndex = 1;
-            // 
-            // MeshList
-            // 
-            this.MeshList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.MeshList.BackColor = System.Drawing.SystemColors.Menu;
-            this.MeshList.Location = new System.Drawing.Point(126, 40);
-            this.MeshList.Name = "MeshList";
-            this.MeshList.Size = new System.Drawing.Size(167, 433);
-            this.MeshList.TabIndex = 2;
-            // 
-            // ShowDamage
-            // 
-            this.ShowDamage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.ShowDamage.AutoSize = true;
-            this.ShowDamage.Enabled = false;
-            this.ShowDamage.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.75F);
-            this.ShowDamage.ForeColor = System.Drawing.SystemColors.Control;
-            this.ShowDamage.Location = new System.Drawing.Point(307, 479);
-            this.ShowDamage.Name = "ShowDamage";
-            this.ShowDamage.Size = new System.Drawing.Size(106, 19);
-            this.ShowDamage.TabIndex = 4;
-            this.ShowDamage.Text = "Show damage";
-            this.ShowDamage.UseVisualStyleBackColor = false;
-            // 
-            // ViewerElement
-            // 
-            this.ViewerElement.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.ViewerElement.Location = new System.Drawing.Point(307, 40);
-            this.ViewerElement.Name = "ViewerElement";
-            this.ViewerElement.Size = new System.Drawing.Size(540, 433);
-            this.ViewerElement.TabIndex = 3;
-            this.ViewerElement.Child = this.Viewer;
+            this.ElementHostGUI.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ElementHostGUI.Location = new System.Drawing.Point(0, 24);
+            this.ElementHostGUI.Name = "ElementHostGUI";
+            this.ElementHostGUI.Size = new System.Drawing.Size(859, 488);
+            this.ElementHostGUI.TabIndex = 4;
+            this.ElementHostGUI.Text = "elementHost1";
+            this.ElementHostGUI.Child = this.WPFGui;
             // 
             // MainGui
             // 
@@ -180,10 +143,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlDarkDark;
             this.ClientSize = new System.Drawing.Size(859, 512);
-            this.Controls.Add(this.ShowDamage);
-            this.Controls.Add(this.ViewerElement);
-            this.Controls.Add(this.MeshList);
-            this.Controls.Add(this.PackList);
+            this.Controls.Add(this.ElementHostGUI);
             this.Controls.Add(this.menuStrip1);
             this.DoubleBuffered = true;
             this.MainMenuStrip = this.menuStrip1;
@@ -208,13 +168,10 @@
         private System.Windows.Forms.ToolStripMenuItem mn_View;
         private System.Windows.Forms.ToolStripMenuItem mn_View_Models;
         private System.Windows.Forms.ToolStripMenuItem mn_View_Textures;
-        public System.Windows.Forms.ListBox PackList;
-        public System.Windows.Forms.ListBox MeshList;
         private System.Windows.Forms.ToolStripMenuItem mn_Tools;
         private System.Windows.Forms.ToolStripMenuItem mn_Tools_ExportOBJ;
-        private System.Windows.Forms.Integration.ElementHost ViewerElement;
-        private ModelViewer Viewer;
-        private System.Windows.Forms.CheckBox ShowDamage;
+        private System.Windows.Forms.Integration.ElementHost ElementHostGUI;
+        private WPFGui WPFGui;
     }
 }
 

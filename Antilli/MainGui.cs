@@ -20,49 +20,32 @@ using DSCript.Methods;
 using Antilli.IO;
 using Antilli.Models;
 
-// HACK: Fix discrepencies between a Form's 'DialogResult' and the enumeration
 using DialogResult = System.Windows.Forms.DialogResult;
-
+using Visibility = System.Windows.Visibility;
 
 namespace Antilli
 {
     public partial class MainGui : Form
     {
+        string _title = String.Empty;
+
         public MainGui()
         {
             InitializeComponent();
+
+            _title = Text;
+
             AntilliMain();
         }
 
-        bool useBlendWeights = false;
-        string title = "";
-
-        IModelFile _modelFile;
-
-        public IModelFile ModelFile
+        public void ClearSubTitle()
         {
-            get { return _modelFile; }
-            set
-            {
-                if (_modelFile != null)
-                    ((ModelFile)_modelFile).Dispose();
-
-                _modelFile = value;
-            }
+            Text = _title;
         }
 
-        public List<ModelsPackage> ModelPackages
+        public void SetSubTitle(string subTitle)
         {
-            get { return ModelFile.Models; }
-        }
-
-        public ChunkFile ChunkFile { get; set; }
-        public List<ModelPackage> MPackages { get; set; }
-
-        /// <summary>Checks to see if a chunk file is currently opened</summary>
-        public bool FileOpened
-        {
-            get { return ((ModelFile != null) ? true : false); }
+            Text = String.Format("{0} - {1}", _title, subTitle);
         }
 
         private void AntilliMain()
@@ -70,65 +53,33 @@ namespace Antilli
             // Capture exceptions
             try
             {
-                title = Text;
-
                 // Setup events
                 mn_File_Open.Click += (o, e) => OpenFile();
                 mn_File_Save.Click += (o, e) => SaveFile();
                 mn_File_Exit.Click += (o, e) => Application.Exit();
 
-                //mn_View_Models.Click += (o, e) => PopulateLists();
+                mn_Tools_ExportOBJ.Click += (o, e) => {
+                    ModelPackage model = WPFGui.SelectedModelsPackage;
+                    long uid = WPFGui.SelectedMeshUID;
 
-                mn_Tools_ExportOBJ.Click += (o, e) => SaveOBJFile();
-
-                PackList.SelectedIndexChanged += (o, e) => {
-                    if (ModelFile.Models != null)
+                    if (model == null || uid == -1 || (uid != -1 && model.Meshes.Count < 1))
                     {
-                        MeshList.Items.Clear();
-
-                        int idx = PackList.SelectedIndex;
-
-                        if (ModelFile.Models[idx].Parts.Count > 0)
-                        {
-                            for (int i = 0; i < ModelFile.Models[idx].Parts.Count; i++)
-                            {
-                                long uid = ModelFile.Models[idx].Parts[i].UID;
-
-                                if (!MeshList.Items.Contains(uid))
-                                    MeshList.Items.Add(uid);
-                            }
-
-                            MeshList.SelectedIndex = 0;
-                        }
-                        else
-                            MeshList.Items.Add("N/A");
+                        MessageBoxEx.Show("Nothing was selected!", MessageBoxExFlags.WarningBoxOK);
+                        return;
                     }
+
+                    ExportOBJ export = new ExportOBJ(WPFGui.SelectedModelsPackage, WPFGui.SelectedMeshUID);
+
+                    System.Drawing.Point pt = new System.Drawing.Point(
+                        this.Location.X + 25 + (this.Bounds.Width - (export.Bounds.Width)) / 2,
+                        this.Location.Y + (this.Bounds.Height - (export.Bounds.Height)) / 2);
+
+                    export.Location = pt;
+
+                    export.ShowDialog();
                 };
 
-                MeshList.SelectedIndexChanged += (o, e) => DrawMeshes();
-
-                ShowDamage.CheckedChanged += (o, e) => {
-                    useBlendWeights = (ShowDamage.Checked) ? true : false;
-                    DrawMeshes();
-                };
-
-                ShowDamage.EnabledChanged += (o, e) => {
-                    if (!ShowDamage.Enabled && ShowDamage.Checked)
-                        ShowDamage.Checked = false;
-                };
-
-                MeshBuilder box = new MeshBuilder();
-                
-                box.AddBox(new Point3D(0, 0, 0), 1.5, 1.5, 1.5);
-                
-                MeshGeometry3D mesh = box.ToMesh();
-                
-                Material material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(255, 180, 180, 180)));
-                
-                GeometryModel3D model = new GeometryModel3D(mesh, material);
-                
-                Viewer.Models.Content = model;
-
+                Console.WriteLine(Settings.Configuration["Models"]);
             }
             catch (Exception e)
             {
@@ -136,72 +87,7 @@ namespace Antilli
             }
         }
 
-        public void DrawMeshes()
-        {
-            if (ModelFile.Models != null)
-            {
-                int modelIdx = PackList.SelectedIndex;
-                int partIdx = MeshList.SelectedIndex;
-
-                LoadMeshParts(ModelFile.Models[modelIdx], (long)MeshList.Items[partIdx]);
-            }
-        }
-
-        public void LoadModels()
-        {
-            if (PackList.Items.Count > 0)
-                PackList.Items.Clear();
-            if (MeshList.Items.Count > 0)
-                MeshList.Items.Clear();
-
-            for (int i = 0; i < ModelFile.Models.Count; i++)
-                PackList.Items.Add(String.Format("Model Package {0}", i));
-
-            PackList.SelectedIndex = 0;
-        }
-
-        public void LoadMeshParts(ModelsPackage modelPackage)
-        {
-            LoadMeshParts(modelPackage, -1);
-        }
-
-        public void LoadMeshParts(ModelsPackage modelPackage, long uid)
-        {
-            Model3DGroup models = new Model3DGroup();
-
-            Viewer.Models.Content = models;
-
-            foreach (PartsGroup part in modelPackage.Parts)
-            {
-                if (uid != -1 && part.UID != uid)
-                    continue;
-
-                // Load the "HIGH" mesh only until object selecting is implemented
-                for (int g = 0; g < 1 /*part.Parts.Count*/; g++)
-                {
-                    MeshGroup group = part.Parts[g].Group;
-
-                    if (group == null)
-                        continue;
-
-                    foreach (IndexedPrimitive prim in group.Meshes)
-                    {
-                        DriverModel3D model = new DriverModel3D(modelPackage, prim);
-                        models.Children.Add(model.ToGeometry(useBlendWeights));
-                    }
-                }
-            }
-
-            ShowDamage.Enabled = (modelPackage.Vertices.VertexType == FVFType.Vertex15 && modelPackage.Parts.Count > 0) ? true : false;
-
-            if (!ShowDamage.Checked)
-            {
-                Viewer.VP3D.ZoomExtents();
-                Viewer.VP3D.Camera.LookAt(new Point3D(0, 0, Viewer.Models.Content.Bounds.SizeZ / 2.0), 0.0);
-                Viewer.VP3D.CameraController.Zoom(-0.15);
-            }
-        }
-
+        #region Open/Save File methods
         static OpenFileDialog openFile = new OpenFileDialog() {
             CheckFileExists = true,
             CheckPathExists = true,
@@ -219,18 +105,18 @@ namespace Antilli
             ValidateNames = true
         };
 
-        public void SaveOBJFile()
-        {
-            DialogResult result = saveFile.ShowDialog();
-
-            if (result == DialogResult.OK)
-            {
-                int modelIdx = PackList.SelectedIndex;
-                int partIdx = MeshList.SelectedIndex;
-
-                OBJFile.Export(saveFile.FileName, ModelFile.Models[modelIdx], (long)MeshList.Items[partIdx]);
-            }
-        }
+        //public void SaveOBJFile()
+        //{
+        //    DialogResult result = saveFile.ShowDialog();
+        //
+        //    if (result == DialogResult.OK)
+        //    {
+        //        int modelIdx = PackList.SelectedIndex;
+        //        int partIdx = MeshList.SelectedIndex;
+        //
+        //        OBJFile.Export(saveFile.FileName, ModelFile.Models[modelIdx], (long)MeshList.Items[partIdx]);
+        //    }
+        //}
 
         /// <summary>Opens a dialog to select a chunk file</summary>
         public void OpenFile()
@@ -241,29 +127,126 @@ namespace Antilli
             {
                 IModelFile modelFile = null;
 
+                bool useSharedTextures = false;
+
                 Cursor = Cursors.WaitCursor;
 
                 switch (Path.GetExtension(openFile.FileName))
                 {
                 case ".vvs":
                     modelFile = new VVSFile(openFile.FileName);
-                    break;
+                    goto vehicles;
                 case ".vvv":
                     modelFile = new VVVFile(openFile.FileName);
+                    goto vehicles;
+                vehicles:
+                    VGTFile sharedTextures = null;
+
+                    string carGlobalsMiami      = @"{0}\Miami\CarGlobalsMiami.vgt";
+                    string carGlobalsNice       = @"{0}\Nice\CarGlobalsNice.vgt";
+                    string carGlobalsIstanbul   = @"{0}\Istanbul\CarGlobalsIstanbul.vgt";
+
+                    // until configuration is implemented, do this to find vehicle globals
+                    string[] dirs = openFile.FileName.Split('\\');
+                    string dir = "";
+
+                    StringBuilder root = new StringBuilder();
+
+                    if (dirs[dirs.Length - 2] != "Vehicles")
+                    {
+                        root.AppendFormat(@"{0}\", dirs[0]);
+
+                        int idx = dirs.Length - 1;
+                        int rootIdx = 1;
+
+                        while ((idx - 1 > 0) && dir != "Vehicles")
+                        {
+                            dir = dirs[idx--];
+                            root.AppendFormat(@"{0}\", dirs[rootIdx++]);
+                        }
+
+                        if (dir != "Vehicles")
+                            throw new Exception("Failed to find Vehicles directory!");
+
+                        root.Append(dir);
+                    }
+                    else
+                    {
+                        for (int i = 0; i < dirs.Length - 1; i++)
+                            root.AppendFormat(@"{0}\", dirs[i]);
+                    }
+
+                    if (openFile.FileName.Contains("miami"))
+                    {
+                        sharedTextures = new VGTFile(String.Format(carGlobalsMiami, root.ToString()));
+                        ModelPackage.GlobalTexturesName = "CarGlobalsMiami";
+                    }
+                    else if (openFile.FileName.Contains("nice"))
+                    {
+                        sharedTextures = new VGTFile(String.Format(carGlobalsNice, root.ToString()));
+                        ModelPackage.GlobalTexturesName = "CarGlobalsNice";
+                    }
+                    else if (openFile.FileName.Contains("istanbul"))
+                    {
+                        sharedTextures = new VGTFile(String.Format(carGlobalsIstanbul, root.ToString()));
+                        ModelPackage.GlobalTexturesName = "CarGlobalsIstanbul";
+                    }
+                    else if (openFile.FileName.Contains("mission"))
+                    {
+                        string path = Path.GetFileNameWithoutExtension(openFile.FileName);
+
+                        /* === mission%02d.vvv ===
+                        miami: 	    01 - 10, 32-33, 38-40, 50-51, 56, 59-61, 71-72, 77-78
+                        nice: 	    11 - 21, 34-35, 42-44, 52-53, 57, 62-64, 73-74, 80-81
+                        istanbul: 	22 - 31, 36-37, 46-48, 54-55, 58, 65-67, 75-76, 83-84 */
+
+                        //-- Be careful not to break the formatting!!
+                        switch (int.Parse(path.Substring(path.Length - 2, 2)))
+                        {
+                        case 01: case 02: case 03: case 04: case 05: case 06:
+                        case 07: case 08: case 09: case 10: case 32: case 33:
+                        case 38: case 39: case 40: case 50: case 51: case 56:
+                        case 59: case 60: case 61: case 71: case 72:
+                            sharedTextures = new VGTFile(String.Format(carGlobalsMiami, root.ToString()));
+                            ModelPackage.GlobalTexturesName = "CarGlobalsMiami";
+                            break;
+                        case 11: case 12: case 13: case 14: case 15: case 16:
+                        case 17: case 18: case 19: case 20: case 21: case 34:
+                        case 35: case 42: case 43: case 44: case 52: case 53:
+                        case 57: case 62: case 63: case 64: case 73: case 74:
+                            sharedTextures = new VGTFile(String.Format(carGlobalsNice, root.ToString()));
+                            ModelPackage.GlobalTexturesName = "CarGlobalsNice";
+                            break;
+                        case 22: case 23: case 24: case 25: case 26: case 27:
+                        case 28: case 29: case 30: case 31: case 36: case 37:
+                        case 46: case 47: case 48: case 54: case 55: case 58:
+                        case 65: case 66: case 67: case 75: case 76:
+                            sharedTextures = new VGTFile(String.Format(carGlobalsIstanbul, root.ToString()));
+                            ModelPackage.GlobalTexturesName = "CarGlobalsIstanbul";
+                            break;
+                        }
+                    }
+
+                    if (sharedTextures != null)
+                    {
+                        useSharedTextures = true;
+                        ModelPackage.GlobalTextures = sharedTextures.StandaloneTextures;
+                    }
+
                     break;
                 default:
                     modelFile = new ModelFile(openFile.FileName);
                     break;
                 }
 
+                if (!useSharedTextures && ModelPackage.HasGlobalTextures)
+                    ModelPackage.GlobalTextures = null;
+
                 if (modelFile.Models != null)
                 {
-                    ModelFile = modelFile;
+                    SetSubTitle(openFile.FileName);
 
-                    Text = String.Format("{0} - {1}", title, openFile.FileName);
-
-                    if (ModelFile.Models.Count > 0)
-                        LoadModels();
+                    WPFGui.LoadModelFile(modelFile);
                 }
                 else
                 {
@@ -276,6 +259,7 @@ namespace Antilli
                 Cursor = Cursors.Default;
             }
         }
+        #endregion
 
         /// <summary>Not implemented!</summary>
         public void SaveFile()

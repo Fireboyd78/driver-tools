@@ -15,22 +15,6 @@ namespace Antilli.Models
 {
     public class PartsGroup
     {
-        public class Entry
-        {
-            public int ID { get; set; }
-
-            public uint Unknown { get; set; }
-            public uint Reserved { get; set; }
-
-            public PartsGroup Parent { get; set; }
-            public MeshGroup Group { get; set; }
-
-            public Entry(int id)
-            {
-                ID = id;
-            }
-        }
-
         uint _uid;
 
         public uint UID
@@ -47,11 +31,11 @@ namespace Antilli.Models
         public int Unknown1 { get; set; }
         public int Unknown2 { get; set; }
 
-        public List<Entry> Parts { get; set; }
+        public List<PartDefinition> Parts { get; set; }
 
         public PartsGroup()
         {
-            Parts = new List<Entry>(7);
+            Parts = new List<PartDefinition>(7);
         }
     }
 }

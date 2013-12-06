@@ -15,6 +15,21 @@ build/
 [Bb]in/
 [Oo]bj/
 
+# Deprecated/old files
+[Dd]eprecated/
+*.cs.old
+*.old.cs
+*.old.*
+[Dd]_*.cs
+[Dd]_*.*
+
+# Not intended for dist.
+__DO NOT INCLUDE__/
+__DEV__/
+[Pp]rivate/
+[Dd]oc/
+*/[Dd]oc/*.xml
+
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
 
@@ -154,4 +169,3 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
-/Antilli/doc/antilli.xml
