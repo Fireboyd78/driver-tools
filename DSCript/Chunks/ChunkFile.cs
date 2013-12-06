@@ -8,7 +8,6 @@ using System.Text;
 
 using DSCript;
 using DSCript.IO;
-using DSCript.Methods;
 
 namespace DSCript
 {

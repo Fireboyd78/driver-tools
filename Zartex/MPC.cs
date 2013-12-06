@@ -7,8 +7,6 @@ using System.Windows.Forms;
 
 using DSCript;
 using DSCript.IO;
-using DSCript.Methods;
-using DSCript.Object;
 
 using Zartex;
 using Zartex.MissionObjects;

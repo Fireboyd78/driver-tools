@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Text;
 
 using DSCript;
-using DSCript.Methods;
 
 namespace DSCript.IO
 {

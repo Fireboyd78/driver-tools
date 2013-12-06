@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 
 using DSCript.IO;
-using DSCript.Methods;
 using DSCript.Object;
 
 using Zartex.Converters;
