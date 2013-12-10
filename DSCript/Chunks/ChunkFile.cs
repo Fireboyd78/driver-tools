@@ -3,16 +3,21 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
-using DSCript;
 using DSCript.IO;
 
 namespace DSCript
 {
     public sealed class ChunkFile : IDisposable
     {
+        /// <summary>
+        /// Gets the name of the file that was used to build this <see cref="ChunkFile"/>.
+        /// </summary>
         public string Filename { get; private set; }
 
         #region Temp File management
@@ -62,6 +67,10 @@ namespace DSCript
             DestroyTempFile();
         }
 
+        /// <summary>
+        /// Returns a new <see cref="FileStream"/> based on the file that was used to build this <see cref="ChunkFile"/>.
+        /// </summary>
+        /// <returns></returns>
         public FileStream GetStream()
         {
             return File.Open(Filename, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -105,7 +114,6 @@ namespace DSCript
             };
 
             // Add our ChunkEntry to the ChunkBlock
-            // Access can still be made with 'block' object
             chunk.Entries.Insert(id, block);
 
             // Read string length
@@ -121,38 +129,51 @@ namespace DSCript
             // Hold this position so we can come back to it and read the next entry
             long holdPosition = reader.GetPosition();
 
-            /* ################# Read description ################# */
+            /* ----------------------------------------------------
+             * Descriptions are found at the very end of chunks, so
+             * we can add up the total size of the chunk (including
+             * offsets) to find it. Descriptions are Pascal strings
+             * (those with no terminator character ('\0').
+             * 
+             * If there isn't a description, an empty string value
+             * will be assigned.
+             * ---------------------------------------------------- */
             if (strLen > 0)
             {
-                // Descriptions are found at the very end of chunks
-                // So add up the total size of the chunk (including offsets) to find it
                 reader.Seek(baseOffset + (block.Offset + block.Size), SeekOrigin.Begin);
-
-                // Descriptions are Pascal strings (no terminator)
                 block.Description = reader.ReadString(strLen);
             }
             else
             {
-                // If no description exists, just give it an empty string value
                 block.Description = String.Empty;
             }
-            /* #################################################### */
 
 
-            /* ################# Read data ######################## */
+            /* ----------------------------------------------------
+             * Now we read the actual data contained in this block.
+             * We first check to see if the data is either a nested
+             * chunk, or raw data that should be accounted for.
+             * 
+             * If it's a chunk 'CHNK', we'll do some more recursing
+             * - otherwise, we'll just add a new BlockData entry to
+             * keep track of the raw data.
+             * ---------------------------------------------------- */
             reader.Seek(baseOffset + block.Offset, SeekOrigin.Begin);
 
-            // We need to see if the data is in fact a nested chunk
-            // So check to see if this is another Chunk so we can recurse through it
-            if (Chunk.CheckType(reader.ReadUInt32(), ChunkType.Chunk))
-            {
-                /* Chunks begin with 'CHNK', thus it's safe to assume we have found a nested chunk!
-                   We'll gather the data from it in a similar fashion to the one that is currently on hold */
+            uint magic = reader.ReadUInt32();
 
+            if (!Chunk.IsChunkType(magic, ChunkType.Chunk))
+            {
+                BlockData.Add(new BlockData(this, block));
+            }
+            else
+            {
                 // Since we read the first 4 bytes, the offset is the current position - 4
                 uint blockOffset = (uint)(reader.GetPosition() - 0x4);
-                int ss = Chunks.Count, ii = 0;
 
+                int ss = Chunks.Count;
+                int ii = 0;
+                
                 // Read size and count
                 uint size = reader.ReadUInt32();
                 int count = reader.ReadInt32();
@@ -169,22 +190,9 @@ namespace DSCript
                 // Insert it into the master Chunk list
                 Chunks.Insert(ss, newChunk);
 
-                // If there's multiple entries, we can use a loop to grab them
-                // But if there is not, we know that the index is '0' so we skip the loop
-                if ((ii + 1) != newChunk.Entries.Capacity)
-                {
-                    for (ii = 0; ii < newChunk.Entries.Capacity; ii++)
-                        ReadChunks(reader, newChunk, ii, blockOffset);
-                }
-                else
-                {
-                    ReadChunks(reader, newChunk, 0, blockOffset);
-                }
-            }
-            else
-            {
-                // If it's not a nested chunk, add a new BlockData entry
-                BlockData.Add(new BlockData(this, block));
+                // Recurse through the entries
+                for (ii = 0; ii < newChunk.Entries.Capacity; ii++)
+                    ReadChunks(reader, newChunk, ii, blockOffset);
             }
 
             // Seek back to the next entry and continue
@@ -197,7 +205,7 @@ namespace DSCript
             using (BinaryReader f = new BinaryReader(fs))
             {
                 // Make sure this is actually a chunk file and not some imitator
-                if (!Chunk.CheckType(f.ReadUInt32(), ChunkType.Chunk))
+                if (!Chunk.IsChunkType(f.ReadUInt32(), ChunkType.Chunk))
                     return -1;
 
                 uint size = f.ReadUInt32();
@@ -207,118 +215,41 @@ namespace DSCript
                 if (f.ReadUInt32() != Chunk.Version)
                     return -1;
 
-                // No errors so far, intialize the Chunks and BlockData!
+                // Intialize the Chunks and BlockData
                 Chunks = new List<ChunkBlock>();
                 BlockData = new List<BlockData>();
 
                 // Create our root chunk using ID '0' and a base offset of 0x0
+                // Then insert it into the master chunk list
                 ChunkBlock root = new ChunkBlock(0, 0x0) {
                     Size    = size,
                     Entries = new List<ChunkEntry>(count)
                 };
 
-                // Insert it into the master chunk list
                 Chunks.Insert(0, root);
 
-                DSC.Log("Loading {0} chunks...please wait", root.Entries.Capacity);
+                DSC.Log("Loading {0} chunks...", root.Entries.Capacity);
 
                 // Read all chunk entries (the iterator is defined in the local scope so it doesn't lose its value)
-                int ck;
+                int ck = 0, numChunksRead = 0;
 
-                for (ck = 0; ck < root.Entries.Capacity; ck++)
+                for (ck = 0; ck < root.Entries.Capacity; ck++, ++numChunksRead)
                     ReadChunks(f, root, ck, 0x0);
 
-                return 1;
+                return numChunksRead;
             }
-        }
-
-        private void WriteChunkData(FileStream stream, ChunkBlock chunk)
-        {
-            byte[] buffer = new byte[(int)chunk.HeaderSize];
-
-            stream.Write(chunk.Magic);
-            stream.Write(chunk.Size);
-            stream.Write(chunk.Entries.Count);
-            stream.Write(Chunk.Version);
-
-            foreach (ChunkEntry block in chunk.Entries)
-            {
-                stream.Write(block.Magic);
-                stream.Write(block.Offset);
-                stream.WriteByte(block.Reserved);
-                stream.WriteByte(block.Description.Length);
-                stream.Write(0x0C, 0xCC);
-                stream.Write(block.Size);
-            }
-
-            WriteBlocks(stream, chunk);
-        }
-
-        private void WriteBlocks(FileStream stream, ChunkBlock chunk)
-        {
-            foreach (ChunkEntry block in chunk.Entries)
-            {
-                WritePadding(stream, block.BaseOffset);
-
-                BlockData data = GetBlockData(block);
-
-                if (data != null)
-                {
-                    stream.Write(data.Data, 0, data.Data.Length);
-
-                    if (block.Description.Length > 0)
-                        stream.Write(Encoding.UTF8.GetBytes(block.Description), 0, block.Description.Length);
-                }
-                else
-                {
-                    int i = Chunks.FindIndex((c) => c.BaseOffset == block.BaseOffset);
-
-                    if (i != -1)
-                    {
-                        WriteChunkData(stream, Chunks[i]);
-                        WritePadding(stream, (Chunks[i].BaseOffset + Chunks[i].Size));
-                    }
-
-                    if (block.Description.Length > 0)
-                        stream.Write(Encoding.UTF8.GetBytes(block.Description), 0, block.Description.Length);
-                }
-            }
-        }
-
-        private void WritePadding(FileStream stream, long padToOffset)
-        {
-            if (stream.Position > padToOffset)
-                return;
-
-            stream.ByteAlign(4);
-
-            long padLength = padToOffset - stream.Position;
-
-            for (int i = 0; i < padLength / 4; i++)
-                stream.Write(Chunk.PaddingBytes);
-        }
-
-        public void Export()
-        {
-            Export(@"C:\dev\VS2013\Projects\Driver Tools\Antilli\bin\Debug\export\export.chunk");
-        }
-
-        public void Export(string filename)
-        {
-            using (FileStream f = File.Create(filename, (int)Chunks[0].Size))
-            {
-                WriteChunkData(f, Chunks[0]);
-                WritePadding(f, Chunks[0].Size);
-            }
-
-            DSC.Log("Successfully exported {0}", filename);
         }
 
         public ChunkFile(string filename)
         {
             Filename = filename;
 
-            IsLoaded = (Load() != -1) ? true : false;
+            int numChunksRead = Load();
+
+            IsLoaded = (numChunksRead != -1) ? true : false;
+
+            if (IsLoaded)
+                DSC.Log("{0} chunks loaded.", numChunksRead);
         }
 
         ~ChunkFile()

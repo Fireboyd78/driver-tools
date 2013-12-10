@@ -51,7 +51,7 @@
                        ViewCubeRightText="F"
                        ViewCubeVerticalPosition="Top"
                        ViewCubeHorizontalPosition="Left"
-                       ViewCubeHeight="60">
+                       ViewCubeHeight="95" ViewCubeWidth="95">
 
       <h:HelixViewport3D.Camera>
         <PerspectiveCamera x:Name="ViewCam"/>

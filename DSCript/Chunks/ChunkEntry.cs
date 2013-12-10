@@ -18,21 +18,11 @@ namespace DSCript
     {
         public event BlockDataEventHandler SizeUpdated;
 
-        private void OnSizeUpdated(BlockDataEventArgs e)
+        void OnSizeUpdated(BlockDataEventArgs e)
         {
             if (SizeUpdated != null)
                 SizeUpdated(this, e);
         }
-
-        const string fmt =
-@":: Block ::
-Magic: '{0}'
-Description: {1}
-Base Offset: 0x{2:X}
-Offset: 0x{3:X}
-Size: 0x{4:X}
---
-";
 
         public new ChunkBlock Parent
         {
@@ -40,7 +30,7 @@ Size: 0x{4:X}
             set { base.Parent = value; }
         }
 
-        public int Reserved { get; set; }
+        public byte Reserved { get; set; }
 
         public string Description { get; set; }
 
@@ -59,16 +49,6 @@ Size: 0x{4:X}
         public override BlockType BlockType
         {
             get { return BlockType.ChunkItem; }
-        }
-
-        public override string ToString()
-        {
-            return String.Format(fmt,
-                MagicConverter.ToString(Magic),
-                Description,
-                BaseOffset,
-                Offset,
-                Size);
         }
 
         public ChunkEntry(int id, ChunkBlock parent)

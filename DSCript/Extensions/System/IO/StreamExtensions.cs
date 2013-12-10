@@ -15,7 +15,7 @@ namespace System.IO
 {
     public static class StreamExtensions
     {
-        public static void ByteAlign(this Stream stream, uint byteAlignment)
+        public static void WriteByteAlignment(this Stream stream, uint byteAlignment)
         {
             uint offset = (uint)stream.Position;
             int align = (int)Chunk.GetByteAlignment(offset, byteAlignment);

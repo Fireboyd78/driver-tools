@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -146,10 +148,10 @@ namespace Antilli
             ViewCam.Position            = dCamPos;
             ViewCam.LookDirection       = dLookdir;
             ViewCam.UpDirection         = zUp;
-            ViewCam.NearPlaneDistance   = Settings.Configuration.GetSetting<double>("NearDistance");
-            ViewCam.FarPlaneDistance    = Settings.Configuration.GetSetting<double>("FarDistance");
+            ViewCam.NearPlaneDistance   = Settings.Configuration.GetSetting<double>("NearDistance", 0);
+            ViewCam.FarPlaneDistance    = Settings.Configuration.GetSetting<double>("FarDistance", 300000);
 
-            ViewCam.FieldOfView         = Settings.Configuration.GetSetting<double>("DefaultFOV");
+            ViewCam.FieldOfView         = Settings.Configuration.GetSetting<double>("DefaultFOV", 45);
 
             VP3D.PanGesture             = new MouseGesture(MouseAction.LeftClick);
             VP3D.ChangeLookAtGesture    = new MouseGesture(MouseAction.None);
@@ -172,7 +174,7 @@ namespace Antilli
 
         void DelayResetDebugInfo()
         {
-            int timeout = Settings.Configuration.GetSetting<int>("DebugInfoTimeout");
+            int timeout = Settings.Configuration.GetSetting<int>("DebugInfoTimeout", 2500);
 
             for (int i = 0; i < timeout; i++)
             {
@@ -231,7 +233,7 @@ namespace Antilli
                 Model3D model3D = Models.Content;
                 Model3D selectedModel = ((ModelGroupListItem)ModelList.SelectedItem).Content;
 
-                double ghostOpacity = Settings.Configuration.GetSetting<double>("GhostOpacity");
+                double ghostOpacity = Settings.Configuration.GetSetting<double>("GhostOpacity", 0.15);
 
                 if (model3D is Model3DGroup)
                 {
@@ -318,7 +320,7 @@ namespace Antilli
             ResetToDefaults(true);
 
             Loaded += (o, e) => {
-                InfiniteSpin = Settings.Configuration.GetSetting<bool>("InfiniteSpin");
+                InfiniteSpin = Settings.Configuration.GetSetting<bool>("InfiniteSpin", true);
             };
 
             ModelList.GotFocus += (o, e) => GhostNonSelectedModels();

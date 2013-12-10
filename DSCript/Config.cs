@@ -12,7 +12,7 @@ using System.Windows.Forms;
 
 namespace DSCript
 {
-    public class DSCriptConfiguration
+    public class IniConfiguration
     {
         public string DirectoriesKey { get; private set; }
         public string SettingsKey { get; private set; }
@@ -59,17 +59,30 @@ namespace DSCript
             return DSC.INIFile.ReadValue(SettingsKey, key);
         }
 
-        public T GetSetting<T>(string key)
+        public T GetSetting<T>(string key, T defaultValue)
                 where T : IComparable, IConvertible
         {
-            IConvertible val;
+            object val = null;
+
+            string keyVal = GetSetting(key);
 
             if (typeof(T) == typeof(bool))
-                val = (IConvertible)bool.Parse((GetSetting<int>(key) == 1).ToString());
-            else
-                val = (IConvertible)DSC.INIFile.ReadValue(SettingsKey, key);
+            {
+                if (keyVal != String.Empty)
+                {
+                    bool bVal = bool.Parse((GetSetting<int>(key, 0) == 1).ToString());
 
-            return (T)(val.ToType(typeof(T), CultureInfo.CurrentCulture));
+                    if (bVal != false)
+                        val = bVal;
+                }
+            }
+            else
+            {
+                if (keyVal != String.Empty)
+                    val = keyVal;
+            }
+
+            return (val != null) ? (T)Convert.ChangeType(val, typeof(T)) : defaultValue;
         }
 
         public bool SetSetting(string key, string value)
@@ -77,7 +90,7 @@ namespace DSCript
             return DSC.INIFile.WriteValue(SettingsKey, key, value);
         }
 
-        public DSCriptConfiguration(string identifier)
+        public IniConfiguration(string identifier)
         {
             DirectoriesKey = String.Format("{0}.Directories", identifier);
             SettingsKey = String.Format("{0}.Configuration", identifier);
@@ -86,14 +99,19 @@ namespace DSCript
 
     public static partial class DSC
     {
-        public static DSCriptConfiguration Configuration { get; private set; }
+        public static IniConfiguration Configuration { get; private set; }
         
         internal static INIFile INIFile { get; private set; }
+
+        public static bool IsConfigLoaded
+        {
+            get { return INIFile != null; }
+        }
 
         static DSC()
         {
             INIFile = new INIFile(String.Format("{0}\\DSCript.ini", Application.StartupPath));
-            Configuration = new DSCriptConfiguration("Global");
+            Configuration = new IniConfiguration("Global");
         }
     }
 }

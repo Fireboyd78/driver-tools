@@ -78,8 +78,8 @@ namespace Antilli
                 mn_File_Exit.Click += (o, e) => Application.Exit();
 
                 mn_Tools_ExportOBJ.Click += (o, e) => {
-                    ModelPackage model = WPFGui.SelectedModelsPackage;
-                    long uid = WPFGui.SelectedMeshUID;
+                    ModelPackage model = GUI.SelectedModelsPackage;
+                    long uid = GUI.SelectedMeshUID;
 
                     if (model == null || uid == -1 || (uid != -1 && model.Meshes.Count < 1))
                     {
@@ -87,7 +87,7 @@ namespace Antilli
                         return;
                     }
 
-                    ExportOBJ export = new ExportOBJ(WPFGui.SelectedModelsPackage, WPFGui.SelectedMeshUID);
+                    ExportOBJ export = new ExportOBJ(GUI.SelectedModelsPackage, GUI.SelectedMeshUID);
 
                     System.Drawing.Point pt = new System.Drawing.Point(
                         this.Location.X + 25 + (this.Bounds.Width - (export.Bounds.Width)) / 2,
@@ -250,7 +250,7 @@ namespace Antilli
                 {
                     SetSubTitle(openFile.FileName);
 
-                    WPFGui.LoadModelFile(modelFile);
+                    GUI.LoadModelFile(modelFile);
                 }
                 else
                 {

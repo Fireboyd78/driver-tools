@@ -9,35 +9,107 @@
             <param name="byteAlignment">The byte-alignment to calculate (e.x. 1024)</param>
             <returns>Cursor position after byte-alignment</returns>
         </member>
+        <member name="T:DSCript.Block">
+            <summary>
+            Represents the base class for chunks/chunk data
+            </summary>
+        </member>
+        <member name="P:DSCript.Block.ID">
+            <summary>
+            Gets or sets the zero-based ID of this block.
+            </summary>
+        </member>
         <member name="P:DSCript.Block.Magic">
             <summary>
-            Gets or sets the magic number for this Block.
+            Gets or sets the magic number of this block.
+            </summary>
+        </member>
+        <member name="P:DSCript.Block.Parent">
+            <summary>
+            Gets or sets the parent of this block.
+            </summary>
+        </member>
+        <member name="P:DSCript.Block.BaseOffset">
+            <summary>
+            Gets the calculated base offset of this block.
+            </summary>
+        </member>
+        <member name="P:DSCript.Block.Offset">
+            <summary>
+            Gets or sets the offset to this block. This is usually relative to the parent (if it has one) - otherwise, it should be zero.
+            </summary>
+        </member>
+        <member name="P:DSCript.Block.Size">
+            <summary>
+            Gets or sets the size of this block. This should represent all data contained, depending on the <see cref="P:DSCript.Block.BlockType"/>.
+            </summary>
+        </member>
+        <member name="P:DSCript.Block.BlockType">
+            <summary>
+            Gets the <see cref="P:DSCript.Block.BlockType"/> for this block.
+            </summary>
+        </member>
+        <member name="T:DSCript.ChunkBlock">
+            <summary>
+            A class that represents a spooling-based data format, used to store data of various formats in Reflections games.
             </summary>
         </member>
         <member name="M:DSCript.ChunkBlock.CalculateOffsets">
             <summary>
-            Calculate's the offsets for each entry
+            Calculate's the offsets for each entry.
             </summary>
         </member>
         <member name="M:DSCript.ChunkBlock.CalculateSize">
             <summary>
-            Calculates the size of the Chunk
+            Calculates the overall size of this chunk.
             </summary>
-            <returns>The computed size of the Chunk</returns>
+            <returns>The computed size of this chunk.</returns>
+        </member>
+        <member name="M:DSCript.ChunkBlock.#ctor(System.Int32,System.UInt32)">
+            <summary>
+            Creates a new <see cref="T:DSCript.ChunkBlock"/> with the specified id and offset.
+            Since no parent is defined, this should be used for root chunks only.
+            </summary>
+            <param name="id">The zero-based id used to identify this chunk.</param>
+            <param name="offset">The absolute offset to this chunk.</param>
+        </member>
+        <member name="M:DSCript.ChunkBlock.#ctor(System.Int32,System.UInt32,DSCript.ChunkEntry)">
+            <summary>
+            Creates a new <see cref="T:DSCript.ChunkBlock"/> with the specified id, offset, and parent.
+            The parent-child relationship allows for this chunk to be included in size calculations that are initiated from the parent.
+            </summary>
+            <param name="id">The zero-based id used to identify this chunk.</param>
+            <param name="offset">The relative offset to this chunk.</param>
+            <param name="parent">The <see cref="T:DSCript.ChunkEntry"/> parent of this chunk.</param>
+        </member>
+        <member name="P:DSCript.ChunkBlock.Entries">
+            <summary>
+            Gets or sets the list of block entries in this chunk.
+            </summary>
         </member>
         <member name="P:DSCript.ChunkBlock.Magic">
             <summary>
-            Gets the Magic Number for this Chunk block. Note: The set accessor cannot be used to change the magic.
+            Gets the magic number for this chunk.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.Parent">
+            <summary>
+            Gets or sets the parent of this chunk.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.HasParent">
+            <summary>
+            Gets a value representing whether or not this chunk has a parent.
             </summary>
         </member>
         <member name="P:DSCript.ChunkBlock.Size">
             <summary>
-            Gets the computed size of this Chunk. Note: The set accessor cannot be used to change the size.
+            Gets the computed size of this chunk.
             </summary>
         </member>
         <member name="P:DSCript.ChunkBlock.HeaderSize">
             <summary>
-            Gets the computed size of the header
+            Gets the computed size of the header.
             </summary>
         </member>
         <member name="M:DSCript.BlockEditor.Commit">
@@ -74,7 +146,7 @@
             <param name="source">The source bitmap.</param>
             <returns>A BitmapSource</returns>
         </member>
-        <member name="M:System.StringColumn.SplitColumn(System.String,System.Int32)">
+        <member name="M:System.StringExtensions.SplitColumn(System.String,System.Int32)">
             <summary>
             Formats a delimited string using the "|" character into a split column with the specified distance.
             </summary>
@@ -128,11 +200,22 @@
             Gets or sets the path to the <see cref="T:System.IO.INIFile"/>.
             </summary>
         </member>
+        <member name="M:DSCript.ChunkFile.GetStream">
+            <summary>
+            Returns a new <see cref="T:System.IO.FileStream"/> based on the file that was used to build this <see cref="T:DSCript.ChunkFile"/>.
+            </summary>
+            <returns></returns>
+        </member>
         <member name="M:DSCript.ChunkFile.GetBlockData(DSCript.ChunkEntry)">
             <summary>
             Gets the block data for the specified block.
             </summary>
             <param name="block">The block to retrieve the data from</param>
+        </member>
+        <member name="P:DSCript.ChunkFile.Filename">
+            <summary>
+            Gets the name of the file that was used to build this <see cref="T:DSCript.ChunkFile"/>.
+            </summary>
         </member>
         <member name="P:DSCript.IO.ChunkReader.Position">
             <summary> Gets or sets the position of the cursor in the FileStream. </summary>
@@ -964,6 +1047,189 @@
         <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign4096">
             <summary>
             Aligns data to 4096-bytes (e.g. 0x384 > 0x1000)
+            </summary>
+        </member>
+        <member name="M:DSCript.Models.Models.TextureCache.Flush">
+            <summary>
+            Flushes the texture cache and frees up any memory as needed.
+            </summary>
+        </member>
+        <member name="T:DSCript.Models.D3DPRIMITIVETYPE">
+            <summary>
+            Defines the primitives supported by Direct3D. 
+            Source: http://msdn.microsoft.com/en-us/library/windows/desktop/bb172589%28v=vs.85%29.aspx
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_POINTLIST">
+            <summary>
+            Renders the vertices as a collection of isolated points. This value is unsupported for indexed primitives.
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_LINELIST">
+            <summary>
+            Renders the vertices as a list of isolated straight line segments.
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_LINESTRIP">
+            <summary>
+            Renders the vertices as a single polyline.
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_TRIANGLELIST">
+            <summary>
+            Renders the specified vertices as a sequence of isolated triangles. Each group of three vertices defines a separate triangle.
+            
+            Back-face culling is affected by the current winding-order render state.
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_TRIANGLESTRIP">
+            <summary>
+            Renders the vertices as a triangle strip. The backface-culling flag is automatically flipped on even-numbered triangles.
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_TRIANGLEFAN">
+            <summary>
+            Renders the vertices as a triangle fan. 
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.D3DPRIMITIVETYPE.D3DPT_FORCE_DWORD">
+            <summary>
+            Forces this enumeration to compile to 32 bits in size. Without this value, some compilers would allow this enumeration to compile to a size other than 32 bits. This value is not used. 
+            </summary>
+        </member>
+        <member name="T:DSCript.Models.IndexedPrimitive">
+            <summary>
+            IDirect3DDevice9::DrawIndexedPrimitive -- Based on indexing, renders the specified geometric primitive into an array of vertices.
+            
+            Source: http://msdn.microsoft.com/en-us/library/windows/desktop/bb174369%28v=vs.85%29.aspx
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.PrimitiveType">
+            <summary>
+            Member of the <see cref="T:DSCript.Models.D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.Group">
+            <summary>
+            The <see cref="T:DSCript.Models.MeshGroup"/> this mesh belongs to.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.BaseVertexIndex">
+            <summary>
+            Offset from the start of the vertex buffer to the first vertex.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.MinIndex">
+            <summary>
+            Minimum vertex index for vertices used during this call. This is a zero based index relative to BaseVertexIndex.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.NumVertices">
+            <summary>
+            Number of vertices used during this call. The first vertex is located at index: BaseVertexIndex + MinIndex.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.StartIndex">
+            <summary>
+            Index of the first index to use when accessing the vertex buffer. Beginning at StartIndex to index vertices from the vertex buffer.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.PrimitiveCount">
+            <summary>
+            Number of primitives to render. The number of vertices used is a function of the primitive count and the primitive type.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedPrimitive.MaterialId">
+            <summary>
+            The material used for this mesh.
+            </summary>
+        </member>
+        <member name="M:DSCript.Models.Vertex.GetBytes">
+            <summary>
+            Returns the byte-array representing this <see cref="T:DSCript.Models.Vertex"/> in its compiled form.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:DSCript.Models.Vertex.#ctor(DSCript.Models.FVFType)">
+            <summary>Creates a new <see cref="T:DSCript.Models.Vertex"/>.</summary>
+            <param name="vertexType">The <see cref="T:DSCript.Models.FVFType"/> this <see cref="T:DSCript.Models.Vertex"/> will be based on.</param>
+        </member>
+        <member name="M:DSCript.Models.Vertex.#ctor(DSCript.Models.Vertex,DSCript.Models.FVFType)">
+            <summary>
+            Creates a new <see cref="T:DSCript.Models.Vertex"/> based on an existing instance.
+            </summary>
+            <param name="vertex">The existing <see cref="T:DSCript.Models.Vertex"/> to copy values from</param>
+            <param name="vertexType">The vertex format used. The new vertex will reflect upon this format.</param>
+        </member>
+        <member name="M:DSCript.Models.Vertex.#ctor(System.Byte[],DSCript.Models.FVFType)">
+            <summary>
+            Creates a new <see cref="T:DSCript.Models.Vertex"/> based on a buffer.
+            </summary>
+            <param name="vertexBuffer">The bytes from a vertex buffer</param>
+            <param name="vertexType">The vertex format used to read the buffer.</param>
+        </member>
+        <member name="P:DSCript.Models.Vertex.Positions">
+            <summary>Gets or sets the position of the vertex.</summary>
+        </member>
+        <member name="P:DSCript.Models.Vertex.Normals">
+            <summary>Gets or sets the normals of the vertex.</summary>
+        </member>
+        <member name="P:DSCript.Models.Vertex.UVs">
+            <summary>Gets or sets the UV mapping of the vertex.</summary>
+        </member>
+        <member name="P:DSCript.Models.Vertex.Diffuse">
+            <summary>Gets or sets the RGBA diffuse color of the vertex.</summary>
+        </member>
+        <member name="P:DSCript.Models.Vertex.BlendWeights">
+            <summary>Gets or sets the blending weights of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
+        </member>
+        <member name="P:DSCript.Models.Vertex.Unknown">
+            <summary>Gets or sets the unknown value of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
+        </member>
+        <member name="T:DSCript.Models.FVFType">
+            <summary>
+            An enumeration defining different types of vertices used in DRIV3R/Driver: Parallel Lines.
+            </summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Vertex12">
+            <summary>Contains data for Position, Normals, Mapping, and Specular.</summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Vertex15">
+            <summary>Contains data for Position, Normals, Mapping, Blend Weights, and Specular.</summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Vertex16">
+            <summary>Contains data for Position, Normals, Mapping, Blend Weights, Specular, and Unknown.</summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Unknown">
+            <summary>Represents an unknown type.</summary>
+        </member>
+        <member name="M:DSCript.Models.VertexData.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Creates a new vertex buffer used for storing vertices.
+            </summary>
+            <param name="count">The number of vertices in the buffer.</param>
+            <param name="length">The length of each <see cref="T:DSCript.Models.Vertex"/> in the buffer. This should be based on an existing <see cref="T:DSCript.Models.FVFType"/>.</param>
+        </member>
+        <member name="P:DSCript.Models.VertexData.Length">
+            <summary>
+            Gets the length of each <see cref="T:DSCript.Models.Vertex"/> entry.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.VertexData.Buffer">
+            <summary>
+            Gets or sets the <see cref="T:DSCript.Models.Vertex"/> buffer.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.VertexData.Item(System.Int32)">
+            <summary>
+            Gets or sets the <see cref="T:DSCript.Models.Vertex"/> at the specified index.
+            </summary>
+            <param name="id">The index into the buffer.</param>
+            <returns>The vertex at the specified index in the buffer.</returns>
+        </member>
+        <member name="P:DSCript.Models.VertexData.VertexType">
+            <summary>
+            Gets the <see cref="T:DSCript.Models.FVFType"/> of the vertices. The returned value is based on the 'Length' property.
             </summary>
         </member>
     </members>

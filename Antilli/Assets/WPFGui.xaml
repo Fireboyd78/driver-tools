@@ -23,7 +23,7 @@
       </LinearGradientBrush>
     </Grid.Background>
 
-    <at:ModelViewer x:Name="Viewer" Margin="260,10,10,10"/>
+    <at:ModelViewer x:Name="Viewer" Margin="265,10,10,10" Width="Auto"/>
     <ListBox x:Name="PackList" HorizontalAlignment="Left" Margin="10,35,0,90" Width="120"/>
     <ListBox x:Name="MeshList" HorizontalAlignment="Left" Margin="135,35,0,90" Width="120"/>
     <Label Content="Model Packages" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="120" Style="{StaticResource LabelListBoxHeader}"/>

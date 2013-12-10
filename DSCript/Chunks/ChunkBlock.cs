@@ -14,35 +14,36 @@ using DSCript.IO;
 
 namespace DSCript
 {
+    /// <summary>
+    /// A class that represents a spooling-based data format, used to store data of various formats in Reflections games.
+    /// </summary>
     public sealed class ChunkBlock : Block
     {
-        const string fmt =
-@":: Chunk Block ::
-Magic: '{0}'
-Base Offset: 0x{1:X}
-Offset: 0x{2:X}
-Size: 0x{3:X}
-Parent? {4}
---
-";
-
+        /// <summary>
+        /// Gets or sets the list of block entries in this chunk.
+        /// </summary>
         public List<ChunkEntry> Entries { get; set; }
 
         /// <summary>
-        /// Gets the Magic Number for this Chunk block. Note: The set accessor cannot be used to change the magic.
+        /// Gets the magic number for this chunk.
         /// </summary>
-        public override uint Magic
+        public new uint Magic
         {
             get { return (uint)Chunk.Magic; }
-            set { return; }
         }
 
+        /// <summary>
+        /// Gets or sets the parent of this chunk.
+        /// </summary>
         public new ChunkEntry Parent
         {
             get { return (ChunkEntry)base.Parent; }
             set { base.Parent = value; }
         }
 
+        /// <summary>
+        /// Gets a value representing whether or not this chunk has a parent.
+        /// </summary>
         public bool HasParent
         {
             get { return (Parent != null) ? true : false; }
@@ -54,16 +55,15 @@ Parent? {4}
         }
 
         /// <summary>
-        /// Gets the computed size of this Chunk. Note: The set accessor cannot be used to change the size.
+        /// Gets the computed size of this chunk.
         /// </summary>
         public override uint Size
         {
             get { return CalculateSize(); }
-            set { return; }
         }
 
         /// <summary>
-        /// Gets the computed size of the header
+        /// Gets the computed size of the header.
         /// </summary>
         public uint HeaderSize
         {
@@ -71,7 +71,7 @@ Parent? {4}
         }
 
         /// <summary>
-        /// Calculate's the offsets for each entry
+        /// Calculate's the offsets for each entry.
         /// </summary>
         public void CalculateOffsets()
         {
@@ -92,9 +92,9 @@ Parent? {4}
         }
 
         /// <summary>
-        /// Calculates the size of the Chunk
+        /// Calculates the overall size of this chunk.
         /// </summary>
-        /// <returns>The computed size of the Chunk</returns>
+        /// <returns>The computed size of this chunk.</returns>
         public uint CalculateSize()
         {
             // Return 0x10 for dummy chunks
@@ -111,17 +111,21 @@ Parent? {4}
             return Chunk.ByteAlign(size, (HasParent) ? Chunk.FilePadding : Chunk.ByteAlignment.ByteAlign4096);
         }
 
-        public override string ToString()
-        {
-            return String.Format(fmt,
-                MagicConverter.ToString(Magic),
-                BaseOffset,
-                Offset,
-                Size,
-                (HasParent) ? "Yes" : "No");
-        }
-
+        /// <summary>
+        /// Creates a new <see cref="ChunkBlock"/> with the specified id and offset.
+        /// Since no parent is defined, this should be used for root chunks only.
+        /// </summary>
+        /// <param name="id">The zero-based id used to identify this chunk.</param>
+        /// <param name="offset">The absolute offset to this chunk.</param>
         public ChunkBlock(int id, uint offset) : this(id, offset, null) { }
+
+        /// <summary>
+        /// Creates a new <see cref="ChunkBlock"/> with the specified id, offset, and parent.
+        /// The parent-child relationship allows for this chunk to be included in size calculations that are initiated from the parent.
+        /// </summary>
+        /// <param name="id">The zero-based id used to identify this chunk.</param>
+        /// <param name="offset">The relative offset to this chunk.</param>
+        /// <param name="parent">The <see cref="ChunkEntry"/> parent of this chunk.</param>
         public ChunkBlock(int id, uint offset, ChunkEntry parent)
         {
             ID = id;

@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSCript", "DSCript\DSCript.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Antilli", "Antilli\Antilli.csproj", "{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AntilliWPF", "AntilliWPF\AntilliWPF.csproj", "{BEB558CA-5BAE-4718-9C09-921683F78AA3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,7 +32,6 @@ Global
 		{614EF28C-7366-49F1-8996-F0FCA85E33E9}.Release|Mixed Platforms.ActiveCfg = Release|x86
 		{614EF28C-7366-49F1-8996-F0FCA85E33E9}.Release|Mixed Platforms.Build.0 = Release|x86
 		{614EF28C-7366-49F1-8996-F0FCA85E33E9}.Release|x86.ActiveCfg = Release|x86
-		{614EF28C-7366-49F1-8996-F0FCA85E33E9}.Release|x86.Build.0 = Release|x86
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -56,6 +57,18 @@ Global
 		{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}.Release|x86.ActiveCfg = Release|Any CPU
 		{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}.Release|x86.Build.0 = Release|Any CPU
 		{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}.Release|x86.Deploy.0 = Release|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|x86.Build.0 = Debug|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|x86.ActiveCfg = Release|Any CPU
+		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

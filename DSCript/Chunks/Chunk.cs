@@ -42,7 +42,7 @@ namespace DSCript
 
         public static BytePaddingType PaddingType = BytePaddingType.PaddingType1;
 
-        static byte[] _paddingBytes = { 0x00, 0x00, 0x00, 0x00 };
+        static byte[] _paddingBytes       = { 0x00, 0x00, 0x00, 0x00 };
         static byte[][] _paddingByteTypes = {
                                                new byte[4] { 0xA1, 0x15, 0xC0, 0xDE },
                                                new byte[4] { 0x3E, 0x3E, 0x3E, 0x3E }
@@ -54,24 +54,37 @@ namespace DSCript
             {
                 switch (PaddingType)
                 {
-                case BytePaddingType.PaddingType2:
-                    return _paddingByteTypes[1];
                 case BytePaddingType.Custom:
                     return _paddingBytes;
+                case BytePaddingType.PaddingType2:
+                    return _paddingByteTypes[1];
                 default:
                     return _paddingByteTypes[0];
                 }
             }
-            set
-            {
-                if (value.Length > 4)
-                    throw new IndexOutOfRangeException("Too many bytes specified!");
+        }
 
-                _paddingBytes = value;
-            }
+        public static void SetCustomPadding(char char1, char char2, char char3, char char4)
+        {
+            _paddingBytes = new byte[4] {
+                (byte)char1,
+                (byte)char2,
+                (byte)char3,
+                (byte)char4
+            };
+        }
+
+        public static void SetCustomPadding(byte byte1, byte byte2, byte byte3, byte byte4)
+        {
+            _paddingBytes = new byte[4] { byte1, byte2, byte3, byte4 };
+        }
+
+        public static void ResetCustomPadding()
+        {
+            _paddingBytes = new byte[4] { 0x00, 0x00, 0x00, 0x00 };
         }
        
-        public static bool CheckType(uint magic, ChunkType type)
+        public static bool IsChunkType(uint magic, ChunkType type)
         {
             return (magic == (uint)type) ? true : false;
         }

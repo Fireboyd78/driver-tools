@@ -40,7 +40,7 @@
             this.mn_Tools = new System.Windows.Forms.ToolStripMenuItem();
             this.mn_Tools_ExportOBJ = new System.Windows.Forms.ToolStripMenuItem();
             this.ElementHostGUI = new System.Windows.Forms.Integration.ElementHost();
-            this.WPFGui = new Antilli.WPFGui();
+            this.GUI = new Antilli.WPFGui();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -129,13 +129,14 @@
             // 
             // ElementHostGUI
             // 
+            this.ElementHostGUI.AutoSize = true;
             this.ElementHostGUI.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ElementHostGUI.Location = new System.Drawing.Point(0, 24);
             this.ElementHostGUI.Name = "ElementHostGUI";
             this.ElementHostGUI.Size = new System.Drawing.Size(859, 488);
             this.ElementHostGUI.TabIndex = 4;
             this.ElementHostGUI.Text = "elementHost1";
-            this.ElementHostGUI.Child = this.WPFGui;
+            this.ElementHostGUI.Child = this.GUI;
             // 
             // MainGui
             // 
@@ -171,7 +172,7 @@
         private System.Windows.Forms.ToolStripMenuItem mn_Tools;
         private System.Windows.Forms.ToolStripMenuItem mn_Tools_ExportOBJ;
         private System.Windows.Forms.Integration.ElementHost ElementHostGUI;
-        private WPFGui WPFGui;
+        private WPFGui GUI;
     }
 }
 

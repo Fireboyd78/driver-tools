@@ -11,10 +11,8 @@ using System.Text;
 
 namespace System
 {
-    public static class StringColumn
+    public static class StringExtensions
     {
-        /* Hooray for totally irrelevant stuff! */
-
         /// <summary>
         /// Formats a delimited string using the "|" character into a split column with the specified distance.
         /// </summary>
