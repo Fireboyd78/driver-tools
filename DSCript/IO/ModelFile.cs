@@ -75,6 +75,11 @@ namespace DSCript.Models
             LoadModels();
         }
 
+        protected ModelFile()
+        {
+
+        }
+
         public ModelFile(string filename)
         {
             LoadFile(filename);

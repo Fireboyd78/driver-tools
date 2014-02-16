@@ -54,26 +54,39 @@ namespace Zartex
 
         private void LogicNodes_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            if (e.Node.Tag.GetType() == typeof(WireCollectionEntry))
+            if (e.Node.Tag is WireCollectionEntry)
             {
-                if (e.Node.Nodes.Count == 0)
-                {
-                    WireCollectionEntry wire = (WireCollectionEntry)e.Node.Tag;
-
-                    // select the node we're looking for
-                    // LogicNodes.SelectedNode = LogicNodes.Nodes[wire.NodeId];
-
-                    // experimental node expansion
-                    foreach (TreeNode node in Nodes.Nodes[wire.NodeId].Nodes)
-                        e.Node.Nodes.Add((TreeNode)node.Clone());
-
-                    e.Node.Expand();
-                }
-                else
+                if (e.Node.Nodes.Count > 0)
                 {
                     e.Node.Nodes.Clear();
-                    GC.Collect();
+                    return;
                 }
+
+                var wire = e.Node.Tag as WireCollectionEntry;
+                var node = Nodes.Nodes[wire.NodeId];
+
+                int nProps = node.Nodes.Count;
+
+                if (nProps == 1 && node.Nodes[0].Tag is LogicProperty)
+                {
+                    var prop = node.Nodes[0].Tag as LogicProperty;
+
+                    if (prop.Opcode == 19)
+                    {
+                        foreach (TreeNode propNode in node.Nodes[0].Nodes)
+                            e.Node.Nodes.Add((TreeNode)propNode.Clone());
+
+                        e.Node.Expand();
+
+                        return;
+                    }
+                }
+
+                // experimental node expansion
+                foreach (TreeNode propNode in node.Nodes)
+                    e.Node.Nodes.Add((TreeNode)propNode.Clone());
+
+                e.Node.Expand();
             }
         }
     }

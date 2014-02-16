@@ -200,12 +200,6 @@
             Gets or sets the path to the <see cref="T:System.IO.INIFile"/>.
             </summary>
         </member>
-        <member name="M:DSCript.ChunkFile.GetStream">
-            <summary>
-            Returns a new <see cref="T:System.IO.FileStream"/> based on the file that was used to build this <see cref="T:DSCript.ChunkFile"/>.
-            </summary>
-            <returns></returns>
-        </member>
         <member name="M:DSCript.ChunkFile.GetBlockData(DSCript.ChunkEntry)">
             <summary>
             Gets the block data for the specified block.
@@ -216,6 +210,12 @@
             <summary>
             Gets the name of the file that was used to build this <see cref="T:DSCript.ChunkFile"/>.
             </summary>
+        </member>
+        <member name="P:DSCript.ChunkFile.Stream">
+            <summary>
+            Returns a <see cref="T:System.IO.FileStream"/> based on the file that was used to build this <see cref="T:DSCript.ChunkFile"/>.
+            </summary>
+            <returns></returns>
         </member>
         <member name="P:DSCript.IO.ChunkReader.Position">
             <summary> Gets or sets the position of the cursor in the FileStream. </summary>
@@ -1049,10 +1049,29 @@
             Aligns data to 4096-bytes (e.g. 0x384 > 0x1000)
             </summary>
         </member>
-        <member name="M:DSCript.Models.Models.TextureCache.Flush">
+        <member name="T:DSCript.Models.FVFType">
             <summary>
-            Flushes the texture cache and frees up any memory as needed.
+            An enumeration defining different types of vertices used in DRIV3R/Driver: Parallel Lines.
             </summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Vertex12">
+            <summary>Contains data for Position, Normals, Mapping, and Specular.</summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Vertex15">
+            <summary>Contains data for Position, Normals, Mapping, Blend Weights, and Specular.</summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Vertex16">
+            <summary>Contains data for Position, Normals, Mapping, Blend Weights, Specular, and Unknown.</summary>
+        </member>
+        <member name="F:DSCript.Models.FVFType.Unknown">
+            <summary>Represents an unknown type.</summary>
+        </member>
+        <member name="M:DSCript.Models.TextureCache.GetCachedTexture(DSCript.Models.PCMPTexture)">
+            <summary>
+            Retrieves a cached version of this texture (if it exists), otherwise it will be added to the cache automatically.
+            </summary>
+            <param name="texture">The texture to get a cached version of</param>
+            <returns>The cached version of the texture</returns>
         </member>
         <member name="T:DSCript.Models.D3DPRIMITIVETYPE">
             <summary>
@@ -1097,51 +1116,56 @@
             Forces this enumeration to compile to 32 bits in size. Without this value, some compilers would allow this enumeration to compile to a size other than 32 bits. This value is not used. 
             </summary>
         </member>
-        <member name="T:DSCript.Models.IndexedPrimitive">
+        <member name="T:DSCript.Models.MeshDefinition">
             <summary>
             IDirect3DDevice9::DrawIndexedPrimitive -- Based on indexing, renders the specified geometric primitive into an array of vertices.
             
             Source: http://msdn.microsoft.com/en-us/library/windows/desktop/bb174369%28v=vs.85%29.aspx
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.PrimitiveType">
+        <member name="P:DSCript.Models.MeshDefinition.PrimitiveType">
             <summary>
             Member of the <see cref="T:DSCript.Models.D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.Group">
+        <member name="P:DSCript.Models.MeshDefinition.Group">
             <summary>
             The <see cref="T:DSCript.Models.MeshGroup"/> this mesh belongs to.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.BaseVertexIndex">
+        <member name="P:DSCript.Models.MeshDefinition.BaseVertexIndex">
             <summary>
             Offset from the start of the vertex buffer to the first vertex.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.MinIndex">
+        <member name="P:DSCript.Models.MeshDefinition.MinIndex">
             <summary>
             Minimum vertex index for vertices used during this call. This is a zero based index relative to BaseVertexIndex.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.NumVertices">
+        <member name="P:DSCript.Models.MeshDefinition.NumVertices">
             <summary>
             Number of vertices used during this call. The first vertex is located at index: BaseVertexIndex + MinIndex.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.StartIndex">
+        <member name="P:DSCript.Models.MeshDefinition.StartIndex">
             <summary>
             Index of the first index to use when accessing the vertex buffer. Beginning at StartIndex to index vertices from the vertex buffer.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.PrimitiveCount">
+        <member name="P:DSCript.Models.MeshDefinition.PrimitiveCount">
             <summary>
             Number of primitives to render. The number of vertices used is a function of the primitive count and the primitive type.
             </summary>
         </member>
-        <member name="P:DSCript.Models.IndexedPrimitive.MaterialId">
+        <member name="P:DSCript.Models.MeshDefinition.MaterialId">
             <summary>
             The material used for this mesh.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.MeshDefinition.SourceUID">
+            <summary>
+            The UID of the package containing the material.
             </summary>
         </member>
         <member name="M:DSCript.Models.Vertex.GetBytes">
@@ -1185,23 +1209,6 @@
         </member>
         <member name="P:DSCript.Models.Vertex.Unknown">
             <summary>Gets or sets the unknown value of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
-        </member>
-        <member name="T:DSCript.Models.FVFType">
-            <summary>
-            An enumeration defining different types of vertices used in DRIV3R/Driver: Parallel Lines.
-            </summary>
-        </member>
-        <member name="F:DSCript.Models.FVFType.Vertex12">
-            <summary>Contains data for Position, Normals, Mapping, and Specular.</summary>
-        </member>
-        <member name="F:DSCript.Models.FVFType.Vertex15">
-            <summary>Contains data for Position, Normals, Mapping, Blend Weights, and Specular.</summary>
-        </member>
-        <member name="F:DSCript.Models.FVFType.Vertex16">
-            <summary>Contains data for Position, Normals, Mapping, Blend Weights, Specular, and Unknown.</summary>
-        </member>
-        <member name="F:DSCript.Models.FVFType.Unknown">
-            <summary>Represents an unknown type.</summary>
         </member>
         <member name="M:DSCript.Models.VertexData.#ctor(System.Int32,System.Int32)">
             <summary>

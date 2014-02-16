@@ -347,6 +347,9 @@ namespace Zartex
                 {
                     LogicProperty prop = def.Properties[p];
 
+                    if (prop.Opcode == 19 && MissionPackage.WireCollections[(int)prop.Value].Count == 0)
+                        continue;
+
                     string propName = MissionPackage.StringCollection[prop.StringId];
 
                     if (prop.Opcode == 20 && MissionPackage.HasLocale)
@@ -382,14 +385,19 @@ namespace Zartex
                 LogicDefinition def = definition[i];
                 LogicProperty prop = def.Properties[0];
 
+                var nodeWireCollection = Nodes.Nodes[i].Nodes[0];
+
                 // it's actor defs, don't try to load
                 if (prop.Opcode != 19) break;
 
                 int wireId = (int)prop.Value;
 
-                for (int w = 0; w < MissionPackage.WireCollections[wireId].Count; w++)
+                var wires = MissionPackage.WireCollections[wireId];
+                int nWires = wires.Count;
+
+                for (int w = 0; w < nWires; w++)
                 {
-                    WireCollectionEntry wire = MissionPackage.WireCollections[wireId].Entries[w];
+                    WireCollectionEntry wire = wires.Entries[w];
 
                     // int wireTypeId = definition[wire.NodeId].StringId;
 
@@ -402,7 +410,7 @@ namespace Zartex
                         Tag = wire
                     };
 
-                    Nodes.Nodes[i].Nodes[0].Nodes.Add(wireNode);
+                    nodeWireCollection.Nodes.Add(wireNode);
                     //LogicNodes.Nodes[i].Nodes[0].Collapse(false);
                 }
             }
@@ -417,8 +425,8 @@ namespace Zartex
 
         private void GenerateLogicNodes()
         {
-            //CreateNodes(MissionPackage.LogicNodeDefinitions);
-            CreateLogicNodesFlowgraph(MissionPackage.LogicNodeDefinitions);
+            CreateNodes(MissionPackage.LogicNodeDefinitions);
+            //CreateLogicNodesFlowgraph(MissionPackage.LogicNodeDefinitions);
 
             // // Nest wires
             // for (int i = 0; i < nodeCount; i++)

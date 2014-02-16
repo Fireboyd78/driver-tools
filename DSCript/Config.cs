@@ -21,19 +21,7 @@ namespace DSCript
         {
             get
             {
-                if (isDirectory)
-                {
-                    string dir = GetDirectory(key);
-
-                    if (dir.StartsWith(@".\", StringComparison.OrdinalIgnoreCase))
-                        return String.Format(@"{0}\{1}", Application.StartupPath, dir.Substring(2));
-                    else
-                        return dir;
-                }
-                else
-                {
-                    return GetSetting(key);
-                }
+                return (!isDirectory) ? GetSetting(key) : GetDirectory(key);
             }
             set
             {
@@ -46,7 +34,9 @@ namespace DSCript
 
         public string GetDirectory(string key)
         {
-            return DSC.INIFile.ReadValue(DirectoriesKey, key);
+            string dir = DSC.INIFile.ReadValue(DirectoriesKey, key);
+            
+            return (!String.IsNullOrEmpty(dir)) ? Path.GetFullPath(Environment.ExpandEnvironmentVariables(dir)) : dir;
         }
 
         public bool SetDirectory(string key, string value)
@@ -99,19 +89,8 @@ namespace DSCript
 
     public static partial class DSC
     {
-        public static IniConfiguration Configuration { get; private set; }
-        
-        internal static INIFile INIFile { get; private set; }
+        internal static readonly INIFile INIFile = new INIFile("DSCript.ini", Application.StartupPath);
 
-        public static bool IsConfigLoaded
-        {
-            get { return INIFile != null; }
-        }
-
-        static DSC()
-        {
-            INIFile = new INIFile(String.Format("{0}\\DSCript.ini", Application.StartupPath));
-            Configuration = new IniConfiguration("Global");
-        }
+        public static readonly IniConfiguration Configuration = new IniConfiguration("Global");
     }
 }

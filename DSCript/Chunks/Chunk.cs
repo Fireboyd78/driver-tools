@@ -148,6 +148,16 @@ namespace DSCript
             return GetByteAlignment(offset, (uint)align);
         }
 
+        public static int Align(this int @this, int align)
+        {
+            return (align - (@this % align)) % align;
+        }
+
+        public static uint Align(this uint @this, uint align)
+        {
+            return (align - (@this % align)) % align;
+        }
+
         /// <summary>
         /// Returns an unsigned integer representing an offset that has been byte-aligned with a given value.
         /// </summary>

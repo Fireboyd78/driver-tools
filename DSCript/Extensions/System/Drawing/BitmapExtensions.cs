@@ -10,8 +10,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+
+using Interop = System.Windows.Interop;
 
 namespace System.Drawing
 {
@@ -30,11 +31,11 @@ namespace System.Drawing
         {
             BitmapSource bitSrc = null;
 
-            var hBitmap = source.GetHbitmap();
+            IntPtr hBitmap = source.GetHbitmap();
 
             try
             {
-                bitSrc = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                bitSrc = Interop.Imaging.CreateBitmapSourceFromHBitmap(
                     hBitmap,
                     IntPtr.Zero,
                     Int32Rect.Empty,

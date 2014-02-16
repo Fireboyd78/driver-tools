@@ -122,6 +122,11 @@ namespace System.IO
             stream.Write(BitConverter.GetBytes(value), 0, sizeof(byte));
         }
 
+        public static void WriteFloat(this Stream stream, double value)
+        {
+            stream.Write((float)value);
+        }
+
         public static void Write(this Stream stream, params byte[] values)
         {
             stream.Write(values, 0, values.Length);

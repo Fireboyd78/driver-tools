@@ -15,11 +15,6 @@ namespace Antilli
 {
     public static class Settings
     {
-        public static IniConfiguration Configuration { get; private set; }
-
-        static Settings()
-        {
-            Configuration = new IniConfiguration("Antilli");
-        }
+        public static readonly IniConfiguration Configuration = new IniConfiguration("Antilli");
     }
 }

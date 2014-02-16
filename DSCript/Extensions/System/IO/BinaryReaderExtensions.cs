@@ -11,57 +11,54 @@ namespace System.IO
         /// <summary>Aligns the cursor's current position to the specified byte-alignment</summary>
         /// <param name="byteAlignment">The byte-alignment to calculate (e.x. 1024)</param>
         /// <returns>Cursor position after byte-alignment</returns>
-        public static long Align(this BinaryReader f, long byteAlignment)
+        public static long Align(this BinaryReader @this, long byteAlignment)
         {
-            long offset = f.BaseStream.Position;
+            long offset = @this.BaseStream.Position;
             long align = (byteAlignment - (offset % byteAlignment)) % byteAlignment;
 
-            return f.BaseStream.Seek(align, SeekOrigin.Current);
+            return @this.BaseStream.Seek(align, SeekOrigin.Current);
         }
 
-        public static byte PeekByte(this BinaryReader f)
+        public static byte PeekByte(this BinaryReader @this)
         {
-            byte b = f.ReadByte();
+            byte b = @this.ReadByte();
 
-            --f.BaseStream.Position;
+            --@this.BaseStream.Position;
 
             return b;
         }
 
-        public static string ReadString(this BinaryReader f, int length)
+        public static string ReadString(this BinaryReader @this, int length)
         {
-            return Encoding.UTF8.GetString(f.ReadBytes(length));
+            return Encoding.UTF8.GetString(@this.ReadBytes(length));
         }
 
-        public static string ReadUnicodeString(this BinaryReader f, int length)
+        public static string ReadUnicodeString(this BinaryReader @this, int length)
         {
-            return Encoding.Unicode.GetString(f.ReadBytes(length));
+            return Encoding.Unicode.GetString(@this.ReadBytes(length));
         }
 
-        public static string ReadCString(this BinaryReader f)
+        public static long GetPosition(this BinaryReader @this)
         {
-            if (f.PeekByte() == 0x0) return "";
-
-            StringBuilder str = new StringBuilder();
-
-            while (f.PeekByte() != 0x0)
-            {
-                str.Append(f.ReadChar());
-            }
-
-            ++f.BaseStream.Position;
-
-            return str.ToString();
+            return @this.BaseStream.Position;
         }
 
-        public static long GetPosition(this BinaryReader f)
+        public static long Seek(this BinaryReader @this, long offset, SeekOrigin origin)
         {
-            return f.BaseStream.Position;
+            return @this.BaseStream.Seek(offset, origin);
         }
 
-        public static long Seek(this BinaryReader f, long offset, SeekOrigin origin)
+        public static long SeekFromOrigin(this BinaryReader @this, long origin, long offset)
         {
-            return f.BaseStream.Seek(offset, origin);
+            return @this.BaseStream.Seek(origin + offset, SeekOrigin.Begin);
+        }
+
+        public static string GetFilename(this BinaryReader @this)
+        {
+            if (@this.BaseStream is FileStream)
+                return ((FileStream)@this.BaseStream).Name;
+
+            return String.Empty;
         }
     }
 }

@@ -13,70 +13,89 @@ using DSCript.IO;
 
 namespace DSCript
 {
-    public sealed class ChunkFile : IDisposable
+    public class ChunkFile : IDisposable
     {
-        /// <summary>
-        /// Gets the name of the file that was used to build this <see cref="ChunkFile"/>.
-        /// </summary>
-        public string Filename { get; private set; }
-
-        #region Temp File management
-        private string TempFilename
-        {
-            get { return String.Format("{0}.TEMP", Filename); }
-        }
-
-        public bool HasTempFile
-        {
-            get { return (File.Exists(TempFilename)) ? true : false; }
-        }
-
-        public FileStream GetTempFile()
-        {
-            if (!HasTempFile)
-                File.Copy(Filename, TempFilename, true);
-
-            return File.Open(TempFilename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        }
-
-        public void DestroyTempFile()
-        {
-            if (HasTempFile)
-                File.Delete(TempFilename);
-        }
-        #endregion
-
         public void Dispose()
         {
+            if (_reader != null)
+            {
+                _reader.Dispose();
+                _reader = null;
+            }
+            if (_writer != null)
+            {
+                _writer.Dispose();
+                _writer = null;
+            }
+            if (_stream != null)
+            {
+                _stream.Dispose();
+                _stream = null;
+            }
             if (Chunks != null)
             {
                 for (int i = 0; i < Chunks.Count; i++)
                     Chunks[i] = null;
 
                 Chunks.Clear();
+                Chunks = null;
             }
-
             if (BlockData != null)
             {
                 for (int i = 0; i < BlockData.Count; i++)
                     BlockData[i] = null;
 
                 BlockData.Clear();
+                BlockData = null;
             }
+        }
 
-            DestroyTempFile();
+        BinaryReaderEx _reader;
+        BinaryWriter _writer;
+
+        FileStream _stream;
+
+        /// <summary>
+        /// Gets the name of the file that was used to build this <see cref="ChunkFile"/>.
+        /// </summary>
+        public string Filename { get; protected set; }
+
+        protected internal BinaryReaderEx Reader
+        {
+            get
+            {
+                if (_reader == null)
+                    _reader = new BinaryReaderEx(Stream);
+
+                return _reader;
+            }
+        }
+
+        protected internal BinaryWriter Writer
+        {
+            get
+            {
+                if (_writer == null)
+                    _writer = new BinaryWriter(Stream);
+
+                return _writer;
+            }
         }
 
         /// <summary>
-        /// Returns a new <see cref="FileStream"/> based on the file that was used to build this <see cref="ChunkFile"/>.
+        /// Returns a <see cref="FileStream"/> based on the file that was used to build this <see cref="ChunkFile"/>.
         /// </summary>
         /// <returns></returns>
-        public FileStream GetStream()
+        public FileStream Stream
         {
-            return File.Open(Filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+            get
+            {
+                if (_stream == null)
+                    _stream = File.Open(Filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    
+                return _stream;
+            }
         }
-
-        public bool IsLoaded { get; private set; }
 
         public List<ChunkBlock> Chunks { get; set; }
         public List<BlockData> BlockData { get; set; }
@@ -90,10 +109,18 @@ namespace DSCript
             return BlockData.Find((data) => data.Block == block);
         }
 
-        private void BlockSizeUpdated(object sender, BlockDataEventArgs e)
+        public ChunkBlock GetChunkFromEntry(ChunkEntry block)
+        {
+            if (block.BlockData != null)
+                return null;
+
+            return Chunks.Find((c) => c.HasParent && c.Parent == block);
+        }
+
+        protected virtual void BlockSizeUpdated(object sender, BlockDataEventArgs e)
         {
             ChunkEntry block = (ChunkEntry)sender;
-            ChunkBlock parent = (ChunkBlock)block.Parent;
+            ChunkBlock parent = block.Parent;
 
             parent.CalculateOffsets();
 
@@ -103,51 +130,41 @@ namespace DSCript
                 parent.Parent.Size = parent.CalculateSize();
         }
 
-        private void ReadChunks(BinaryReader reader, ChunkBlock chunk, int id, uint baseOffset)
+        protected virtual void ReadChunks(ChunkBlock chunk, int id, uint baseOffset)
         {
             // Create a new ChunkEntry with the specified ID
             // Initialize paramaters using the BinaryReader
             ChunkEntry block = new ChunkEntry(id, chunk) {
-                Magic    = reader.ReadUInt32(),
-                Offset   = reader.ReadUInt32(),
-                Reserved = reader.ReadByte()
+                Magic    = Reader.ReadUInt32(),
+                Offset   = Reader.ReadUInt32(),
+                Reserved = Reader.ReadByte()
             };
 
-            // Add our ChunkEntry to the ChunkBlock
             chunk.Entries.Insert(id, block);
 
             // Read string length
-            int strLen = reader.ReadByte();
+            int strLen = Reader.ReadByte();
 
             // skip 2 bytes we don't need
-            reader.Seek(0x2, SeekOrigin.Current);
+            Reader.Seek(0x2, SeekOrigin.Current);
 
             // Read size
-            block.Size = reader.ReadUInt32();
+            block.Size = Reader.ReadUInt32();
             block.SizeUpdated += (o, e) => BlockSizeUpdated(o, e);
 
             // Hold this position so we can come back to it and read the next entry
-            long holdPosition = reader.GetPosition();
+            long holdPosition = Reader.GetPosition();
 
             /* ----------------------------------------------------
              * Descriptions are found at the very end of chunks, so
              * we can add up the total size of the chunk (including
-             * offsets) to find it. Descriptions are Pascal strings
-             * (those with no terminator character ('\0').
-             * 
-             * If there isn't a description, an empty string value
-             * will be assigned.
+             * offsets) to find it.
              * ---------------------------------------------------- */
             if (strLen > 0)
             {
-                reader.Seek(baseOffset + (block.Offset + block.Size), SeekOrigin.Begin);
-                block.Description = reader.ReadString(strLen);
+                Reader.SeekFromOrigin(baseOffset, (block.Offset + block.Size));
+                block.Description = Reader.ReadString(strLen);
             }
-            else
-            {
-                block.Description = String.Empty;
-            }
-
 
             /* ----------------------------------------------------
              * Now we read the actual data contained in this block.
@@ -158,31 +175,34 @@ namespace DSCript
              * - otherwise, we'll just add a new BlockData entry to
              * keep track of the raw data.
              * ---------------------------------------------------- */
-            reader.Seek(baseOffset + block.Offset, SeekOrigin.Begin);
+            Reader.SeekFromOrigin(baseOffset, block.Offset);
 
-            uint magic = reader.ReadUInt32();
+            uint magic = Reader.ReadUInt32();
 
             if (!Chunk.IsChunkType(magic, ChunkType.Chunk))
             {
-                BlockData.Add(new BlockData(this, block));
+                BlockData blockData = new BlockData(this, block);
+                block.BlockData = blockData;
+
+                BlockData.Add(blockData);
             }
             else
             {
                 // Since we read the first 4 bytes, the offset is the current position - 4
-                uint blockOffset = (uint)(reader.GetPosition() - 0x4);
+                uint blockOffset = (uint)(Reader.GetPosition() - 0x4);
 
                 int ss = Chunks.Count;
                 int ii = 0;
                 
                 // Read size and count
-                uint size = reader.ReadUInt32();
-                int count = reader.ReadInt32();
+                uint size = Reader.ReadUInt32();
+                int count = Reader.ReadInt32();
 
                 // Skip version
-                reader.Seek(0x4, SeekOrigin.Current);
+                Reader.Seek(0x4, SeekOrigin.Current);
 
                 // Create our new ChunkBlock using the information from above
-                ChunkBlock newChunk = new ChunkBlock(ss, blockOffset, block) {
+                ChunkBlock newChunk = new ChunkBlock(id, blockOffset, block) {
                     Size    = size,
                     Entries = new List<ChunkEntry>(count)
                 };
@@ -192,69 +212,61 @@ namespace DSCript
 
                 // Recurse through the entries
                 for (ii = 0; ii < newChunk.Entries.Capacity; ii++)
-                    ReadChunks(reader, newChunk, ii, blockOffset);
+                    ReadChunks(newChunk, ii, blockOffset);
             }
 
             // Seek back to the next entry and continue
-            reader.Seek(holdPosition, SeekOrigin.Begin);
+            Reader.Seek(holdPosition, SeekOrigin.Begin);
         }
 
-        public int Load()
+        protected virtual int Load()
         {
-            using (FileStream fs = GetStream())
-            using (BinaryReader f = new BinaryReader(fs))
-            {
-                // Make sure this is actually a chunk file and not some imitator
-                if (!Chunk.IsChunkType(f.ReadUInt32(), ChunkType.Chunk))
-                    return -1;
+            // Make sure this is actually a chunk file and not some imitator
+            if (!Chunk.IsChunkType(Reader.ReadUInt32(), ChunkType.Chunk))
+                return -1;
 
-                uint size = f.ReadUInt32();
-                int count = f.ReadInt32();
+            uint size = Reader.ReadUInt32();
+            int count = Reader.ReadInt32();
 
-                // Check version
-                if (f.ReadUInt32() != Chunk.Version)
-                    return -1;
+            // Check version
+            if (Reader.ReadUInt32() != Chunk.Version)
+                return -1;
 
-                // Intialize the Chunks and BlockData
-                Chunks = new List<ChunkBlock>();
-                BlockData = new List<BlockData>();
+            // Intialize the Chunks and BlockData
+            Chunks = new List<ChunkBlock>();
+            BlockData = new List<BlockData>();
 
-                // Create our root chunk using ID '0' and a base offset of 0x0
-                // Then insert it into the master chunk list
-                ChunkBlock root = new ChunkBlock(0, 0x0) {
-                    Size    = size,
-                    Entries = new List<ChunkEntry>(count)
-                };
+            // Create our root chunk using ID '0' and a base offset of 0x0
+            // Then insert it into the master chunk list
+            ChunkBlock root = new ChunkBlock(0, 0x0) {
+                Size    = size,
+                Entries = new List<ChunkEntry>(count)
+            };
 
-                Chunks.Insert(0, root);
+            Chunks.Insert(0, root);
 
-                DSC.Log("Loading {0} chunks...", root.Entries.Capacity);
+            DSC.Log("Loading {0} chunks...", root.Entries.Capacity);
 
-                // Read all chunk entries (the iterator is defined in the local scope so it doesn't lose its value)
-                int ck = 0, numChunksRead = 0;
+            // Read all chunk entries (the iterator is defined in the local scope so it doesn't lose its value)
+            int ck = 0, numChunksRead = 0;
 
-                for (ck = 0; ck < root.Entries.Capacity; ck++, ++numChunksRead)
-                    ReadChunks(f, root, ck, 0x0);
+            for (ck = 0; ck < root.Entries.Capacity; ck++, ++numChunksRead)
+                ReadChunks(root, ck, 0x0);
 
-                return numChunksRead;
-            }
+            return numChunksRead;
         }
 
         public ChunkFile(string filename)
         {
             Filename = filename;
-
-            int numChunksRead = Load();
-
-            IsLoaded = (numChunksRead != -1) ? true : false;
-
-            if (IsLoaded)
-                DSC.Log("{0} chunks loaded.", numChunksRead);
+            
+            if (Load() != -1)
+                DSC.Log("{0} chunks loaded.", Chunks.Count);
         }
 
         ~ChunkFile()
         {
-            DestroyTempFile();
+            Dispose();
         }
     }
 }

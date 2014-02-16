@@ -17,6 +17,13 @@ namespace DSCript.Models
         {
             ChunkBlock root = ChunkFile.Chunks[0];
 
+            // Check if PS2 version
+            if (ChunkFile.Chunks[1].Entries.Count > 1)
+            {
+                // Load PS2 VVS file
+
+            }
+
             Models = new List<ModelPackage>(root.Entries.Count / 2);
 
             for (int i = root.Entries.Count / 2; i < root.Entries.Count; i++)
@@ -27,5 +34,5 @@ namespace DSCript.Models
 
         // Call the default constructor
         public VVSFile(string filename) : base(filename) { }
-    }   
+    }
 }

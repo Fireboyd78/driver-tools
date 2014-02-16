@@ -51,6 +51,8 @@ namespace DSCript
             get { return BlockType.ChunkItem; }
         }
 
+        public BlockData BlockData { get; set; }
+
         public ChunkEntry(int id, ChunkBlock parent)
         {
             ID = id;

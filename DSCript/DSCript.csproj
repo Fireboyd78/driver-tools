@@ -71,7 +71,7 @@
     <Reference Include="System.Xml.Linq" />
     <Reference Include="TDx.TDxInput">
       <HintPath>..\Libraries\HelixToolkit\TDx.TDxInput.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="Xceed.Wpf.Toolkit, Version=2.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
@@ -83,6 +83,7 @@
     <None Include="IO\ChunksOld\Blocks\BlockData.cs" />
     <Compile Include="Chunks\ChunkExporter.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="Extensions\System\IO\BinaryReaderEx.cs" />
     <Compile Include="Extensions\System\IO\BinaryReaderExtensions.cs" />
     <Compile Include="Chunks\Block.cs" />
     <Compile Include="Chunks\BlockData.cs" />
@@ -109,19 +110,31 @@
     <Compile Include="IO\ChunksOld\ChunkReaderExtensions.cs" />
     <Compile Include="Chunks\ChunkTypes.cs" />
     <Compile Include="IO\ChunksOld\SubChunkBlock.cs" />
+    <Compile Include="IO\DSFModelFile.cs" />
     <Compile Include="IO\ModelFile.cs" />
+    <Compile Include="IO\VGTFile.cs" />
+    <Compile Include="IO\VVVFile.cs" />
     <Compile Include="IO\VVSFile.cs" />
     <Compile Include="Log\Log.cs" />
     <Compile Include="Chunks\Chunk.cs" />
+    <Compile Include="Models\BlendWeightsModel3D.cs" />
+    <Compile Include="Models\DSF\ModelResourcePackage.cs" />
+    <Compile Include="Models\FVFType.cs" />
+    <Compile Include="Models\GeometryBase3D.cs" />
+    <Compile Include="Models\Materials\PCMPMaterial.cs" />
+    <Compile Include="Models\Materials\PCMPSubMaterial.cs" />
+    <Compile Include="Models\Materials\PCMPTextureInfo.cs" />
+    <Compile Include="Models\Materials\TextureFlags.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC_X.cs" />
+    <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
     <Compile Include="Models\TextureCache.cs" />
     <Compile Include="Models\D3DPRIMITIVETYPE.cs" />
     <Compile Include="Models\IndexData.cs" />
     <Compile Include="Models\IndexedPrimitive.cs" />
-    <Compile Include="Models\MaterialData.cs" />
-    <Compile Include="Models\MDPCTypes.cs" />
-    <Compile Include="Models\Mesh.cs" />
+    <Compile Include="Models\Materials\PCMPData.cs" />
+    <Compile Include="Models\PackageTypes.cs" />
+    <Compile Include="Models\DriverModel3D.cs" />
     <Compile Include="Models\MeshGroup.cs" />
     <Compile Include="Models\ModelPackages\ModelPackage.cs" />
     <Compile Include="Models\PartDefinition.cs" />

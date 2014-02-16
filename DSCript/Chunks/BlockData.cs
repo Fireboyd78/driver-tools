@@ -30,12 +30,8 @@ namespace DSCript
 
                 byte[] buffer = new byte[Block.Size];
 
-                using (FileStream fs = File.GetStream())
-                using (BinaryReader f = new BinaryReader(fs))
-                {
-                    f.Seek(FileOffset, SeekOrigin.Begin);
-                    f.Read(buffer, 0, buffer.Length);
-                }
+                File.Reader.Seek(FileOffset, SeekOrigin.Begin);
+                File.Reader.Read(buffer, 0, buffer.Length);
 
                 return buffer;
             }

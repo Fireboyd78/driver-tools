@@ -70,35 +70,36 @@ namespace DSCript.Models
         /// <returns></returns>
         public byte[] GetBytes()
         {
-            byte[] bytes = new byte[(int)VertexType];
-
-            Array.Copy(BitConverter.GetBytes((float)Positions.X), 0, bytes, 0, 4);
-            Array.Copy(BitConverter.GetBytes((float)Positions.Y), 0, bytes, 4, 4);
-            Array.Copy(BitConverter.GetBytes((float)Positions.Z), 0, bytes, 8, 4);
-
-            Array.Copy(BitConverter.GetBytes((float)Normals.X), 0, bytes, 12, 4);
-            Array.Copy(BitConverter.GetBytes((float)Normals.Y), 0, bytes, 16, 4);
-            Array.Copy(BitConverter.GetBytes((float)Normals.Z), 0, bytes, 20, 4);
-
-            Array.Copy(BitConverter.GetBytes((float)UVs.X), 0, bytes, 24, 4);
-            Array.Copy(BitConverter.GetBytes((float)UVs.Y), 0, bytes, 28, 4);
-
-            Array.Copy(BitConverter.GetBytes((float)Diffuse.A), 0, bytes, 32, 4);
-            Array.Copy(BitConverter.GetBytes((float)Diffuse.R), 0, bytes, 36, 4);
-            Array.Copy(BitConverter.GetBytes((float)Diffuse.G), 0, bytes, 40, 4);
-            Array.Copy(BitConverter.GetBytes((float)Diffuse.B), 0, bytes, 44, 4);
-
-            if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
+            using (MemoryStream ms = new MemoryStream((int)VertexType))
             {
-                Array.Copy(BitConverter.GetBytes((float)BlendWeights.X), 0, bytes, 48, 4);
-                Array.Copy(BitConverter.GetBytes((float)BlendWeights.Y), 0, bytes, 52, 4);
-                Array.Copy(BitConverter.GetBytes((float)BlendWeights.Z), 0, bytes, 56, 4);
+                ms.WriteFloat(-Positions.X);
+                ms.WriteFloat(Positions.Z);
+                ms.WriteFloat(Positions.Y);
+
+                ms.WriteFloat(-Normals.X);
+                ms.WriteFloat(Normals.Z);
+                ms.WriteFloat(Normals.Y);
+
+                ms.WriteFloat(UVs.X);
+                ms.WriteFloat(UVs.Y);
+
+                if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
+                {
+                    ms.WriteFloat(-BlendWeights.X);
+                    ms.WriteFloat(BlendWeights.Z);
+                    ms.WriteFloat(BlendWeights.Y);
+                }
 
                 if (VertexType == FVFType.Vertex16)
-                    Array.Copy(BitConverter.GetBytes((float)Unknown), 0, bytes, 60, 4);
-            }
+                    ms.WriteFloat(Unknown);
 
-            return bytes;
+                ms.Write(Diffuse.ScR);
+                ms.Write(Diffuse.ScG);
+                ms.Write(Diffuse.ScB);
+                ms.Write(Diffuse.ScA);
+
+                return ms.ToArray();
+            }
         }
 
         public Vertex Copy()
@@ -174,7 +175,6 @@ namespace DSCript.Models
             using (MemoryStream f = new MemoryStream(vertexBuffer, 0, vertexBuffer.Length))
             {
                 // IMPORTANT NOTE: The Y & Z Axes are flipped and the X axis is negated!
-                // For UV coordinates, the V axis is negated.
 
                 Positions = new Point3D() {
                     X = -f.ReadSingle(),
@@ -190,7 +190,7 @@ namespace DSCript.Models
 
                 UVs = new Point() {
                     X = f.ReadSingle(),
-                    Y = -f.ReadSingle()
+                    Y = f.ReadSingle()
                 };
 
                 if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
@@ -202,15 +202,15 @@ namespace DSCript.Models
                     };
                 }
 
-                Diffuse = Color.FromArgb(
-                    (byte)Math.Round(f.ReadSingle() * 255.0),
-                    (byte)Math.Round(f.ReadSingle() * 255.0),
-                    (byte)Math.Round(f.ReadSingle() * 255.0),
-                    (byte)Math.Round(f.ReadSingle() * 255.0)
-                );
-
                 if (VertexType == FVFType.Vertex16)
                     Unknown = f.ReadSingle();
+
+                float r = f.ReadSingle();
+                float g = f.ReadSingle();
+                float b = f.ReadSingle();
+                float a = f.ReadSingle();
+
+                Diffuse = Color.FromScRgb(a, r, g, b);
             }
         }
     }

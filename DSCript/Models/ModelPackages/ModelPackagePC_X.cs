@@ -29,7 +29,7 @@ namespace DSCript.Models
                 if (f.ReadUInt32() != Magic)
                     throw new Exception("Bad magic, cannot load ModelPackage!");
 
-                uint unknown1           = f.ReadUInt32();
+                UID                     = f.ReadUInt32();
 
                 int nParts              = f.ReadInt32();
                 uint partsOffset        = f.ReadUInt32();
@@ -108,13 +108,13 @@ namespace DSCript.Models
                     * ------------------------------ */
                 f.Seek(meshesOffset, SeekOrigin.Begin);
 
-                Meshes = new List<IndexedPrimitive>(nMeshes);
+                Meshes = new List<MeshDefinition>(nMeshes);
 
                 for (int i = 0; i < nMeshes; i++)
                 {
                     uint offset = (uint)f.GetPosition();
 
-                    IndexedPrimitive mesh = new IndexedPrimitive() {
+                    MeshDefinition mesh = new MeshDefinition() {
                         Offset = offset
                     };
 
@@ -126,9 +126,9 @@ namespace DSCript.Models
 
                     f.Seek(0x4, SeekOrigin.Current);
 
-                    mesh.PrimitiveCount = f.ReadInt32();
+                    mesh.PrimitiveCount = f.ReadUInt32();
 
-                    int indexOffset = f.ReadInt32();
+                    uint indexOffset = f.ReadUInt32();
                     mesh.StartIndex = (indexOffset != 0) ? ((indexOffset / 2) - 1) : 0;
 
                     mesh.MinIndex = 0;
@@ -140,7 +140,7 @@ namespace DSCript.Models
                     f.Seek(0x1C, SeekOrigin.Current);
 
                     mesh.MaterialId = f.ReadInt16();
-                    mesh.TextureFlag = f.ReadUInt16();
+                    mesh.SourceUID = f.ReadUInt16();
 
                     //skip padding
                     f.Seek(0x4, SeekOrigin.Current);
@@ -177,7 +177,7 @@ namespace DSCript.Models
                         if (v == -1)
                             throw new Exception("An error occurred while trying to add a mesh to a group!");
 
-                        IndexedPrimitive mesh = Meshes[v];
+                        MeshDefinition mesh = Meshes[v];
                         mesh.Group = mGroup;
 
                         mGroup.Meshes.Add(mesh);

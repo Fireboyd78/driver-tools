@@ -17,12 +17,12 @@ namespace DSCript.Models
 
         public uint Offset { get; private set; }
 
-        public List<IndexedPrimitive> Meshes { get; set; }
+        public List<MeshDefinition> Meshes { get; set; }
 
         public MeshGroup(uint meshesOffset, int nMeshes)
         {
             Offset = meshesOffset;
-            Meshes = new List<IndexedPrimitive>(nMeshes);
+            Meshes = new List<MeshDefinition>(nMeshes);
         }
     }
 }

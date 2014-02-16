@@ -17,15 +17,19 @@ namespace DSCript.Models
 {
     public abstract class ModelPackage
     {
-        public static string GlobalTexturesName { get; set; }
-        public static List<PCMPMaterial> GlobalTextures { get; set; }
+        public static VGTFile Globals { get; set; }
 
-        public static bool HasGlobalTextures
+        public static bool HasGlobals
         {
-            get { return GlobalTextures != null; }
+            get { return Globals != null; }
         }
 
-        public PackageType PackageType { get; protected set; }
+        public uint UID { get; protected set; }
+
+        public PackageType PackageType
+        {
+            get { return Enum.IsDefined((typeof(PackageType)), UID) ? (PackageType)UID : PackageType.SpooledModels; }
+        }
 
         public virtual uint Magic
         {
@@ -36,7 +40,7 @@ namespace DSCript.Models
 
         public List<PartsGroup> Parts { get; set; }
         public List<MeshGroup> MeshGroups { get; set; }
-        public List<IndexedPrimitive> Meshes { get; set; }
+        public List<MeshDefinition> Meshes { get; set; }
 
         public VertexData Vertices { get; set; }
         public IndexData Indices { get; set; }
@@ -48,7 +52,17 @@ namespace DSCript.Models
             get { return MaterialData != null; }
         }
 
+        public bool HasBlendWeights
+        {
+            get { return Vertices.VertexType != FVFType.Vertex12; }
+        }
+
         public virtual void Load()
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual void Compile()
         {
             throw new NotImplementedException();
         }

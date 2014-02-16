@@ -9,6 +9,8 @@ namespace System.IO
     /// </summary>
     public class INIFile
     {
+        static char[] nullChar = new[] {'\0'};
+
         /// <summary>
         /// Gets or sets the path to the <see cref="INIFile"/>.
         /// </summary>
@@ -20,7 +22,7 @@ namespace System.IO
 
             NativeMethods.GetPrivateProfileString(section, null, null, val, 1024, Path);
 
-            return new string(val).Split(new char[] {'\0'}, StringSplitOptions.RemoveEmptyEntries);
+            return new string(val).Split(nullChar, StringSplitOptions.RemoveEmptyEntries);
         }
 
         /// <summary>
@@ -35,7 +37,7 @@ namespace System.IO
 
             NativeMethods.GetPrivateProfileString(section, key, String.Empty, val, 1024, Path);
 
-            string[] str = new string(val).Split(new char[] {'\0'}, StringSplitOptions.RemoveEmptyEntries);
+            string[] str = new string(val).Split(nullChar, StringSplitOptions.RemoveEmptyEntries);
 
             return (str.Length > 0) ? str[0] : String.Empty;
         }
@@ -63,5 +65,7 @@ namespace System.IO
 
             Path = path;
         }
+
+        public INIFile(string filename, string path) : this(String.Format(@"{0}\{1}", path, filename)) { }
     }
 }
