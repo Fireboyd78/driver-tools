@@ -118,6 +118,7 @@
     <Compile Include="Extensions\System\Windows\Forms\MessageBoxEx.cs" />
     <Compile Include="Extensions\System\XML\XMLExtensions.cs" />
     <Compile Include="Helpers\Driv3r.cs" />
+    <Compile Include="Helpers\Memory.cs" />
     <Compile Include="INIFile.cs" />
     <Compile Include="IO\ChunksOld\Blocks\Block.cs">
       <SubType>Code</SubType>

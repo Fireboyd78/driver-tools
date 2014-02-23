@@ -394,7 +394,7 @@ namespace Antilli
             VisualsLayer1.Children.Clear();
             VisualsLayer2.Children.Clear();
             VisualsLayer3.Children.Clear();
-            //VisualsLayer4.Children.Clear();
+            VisualsLayer4.Children.Clear();
 
             foreach (PartsGroup part in SelectedModelGroup.Parts)
             {

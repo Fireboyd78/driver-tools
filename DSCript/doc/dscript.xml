@@ -167,6 +167,30 @@
             </summary>
             <param name="count">Number of lines to be inserted</param>
         </member>
+        <member name="M:DSCript.Memory.Align(System.Int64,System.Int64)">
+            <summary>
+            Returns the result of aligning an offset to a certain alignment.
+            </summary>
+            <param name="offset">The offset to align</param>
+            <param name="align">The byte-alignment</param>
+            <returns>The byte-aligned offset.</returns>
+        </member>
+        <member name="M:DSCript.Memory.Align(System.Int32,System.Int32)">
+            <summary>
+            Returns the result of aligning an offset to a certain alignment.
+            </summary>
+            <param name="offset">The offset to align</param>
+            <param name="align">The byte-alignment</param>
+            <returns>The byte-aligned offset.</returns>
+        </member>
+        <member name="M:DSCript.Memory.Align(System.UInt32,System.UInt32)">
+            <summary>
+            Returns the result of aligning an offset to a certain alignment.
+            </summary>
+            <param name="offset">The offset to align</param>
+            <param name="align">The byte-alignment</param>
+            <returns>The byte-aligned offset.</returns>
+        </member>
         <member name="T:System.IO.INIFile">
             <summary>
             Represents a class used to read/write key values to/from INI files.

@@ -22,12 +22,23 @@ namespace Antilli
 
         public IList<ModelListItem> Parent { get; private set; }
 
+        public ModelVisual3DGroup Model { get; private set; }
+
         public string Name
         {
-            get { return (Model.Name != "") ? Model.Name : String.Format("Model {0}", Index); ; }
+            get
+            {
+                if (!String.IsNullOrEmpty(Model.Name))
+                    return Model.Name;
+                else
+                    return String.Format("Model {0}", Index);
+            }
         }
 
-        public ModelVisual3DGroup Model { get; private set; }
+        public override string ToString()
+        {
+            return Name;
+        }
 
         public ModelListItem(IList<ModelListItem> parent, ModelVisual3DGroup model)
         {

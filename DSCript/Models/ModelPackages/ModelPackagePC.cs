@@ -64,7 +64,8 @@ namespace DSCript.Models
                 if (PackageType == PackageType.VehicleGlobals || fvfOffset == 0)
                     goto LoadPCMP;
 
-                VertexBuffers = new List<VertexData>(numVertexBuffers);
+                if (numVertexBuffers > 0)
+                    VertexBuffers = new List<VertexData>(numVertexBuffers);
 
                 /* ------------------------------
                  * Read vertex buffer header(s) (Size: 0x1C)
@@ -180,7 +181,7 @@ namespace DSCript.Models
                  * ------------------------------ */
                 for (int i = 0; i < nParts; i++)
                 {
-                    f.SeekFromOrigin(partsOffset, (i * 0x188));
+                    long entryPoint = f.SeekFromOrigin(partsOffset, (i * 0x188));
 
                     PartsGroup part = new PartsGroup() {
                         UID = f.ReadUInt32(),
@@ -249,6 +250,40 @@ namespace DSCript.Models
                             // TODO: Not have such ugly code!
                             foreach (IndexedMesh mesh in mGroup.Meshes)
                                 mesh.PartsGroup = entry.Parent;
+
+                            // This is obviously a bad way to fix something that was clearly intentional...
+                            // FIX IT
+                            //if (entry.Unknown > 1)
+                            //{
+                            //    DSC.Log("Attempting to fix buggy parts group {0} @ 0x{1:X}", part.UID, entryPoint);
+                            //
+                            //    PartsGroup newPart = new PartsGroup() {
+                            //        UID = part.UID,
+                            //        Handle = part.Handle,
+                            //        VertexBufferId = part.VertexBufferId,
+                            //        Unknown1 = part.Unknown1,
+                            //        Unknown2 = part.Unknown2,
+                            //        Transform = part.Transform
+                            //    };
+                            //
+                            //    Parts.Add(newPart);
+                            //
+                            //    PartDefinition pDef = new PartDefinition(k) {
+                            //        Parent = newPart,
+                            //        Unknown = 1,
+                            //        Reserved = entry.Reserved
+                            //    };
+                            //
+                            //    newPart.Parts.Add(pDef);
+                            //
+                            //    MeshGroup nMGroup = groups[gOffset + 0x58];
+                            //
+                            //    pDef.Group = nMGroup;
+                            //    nMGroup.Parent = entry;
+                            //
+                            //    foreach (IndexedMesh mesh in nMGroup.Meshes)
+                            //        mesh.PartsGroup = pDef.Parent;
+                            //}
                         }
                     }
                 }
@@ -396,141 +431,121 @@ namespace DSCript.Models
 
         public override void Compile()
         {
-            throw new Exception("Needs to be rewritten first!");
-
-            /*
-            int bufSize             = 0;
+            int bufferSize          = 0;
 
             int nParts              = 0;
             int nGroups             = 0;
             int nMeshes             = 0;
             int nIndices            = 0;
-            int nVertices           = 0;
+            int nVertexBuffers      = 0;
 
-            int partsOffset         = 0x80; // haven't seen any different values
+            int partsOffset         = 0x80;
             int groupsOffset        = 0;
             int meshesOffset        = 0;
+            
             int ddsOffset           = 0;
             int pcmpOffset          = 0;
+
             int indicesOffset       = 0;
-            int fvfOffset           = 0;
-            int vertsOffset         = 0;
-            int ddsOffset2          = 0;
-            int materialsOffset     = 0;
-            int subMatTableOffset   = 0;
-            int subMaterialsOffset  = 0;
-            int texInfoTableOffset  = 0;
-            int texInfoOffset       = 0;
-
-            int vertLength          = 0;
-            int vertsSize           = 0;
-
             int indicesSize         = 0;
+            
+            int fvfOffset           = 0;
+            int vBufferOffset       = 0;
 
-            bool writeModels        = (Parts != null && VertexBuffers.Buffer != null && Indices.Buffer != null);
 
-            // sections aligned 128 bytes
+            bool writeModels        = (VertexBuffers != null) && (Parts != null);
+
             // Size of header
-            bufSize += 0x44;
-            bufSize += bufSize.Align(128);
+            bufferSize = Memory.Align(0x44, 128);
 
-            if (!writeModels)
+            if (writeModels)
             {
-                bufSize += bufSize.Align(4096);
-            }
-            else
-            {
-                nParts = Parts.Count;
-                nGroups = MeshGroups.Count;
-                nMeshes = Meshes.Count;
+                nParts              = Parts.Count;
+                nGroups             = MeshGroups.Count;
+                nMeshes             = Meshes.Count;
 
-                nIndices = Indices.Buffer.Length;
-                nVertices = VertexBuffers.Buffer.Length;
+                nIndices            = Indices.Buffer.Length;
+                indicesSize         = nIndices * 2;
 
-                vertLength = (int)VertexBuffers.VertexType;
-                vertsSize = vertLength * nVertices;
-
-                indicesSize = nIndices * 2;
-
-                partsOffset = bufSize;
+                nVertexBuffers      = VertexBuffers.Count;
 
                 // Add up size of parts groups
-                bufSize += nParts * 0x188;
-                bufSize += bufSize.Align(128);
+                bufferSize += Memory.Align((nParts * 0x188), 128);
+                groupsOffset = bufferSize;
 
-                groupsOffset = bufSize;
-
-                // Add up size of mesh groups
-                bufSize += nGroups * 0x58;
-                meshesOffset = bufSize;
+                // Add up size of mesh groups (non-aligned)
+                bufferSize += (nGroups * 0x58);
+                meshesOffset = bufferSize;
 
                 // Add up size of mesh definitions
-                bufSize += nMeshes * 0x38;
-                bufSize += bufSize.Align(128);
+                bufferSize += Memory.Align((nMeshes * 0x38), 128);
+                fvfOffset = bufferSize;
 
-                fvfOffset = bufSize;
+                // Add up size of vertex buffer(s) FVF data
+                bufferSize += (nVertexBuffers * 0x1C);
 
-                // Add up size of FVF data
-                bufSize += 0x1C;
+                indicesOffset = bufferSize;
+                bufferSize += indicesSize;
 
-                indicesOffset = bufSize;
-                bufSize += indicesSize;
+                bufferSize = Memory.Align(bufferSize, 4096);
+                vBufferOffset = bufferSize;
 
-                bufSize += bufSize.Align(4096);
-
-                vertsOffset = bufSize;
-                bufSize += vertsSize;
-
-                bufSize += bufSize.Align(4096);
+                foreach (VertexData vBuffer in VertexBuffers)
+                    bufferSize += (vBuffer.Buffer.Length * vBuffer.Length);
             }
+
+            bufferSize = Memory.Align(bufferSize, 4096);
 
             // -- PCMP -- \\
 
-            int nMaterials      = MaterialData.Materials.Count;
-            int nSubMaterials   = MaterialData.SubMaterials.Count;
-            int nTextures       = MaterialData.Textures.Count;
+            int nMaterials              = MaterialData.Materials.Count;
+            int nSubMaterials           = MaterialData.SubMaterials.Count;
+            int nTextures               = MaterialData.Textures.Count;
 
-            pcmpOffset = bufSize;
+            int materialsOffset         = 0;
+            int subMatTableOffset       = 0;
+            int subMaterialsOffset      = 0;
+            int texInfoTableOffset      = 0;
+            int texInfoOffset           = 0;
+
+            pcmpOffset = bufferSize;
 
             // Size of header
-            bufSize += 0x38;
+            bufferSize += 0x38;
 
-            materialsOffset = (bufSize - pcmpOffset);
-            bufSize += (int)(nMaterials * 0x18);
+            materialsOffset = (bufferSize - pcmpOffset);
+            bufferSize += (nMaterials * 0x18);
 
-            subMatTableOffset = (bufSize - pcmpOffset);
-            bufSize += (int)(nSubMaterials * 0x8);
+            subMatTableOffset = (bufferSize - pcmpOffset);
+            bufferSize += (nSubMaterials * 0x8);
 
-            subMaterialsOffset = (bufSize - pcmpOffset);
-            bufSize += (int)(nSubMaterials * 0x20);
+            subMaterialsOffset = (bufferSize - pcmpOffset);
+            bufferSize += (nSubMaterials * 0x20);
 
-            texInfoTableOffset = (bufSize - pcmpOffset);
-            bufSize += (int)(nTextures * 0x8);
+            texInfoTableOffset = (bufferSize - pcmpOffset);
+            bufferSize += (nTextures * 0x8);
 
-            texInfoOffset = (bufSize - pcmpOffset);
-            bufSize += (int)(nTextures * 0x20);
+            texInfoOffset = (bufferSize - pcmpOffset);
+            bufferSize += (nTextures * 0x20);
 
-            bufSize += bufSize.Align(4096);
+            bufferSize = Memory.Align(bufferSize, 4096);
 
-            ddsOffset = bufSize;
-            ddsOffset2 = (ddsOffset - pcmpOffset);
+            ddsOffset = bufferSize;
 
             int[] texOffsets = new int[nTextures];
 
             for (int t = 0; t < nTextures; t++)
             {
-                texOffsets[t] = (bufSize - ddsOffset);
-
-                bufSize += MaterialData.Textures[t].Buffer.Length;
-                bufSize += bufSize.Align(128);
+                texOffsets[t] = (bufferSize - ddsOffset);
+                bufferSize += Memory.Align(MaterialData.Textures[t].Buffer.Length, 128);
             }
 
-            int pcmpSize = (bufSize - pcmpOffset);
+            int pcmpSize = (bufferSize - pcmpOffset);
 
-            bufSize += bufSize.Align(4096);
+            bufferSize = Memory.Align(bufferSize, 4096);
 
             // Now that we have our initialized buffer size, write ALL the data!
-            byte[] buffer = new byte[bufSize];
+            byte[] buffer = new byte[bufferSize];
 
             using (MemoryStream f = new MemoryStream(buffer))
             {
@@ -560,28 +575,38 @@ namespace DSCript.Models
                     f.Write(indicesSize);
                     f.Write(indicesOffset);
 
-                    f.Write(0x1);
+                    f.Write(nVertexBuffers);
                     f.Write(fvfOffset);
 
-                    // Write FVF data
-                    f.Seek(fvfOffset, SeekOrigin.Begin);
+                    // write vertex buffer(s) & FVF data
+                    for (int vB = 0; vB < VertexBuffers.Count; vB++)
+                    {
+                        var vBuffer = VertexBuffers[vB];
+                        
+                        f.Seek(fvfOffset + (vB * 0x1C), SeekOrigin.Begin);
 
-                    f.Write(nVertices);
-                    f.Write(vertsSize);
-                    f.Write(vertsOffset);
-                    f.Write(vertLength);
+                        int nVerts = vBuffer.Buffer.Length;
+                        int vertsSize = nVerts * vBuffer.Length;
+
+                        f.Write(nVerts);
+                        f.Write(vertsSize);
+                        f.Write(vBufferOffset);
+                        f.Write(vBuffer.Length);
+
+                        // write vertices
+                        f.Seek(vBufferOffset, SeekOrigin.Begin);
+
+                        for (int v = 0; v < nVerts; v++)
+                            f.Write(vBuffer.Buffer[v].GetBytes());
+
+                        vBufferOffset += vertsSize;
+                    }
 
                     // Write indices
                     f.Seek(indicesOffset, SeekOrigin.Begin);
 
                     for (int i = 0; i < nIndices; i++)
                         f.Write((ushort)Indices[i]);
-
-                    // Write vertices
-                    f.Seek(vertsOffset, SeekOrigin.Begin);
-
-                    for (int v = 0; v < nVertices; v++)
-                        f.Write(VertexBuffers[v].GetBytes());
 
                     // Write part groups
                     f.Seek(partsOffset, SeekOrigin.Begin);
@@ -598,7 +623,9 @@ namespace DSCript.Models
                         // skip float padding
                         f.Seek(0x10, SeekOrigin.Current);
 
+                        f.Write(part.VertexBufferId);
                         f.Write(part.Unknown1);
+
                         f.Write(part.Unknown2);
 
                         f.Seek(0x8, SeekOrigin.Current);
@@ -623,6 +650,12 @@ namespace DSCript.Models
                                 f.Seek(0x4, SeekOrigin.Current);
 
                                 f.Write(partDef.Unknown);
+
+                                if (partDef.Unknown > 1)
+                                {
+                                    for (int i = 1; i < partDef.Unknown; i++)
+                                        ++gIdx;
+                                }
 
                                 f.Seek(0x8, SeekOrigin.Current);
 
@@ -704,7 +737,7 @@ namespace DSCript.Models
                 f.Write(nTextures);
                 f.Write(texInfoOffset);
 
-                f.Write(ddsOffset2);
+                f.Write((ddsOffset - pcmpOffset));
                 f.Write(pcmpSize);
 
                 f.Seek((pcmpOffset + materialsOffset), SeekOrigin.Begin);
@@ -775,15 +808,15 @@ namespace DSCript.Models
                 {
                     PCMPTexture texture = MaterialData.Textures[t];
 
-                    f.Write((uint)0x1010101);
+                    f.Write(0x1010101u);
                     f.Write(texture.CRC32);
 
                     f.Write(texOffsets[t]);
                     f.Write(texture.Buffer.Length);
                     f.Write(texture.Type);
 
-                    f.Write(texture.Width);
-                    f.Write(texture.Height);
+                    f.Write((ushort)texture.Width);
+                    f.Write((ushort)texture.Height);
 
                     f.Seek(0x8, SeekOrigin.Current);
 
@@ -797,7 +830,6 @@ namespace DSCript.Models
             }
 
             BlockData.Buffer = buffer;
-            */
         }
 
         public ModelPackagePC(BlockData blockData)
