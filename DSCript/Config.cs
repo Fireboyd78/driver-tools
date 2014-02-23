@@ -9,6 +9,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace DSCript
 {
@@ -50,26 +52,32 @@ namespace DSCript
         }
 
         public T GetSetting<T>(string key, T defaultValue)
-                where T : IComparable, IConvertible
+                where T : struct
         {
             object val = null;
 
             string keyVal = GetSetting(key);
 
+            if (string.IsNullOrEmpty(keyVal))
+                return defaultValue;
+
             if (typeof(T) == typeof(bool))
             {
-                if (keyVal != String.Empty)
-                {
-                    bool bVal = bool.Parse((GetSetting<int>(key, 0) == 1).ToString());
+                bool bVal = (GetSetting<int>(key, 0) == 1);
 
-                    if (bVal != false)
-                        val = bVal;
-                }
+                if (bVal != false)
+                    val = bVal;
+            }
+            else if (typeof(T) == typeof(Point3D))
+            {
+                Point3D p3d = Point3D.Parse(keyVal);
+
+                if (p3d != null)
+                    val = p3d;
             }
             else
             {
-                if (keyVal != String.Empty)
-                    val = keyVal;
+                val = keyVal;
             }
 
             return (val != null) ? (T)Convert.ChangeType(val, typeof(T)) : defaultValue;
@@ -92,5 +100,6 @@ namespace DSCript
         internal static readonly INIFile INIFile = new INIFile("DSCript.ini", Application.StartupPath);
 
         public static readonly IniConfiguration Configuration = new IniConfiguration("Global");
+        public static readonly CultureInfo CurrentCulture = new CultureInfo("en-US");
     }
 }

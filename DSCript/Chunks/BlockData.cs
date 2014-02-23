@@ -14,14 +14,14 @@ using DSCript.IO;
 
 namespace DSCript
 {
-    public sealed class BlockData
+    public class BlockData : IDisposable
     {
         private byte[] _buffer;
 
-        public ChunkFile File { get; set; }
-        public ChunkEntry Block { get; set; }
+        public ChunkFile ChunkFile { get; protected set; }
+        public ChunkEntry Block { get; protected set; }
 
-        public byte[] Data
+        public byte[] Buffer
         {
             get
             {
@@ -30,8 +30,8 @@ namespace DSCript
 
                 byte[] buffer = new byte[Block.Size];
 
-                File.Reader.Seek(FileOffset, SeekOrigin.Begin);
-                File.Reader.Read(buffer, 0, buffer.Length);
+                ChunkFile.Reader.Seek(Block.BaseOffset, SeekOrigin.Begin);
+                ChunkFile.Reader.Read(buffer, 0, buffer.Length);
 
                 return buffer;
             }
@@ -42,30 +42,21 @@ namespace DSCript
             }
         }
 
-        public uint FileOffset { get; private set; }
-
         public uint Size
         {
             get { return (_buffer != null) ? (uint)_buffer.Length : Block.Size; }
         }
 
-        public int ClearBuffer()
+        public void Dispose()
         {
-            _buffer = null;
-            return (_buffer == null) ? 1 : -1;
-        }
-
-        ~BlockData()
-        {
-            ClearBuffer();
+            if (_buffer != null)
+                _buffer = null;
         }
 
         public BlockData(ChunkFile file, ChunkEntry block)
         {
-            File = file;
+            ChunkFile = file;
             Block = block;
-
-            FileOffset = Block.BaseOffset;
         }
     }
 }

@@ -11,6 +11,58 @@ namespace System.Windows.Media.Media3D
 {
     public static class Media3DExtensions
     {
+        private static int RandomMaterialSeed;
+
+        static Media3DExtensions()
+        {
+            GenerateSeed();
+        }
+
+        private static void GenerateSeed()
+        {
+            int random = DateTime.Now.Millisecond;
+            RandomMaterialSeed = new Random(random).Next(0, new Random(random * (int)new Random(random).Next(0, (int)new Random(random).Next())).Next(random, int.MaxValue));
+        }
+
+        public static void Randomize(this Material @this)
+        {
+            if (@this == null)
+                @this = new DiffuseMaterial();
+
+            SolidColorBrush brush = new SolidColorBrush() {
+                Color = Color.FromArgb(
+                    255,
+                    (byte)new Random(RandomMaterialSeed * 1564145 * 573 / 31).Next(0, 255),
+                    (byte)new Random(RandomMaterialSeed * (35645 * 29485 / 71) / 25).Next(0, 255),
+                    (byte)new Random(RandomMaterialSeed * (755 * 34157 / 33) / 10).Next(0, 255)
+                )
+            };
+
+            if (@this is MaterialGroup)
+            {
+                foreach (Material mat in ((MaterialGroup)@this).Children)
+                    Randomize(mat);
+                return;
+            }
+
+            if (@this is DiffuseMaterial)
+                ((DiffuseMaterial)@this).Brush = brush;
+            else if (@this is SpecularMaterial)
+                ((SpecularMaterial)@this).Brush = brush;
+            else if (@this is EmissiveMaterial)
+                ((EmissiveMaterial)@this).Brush = brush;
+
+            GenerateSeed();
+        }
+
+        public static void RandomizeColors(this GeometryModel3D @this)
+        {
+            if (@this.Material == null)
+                @this.Material = new DiffuseMaterial();
+
+            @this.Material.Randomize();
+        }
+
         public static void SetOpacity(this Material @this, double opacity)
         {
             if (@this is MaterialGroup)
@@ -28,15 +80,15 @@ namespace System.Windows.Media.Media3D
                 ((EmissiveMaterial)@this).Brush.Opacity = opacity;
         }
 
-        public static void SetOpacity(this Model3D @this, double opacity, bool doubleSided=false)
+        public static void SetOpacity(this Model3D @this, double opacity)
         {
             if (@this is GeometryModel3D)
             {
-                GeometryModel3D geom = (GeometryModel3D)@this;
+                var geom = @this as GeometryModel3D;
 
                 geom.Material.SetOpacity(opacity);
 
-                if (doubleSided)
+                if (geom.BackMaterial != null)
                     geom.BackMaterial.SetOpacity(opacity);
             }
             else if (@this is Model3DGroup)
@@ -46,34 +98,43 @@ namespace System.Windows.Media.Media3D
             }
         }
 
+        public static void SetOpacity(this ModelVisual3D @this, double opacity)
+        {
+            @this.Content.SetOpacity(opacity);
+        }
+
         public static void SetOpacity(this DriverModelVisual3D @this, double opacity)
         {
             @this.BaseMaterial.SetOpacity(opacity);
             @this.UpdateModel();
         }
 
-        public static void SetOpacity(this DriverModelGroup @this, double opacity)
+        public static void SetOpacity(this ModelVisual3DGroup @this, double opacity)
         {
             if (@this.Models.Count == 0)
                 return;
 
-            foreach (DriverModelVisual3D dmodel in @this.Models)
+            foreach (ModelVisual3D dmodel in @this.Models)
                 dmodel.SetOpacity(opacity);
         }
 
-        public static void SelectModel3D(this Visual3D @this, Model3D selectedModel, double opacity)
+        public static GeometryModel3D ToGeometry(this MeshGeometry3D @this)
         {
-            if (@this is ModelVisual3D)
-            {
-                ModelVisual3D mv3d = @this as ModelVisual3D;
+            return @this.ToGeometry(null, false);
+        }
 
-                if (mv3d.Content != null)
-                    mv3d.Content.SetOpacity((mv3d.Content != selectedModel) ? opacity : 1.0);
+        public static GeometryModel3D ToGeometry(this MeshGeometry3D @this, Material material)
+        {
+            return @this.ToGeometry(material, false);
+        }
 
-                if (mv3d.Children.Count > 0)
-                    foreach (Visual3D v3d in mv3d.Children)
-                        v3d.SelectModel3D(selectedModel, opacity);
-            }
+        public static GeometryModel3D ToGeometry(this MeshGeometry3D @this, Material material, bool doubleSided)
+        {
+            return new GeometryModel3D() {
+                Geometry = @this,
+                Material = material,
+                BackMaterial = (doubleSided) ? material : null
+            };
         }
     }
 }

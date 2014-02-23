@@ -48,7 +48,7 @@ namespace DSCript
 
                 if (data != null)
                 {
-                    Stream.Write(data.Data, 0, data.Data.Length);
+                    Stream.Write(data.Buffer, 0, data.Buffer.Length);
                 }
                 else
                 {

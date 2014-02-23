@@ -21,24 +21,24 @@ namespace DSCript
         /// <summary>
         /// The memory stream representing the buffer.
         /// </summary>
-        public MemoryStream Stream { get; set; }
+        public MemoryStream Stream { get; private set; }
 
         /// <summary>
         /// A <see cref="BinaryReader"/> based off of the memory stream representing the buffer.
         /// </summary>
-        public BinaryReader Reader { get; set; }
+        public BinaryReader Reader { get; private set; }
 
         /// <summary>
         /// A <see cref="BinaryWriter"/> based off of the memory stream representing the buffer.
         /// </summary>
-        public BinaryWriter Writer { get; set; }
+        public BinaryWriter Writer { get; private set; }
 
         /// <summary>
         /// Commits all changes made to the buffer and applies them to the Block's data.
         /// </summary>
         public void Commit()
         {
-            BlockData.Data = Stream.ToArray();
+            BlockData.Buffer = Stream.ToArray();
         }
 
         public void Dispose()
@@ -52,7 +52,7 @@ namespace DSCript
         {
             BlockData = blockData;
             
-            Stream = new MemoryStream(BlockData.Data, true);
+            Stream = new MemoryStream(BlockData.Buffer, true);
 
             Reader = new BinaryReader(Stream);
             Writer = new BinaryWriter(Stream);

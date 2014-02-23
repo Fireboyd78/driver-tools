@@ -39,7 +39,9 @@ namespace DSCript.Models
 
             // VVV files only have one model package defined
             Models = new List<ModelPackage>(1) {
-                new ModelPackagePC(ChunkFile.GetBlockData(models))
+                new ModelPackagePC(ChunkFile.GetBlockData(models)){
+                            ModelFile = this
+                        }
             };
 
             DSC.Log("VVV file loaded successfully!", Models.Count);

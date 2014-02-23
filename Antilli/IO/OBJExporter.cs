@@ -109,7 +109,7 @@ namespace Antilli.IO
 
                     StringBuilder faces = new StringBuilder();
 
-                    int tIdx = 0;
+                    int minIndex = 0;
 
                     for (int m = 0; m < group.Meshes.Count; m++)
                     {
@@ -186,12 +186,12 @@ namespace Antilli.IO
                         for (int t = 0; t < tCount; t += 3)
                         {
                             faces.AppendFormat("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                                ((model.TriangleIndices[t] + tIdx + 1) + startIndex),
-                                ((model.TriangleIndices[t + 1] + tIdx + 1) + startIndex),
-                                ((model.TriangleIndices[t + 2] + tIdx + 1) + startIndex)).AppendLine();
+                                ((model.TriangleIndices[t] + minIndex + 1) + startIndex),
+                                ((model.TriangleIndices[t + 1] + minIndex + 1) + startIndex),
+                                ((model.TriangleIndices[t + 2] + minIndex + 1) + startIndex)).AppendLine();
                         }
 
-                        tIdx += vCount;
+                        minIndex += vCount;
                     }
 
                     int nVerts = vertices.Count;

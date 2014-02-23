@@ -17,12 +17,7 @@ namespace DSCript.Models
 {
     public abstract class ModelPackage
     {
-        public static VGTFile Globals { get; set; }
-
-        public static bool HasGlobals
-        {
-            get { return Globals != null; }
-        }
+        public IModelFile ModelFile { get; set; }
 
         public uint UID { get; protected set; }
 
@@ -40,21 +35,21 @@ namespace DSCript.Models
 
         public List<PartsGroup> Parts { get; set; }
         public List<MeshGroup> MeshGroups { get; set; }
-        public List<MeshDefinition> Meshes { get; set; }
+        public List<IndexedMesh> Meshes { get; set; }
 
         public VertexData Vertices { get; set; }
         public IndexData Indices { get; set; }
 
         public PCMPData MaterialData { get; set; }
 
-        public bool HasTextures
+        public bool HasMaterials
         {
             get { return MaterialData != null; }
         }
 
         public bool HasBlendWeights
         {
-            get { return Vertices.VertexType != FVFType.Vertex12; }
+            get { return (Vertices != null) ? Vertices.VertexType != FVFType.Vertex12 : false; }
         }
 
         public virtual void Load()

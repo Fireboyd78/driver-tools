@@ -107,7 +107,7 @@ namespace DSCript.Models
 
                 Parts       = new List<PartsGroup>(nParts);
                 MeshGroups  = new List<MeshGroup>();
-                Meshes      = new List<MeshDefinition>();
+                Meshes      = new List<IndexedMesh>();
 
                 long holdPos;
 

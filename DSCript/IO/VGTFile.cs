@@ -11,13 +11,18 @@ using System.Text;
 
 namespace DSCript.Models
 {
-    public class VGTFile : ModelFile
+    public class VGTFile : ModelFile, IStandaloneModelFile
     {
+        public ModelPackage ModelData
+        {
+            get { return Models[0]; }
+        }
+
         public List<PCMPMaterial> StandaloneTextures { get; set; }
 
-        public PCMPData GlobalData
+        public PCMPData MaterialData
         {
-            get { return Models[0].MaterialData; }
+            get { return ModelData.MaterialData; }
         }
 
         public string Name { get; set; }
@@ -45,7 +50,7 @@ namespace DSCript.Models
                 {
                     int matId = f.ReadInt16();
 
-                    StandaloneTextures.Add(Models[0].MaterialData.Materials[matId]);
+                    StandaloneTextures.Add(MaterialData.Materials[matId]);
 
                     f.Seek(0x2, SeekOrigin.Current);
                 }

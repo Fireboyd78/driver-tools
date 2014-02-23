@@ -27,7 +27,9 @@ namespace DSCript.Models
             Models = new List<ModelPackage>(root.Entries.Count / 2);
 
             for (int i = root.Entries.Count / 2; i < root.Entries.Count; i++)
-                Models.Add(new ModelPackagePC(ChunkFile.GetBlockData(root.Entries[i])));
+                Models.Add(new ModelPackagePC(ChunkFile.GetBlockData(root.Entries[i])) {
+                    ModelFile = this
+                });
 
             DSC.Log("Loaded {0} VVS models!", Models.Count);
         }

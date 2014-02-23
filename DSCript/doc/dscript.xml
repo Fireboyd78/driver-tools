@@ -1066,7 +1066,7 @@
         <member name="F:DSCript.Models.FVFType.Unknown">
             <summary>Represents an unknown type.</summary>
         </member>
-        <member name="M:DSCript.Models.TextureCache.GetCachedTexture(DSCript.Models.PCMPTexture)">
+        <member name="M:DSCript.Models.TextureCache.GetCachedTexture(DSCript.Models.CacheableTexture)">
             <summary>
             Retrieves a cached version of this texture (if it exists), otherwise it will be added to the cache automatically.
             </summary>
@@ -1116,54 +1116,54 @@
             Forces this enumeration to compile to 32 bits in size. Without this value, some compilers would allow this enumeration to compile to a size other than 32 bits. This value is not used. 
             </summary>
         </member>
-        <member name="T:DSCript.Models.MeshDefinition">
+        <member name="T:DSCript.Models.IndexedMesh">
             <summary>
             IDirect3DDevice9::DrawIndexedPrimitive -- Based on indexing, renders the specified geometric primitive into an array of vertices.
             
             Source: http://msdn.microsoft.com/en-us/library/windows/desktop/bb174369%28v=vs.85%29.aspx
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.PrimitiveType">
+        <member name="P:DSCript.Models.IndexedMesh.PrimitiveType">
             <summary>
             Member of the <see cref="T:DSCript.Models.D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.Group">
+        <member name="P:DSCript.Models.IndexedMesh.Group">
             <summary>
             The <see cref="T:DSCript.Models.MeshGroup"/> this mesh belongs to.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.BaseVertexIndex">
+        <member name="P:DSCript.Models.IndexedMesh.BaseVertexIndex">
             <summary>
             Offset from the start of the vertex buffer to the first vertex.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.MinIndex">
+        <member name="P:DSCript.Models.IndexedMesh.MinIndex">
             <summary>
             Minimum vertex index for vertices used during this call. This is a zero based index relative to BaseVertexIndex.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.NumVertices">
+        <member name="P:DSCript.Models.IndexedMesh.NumVertices">
             <summary>
             Number of vertices used during this call. The first vertex is located at index: BaseVertexIndex + MinIndex.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.StartIndex">
+        <member name="P:DSCript.Models.IndexedMesh.StartIndex">
             <summary>
             Index of the first index to use when accessing the vertex buffer. Beginning at StartIndex to index vertices from the vertex buffer.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.PrimitiveCount">
+        <member name="P:DSCript.Models.IndexedMesh.PrimitiveCount">
             <summary>
             Number of primitives to render. The number of vertices used is a function of the primitive count and the primitive type.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.MaterialId">
+        <member name="P:DSCript.Models.IndexedMesh.MaterialId">
             <summary>
             The material used for this mesh.
             </summary>
         </member>
-        <member name="P:DSCript.Models.MeshDefinition.SourceUID">
+        <member name="P:DSCript.Models.IndexedMesh.SourceUID">
             <summary>
             The UID of the package containing the material.
             </summary>
@@ -1192,13 +1192,13 @@
             <param name="vertexBuffer">The bytes from a vertex buffer</param>
             <param name="vertexType">The vertex format used to read the buffer.</param>
         </member>
-        <member name="P:DSCript.Models.Vertex.Positions">
+        <member name="P:DSCript.Models.Vertex.Position">
             <summary>Gets or sets the position of the vertex.</summary>
         </member>
-        <member name="P:DSCript.Models.Vertex.Normals">
+        <member name="P:DSCript.Models.Vertex.Normal">
             <summary>Gets or sets the normals of the vertex.</summary>
         </member>
-        <member name="P:DSCript.Models.Vertex.UVs">
+        <member name="P:DSCript.Models.Vertex.UV">
             <summary>Gets or sets the UV mapping of the vertex.</summary>
         </member>
         <member name="P:DSCript.Models.Vertex.Diffuse">

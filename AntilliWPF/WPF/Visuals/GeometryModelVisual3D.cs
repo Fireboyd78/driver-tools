@@ -135,9 +135,9 @@ namespace Antilli
 
             foreach (Vertex vertex in Vertices)
             {
-                positions.Add(vertex.Positions);
-                normals.Add(vertex.Normals);
-                textureCoordinates.Add(vertex.UVs);
+                positions.Add(vertex.Position);
+                normals.Add(vertex.Normal);
+                textureCoordinates.Add(vertex.UV);
             }
 
             return new MeshGeometry3D() {
@@ -162,6 +162,17 @@ namespace Antilli
         public GeometryModelVisual3D(List<Vertex> vertices, Int32Collection triangleIndices) : this()
         {
             Vertices = vertices;
+            TriangleIndices = triangleIndices;
+        }
+
+        public GeometryModelVisual3D(Point3DCollection positions, Vector3DCollection normals, PointCollection textureCoordinates, Int32Collection triangleIndices)
+            : this()
+        {
+            Vertices = new List<Vertex>(positions.Count);
+
+            for (int v = 0; v < positions.Count; v++)
+                Vertices.Add(new Vertex(positions[v], normals[v], textureCoordinates[v]));
+
             TriangleIndices = triangleIndices;
         }
     }

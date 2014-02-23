@@ -19,11 +19,14 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
-//using System.Windows.Shapes;
+
+using System.Xml;
 
 using HelixToolkit.Wpf;
 
 using Microsoft.Win32;
+
+using FreeImageAPI;
 
 using DSCript;
 using DSCript.Models;
@@ -33,171 +36,12 @@ namespace Antilli
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : AntilliWindow
     {
-        #region INotifyPropertyChanged implementations
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void RaisePropertyChanged(string property)
-        {
-            var handler = PropertyChanged;
-            if (handler != null)
-            {
-                handler(this, new PropertyChangedEventArgs(property));
-            }
-        }
-        #endregion
-
-        #region DebugInfo methods/properties
-        static Thread debugInfoThread;
-        volatile bool restartThread = false;
-
-        public void SetDebugInfo(string str, params object[] args)
-        {
-            SetDebugInfo(String.Format(str, args));
-        }
-
-        public void SetDebugInfo(string str)
-        {
-            Viewport.DebugInfo = str;
-
-            if (debugInfoThread != null && debugInfoThread.IsAlive)
-                restartThread = true;
-            else
-            {
-                debugInfoThread = new Thread(new ThreadStart(DelayResetDebugInfo)) { IsBackground = true };
-                debugInfoThread.Start();
-            }
-        }
-
-        void ResetDebugInfo()
-        {
-            Viewport.DebugInfo = String.Empty;
-        }
-
-        void DelayResetDebugInfo()
-        {
-            int timeout = Settings.Configuration.GetSetting<int>("DebugInfoTimeout", 1500);
-
-            for (int i = 0; i < timeout; i++)
-            {
-                Thread.Sleep(1);
-
-                if (restartThread)
-                {
-                    i = 0;
-                    restartThread = false;
-                }
-            }
-
-            Viewport.Dispatcher.Invoke(new ResetDebugCallback(ResetDebugInfo));
-        }
-        #endregion
-
-        const string titleFmt = "{0} - {1}";
-
-        string title = String.Empty;
-        string subTitle = String.Empty;
-
-        List<DriverModelGroup> currentModel;
-        DriverModelGroup selectedModel;
+        List<ModelVisual3DGroup> currentModel;
+        ModelVisual3DGroup selectedModel;
 
         IModelFile modelFile;
-
-        bool debugMode = false;
-        bool isWalkAround = false;
-        bool isSorting = true;
-
-        delegate void ResetDebugCallback();
-
-        public string SubTitle
-        {
-            get { return subTitle; }
-            set
-            {
-                subTitle = value;
-
-                Title = String.Format(titleFmt, title, subTitle);
-            }
-        }
-
-        public bool DebugMode
-        {
-            get { return debugMode; }
-            set
-            {
-                Viewport.ShowFieldOfView = value;
-                Viewport.ShowFrameRate = value;
-                Viewport.ShowCameraInfo = value;
-                Viewport.ShowCameraTarget = value;
-                Viewport.ShowTriangleCountInfo = value;
-
-                debugMode = value;
-
-                SetDebugInfo("Debug mode {0}.", (debugMode) ? "enabled" : "disabled");
-
-                RaisePropertyChanged("DebugMode");
-            }
-        }
-
-        public bool InfiniteSpin
-        {
-            get { return Viewport.InfiniteSpin; }
-            set
-            {
-                if (Viewport.CameraMode == HelixToolkit.Wpf.CameraMode.WalkAround)
-                {
-                    SetDebugInfo("Infinite spin cannot be enabled in walkaround mode.");
-                }
-                else
-                {
-                    Viewport.InfiniteSpin = value;
-
-                    if (InfiniteSpin)
-                        Viewport.CameraController.StartSpin(new Vector(120.0, 0.0), new Point(0, 0), new Point3D(0, 0, 0));
-
-                    SetDebugInfo("Infinite spin {0}.", (InfiniteSpin) ? "enabled" : "disabled");
-
-                    RaisePropertyChanged("InfiniteSpin");
-                }
-            }
-        }
-
-        public bool WalkaroundMode
-        {
-            get { return isWalkAround; }
-            set
-            {
-                isWalkAround = value;
-
-                Viewport.CameraMode = (!isWalkAround) ? CameraMode.Inspect : CameraMode.WalkAround;
-                //VP3D.CameraRotationMode                 = (!isWalkAround) ? CameraRotationMode.Trackball : CameraRotationMode.Turntable;
-                //VP3D.CameraController.ModelUpDirection  = (!isWalkAround) ? zDown : zUp;
-                //VP3D.Camera.UpDirection                 = (!isWalkAround) ? zDown : zUp;
-
-                InfiniteSpin = false;
-
-                //if (!isWalkAround)
-                //{
-                //    VCam.Position = dCamPos;
-                //    VCam.LookDirection = dLookdir;
-                //}
-
-                SetDebugInfo("Walkaround mode {0}.", (isWalkAround) ? "enabled" : "disabled");
-            }
-        }
-
-        public bool IsSorting
-        {
-            get { return isSorting; }
-            set
-            {
-                isSorting = value;
-
-                SetDebugInfo("Model sorting {0}.", (isSorting) ? "enabled" : "disabled");
-                RaisePropertyChanged("IsSorting");
-            }
-        }
 
         static OpenFileDialog openFile = new OpenFileDialog() {
             CheckFileExists = true,
@@ -219,82 +63,39 @@ namespace Antilli
                 string filename = openFile.FileName;
                 IModelFile modelFile = null;
 
-                switch (Path.GetExtension(filename).Trim('.').ToLower())
+                switch (Path.GetExtension(filename).ToLower())
                 {
-                case "vvs":
+                case ".vvs":
                     modelFile = new VVSFile(filename);
                     goto vehicles;
-                case "vvv":
+                case ".vvv":
                     modelFile = new VVVFile(filename);
                     goto vehicles;
                 vehicles:
                     {
-                    string carGlobalsMiami      = @"Miami\CarGlobalsMiami.vgt";
-                    string carGlobalsNice       = @"Nice\CarGlobalsNice.vgt";
-                    string carGlobalsIstanbul   = @"Istanbul\CarGlobalsIstanbul.vgt";
+                        var city = Driv3r.GetCityFromFileName(filename);
 
-                    string root                 = String.Format(@"{0}\Vehicles", DSC.Configuration.GetDirectory("Driv3r"));
-                    
-                    string pathFmt              = String.Format("{0}{1}", root, @"\{0}");
-                    string path                 = String.Empty;
-
-                    if (filename.Contains("miami"))
-                        path = String.Format(pathFmt, carGlobalsMiami);
-                    else if (filename.Contains("nice"))
-                        path = String.Format(pathFmt, carGlobalsNice);
-                    else if (filename.Contains("istanbul"))
-                        path = String.Format(pathFmt, carGlobalsIstanbul);
-                    else if (filename.Contains("mission"))
-                    {
-                        string strPath = Path.GetFileNameWithoutExtension(filename).ToLower();
-
-                        /* === mission%02d.vvv ===
-                        miami: 	    01 - 10, 32-33, 38-40, 50-51, 56, 59-61, 71-72, 77-78
-                        nice: 	    11 - 21, 34-35, 42-44, 52-53, 57, 62-64, 73-74, 80-81
-                        istanbul: 	22 - 31, 36-37, 46-48, 54-55, 58, 65-67, 75-76, 83-84 */
-
-                        //-- Be careful not to break the formatting!!
-                        switch (int.Parse(strPath.Substring(strPath.Length - 2, 2)))
+                        if (city != null)
                         {
-                        case 01: case 02: case 03: case 04: case 05: case 06:
-                        case 07: case 08: case 09: case 10: case 32: case 33:
-                        case 38: case 39: case 40: case 50: case 51: case 56:
-                        case 59: case 60: case 61: case 71: case 72:
-                            path = String.Format(pathFmt, carGlobalsMiami);
-                            break;
-                        case 11: case 12: case 13: case 14: case 15: case 16:
-                        case 17: case 18: case 19: case 20: case 21: case 34:
-                        case 35: case 42: case 43: case 44: case 52: case 53:
-                        case 57: case 62: case 63: case 64: case 73: case 74:
-                            path = String.Format(pathFmt, carGlobalsNice);
-                            break;
-                        case 22: case 23: case 24: case 25: case 26: case 27:
-                        case 28: case 29: case 30: case 31: case 36: case 37:
-                        case 46: case 47: case 48: case 54: case 55: case 58:
-                        case 65: case 66: case 67: case 75: case 76:
-                            path = String.Format(pathFmt, carGlobalsIstanbul);
-                            break;
+                            var path = Driv3r.GetVehicleGlobals(city);
+                            modelFile.SpooledFile = new VGTFile(path);
                         }
-                    }
 
-                    if (path != String.Empty)
-                        ModelPackage.Globals = new VGTFile(path);
-
-                    if (ModelPackage.HasGlobals)
-                    {
-                        viewGlobalMaterials.Visibility = System.Windows.Visibility.Visible;
-
-                        if (IsGlobalMaterialEditorOpen)
-                            GlobalMaterialEditor.UpdateMaterials();
-                    }
-                    else
-                    {
-                        if (IsGlobalMaterialEditorOpen)
+                        if (modelFile.HasSpooledFile)
                         {
-                            GlobalMaterialEditor.Close();
-                            viewGlobalMaterials.Visibility = System.Windows.Visibility.Collapsed;
+                            viewGlobalMaterials.Visibility = System.Windows.Visibility.Visible;
+
+                            if (IsGlobalMaterialEditorOpen)
+                                GlobalMaterialEditor.UpdateMaterials();
                         }
-                    }
+                        else
+                        {
+                            if (IsGlobalMaterialEditorOpen)
+                            {
+                                GlobalMaterialEditor.Close();
+                                viewGlobalMaterials.Visibility = System.Windows.Visibility.Collapsed;
+                            }
+                        }
                     }
                     break;
                 default:
@@ -304,10 +105,10 @@ namespace Antilli
 
                 if (modelFile.Models != null)
                 {
-                    SubTitle = filename;
                     ModelFile = modelFile;
+                    SubTitle = filename;
 
-                    InfiniteSpin = Settings.Configuration.GetSetting<bool>("InfiniteSpin", true);
+                    Viewport.InfiniteSpin = Settings.Configuration.GetSetting<bool>("InfiniteSpin", true);
 
                     viewTextures.IsEnabled = true;
                     viewMaterials.IsEnabled = true;
@@ -408,16 +209,13 @@ namespace Antilli
             switch (e.Key)
             {
             case Key.I:
-                InfiniteSpin = !InfiniteSpin;
+                Viewport.InfiniteSpin = !Viewport.InfiniteSpin;
                 break;
             case Key.G:
-                DebugMode = !DebugMode;
+                Viewport.DebugMode = !Viewport.DebugMode;
                 break;
-            case Key.P:
-                WalkaroundMode = !WalkaroundMode;
-                break;
-            case Key.V:
-                IsSorting = !IsSorting;
+            case Key.C:
+                Viewport.CameraMode = (Viewport.CameraMode == CameraMode.Inspect) ? CameraMode.WalkAround : (Viewport.CameraMode == CameraMode.WalkAround) ? CameraMode.FixedPosition : CameraMode.Inspect;
                 break;
             default:
                 break;
@@ -478,10 +276,8 @@ namespace Antilli
 
                 List<ModelListItem> models = new List<ModelListItem>();
 
-                int idx = 0;
-
-                foreach (DriverModelGroup dg in (List<DriverModelGroup>)CurrentModel)
-                    models.Add(new ModelListItem(++idx, dg));
+                foreach (ModelVisual3DGroup dg in (List<ModelVisual3DGroup>)CurrentModel)
+                    models.Add(new ModelListItem(models, dg));
 
                 return models;
             }
@@ -493,7 +289,7 @@ namespace Antilli
             RaisePropertyChanged("Elements");
         }
 
-        public List<DriverModelGroup> CurrentModel
+        public List<ModelVisual3DGroup> CurrentModel
         {
             get { return currentModel; }
             set
@@ -541,6 +337,7 @@ namespace Antilli
             if (index == -1)
                 return;
 
+            TextureCache.FlushIfNeeded();
             ModelPackage modelPackage = ModelPackages[index];
 
             SelectedModelPackage = modelPackage;
@@ -590,7 +387,7 @@ namespace Antilli
 
             ResetLODButtons();
 
-            List<DriverModelGroup> models = new List<DriverModelGroup>();
+            List<ModelVisual3DGroup> models = new List<ModelVisual3DGroup>();
 
             VisualsLayer1.Children.Clear();
             VisualsLayer2.Children.Clear();
@@ -604,11 +401,11 @@ namespace Antilli
                 if (group == null)
                     continue;
 
-                DriverModelGroup parts = new DriverModelGroup();
+                ModelVisual3DGroup parts = new ModelVisual3DGroup();
 
-                foreach (MeshDefinition prim in group.Meshes)
+                foreach (IndexedMesh prim in group.Meshes)
                 {
-                    DriverModelVisual3D dmodel = new DriverModelVisual3D(ModelFile, SelectedModelPackage, prim);
+                    DriverModelVisual3D dmodel = new DriverModelVisual3D(ModelFile, SelectedModelPackage, prim, UseBlendWeights);
 
                     if (dmodel.IsEmissive)
                         VisualsLayer3.Children.Add(dmodel);
@@ -626,9 +423,9 @@ namespace Antilli
             CurrentModel = models;
         }
 
-        List<VisualParentSwap> visualParents = new List<VisualParentSwap>();
+        List<VisualParentHelper> visualParents = new List<VisualParentHelper>();
 
-        public DriverModelGroup SelectedModel
+        public ModelVisual3DGroup SelectedModel
         {
             get { return selectedModel; }
             set
@@ -637,21 +434,21 @@ namespace Antilli
 
                 if (visualParents.Count > 0)
                 {
-                    foreach (VisualParentSwap k in visualParents)
+                    foreach (VisualParentHelper k in visualParents)
                         k.RestoreParent();
 
                     VisualsLayer4.Children.Clear();
                     visualParents.Clear();
                 }
 
-                foreach (DriverModelGroup dModel in (List<DriverModelGroup>)CurrentModel)
+                foreach (ModelVisual3DGroup dModel in (List<ModelVisual3DGroup>)CurrentModel)
                 {
                     if (SelectedModel != null && SelectedModel != dModel)
                     {
                         dModel.SetOpacity(GhostOpacity);
 
-                        foreach (DriverModelVisual3D d in dModel.Models)
-                            visualParents.Add(new VisualParentSwap(d, VisualsLayer4));
+                        foreach (ModelVisual3D d in dModel.Models)
+                            visualParents.Add(new VisualParentHelper(d, VisualsLayer4));
                     }
                     else
                         dModel.SetOpacity(1.0);
@@ -664,7 +461,7 @@ namespace Antilli
             if (CurrentModel == null)
                 return;
 
-            foreach (DriverModelGroup dgroup in CurrentModel)
+            foreach (ModelVisual3DGroup dgroup in CurrentModel)
             {
                 foreach (DriverModelVisual3D dmodel in dgroup.Models)
                     dmodel.UseBlendWeights = UseBlendWeights;
@@ -699,13 +496,75 @@ namespace Antilli
             }
         }
 
+        public void DEBUG_ExportModelPackageXML()
+        {
+            if (SelectedModelPackage == null)
+            {
+                MessageBox.Show("Nothing to export!");
+                return;
+            }
+
+            XmlDocument xml = new XmlDocument();
+
+            XmlElement mdpcNode = xml.AddElement("ModelPackage")
+                                .AddAttribute("Type", Path.GetExtension(ModelFile.ChunkFile.Filename).Split('.')[1].ToUpper())
+                                .AddAttribute("Version", 1);
+
+            XmlElement groupsNode = mdpcNode.AddElement("Groups");
+
+            var parts = SelectedModelPackage.Parts;
+            int nParts = SelectedModelPackage.Parts.Count;
+
+            for (int g = 0; g < nParts; g++)
+            {
+                var group = parts[g];
+
+                bool merged = (group.UID != 0 && g + 1 < nParts && parts[g + 1].UID == group.UID);
+
+                var partsGroupNode = groupsNode.AddElementIf("MergedPartsGroup", merged)
+                                                    .AddAttributeIf("UID", group.UID, merged)
+                                                    .AddAttributeIf("File", String.Format("{0}.obj", group.UID), merged);
+
+                int m = 0;
+
+                bool loop = false;
+
+                do
+                {
+                    if (loop)
+                        group = parts[++g];
+
+                    var groupNode = partsGroupNode.AddElement("PartsGroup")
+                                                    .AddAttribute("Name", String.Format("Model{0}", ++m))
+                                                    .AddAttributeIf("UID", group.UID, !merged)
+                                                    .AddAttributeIf("File", String.Format("{0}.obj", group.UID), !merged);
+
+                    foreach (PartDefinition part in group.Parts)
+                    {
+                        if (part.Group == null)
+                            continue;
+
+                        groupNode.AddElement("Part")
+                                    .AddAttribute("Slot", part.ID + 1)
+                                    .AddAttribute("Type", part.Reserved)
+                                    .AddAttribute("Source", String.Format("Model{0}_{1}", m, part.ID + 1));
+                    }
+
+                    loop = (merged && g + 1 < nParts && parts[g + 1].UID == group.UID);
+
+                } while (loop);
+            }
+
+            xml.Save(@"C:\Users\Mark\Desktop\export.xml");
+
+            DSC.Log("Exported model package!");
+        }
+
         public MainWindow()
         {
-            InitializeComponent();
-
             DataContext = this;
-
-            title = Title;
+            
+            InitializeComponent();
 
             KeyDown += OnKeyDownReceived;
 
@@ -740,6 +599,7 @@ namespace Antilli
             viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
 
             exportMDPC.Click += (o, e) => DEBUG_ExportModelPackage();
+            exportXML.Click += (o, e) => DEBUG_ExportModelPackageXML();
 
             Viewport.Loaded += (o, e) => {
                 // Set up FOV and Near/Far distance
@@ -755,164 +615,6 @@ namespace Antilli
             //     Geometry = box.ToMesh(),
             //     Material = new DiffuseMaterial(new SolidColorBrush(Color.FromArgb(255, 180, 180, 180)))
             // };
-        }
-    }
-
-    public class VisualParentSwap
-    {
-        public DriverModelVisual3D Visual { get; private set; }
-
-        public ModelVisual3D Parent { get; private set; }
-
-        public int Index { get; private set; }
-
-        public void RestoreParent()
-        {
-            ModelVisual3D oldParent = (ModelVisual3D)VisualTreeHelper.GetParent(Visual);
-
-            bool insert = Index <= Parent.Children.Count;
-
-            oldParent.Children.Remove(Visual);
-
-            if (insert)
-                Parent.Children.Insert(Index, Visual);
-            else
-                Parent.Children.Add(Visual);
-        }
-
-        public VisualParentSwap(DriverModelVisual3D visual, ModelVisual3D newParent)
-        {
-            Visual = visual;
-
-            Parent = (ModelVisual3D)VisualTreeHelper.GetParent(Visual);
-
-            Index = Parent.Children.IndexOf(Visual);
-
-            Parent.Children.Remove(Visual);
-            newParent.Children.Add(Visual);
-        }
-    }
-
-    public class ModelGroupListItem
-    {
-        public string Text
-        {
-            get { return (!IsNull) ? UID.ToString() : "<NULL>"; }
-        }
-
-        public uint UID { get; private set; }
-
-        public bool IsNull
-        {
-            get
-            {
-                foreach (PartsGroup part in Parts)
-                    if (part.Parts[0].Group != null)
-                        return false;
-
-                return true;
-            }
-        }
-        
-        public List<PartsGroup> Parts { get; private set; }
-
-        public IModelFile ModelFile { get; private set; }
-        public ModelPackage ModelPackage { get; private set; }
-
-        public Model3DGroup Models { get; private set; }
-
-        public Model3DGroup ToModel3DGroup(SortingVisual3D sortingVisual3D, ModelVisual3D sortingVisual3DEmissive, int lodType, bool useBlendWeights)
-        {
-            Model3DGroup opaqueModels = new Model3DGroup();
-
-            Model3DGroup models = new Model3DGroup();
-
-            sortingVisual3D.Children.Clear();
-            sortingVisual3DEmissive.Children.Clear();
-
-            foreach (PartsGroup part in Parts)
-            {
-                MeshGroup group = part.Parts[lodType].Group;
-
-                if (group == null)
-                    continue;
-
-                Model3DGroup partModels = new Model3DGroup();
-
-                Model3DGroup __models = new Model3DGroup();
-
-                foreach (MeshDefinition prim in group.Meshes)
-                {
-                    Driv3rModel3D dmodel = new Driv3rModel3D(ModelFile, ModelPackage, prim, useBlendWeights);
-                    GeometryModel3D geom = dmodel;
-
-                    ModelVisual3D mvis = new ModelVisual3D() { Content = geom };
-
-                    if (dmodel.IsEmissive)
-                        sortingVisual3DEmissive.Children.Add(mvis);
-                    else if (dmodel.HasTransparency)
-                        sortingVisual3D.Children.Add(mvis);
-                    else
-                        partModels.Children.Add(dmodel);
-
-                    __models.Children.Add(geom);
-                }
-
-                models.Children.Add(__models);
-                opaqueModels.Children.Add(partModels);
-            }
-
-            Models = models;
-
-            return opaqueModels;
-        }
-
-        public Model3DGroup ToModel3DGroup(int lodType, bool useBlendWeights)
-        {
-            Model3DGroup models = new Model3DGroup();
-
-            foreach (PartsGroup part in Parts)
-            {
-                MeshGroup group = part.Parts[lodType].Group;
-
-                if (group == null)
-                    continue;
-
-                Model3DGroup partModels = new Model3DGroup();
-
-                foreach (MeshDefinition prim in group.Meshes)
-                    partModels.Children.Add(new Driv3rModel3D(ModelFile, ModelPackage, prim, useBlendWeights));
-
-                models.Children.Add(partModels);
-            }
-
-            return models;
-        }
-
-        public ModelGroupListItem(IModelFile modelFile, ModelPackage modelPackage, PartsGroup partBasedOn)
-        {
-            ModelFile = modelFile;
-            ModelPackage = modelPackage;
-            
-            UID = partBasedOn.UID;
-
-            Parts = new List<PartsGroup>();
-
-            int startIndex = ModelPackage.Parts.FindIndex((p) => p == partBasedOn);
-
-            for (int p = startIndex; p < ModelPackage.Parts.Count; p++)
-            {
-                PartsGroup part = ModelPackage.Parts[p];
-
-                if (part.UID != UID)
-                    continue;
-
-                do
-                    Parts.Add(part);
-                while (++p < ModelPackage.Parts.Count && (part = ModelPackage.Parts[p]).UID == UID);
-
-                break;
-            }
         }
     }
 }

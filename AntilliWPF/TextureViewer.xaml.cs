@@ -69,13 +69,15 @@ namespace Antilli
 
                 CachedTexture tex = TextureCache.GetCachedTexture(CurrentTexture);
 
-                switch (texChannel)
-                {
-                case 0: return tex.GetBitmapSource();
-                case 1: return tex.GetBitmapSource(true);
-                case 2: return tex.GetBitmapSourceAlphaChannel();
-                default: return null;
-                }
+                return tex.GetBitmapSource((BitmapSourceLoadFlags)texChannel);
+
+                //switch (texChannel)
+                //{
+                //case 0: return tex.GetBitmapSource();
+                //case 1: return tex.GetBitmapSource(true);
+                //case 2: return tex.GetBitmapSourceAlphaChannel();
+                //default: return null;
+                //}
             }
         }
 
@@ -103,12 +105,12 @@ namespace Antilli
                 //     return textures;
                 // }
 
-                List<PCMPTexture> textures = (Parent.SelectedModelPackage.HasTextures)
+                List<PCMPTexture> textures = (Parent.SelectedModelPackage.HasMaterials)
                     ? new List<PCMPTexture>(Parent.SelectedModelPackage.MaterialData.Textures)
                     : new List<PCMPTexture>();
 
-                if (ModelPackage.HasGlobals)
-                    foreach (PCMPTexture texture in ModelPackage.Globals.GlobalData.Textures)
+                if (Parent.ModelFile.HasSpooledFile)
+                    foreach (PCMPTexture texture in Parent.ModelFile.SpooledFile.MaterialData.Textures)
                         textures.Add(texture);
 
                 return textures;
@@ -118,7 +120,7 @@ namespace Antilli
         public void UpdateTextures()
         {
             RaisePropertyChanged("Textures");
-            TextureList.SelectedIndex = (Parent.SelectedModelPackage.HasTextures) ? 0 : -1;
+            TextureList.SelectedIndex = (Parent.SelectedModelPackage.HasMaterials) ? 0 : -1;
         }
 
         public void ReloadTexture()

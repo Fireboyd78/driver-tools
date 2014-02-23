@@ -15,14 +15,11 @@ namespace DSCript.Models
     {
         public PartDefinition Parent { get; set; }
 
-        public uint Offset { get; private set; }
+        public List<IndexedMesh> Meshes { get; set; }
 
-        public List<MeshDefinition> Meshes { get; set; }
-
-        public MeshGroup(uint meshesOffset, int nMeshes)
+        public MeshGroup(int nMeshes)
         {
-            Offset = meshesOffset;
-            Meshes = new List<MeshDefinition>(nMeshes);
+            Meshes = new List<IndexedMesh>(nMeshes);
         }
     }
 }

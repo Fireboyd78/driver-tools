@@ -19,12 +19,35 @@ namespace DSCript.Models
 {
     public class PCMPSubMaterial
     {
-        internal uint BaseOffset { get; set; }
+        public uint Flags { get; set; }
 
-        public uint Unk1 { get; set; }
+        public ushort Mode { get; set; }
+        public ushort Type { get; set; }
 
-        public ushort Unk2 { get; set; }
-        public ushort Unk3 { get; set; }
+        public bool AlphaMask
+        {
+            get { return (Type == 0x400 || Type == 0x1000); }
+        }
+
+        public bool Damage
+        {
+            get { return (Type == 0x800 || Type == 0x1000); }
+        }
+
+        public bool Specular
+        {
+            get { return (Mode == 0x201 || Mode == 0x102); }
+        }
+
+        public bool Emissive
+        {
+            get { return ((Flags & 0x18000) == 0x18000 || (Flags & 0x1E) == 0x1E); }
+        }
+
+        public bool Transparency
+        {
+            get { return (((Flags & 0x1) == 0x1 || Flags == 0x4) && !Specular); }
+        }
 
         public List<PCMPTexture> Textures { get; set; }
 

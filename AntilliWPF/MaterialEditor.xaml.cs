@@ -102,11 +102,11 @@ namespace Antilli
 
                 if (ShowGlobalMaterials)
                 {
-                    if (ModelPackage.HasGlobals)
-                        foreach (PCMPMaterial material in ModelPackage.Globals.StandaloneTextures)
+                    if (Parent.ModelFile.HasSpooledFile)
+                        foreach (PCMPMaterial material in Parent.ModelFile.SpooledFile.MaterialData.Materials)
                             materials.Add(new MaterialTreeItem(++count, material));
                 }
-                else  if (Parent.SelectedModelPackage.HasTextures)
+                else  if (Parent.SelectedModelPackage.HasMaterials)
                 {
                     foreach (PCMPMaterial material in Parent.SelectedModelPackage.MaterialData.Materials)
                         materials.Add(new MaterialTreeItem(++count, material));
@@ -158,9 +158,9 @@ namespace Antilli
                 bool specular = false;
                 bool emissive = false;
 
-                uint type = subMat.Unk1;
-                uint spec = subMat.Unk2;
-                uint flags = subMat.Unk3;
+                uint type = subMat.Flags;
+                uint spec = subMat.Mode;
+                uint flags = subMat.Type;
 
                 if (flags == 0x400 || flags == 0x1000)
                     mask = true;
@@ -177,10 +177,10 @@ namespace Antilli
 
                 str.AppendLine("== SubMaterial Information ==");
 
-                str.AppendFormat("Unk1: 0x{0:X8}", subMat.Unk1).AppendLines(2);
+                str.AppendFormat("Unk1: 0x{0:X8}", subMat.Flags).AppendLines(2);
 
-                str.AppendFormat("Unk2: 0x{0:X4}", subMat.Unk2).AppendLine();
-                str.AppendFormat("Unk3: 0x{0:X4}", subMat.Unk3).AppendLines(2);
+                str.AppendFormat("Unk2: 0x{0:X4}", subMat.Mode).AppendLine();
+                str.AppendFormat("Unk3: 0x{0:X4}", subMat.Type).AppendLines(2);
 
                 str.AppendFormat("Transparent: {0}", transparency).AppendLine();
                 str.AppendFormat("Damage: {0}", damage).AppendLine();
@@ -232,8 +232,6 @@ namespace Antilli
                     tex.Texture.Width = Convert.ToUInt16(bmap.Width);
                     tex.Texture.Height = Convert.ToUInt16(bmap.Height);
 
-                    tex.Texture.Size = (uint)ddsFile.Length;
-
                     Parent.DEBUG_ExportModelPackage();
                     Parent.LoadSelectedModel();
 
@@ -261,7 +259,7 @@ namespace Antilli
                 MenuItem item = (MenuItem)e.OriginalSource;
 
                 PCMPData material = (ShowGlobalMaterials)
-                    ? ModelPackage.Globals.GlobalData
+                    ? Parent.ModelFile.SpooledFile.MaterialData
                     : (Parent.SelectedModelPackage != null)
                         ? Parent.SelectedModelPackage.MaterialData
                         : null;
@@ -283,8 +281,7 @@ namespace Antilli
                         PCMPTexture texInfo = new PCMPTexture();
 
                         texInfo.Buffer  = EmbedRes.GetBytes("notex.dds");
-                        texInfo.Size    = (uint)texInfo.Buffer.Length;
-
+                        
                         texInfo.Width   = 128;
                         texInfo.Height  = 128;
 
@@ -293,10 +290,10 @@ namespace Antilli
                         subMtl.Textures.Add(texInfo);
                         material.Textures.Add(texInfo);
 
-                        subMtl.Unk1 = 4;
+                        subMtl.Flags = 4;
 
-                        subMtl.Unk2 = 0;
-                        subMtl.Unk3 = 0;
+                        subMtl.Mode = 0;
+                        subMtl.Type = 0;
 
                         newMtl.SubMaterials.Add(subMtl);
                         material.SubMaterials.Add(subMtl);

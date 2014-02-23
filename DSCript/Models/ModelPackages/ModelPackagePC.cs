@@ -56,10 +56,7 @@ namespace DSCript.Models
                 uint indicesSize        = f.ReadUInt32();
                 uint indicesOffset      = f.ReadUInt32();
 
-                uint unkFaceType        = f.ReadUInt32();
-
-                /*if (unkFaceType != 0x1)
-                    DSC.Log("Unknown face type check failed, errors may occur.");*/
+                uint unknown            = f.ReadUInt32();
 
                 uint fvfOffset          = f.ReadUInt32();
 
@@ -68,8 +65,8 @@ namespace DSCript.Models
                     goto LoadPCMP;
 
                 /* ------------------------------
-                    * Read vertex header
-                    * ------------------------------ */
+                 * Read vertex header
+                 * ------------------------------ */
                 f.Seek(fvfOffset, SeekOrigin.Begin);
 
                 int nVerts              = f.ReadInt32();
@@ -78,8 +75,8 @@ namespace DSCript.Models
                 int vertLength          = f.ReadInt32();
 
                 /* ------------------------------
-                    * Read indices
-                    * ------------------------------ */
+                 * Read indices
+                 * ------------------------------ */
                 f.Seek(indicesOffset, SeekOrigin.Begin);
 
                 Indices = new IndexData(nIndices);
@@ -87,11 +84,9 @@ namespace DSCript.Models
                 for (int i = 0; i < nIndices; i++)
                     Indices.Buffer[i] = f.ReadUInt16();
 
-                //--DSC.Log("Finished reading {0} index entries.", nIndices);
-
                 /* ------------------------------
-                    * Read vertices
-                    * ------------------------------ */
+                 * Read vertices
+                 * ------------------------------ */
                 f.Seek(vertsOffset, SeekOrigin.Begin);
 
                 Vertices = new VertexData(nVerts, vertLength);
@@ -99,7 +94,15 @@ namespace DSCript.Models
                 for (int i = 0; i < nVerts; i++)
                     Vertices.Buffer[i] = new Vertex(f.ReadBytes(vertLength), Vertices.VertexType);
 
-                //--DSC.Log("Finished reading {0} vertex entries.", nVerts);
+                /* ------------------------------
+                 * Read model data
+                 * ------------------------------ */
+                var meshes = new Dictionary<uint, IndexedMesh>(nMeshes);
+                var groups = new Dictionary<uint, MeshGroup>(nMeshGroups);
+
+                Meshes = new List<IndexedMesh>(nMeshes);
+                MeshGroups = new List<MeshGroup>(nMeshGroups);
+                Parts = new List<PartsGroup>(nParts);
 
                 // To collect the data for our meshes, we will read everything backwards:
                 // - 1) Meshes
@@ -109,51 +112,40 @@ namespace DSCript.Models
                 // This will help prevent redundant loops, and everything is read once, not twice!
 
                 /* ------------------------------
-                    * Read meshes
-                    * ------------------------------ */
+                 * Read meshes (Size: 0x38)
+                 * ------------------------------ */
                 f.Seek(meshesOffset, SeekOrigin.Begin);
-
-                Meshes = new List<MeshDefinition>(nMeshes);
-
                 for (int i = 0; i < nMeshes; i++)
                 {
-                    uint offset = (uint)f.GetPosition();
+                    uint offset = (uint)(f.SeekFromOrigin(meshesOffset, (i * 0x38)));
 
-                    MeshDefinition mesh = new MeshDefinition() {
-                        Offset = offset
-                    };
-
+                    IndexedMesh mesh        = new IndexedMesh(this);
                     Meshes.Add(mesh);
 
-                    mesh.PrimitiveType = (D3DPRIMITIVETYPE)f.ReadInt32();
+                    // add to mesh lookup
+                    meshes.Add(offset, mesh);
 
-                    mesh.BaseVertexIndex = f.ReadInt32();
-                    mesh.MinIndex = f.ReadUInt32();
-                    mesh.NumVertices = f.ReadUInt32();
+                    mesh.PrimitiveType      = (D3DPRIMITIVETYPE)f.ReadInt32();
 
-                    mesh.StartIndex = f.ReadUInt32();
-                    mesh.PrimitiveCount = f.ReadUInt32();
+                    mesh.BaseVertexIndex    = f.ReadInt32();
+                    mesh.MinIndex           = f.ReadUInt32();
+                    mesh.NumVertices        = f.ReadUInt32();
+
+                    mesh.StartIndex         = f.ReadUInt32();
+                    mesh.PrimitiveCount     = f.ReadUInt32();
 
                     // skip padding
                     f.Seek(0x18, SeekOrigin.Current);
 
-                    mesh.MaterialId = f.ReadInt16();
-                    mesh.SourceUID = f.ReadUInt16();
-
-                    //skip padding
-                    f.Seek(0x4, SeekOrigin.Current);
+                    mesh.MaterialId         = f.ReadInt16();
+                    mesh.SourceUID          = f.ReadUInt16();
                 }
-
                 /* ------------------------------
-                    * Read mesh groups
-                    * ------------------------------ */
-                f.Seek(meshGroupsOffset, SeekOrigin.Begin);
-
-                MeshGroups = new List<MeshGroup>(nMeshGroups);
-
+                 * Read mesh groups (Size: 0x58)
+                 * ------------------------------ */
                 for (int i = 0; i < nMeshGroups; i++)
                 {
-                    uint offset = (uint)f.GetPosition();
+                    uint offset = (uint)(f.SeekFromOrigin(meshGroupsOffset, (i * 0x58)));
                     uint mOffset = f.ReadUInt32();
 
                     // skip padding
@@ -161,56 +153,47 @@ namespace DSCript.Models
 
                     short count = f.ReadInt16();
 
-                    // skip padding
-                    f.Seek(0x2 + 0xC, SeekOrigin.Current);
+                    MeshGroup group = new MeshGroup(count);
+                    MeshGroups.Add(group);
 
-                    MeshGroup mGroup = new MeshGroup(offset, count);
-
-                    MeshGroups.Add(mGroup);
+                    // add to mesh groups lookup
+                    groups.Add(offset, group);
 
                     // Add meshes to group
-                    for (int k = 0; k < count; k++)
+                    for (uint k = 0; k < count; k++)
                     {
-                        int v = Meshes.FindIndex((m) => m.Offset == mOffset + (0x38 * k));
+                        IndexedMesh mesh = meshes[mOffset + (k * 0x38)];
+                        mesh.Group = group;
 
-                        if (v == -1)
-                            throw new Exception("An error occurred while trying to add a mesh to a group!");
-
-                        MeshDefinition mesh = Meshes[v];
-                        mesh.Group = mGroup;
-
-                        mGroup.Meshes.Add(mesh);
+                        group.Meshes.Add(mesh);
                     }
                 }
-
                 /* ------------------------------
-                    * Read parts groups
-                    * ------------------------------ */
-                f.Seek(partsOffset, SeekOrigin.Begin);
-
-                Parts = new List<PartsGroup>(nParts);
-
+                 * Read parts groups (Size: 0x188)
+                 * ------------------------------ */
                 for (int i = 0; i < nParts; i++)
                 {
-                    PartsGroup group = new PartsGroup() {
+                    f.SeekFromOrigin(partsOffset, (i * 0x188));
+
+                    PartsGroup part = new PartsGroup() {
                         UID = f.ReadUInt32(),
                         Handle = f.ReadUInt32()
                     };
 
-                    Parts.Add(group);
+                    Parts.Add(part);
 
-                    // skip float padding
+                    // skip unknown float padding
                     f.Seek(0x10, SeekOrigin.Current);
 
-                    group.Unknown1 = f.ReadInt32();
-                    group.Unknown2 = f.ReadInt32();
+                    part.Unknown1 = f.ReadInt32();
+                    part.Unknown2 = f.ReadInt32();
 
                     // skip padding
                     f.Seek(0x8, SeekOrigin.Current);
 
                     // read unknown list of 8 Point4Ds
                     for (int t = 0; t < 8; t++)
-                        group.Transform.Add(new Point4D(
+                        part.Transform.Add(new Point4D(
                             (double)f.ReadSingle(),
                             (double)f.ReadSingle(),
                             (double)f.ReadSingle(),
@@ -220,9 +203,11 @@ namespace DSCript.Models
                     // there are 7 part definitions per group
                     for (int k = 0; k < 7; k++)
                     {
-                        PartDefinition entry = new PartDefinition(k);
+                        PartDefinition entry = new PartDefinition(k) {
+                            Parent = part
+                        };
 
-                        group.Parts.Add(entry);
+                        part.Parts.Add(entry);
 
                         uint gOffset = f.ReadUInt32();
 
@@ -239,16 +224,9 @@ namespace DSCript.Models
                         // skip padding
                         f.Seek(0x8, SeekOrigin.Current);
 
-                        entry.Parent = group;
-
                         if (gOffset != 0)
                         {
-                            int v = MeshGroups.FindIndex((g) => g.Offset == gOffset);
-
-                            if (v == -1)
-                                throw new Exception("An error occurred while trying to add a Mesh group to a Part entry!");
-
-                            MeshGroup mGroup = MeshGroups[v];
+                            MeshGroup mGroup = groups[gOffset];
 
                             entry.Group = mGroup;
                             mGroup.Parent = entry;
@@ -256,8 +234,11 @@ namespace DSCript.Models
                     }
                 }
 
-                goto LoadPCMP;
+                // lookup tables no longer needed
+                meshes.Clear();
+                groups.Clear();
 
+                goto LoadPCMP;
 
                 // Read PCMP
             LoadPCMP:
@@ -272,124 +253,104 @@ namespace DSCript.Models
                 if (f.ReadUInt32() != 0x3)
                     DSC.Log("PCMP version check failed, errors may occur.");
 
-                int tGroupCount     = f.ReadInt32();
-                uint tGroupOffset   = f.ReadUInt32();
+                int nMats               = f.ReadInt32();
+                uint matsOffset         = f.ReadUInt32();
 
-                int t2Count         = f.ReadInt32();
-                uint t2Offset       = f.ReadUInt32();
+                int table1Count         = f.ReadInt32();
+                uint table1Offset       = f.ReadUInt32();
 
-                int tSubMatCount    = f.ReadInt32();
-                uint tSubMatOffset  = f.ReadUInt32();
+                int nSubMats            = f.ReadInt32();
+                uint subMatsOffset      = f.ReadUInt32();
 
-                int t4Count         = f.ReadInt32();
-                uint t4Offset       = f.ReadUInt32();
+                int table2Count         = f.ReadInt32();
+                uint table2Offset       = f.ReadUInt32();
 
-                int DDSInfoCount    = f.ReadInt32();
-                uint DDSInfoOffset  = f.ReadUInt32();
+                int DDSInfoCount        = f.ReadInt32();
+                uint DDSInfoOffset      = f.ReadUInt32();
 
-                uint DDSOffset      = f.ReadUInt32();
-                uint Size           = f.ReadUInt32();
+                uint DDSOffset          = f.ReadUInt32();
+                uint Size               = f.ReadUInt32();
 
                 MaterialData = new PCMPData();
 
-                List<PCMPMaterial> materials = MaterialData.Materials;
+                var textures = new Dictionary<uint, PCMPTexture>(DDSInfoCount);
+                var subMaterials = new Dictionary<uint, PCMPSubMaterial>(nSubMats);
 
-                // Read everything backwards, it's easiest that way
+                // Read backwards
 
-                // Textures
-                f.Seek(pcmpOffset + DDSInfoOffset, SeekOrigin.Begin);
-
+                // Textures (Size: 0x20)
                 for (int t = 0; t < DDSInfoCount; t++)
                 {
-                    uint baseOffset = (uint)f.GetPosition() - pcmpOffset;
-
-                    PCMPTexture textureInfo = new PCMPTexture() {
-                        BaseOffset = baseOffset,
-
-                        Unk1 = f.ReadByte(),
-                        Unk2 = f.ReadByte(),
-                        Unk3 = f.ReadByte(),
-                        Unk4 = f.ReadByte(),
-
-                        CRC32 = f.ReadUInt32(),
-                        Offset = f.ReadUInt32(),
-                        Size = f.ReadUInt32(),
-                        Type = f.ReadUInt32(),
-
-                        Width = f.ReadUInt16(),
-                        Height = f.ReadUInt16(),
-
-                        Unk5 = f.ReadUInt32(),
-                        Unk6 = f.ReadUInt32()
-                    };
-
-                    long holdPosition = f.GetPosition();
-
-                    f.Seek(pcmpOffset + DDSOffset + textureInfo.Offset, SeekOrigin.Begin);
-
-                    textureInfo.Buffer = f.ReadBytes((int)textureInfo.Size);
-
-                    f.Seek(holdPosition, SeekOrigin.Begin);
+                    uint baseOffset = (uint)(f.SeekFromOrigin(pcmpOffset, (DDSInfoOffset + (t * 0x20)))) - pcmpOffset;
+                    
+                    PCMPTexture textureInfo = new PCMPTexture();
 
                     MaterialData.Textures.Add(textureInfo);
+
+                    //add to texture lookup
+                    textures.Add(baseOffset, textureInfo);
+                    
+                    textureInfo.Unk1    = f.ReadByte();
+                    textureInfo.Unk2    = f.ReadByte();
+                    textureInfo.Unk3    = f.ReadByte();
+                    textureInfo.Unk4    = f.ReadByte();
+
+                    textureInfo.CRC32   = f.ReadUInt32();
+
+                    uint offset         = f.ReadUInt32();
+                    int size            = f.ReadInt32();
+
+                    textureInfo.Type    = f.ReadUInt32();
+
+                    textureInfo.Width   = f.ReadUInt16();
+                    textureInfo.Height  = f.ReadUInt16();
+
+                    textureInfo.Unk5    = f.ReadUInt32();
+                    textureInfo.Unk6    = f.ReadUInt32();
+
+                    // get DDS from absolute offset (defined in MDPC header)
+                    f.SeekFromOrigin(ddsOffset, offset);
+                    textureInfo.Buffer  = f.ReadBytes(size);
                 }
 
-                f.Seek(pcmpOffset + tSubMatOffset, SeekOrigin.Begin);
-
-                // Submaterials
-                for (int s = 0; s < tSubMatCount; s++)
+                // Submaterials (Size: 0x20)
+                for (int s = 0; s < nSubMats; s++)
                 {
-                    uint baseOffset = (uint)f.GetPosition() - pcmpOffset;
+                    uint baseOffset = (uint)(f.SeekFromOrigin(pcmpOffset, (subMatsOffset + (s * 0x20)))) - pcmpOffset;
 
                     PCMPSubMaterial subMaterial = new PCMPSubMaterial() {
-                        BaseOffset = baseOffset,
-
-                        Unk1 = f.ReadUInt32(),
-                        Unk2 = f.ReadUInt16(),
-                        Unk3 = f.ReadUInt16()
+                        Flags = f.ReadUInt32(),
+                        Mode = f.ReadUInt16(),
+                        Type = f.ReadUInt16()
                     };
 
-                    f.Seek(0x8, SeekOrigin.Current);
-
-                    uint texturesOffset = f.ReadUInt32();
-                    uint texturesCount = f.ReadUInt32();
-
-                    f.Seek(0x8, SeekOrigin.Current);
-
-                    long holdPosition = f.GetPosition();
-
-                    f.Seek(pcmpOffset + texturesOffset, SeekOrigin.Begin);
-
-                    for (int t = 0; t < texturesCount; t++)
-                    {
-                        uint texOffset = f.ReadUInt32();
-
-                        f.Seek(0x4, SeekOrigin.Current);
-
-                        long hold = f.GetPosition();
-
-                        int texIdx = MaterialData.Textures.FindIndex((tex) => tex.BaseOffset == texOffset);
-
-                        if (texIdx == -1)
-                            throw new Exception("Fatal error occurred while adding texture to submaterial!");
-
-                        subMaterial.Textures.Add(MaterialData.Textures[texIdx]);
-
-                        f.Seek(hold, SeekOrigin.Begin);
-                    }
-
-                    f.Seek(holdPosition, SeekOrigin.Begin);
-
                     MaterialData.SubMaterials.Add(subMaterial);
+
+                    //add to submaterial lookup
+                    subMaterials.Add(baseOffset, subMaterial);
+
+                    f.Seek(0x8, SeekOrigin.Current);
+
+                    // table info
+                    uint offset = f.ReadUInt32();
+                    uint count = f.ReadUInt32();
+
+                    // get texture from table
+                    for (int t = 0; t < count; t++)
+                    {
+                        f.SeekFromOrigin(pcmpOffset, (offset + (t * 0x8)));
+                        subMaterial.Textures.Add(textures[f.ReadUInt32()]);
+                    }
                 }
 
-                f.Seek(pcmpOffset + tGroupOffset, SeekOrigin.Begin);
-
-                // Materials
-                for (int m = 0; m < tGroupCount; m++)
+                // Materials (Size: 0x18)
+                for (int m = 0; m < nMats; m++)
                 {
-                    uint subMatsOffset = f.ReadUInt32();
-                    uint subMatsCount = f.ReadUInt32();
+                    f.SeekFromOrigin(pcmpOffset, (matsOffset + (m * 0x18)));
+
+                    // table info
+                    uint offset = f.ReadUInt32();
+                    uint count = f.ReadUInt32();
 
                     PCMPMaterial material = new PCMPMaterial() {
                         Reserved1 = f.ReadUInt32(),
@@ -398,32 +359,19 @@ namespace DSCript.Models
                         Reserved4 = f.ReadUInt32()
                     };
 
-                    long holdPosition = f.GetPosition();
-
-                    f.Seek(pcmpOffset + subMatsOffset, SeekOrigin.Begin);
-
-                    for (int s = 0; s < subMatsCount; s++)
-                    {
-                        uint subMatOffset = f.ReadUInt32();
-
-                        f.Seek(0x4, SeekOrigin.Current);
-
-                        long hold = f.GetPosition();
-
-                        int subIdx = MaterialData.SubMaterials.FindIndex((sub) => sub.BaseOffset == subMatOffset);
-
-                        if (subIdx == -1)
-                            throw new Exception("Fatal error occurred while adding submaterial to material!");
-
-                        material.SubMaterials.Add(MaterialData.SubMaterials[subIdx]);
-
-                        f.Seek(hold, SeekOrigin.Begin);
-                    }
-
-                    f.Seek(holdPosition, SeekOrigin.Begin);
-
                     MaterialData.Materials.Add(material);
+
+                    // get submaterial from table
+                    for (int s = 0; s < count; s++)
+                    {
+                        f.SeekFromOrigin(pcmpOffset, (offset + (s * 0x8)));
+                        material.SubMaterials.Add(subMaterials[f.ReadUInt32()]);
+                    }
                 }
+
+                // lookup tables no longer needed
+                textures.Clear();
+                subMaterials.Clear();
             }
         }
 
@@ -437,7 +385,7 @@ namespace DSCript.Models
             int nIndices            = 0;
             int nVertices           = 0;
 
-            int partsOffset         = 0x80;
+            int partsOffset         = 0x80; // haven't seen any different values
             int groupsOffset        = 0;
             int meshesOffset        = 0;
             int ddsOffset           = 0;
@@ -601,7 +549,6 @@ namespace DSCript.Models
                     f.Write(vertsOffset);
                     f.Write(vertLength);
 
-
                     // Write indices
                     f.Seek(indicesOffset, SeekOrigin.Begin);
 
@@ -693,7 +640,7 @@ namespace DSCript.Models
 
                     for (int m = 0; m < nMeshes; m++)
                     {
-                        MeshDefinition mesh = Meshes[m];
+                        IndexedMesh mesh = Meshes[m];
 
                         f.Write((int)mesh.PrimitiveType);
 
@@ -749,13 +696,12 @@ namespace DSCript.Models
                     f.Write(subMatTableOffset + (stIdx * 0x8));
                     f.Write(material.SubMaterials.Count);
 
+                    f.Write(material.Reserved1);
+                    f.Write(material.Reserved2);
+                    f.Write(material.Reserved3);
+                    f.Write(material.Reserved4);
+
                     stIdx += material.SubMaterials.Count;
-
-                    f.Seek(0x4, SeekOrigin.Current);
-
-                    f.Write((uint)0x41C80000);
-
-                    f.Seek(0x8, SeekOrigin.Current);
                 }
 
                 f.Seek((pcmpOffset + subMatTableOffset), SeekOrigin.Begin);
@@ -776,10 +722,10 @@ namespace DSCript.Models
                 {
                     PCMPSubMaterial subMat = MaterialData.SubMaterials[s];
 
-                    f.Write(subMat.Unk1);
+                    f.Write(subMat.Flags);
 
-                    f.Write(subMat.Unk2);
-                    f.Write(subMat.Unk3);
+                    f.Write(subMat.Mode);
+                    f.Write(subMat.Type);
 
                     f.Seek(0x8, SeekOrigin.Current);
 
@@ -828,7 +774,7 @@ namespace DSCript.Models
                 }
             }
 
-            BlockData.Data = buffer;
+            BlockData.Buffer = buffer;
         }
 
         public ModelPackagePC(BlockData blockData)

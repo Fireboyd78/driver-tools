@@ -49,7 +49,7 @@ namespace Antilli
                 DependencyProperty.Register("ModelPackage", typeof(ModelPackage), thisType,
                 new PropertyMetadata(null, null));
             MeshProperty =
-                DependencyProperty.Register("Mesh", typeof(MeshDefinition), thisType,
+                DependencyProperty.Register("Mesh", typeof(IndexedMesh), thisType,
                 new UIPropertyMetadata(null, MeshChanged));
             MaterialProperty =
                 DependencyProperty.Register("Material", typeof(PCMPMaterial), thisType,
@@ -68,9 +68,9 @@ namespace Antilli
             protected set { SetValue(ModelPackageProperty, value); }
         }
 
-        public MeshDefinition Mesh
+        public IndexedMesh Mesh
         {
-            get { return (MeshDefinition)GetValue(MeshProperty); }
+            get { return (IndexedMesh)GetValue(MeshProperty); }
             set { SetValue(MeshProperty, value); }
         }
 
@@ -110,111 +110,23 @@ namespace Antilli
             //    return;
             //}
 
-            VertexData vertexData = ModelPackage.Vertices;
-            IndexData indexData = ModelPackage.Indices;
-
-            PCMPData materialData = ModelPackage.MaterialData;
-
-            if (vertexData.VertexType == FVFType.Vertex12)
+            if (ModelPackage.Vertices.VertexType == FVFType.Vertex12 || ModelPackage.Vertices.VertexType == FVFType.Vertex16)
                 UseBlendWeights = false;
 
-            Vertex[] vertices = vertexData.Buffer;
-            ushort[] indices = indexData.Buffer;
+            Vertices        = Mesh.GetVertices();
+            TriangleIndices = Mesh.GetTriangleIndices();
+            Material        = Mesh.GetMaterial();
 
-            int nVerts = vertices.Length;
+            //if (Material == null)
+            //    OnMaterialChanged();
+        }
 
-            var verts = new List<Vertex>(nVerts);
-            var tris = new Int32Collection();
+        protected override void OnBlendWeightsChanged()
+        {
+            base.OnBlendWeightsChanged();
 
-            for (uint v = 0; v <= Mesh.NumVertices; v++)
-            {
-                uint vIdx = (uint)Mesh.BaseVertexIndex + Mesh.MinIndex + v;
-
-                if (vIdx == vertices.Length)
-                    break;
-
-                verts.Add(vertices[vIdx]);
-            }
-
-            for (int i = 0; i < Mesh.PrimitiveCount; i++)
-            {
-                uint idx = Mesh.StartIndex;
-                int vIdx = Mesh.BaseVertexIndex;
-
-                uint i0, i1, i2;
-
-                if (Mesh.PrimitiveType == D3DPRIMITIVETYPE.D3DPT_TRIANGLESTRIP)
-                {
-                    if (i % 2 == 1.0)
-                    {
-                        i0 = indices[idx + i];
-                        i1 = indices[idx + (i + 1)];
-                        i2 = indices[idx + (i + 2)];
-                    }
-                    else
-                    {
-                        i0 = indices[idx + (i + 2)];
-                        i1 = indices[idx + (i + 1)];
-                        i2 = indices[idx + i];
-                    }
-
-                    // When reading in the vertices, the YZ-axis was flipped
-                    // Therefore i0 and i2 need to be flipped for proper face orientation
-                    // This was AFTER learning the hard way...
-                    if ((i0 != i1) && (i0 != i2) && (i1 != i2))
-                    {
-                        tris.Add((int)(i2 - Mesh.MinIndex));
-                        tris.Add((int)(i1 - Mesh.MinIndex));
-                        tris.Add((int)(i0 - Mesh.MinIndex));
-                    }
-                }
-                else if (Mesh.PrimitiveType == D3DPRIMITIVETYPE.D3DPT_TRIANGLELIST)
-                {
-                    DSCript.DSC.Log("Loading a triangle list primitive!");
-
-                    i0 = indices[idx + i];
-                    i1 = indices[idx + (i + 1)];
-                    i2 = indices[idx + (i + 2)];
-
-                    tris.Add((int)(i2 - Mesh.MinIndex));
-                    tris.Add((int)(i1 - Mesh.MinIndex));
-                    tris.Add((int)(i0 - Mesh.MinIndex));
-                }
-                else
-                {
-                    throw new Exception("Unknown primitive type!");
-                }
-            }
-
-            Vertices = verts;
-            TriangleIndices = tris;
-
-            // Add material
-            if (Mesh.SourceUID != 0)
-            {
-                if (Mesh.SourceUID != (uint)PackageType.VehicleGlobals)
-                {
-                    if (Mesh.SourceUID == ModelPackage.UID || Mesh.SourceUID == 0xFFFD)
-                    {
-                        Material = materialData.Materials[Mesh.MaterialId];
-                    }
-                    else
-                    {
-                        ModelPackage mPak = ModelFile.Models.Find((m) => m.UID == Mesh.SourceUID);
-
-                        if (mPak != null)
-                            Material = mPak.MaterialData.Materials[Mesh.MaterialId];
-                    }
-                }
-                else if (ModelPackage.HasGlobals && Mesh.MaterialId < ModelPackage.Globals.StandaloneTextures.Count)
-                {
-                    Material = ModelPackage.Globals.StandaloneTextures[Mesh.MaterialId];
-                }
-            }
-            else
-            {
-                OnMaterialChanged();
-            }
+            if (Material != null)
+                this.OnMaterialChanged();
         }
 
         protected new void OnMaterialChanged()
@@ -228,36 +140,19 @@ namespace Antilli
             {
                 PCMPSubMaterial subMaterial = Material.SubMaterials[0];
 
-                bool transparency = false;
-
-                bool damage = false;
-                bool mask = false;
-
-                bool specular = false;
-                bool emissive = false;
-
-                uint type = subMaterial.Unk1;
-                uint spec = subMaterial.Unk2;
-                uint flags = subMaterial.Unk3;
-
-                if (flags == 0x400 || flags == 0x1000)
-                    mask = true;
-                if (flags == 0x800 || flags == 0x1000)
-                    damage = true;
-                if (spec == 0x201 || spec == 0x102)
-                    specular = true;
-                if (((type & 0x18000) == 0x18000) || ((type & 0x1E) == 0x1E))
-                    emissive = true;
-                if (((type & 0x1) == 0x1 && !specular) || type == 0x4 && !specular)
-                    transparency = true;
+                bool damage         = subMaterial.Damage;
+                bool mask           = subMaterial.AlphaMask;
+                bool transparency   = subMaterial.Transparency;
+                bool emissive       = subMaterial.Emissive;
+                bool specular       = subMaterial.Specular;
 
                 PCMPTexture texInfo = (UseBlendWeights && damage) ? (mask) ? subMaterial.Textures[2] : subMaterial.Textures[1] : subMaterial.Textures[0];
                 
                 CachedTexture cTex = TextureCache.GetCachedTexture(texInfo);
 
-                bool alphaBlend = transparency || emissive;
+                BitmapSourceLoadFlags loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.AlphaBlend : BitmapSourceLoadFlags.None;
 
-                BitmapSource bmap = cTex.GetBitmapSource(alphaBlend);
+                BitmapSource bmap = cTex.GetBitmapSource(loadFlags);
 
                 matGroup.Children.Add(new DiffuseMaterial() {
                     Brush = new ImageBrush() {
@@ -283,7 +178,7 @@ namespace Antilli
                 {
                     matGroup.Children.Add(new SpecularMaterial() {
                         Brush = new ImageBrush() {
-                            ImageSource = cTex.GetBitmapSourceAlphaChannel(),
+                            ImageSource = cTex.GetBitmapSource(BitmapSourceLoadFlags.AlphaOnly),
                             TileMode = TileMode.Tile,
                             Stretch = Stretch.Fill,
                             ViewportUnits = BrushMappingMode.Absolute
@@ -305,10 +200,11 @@ namespace Antilli
             base.Material = matGroup;
         }
 
-        public DriverModelVisual3D(IModelFile modelFile, ModelPackage modelPackage, MeshDefinition mesh)
+        public DriverModelVisual3D(IModelFile modelFile, ModelPackage modelPackage, IndexedMesh mesh, bool useBlendWeights)
             : base()
         {
             DoubleSided = true;
+            UseBlendWeights = useBlendWeights;
 
             ModelFile = modelFile;
             ModelPackage = modelPackage;

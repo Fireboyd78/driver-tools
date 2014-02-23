@@ -56,12 +56,27 @@
     <FileAlignment>4096</FileAlignment>
     <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <DocumentationFile>doc\Antilli.xml</DocumentationFile>
+    <ErrorReport>prompt</ErrorReport>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="FreeImageNET">
       <HintPath>..\Libraries\FreeImage.NET\FreeImageNET.dll</HintPath>
     </Reference>
     <Reference Include="HelixToolkit.Wpf">
       <HintPath>..\Libraries\HelixToolkit\HelixToolkit.Wpf.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
     <Reference Include="HelixToolkit.Wpf.Input">
       <HintPath>..\Libraries\HelixToolkit\HelixToolkit.Wpf.Input.dll</HintPath>
@@ -97,11 +112,16 @@
     <Compile Include="Config.cs" />
     <Compile Include="EmbedRes.cs" />
     <Compile Include="Extensions\Media3DExtensions.cs" />
+    <Compile Include="Importers\ModelImporter.cs" />
     <Compile Include="MaterialEditor.xaml.cs">
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ModelGroupListItem.cs" />
     <Compile Include="ModelListItem.cs" />
-    <Compile Include="WPF\DriverModelGroup.cs" />
+    <Compile Include="VisualParentHelper.cs" />
+    <Compile Include="WPF\Controls\AntilliViewport3D.cs" />
+    <Compile Include="WPF\Controls\AntilliWindow.cs" />
+    <Compile Include="WPF\ModelVisual3DGroup.cs" />
     <Compile Include="WPF\Visuals\BlendModelVisual3D.cs" />
     <Compile Include="WPF\Visuals\DriverModelVisual3D.cs" />
     <Compile Include="WPF\Visuals\GeometryModelVisual3D.cs" />
@@ -195,7 +215,9 @@
       <Name>DSCript</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

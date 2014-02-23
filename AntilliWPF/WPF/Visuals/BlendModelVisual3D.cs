@@ -58,12 +58,13 @@ namespace Antilli
 
         protected virtual void OnBlendWeightsChanged()
         {
-            base.OnGeometryChanged();
+            if (Model != null)
+                OnGeometryChanged();
         }
 
         protected override MeshGeometry3D ToMesh()
         {
-            if ((Vertices == null || TriangleIndices == null) || ((Vertices.Count == 0 || TriangleIndices.Count == 0)))
+            if (Vertices == null || TriangleIndices == null)
                 return null;
 
             int nVerts = Vertices.Count;
@@ -74,11 +75,11 @@ namespace Antilli
 
             foreach (Vertex vertex in Vertices)
             {
-                Point3D pos = (UseBlendWeights) ? Vertex.Tween(vertex.Positions, vertex.BlendWeights, tweenFactor) : vertex.Positions;
+                Point3D pos = (UseBlendWeights) ? Vertex.Tween(vertex.Position, vertex.BlendWeights, tweenFactor) : vertex.Position;
 
                 positions.Add(pos);
-                normals.Add(vertex.Normals);
-                textureCoordinates.Add(vertex.UVs);
+                normals.Add(vertex.Normal);
+                textureCoordinates.Add(vertex.UV);
             }
 
             return new MeshGeometry3D() {

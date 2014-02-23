@@ -15,18 +15,23 @@ namespace Antilli
 {
     public class ModelListItem
     {
-        public int Id { get; private set; }
-
-        public DriverModelGroup Model { get; private set; }
-
-        public override string ToString()
+        public int Index
         {
-            return String.Format("Model {0}", Id);
+            get { return Parent.IndexOf(this); }
         }
 
-        public ModelListItem(int id, DriverModelGroup model)
+        public IList<ModelListItem> Parent { get; private set; }
+
+        public string Name
         {
-            Id = id;
+            get { return (Model.Name != "") ? Model.Name : String.Format("Model {0}", Index); ; }
+        }
+
+        public ModelVisual3DGroup Model { get; private set; }
+
+        public ModelListItem(IList<ModelListItem> parent, ModelVisual3DGroup model)
+        {
+            Parent = parent;
             Model = model;
         }
     }

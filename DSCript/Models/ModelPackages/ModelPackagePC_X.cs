@@ -11,6 +11,10 @@ using System.Text;
 
 namespace DSCript.Models
 {
+    /* ############################################################
+     * THIS CLASS NEEDS A TOTAL REWRITE, DO NOT USE
+     * ############################################################ */
+    [Obsolete("This class is in need of a complete rewrite, do not use!", true)]
     public class ModelPackagePC_X : ModelPackage
     {
         public override uint Magic
@@ -108,15 +112,13 @@ namespace DSCript.Models
                     * ------------------------------ */
                 f.Seek(meshesOffset, SeekOrigin.Begin);
 
-                Meshes = new List<MeshDefinition>(nMeshes);
+                Meshes = new List<IndexedMesh>(nMeshes);
 
                 for (int i = 0; i < nMeshes; i++)
                 {
                     uint offset = (uint)f.GetPosition();
 
-                    MeshDefinition mesh = new MeshDefinition() {
-                        Offset = offset
-                    };
+                    IndexedMesh mesh = new IndexedMesh();
 
                     Meshes.Add(mesh);
 
@@ -177,7 +179,7 @@ namespace DSCript.Models
                         if (v == -1)
                             throw new Exception("An error occurred while trying to add a mesh to a group!");
 
-                        MeshDefinition mesh = Meshes[v];
+                        IndexedMesh mesh = Meshes[v];
                         mesh.Group = mGroup;
 
                         mGroup.Meshes.Add(mesh);

@@ -16,7 +16,20 @@ namespace DSCript.Models
         ChunkFile ChunkFile { get; set; }
         List<ModelPackage> Models { get; set; }
 
+        IStandaloneModelFile SpooledFile { get; set; }
+
+        bool HasSpooledFile { get; }
+
         void LoadModels();
+    }
+
+    public interface IStandaloneModelFile
+    {
+        ModelPackage ModelData { get; }
+
+        List<PCMPMaterial> StandaloneTextures { get; set; }
+
+        PCMPData MaterialData { get; }
     }
 
     public class ModelFile : IModelFile, IDisposable
@@ -25,10 +38,19 @@ namespace DSCript.Models
 
         public List<ModelPackage> Models { get; set; }
 
+        public IStandaloneModelFile SpooledFile { get; set; }
+
+        public bool HasSpooledFile
+        {
+            get { return (SpooledFile != null); }
+        }
+
         public virtual void Dispose()
         {
             if (ChunkFile != null)
                 ChunkFile.Dispose();
+            if (SpooledFile != null)
+                SpooledFile = null;
 
             if (Models != null)
             {
@@ -52,10 +74,9 @@ namespace DSCript.Models
                     switch (entry.GetChunkType())
                     {
                     case ChunkType.ModelPackagePC:
-                        Models.Add(new ModelPackagePC(ChunkFile.GetBlockData(entry)));
-                        break;
-                    case ChunkType.ModelPackagePC_X:
-                        Models.Add(new ModelPackagePC_X(ChunkFile.GetBlockData(entry)));
+                        Models.Add(new ModelPackagePC(ChunkFile.GetBlockData(entry)) {
+                            ModelFile = this
+                        });
                         break;
                     default:
                         break;

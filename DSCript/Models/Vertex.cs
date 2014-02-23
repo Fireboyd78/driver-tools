@@ -16,19 +16,19 @@ namespace DSCript.Models
 {
     public class Vertex
     {
-        public FVFType VertexType { get; private set; }
+        public FVFType VertexType { get; set; }
 
         Vector3D _blendWeights;
         double _unknown = -1.0;
 
         /// <summary>Gets or sets the position of the vertex.</summary>
-        public Point3D Positions { get; set; }
+        public Point3D Position { get; set; }
 
         /// <summary>Gets or sets the normals of the vertex.</summary>
-        public Vector3D Normals { get; set; }
+        public Vector3D Normal { get; set; }
 
         /// <summary>Gets or sets the UV mapping of the vertex.</summary>
-        public Point UVs { get; set; }
+        public Point UV { get; set; }
 
         /// <summary>Gets or sets the RGBA diffuse color of the vertex.</summary>
         public Color Diffuse { get; set; }
@@ -41,8 +41,6 @@ namespace DSCript.Models
             {
                 if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
                     _blendWeights = value;
-
-                return;
             }
         }
 
@@ -72,16 +70,16 @@ namespace DSCript.Models
         {
             using (MemoryStream ms = new MemoryStream((int)VertexType))
             {
-                ms.WriteFloat(-Positions.X);
-                ms.WriteFloat(Positions.Z);
-                ms.WriteFloat(Positions.Y);
+                ms.WriteFloat(-Position.X);
+                ms.WriteFloat(Position.Z);
+                ms.WriteFloat(Position.Y);
 
-                ms.WriteFloat(-Normals.X);
-                ms.WriteFloat(Normals.Z);
-                ms.WriteFloat(Normals.Y);
+                ms.WriteFloat(-Normal.X);
+                ms.WriteFloat(Normal.Z);
+                ms.WriteFloat(Normal.Y);
 
-                ms.WriteFloat(UVs.X);
-                ms.WriteFloat(UVs.Y);
+                ms.WriteFloat(UV.X);
+                ms.WriteFloat(UV.Y);
 
                 if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
                 {
@@ -116,9 +114,9 @@ namespace DSCript.Models
 
             VertexType = vertexType;
 
-            Positions = new Point3D();
-            Normals = new Vector3D();
-            UVs = new Point();
+            Position = new Point3D();
+            Normal = new Vector3D();
+            UV = new Point();
             Diffuse = Color.FromArgb(255, 0, 0, 0);
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
@@ -142,9 +140,9 @@ namespace DSCript.Models
 
             VertexType = vertexType;
 
-            Positions = vertex.Positions;
-            Normals = vertex.Normals;
-            UVs = vertex.UVs;
+            Position = vertex.Position;
+            Normal = vertex.Normal;
+            UV = vertex.UV;
             Diffuse = vertex.Diffuse;
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
@@ -176,19 +174,19 @@ namespace DSCript.Models
             {
                 // IMPORTANT NOTE: The Y & Z Axes are flipped and the X axis is negated!
 
-                Positions = new Point3D() {
+                Position = new Point3D() {
                     X = -f.ReadSingle(),
                     Z = f.ReadSingle(),
                     Y = f.ReadSingle()
                 };
 
-                Normals = new Vector3D() {
+                Normal = new Vector3D() {
                     X = -f.ReadSingle(),
                     Z = f.ReadSingle(),
                     Y = f.ReadSingle()
                 };
 
-                UVs = new Point() {
+                UV = new Point() {
                     X = f.ReadSingle(),
                     Y = f.ReadSingle()
                 };
@@ -212,6 +210,19 @@ namespace DSCript.Models
 
                 Diffuse = Color.FromScRgb(a, r, g, b);
             }
+        }
+
+        public Vertex(Point3D position, Vector3D normal, Point uv)
+        {
+            VertexType = FVFType.Vertex15;
+
+            Position = position;
+            Normal = normal;
+            UV = uv;
+
+            Diffuse = Color.FromArgb(255, 0, 0, 0);
+
+            _blendWeights = new Vector3D();
         }
     }
 }
