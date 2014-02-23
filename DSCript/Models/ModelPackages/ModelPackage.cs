@@ -37,7 +37,7 @@ namespace DSCript.Models
         public List<MeshGroup> MeshGroups { get; set; }
         public List<IndexedMesh> Meshes { get; set; }
 
-        public VertexData Vertices { get; set; }
+        public List<VertexData> VertexBuffers { get; set; }
         public IndexData Indices { get; set; }
 
         public PCMPData MaterialData { get; set; }
@@ -45,11 +45,6 @@ namespace DSCript.Models
         public bool HasMaterials
         {
             get { return MaterialData != null; }
-        }
-
-        public bool HasBlendWeights
-        {
-            get { return (Vertices != null) ? Vertices.VertexType != FVFType.Vertex12 : false; }
         }
 
         public virtual void Load()

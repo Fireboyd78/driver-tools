@@ -1123,14 +1123,24 @@
             Source: http://msdn.microsoft.com/en-us/library/windows/desktop/bb174369%28v=vs.85%29.aspx
             </summary>
         </member>
+        <member name="P:DSCript.Models.IndexedMesh.ModelPackage">
+            <summary>
+            The <see cref="P:DSCript.Models.IndexedMesh.ModelPackage"/> this mesh belongs to.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedMesh.PartsGroup">
+            <summary>
+            The <see cref="P:DSCript.Models.IndexedMesh.PartsGroup"/> this mesh belongs to.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.IndexedMesh.MeshGroup">
+            <summary>
+            The <see cref="P:DSCript.Models.IndexedMesh.MeshGroup"/> this mesh belongs to.
+            </summary>
+        </member>
         <member name="P:DSCript.Models.IndexedMesh.PrimitiveType">
             <summary>
             Member of the <see cref="T:DSCript.Models.D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
-            </summary>
-        </member>
-        <member name="P:DSCript.Models.IndexedMesh.Group">
-            <summary>
-            The <see cref="T:DSCript.Models.MeshGroup"/> this mesh belongs to.
             </summary>
         </member>
         <member name="P:DSCript.Models.IndexedMesh.BaseVertexIndex">
@@ -1166,6 +1176,11 @@
         <member name="P:DSCript.Models.IndexedMesh.SourceUID">
             <summary>
             The UID of the package containing the material.
+            </summary>
+        </member>
+        <member name="P:DSCript.Models.PartsGroup.VertexBufferId">
+            <summary>
+            Gets or sets the ID of the Vertex Buffer to use when accessing vertices
             </summary>
         </member>
         <member name="M:DSCript.Models.Vertex.GetBytes">

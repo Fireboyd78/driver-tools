@@ -42,6 +42,11 @@ namespace DSCript.Models
             get { return Enum.IsDefined(typeof(FVFType), Length) ? (FVFType)Length : FVFType.Unknown; }
         }
 
+        public bool HasBlendWeights
+        {
+            get { return (Buffer != null) ? (VertexType == FVFType.Vertex15) : false; }
+        }
+
         /// <summary>
         /// Creates a new vertex buffer used for storing vertices.
         /// </summary>

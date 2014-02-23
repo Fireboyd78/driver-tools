@@ -56,7 +56,7 @@ namespace DSCript.Models
                 uint indicesSize        = f.ReadUInt32();
                 uint indicesOffset      = f.ReadUInt32();
 
-                uint unknown            = f.ReadUInt32();
+                int numVertexBuffers    = f.ReadInt32();
 
                 uint fvfOffset          = f.ReadUInt32();
 
@@ -64,18 +64,35 @@ namespace DSCript.Models
                 if (PackageType == PackageType.VehicleGlobals || fvfOffset == 0)
                     goto LoadPCMP;
 
+                VertexBuffers = new List<VertexData>(numVertexBuffers);
+
                 /* ------------------------------
-                 * Read vertex header
+                 * Read vertex buffer header(s) (Size: 0x1C)
                  * ------------------------------ */
-                f.Seek(fvfOffset, SeekOrigin.Begin);
+                for (int vB = 0; vB < numVertexBuffers; vB++)
+                {
+                    f.SeekFromOrigin(fvfOffset, (vB * 0x1C));
 
-                int nVerts              = f.ReadInt32();
-                uint vertsSize          = f.ReadUInt32();
-                uint vertsOffset        = f.ReadUInt32();
-                int vertLength          = f.ReadInt32();
+                    int nVerts              = f.ReadInt32();
+                    uint vertsSize          = f.ReadUInt32();
+                    uint vertsOffset        = f.ReadUInt32();
+                    int vertLength          = f.ReadInt32();
+
+                    VertexData vertexBuffer = new VertexData(nVerts, vertLength);
+
+                    VertexBuffers.Add(vertexBuffer);
+
+                    /* ------------------------------
+                     * Read vertices in buffer
+                     * ------------------------------ */
+                    f.Seek(vertsOffset, SeekOrigin.Begin);
+
+                    for (int i = 0; i < nVerts; i++)
+                        vertexBuffer.Buffer[i] = new Vertex(f.ReadBytes(vertLength), vertexBuffer.VertexType);
+                }
 
                 /* ------------------------------
-                 * Read indices
+                 * Read index buffer
                  * ------------------------------ */
                 f.Seek(indicesOffset, SeekOrigin.Begin);
 
@@ -83,16 +100,6 @@ namespace DSCript.Models
 
                 for (int i = 0; i < nIndices; i++)
                     Indices.Buffer[i] = f.ReadUInt16();
-
-                /* ------------------------------
-                 * Read vertices
-                 * ------------------------------ */
-                f.Seek(vertsOffset, SeekOrigin.Begin);
-
-                Vertices = new VertexData(nVerts, vertLength);
-
-                for (int i = 0; i < nVerts; i++)
-                    Vertices.Buffer[i] = new Vertex(f.ReadBytes(vertLength), Vertices.VertexType);
 
                 /* ------------------------------
                  * Read model data
@@ -163,7 +170,7 @@ namespace DSCript.Models
                     for (uint k = 0; k < count; k++)
                     {
                         IndexedMesh mesh = meshes[mOffset + (k * 0x38)];
-                        mesh.Group = group;
+                        mesh.MeshGroup = group;
 
                         group.Meshes.Add(mesh);
                     }
@@ -185,7 +192,15 @@ namespace DSCript.Models
                     // skip unknown float padding
                     f.Seek(0x10, SeekOrigin.Current);
 
-                    part.Unknown1 = f.ReadInt32();
+                    // INCOMING TRANSMISSION...
+                    // RE: OPERATION S.T.E.R.N....
+                    // ...
+                    // YOUR ASSISTANCE HAS BEEN NOTED...
+                    // ...
+                    // <END OF TRANSMISSION>...
+                    part.VertexBufferId = f.ReadInt16();
+
+                    part.Unknown1 = f.ReadInt16();
                     part.Unknown2 = f.ReadInt32();
 
                     // skip padding
@@ -230,6 +245,10 @@ namespace DSCript.Models
 
                             entry.Group = mGroup;
                             mGroup.Parent = entry;
+
+                            // TODO: Not have such ugly code!
+                            foreach (IndexedMesh mesh in mGroup.Meshes)
+                                mesh.PartsGroup = entry.Parent;
                         }
                     }
                 }
@@ -377,6 +396,9 @@ namespace DSCript.Models
 
         public override void Compile()
         {
+            throw new Exception("Needs to be rewritten first!");
+
+            /*
             int bufSize             = 0;
 
             int nParts              = 0;
@@ -405,7 +427,7 @@ namespace DSCript.Models
 
             int indicesSize         = 0;
 
-            bool writeModels        = (Parts != null && Vertices.Buffer != null && Indices.Buffer != null);
+            bool writeModels        = (Parts != null && VertexBuffers.Buffer != null && Indices.Buffer != null);
 
             // sections aligned 128 bytes
             // Size of header
@@ -423,9 +445,9 @@ namespace DSCript.Models
                 nMeshes = Meshes.Count;
 
                 nIndices = Indices.Buffer.Length;
-                nVertices = Vertices.Buffer.Length;
+                nVertices = VertexBuffers.Buffer.Length;
 
-                vertLength = (int)Vertices.VertexType;
+                vertLength = (int)VertexBuffers.VertexType;
                 vertsSize = vertLength * nVertices;
 
                 indicesSize = nIndices * 2;
@@ -559,7 +581,7 @@ namespace DSCript.Models
                     f.Seek(vertsOffset, SeekOrigin.Begin);
 
                     for (int v = 0; v < nVertices; v++)
-                        f.Write(Vertices[v].GetBytes());
+                        f.Write(VertexBuffers[v].GetBytes());
 
                     // Write part groups
                     f.Seek(partsOffset, SeekOrigin.Begin);
@@ -775,6 +797,7 @@ namespace DSCript.Models
             }
 
             BlockData.Buffer = buffer;
+            */
         }
 
         public ModelPackagePC(BlockData blockData)

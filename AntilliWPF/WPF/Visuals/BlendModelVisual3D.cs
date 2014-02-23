@@ -75,11 +75,14 @@ namespace Antilli
 
             foreach (Vertex vertex in Vertices)
             {
-                Point3D pos = (UseBlendWeights) ? Vertex.Tween(vertex.Position, vertex.BlendWeights, tweenFactor) : vertex.Position;
+                if (vertex != null)
+                {
+                    Point3D pos = (UseBlendWeights) ? Vertex.Tween(vertex.Position, vertex.BlendWeights, tweenFactor) : vertex.Position;
 
-                positions.Add(pos);
-                normals.Add(vertex.Normal);
-                textureCoordinates.Add(vertex.UV);
+                    positions.Add(pos);
+                    normals.Add(vertex.Normal);
+                    textureCoordinates.Add(vertex.UV);
+                }
             }
 
             return new MeshGeometry3D() {

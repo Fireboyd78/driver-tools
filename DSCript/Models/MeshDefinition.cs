@@ -25,14 +25,44 @@ namespace DSCript.Models
     public class IndexedMesh
     {
         /// <summary>
-        /// Member of the <see cref="D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
+        /// The <see cref="ModelPackage"/> this mesh belongs to.
         /// </summary>
-        public D3DPRIMITIVETYPE PrimitiveType { get; set; }
+        public ModelPackage ModelPackage { get; protected set; }
+
+        public IModelFile ModelFile
+        {
+            get { return ModelPackage.ModelFile; }
+        }
+
+        public VertexData VertexBuffer
+        {
+            get
+            {
+                if (PartsGroup != null)
+                {
+                    int vB = PartsGroup.VertexBufferId;
+                    
+                    return (vB < ModelPackage.VertexBuffers.Count) ? ModelPackage.VertexBuffers[vB] : null;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The <see cref="PartsGroup"/> this mesh belongs to.
+        /// </summary>
+        public PartsGroup PartsGroup { get; set; }
 
         /// <summary>
         /// The <see cref="MeshGroup"/> this mesh belongs to.
         /// </summary>
-        public MeshGroup Group { get; set; }
+        public MeshGroup MeshGroup { get; set; }
+
+        /// <summary>
+        /// Member of the <see cref="D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
+        /// </summary>
+        public D3DPRIMITIVETYPE PrimitiveType { get; set; }
 
         /// <summary>
         /// Offset from the start of the vertex buffer to the first vertex.
@@ -69,13 +99,6 @@ namespace DSCript.Models
         /// </summary>
         public uint SourceUID { get; set; }
 
-        public ModelPackage Parent { get; protected set; }
-
-        public IModelFile ModelFile
-        {
-            get { return Parent.ModelFile; }
-        }
-
         public PCMPMaterial GetMaterial()
         {
             if (ModelFile != null)
@@ -84,9 +107,9 @@ namespace DSCript.Models
                     return ModelFile.SpooledFile.StandaloneTextures[MaterialId];
             }
 
-            if (SourceUID == Parent.UID || SourceUID == 0xFFFD)
+            if (SourceUID == ModelPackage.UID || SourceUID == 0xFFFD)
             {
-                return Parent.MaterialData.Materials[MaterialId];
+                return ModelPackage.MaterialData.Materials[MaterialId];
             }
             else if (ModelFile != null)
             {
@@ -101,7 +124,7 @@ namespace DSCript.Models
 
         public List<Vertex> GetVertices()
         {
-            var vBuffer  = Parent.Vertices.Buffer;
+            var vBuffer = VertexBuffer.Buffer;
 
             List<Vertex> vertices = new List<Vertex>((int)NumVertices);
 
@@ -126,7 +149,7 @@ namespace DSCript.Models
 
         public void GetVertices(out Point3DCollection positions, out Vector3DCollection normals, out PointCollection coordinates, out Vector3DCollection blendWeights)
         {
-            var vBuffer  = Parent.Vertices.Buffer;
+            var vBuffer = VertexBuffer.Buffer;
 
             int nVerts   = (int)NumVertices;
 
@@ -153,7 +176,7 @@ namespace DSCript.Models
 
         public Int32Collection GetTriangleIndices()
         {
-            ushort[] indices = Parent.Indices.Buffer;
+            ushort[] indices = ModelPackage.Indices.Buffer;
 
             Int32Collection tris = new Int32Collection();
 
@@ -212,7 +235,7 @@ namespace DSCript.Models
 
         public IndexedMesh(ModelPackage modelPackage)
         {
-            Parent = modelPackage;
+            ModelPackage = modelPackage;
         }
     }
 }

@@ -342,10 +342,12 @@ namespace Antilli
 
             SelectedModelPackage = modelPackage;
 
+            /* TODO: FIX ME
             if (!modelPackage.HasBlendWeights && UseBlendWeights)
                 UseBlendWeights = false;
 
             BlendWeights.Visibility = (modelPackage.HasBlendWeights) ? Visibility.Visible : System.Windows.Visibility.Hidden;
+            */
 
             RaisePropertyChanged("ModelGroups");
 

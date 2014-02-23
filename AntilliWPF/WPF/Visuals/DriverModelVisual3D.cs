@@ -110,9 +110,9 @@ namespace Antilli
             //    return;
             //}
 
-            if (ModelPackage.Vertices.VertexType == FVFType.Vertex12 || ModelPackage.Vertices.VertexType == FVFType.Vertex16)
+            if (!Mesh.VertexBuffer.HasBlendWeights)
                 UseBlendWeights = false;
-
+            
             Vertices        = Mesh.GetVertices();
             TriangleIndices = Mesh.GetTriangleIndices();
             Material        = Mesh.GetMaterial();
