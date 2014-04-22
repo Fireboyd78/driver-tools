@@ -141,7 +141,6 @@
     <Compile Include="Helpers\ArrayHelper.cs" />
     <Compile Include="Helpers\SpoolerMagicConverter.cs" />
     <Compile Include="Config.cs" />
-    <Compile Include="Helpers\TempFile.cs" />
     <Compile Include="IniConfiguration.cs" />
     <Compile Include="INIFile.cs" />
     <Compile Include="Log.cs" />
