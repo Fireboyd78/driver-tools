@@ -343,12 +343,8 @@ namespace DSCript.Models
 
                     //add to texture lookup
                     textures.Add(baseOffset, textureInfo);
-                    
-                    textureInfo.Unk1    = f.ReadByte();
-                    textureInfo.Unk2    = f.ReadByte();
-                    textureInfo.Unk3    = f.ReadByte();
-                    textureInfo.Unk4    = f.ReadByte();
 
+                    textureInfo.Reserved = f.ReadUInt32();
                     textureInfo.CRC32   = f.ReadUInt32();
 
                     uint offset         = f.ReadUInt32();
@@ -470,7 +466,7 @@ namespace DSCript.Models
                 nVertexBuffers      = VertexBuffers.Count;
 
                 // Add up size of parts groups
-                bufferSize += Memory.Align((nParts * 0x188), 128);
+                bufferSize = Memory.Align(bufferSize + (nParts * 0x188), 128);
                 groupsOffset = bufferSize;
 
                 // Add up size of mesh groups (non-aligned)
@@ -478,7 +474,7 @@ namespace DSCript.Models
                 meshesOffset = bufferSize;
 
                 // Add up size of mesh definitions
-                bufferSize += Memory.Align((nMeshes * 0x38), 128);
+                bufferSize = Memory.Align(bufferSize + (nMeshes * 0x38), 128);
                 fvfOffset = bufferSize;
 
                 // Add up size of vertex buffer(s) FVF data
@@ -532,12 +528,22 @@ namespace DSCript.Models
 
             ddsOffset = bufferSize;
 
-            int[] texOffsets = new int[nTextures];
+            Dictionary<uint, int> texOffsets = new Dictionary<uint, int>(nTextures);
 
             for (int t = 0; t < nTextures; t++)
             {
-                texOffsets[t] = (bufferSize - ddsOffset);
-                bufferSize += Memory.Align(MaterialData.Textures[t].Buffer.Length, 128);
+                PCMPTexture tex = MaterialData.Textures[t];
+
+                uint crc32 = tex.CRC32;
+
+                if (!texOffsets.ContainsKey(crc32))
+                {
+                    bufferSize = Memory.Align(bufferSize, 128);
+
+                    texOffsets.Add(crc32, (bufferSize - ddsOffset));
+
+                    bufferSize += tex.Buffer.Length;
+                }
             }
 
             int pcmpSize = (bufferSize - pcmpOffset);
@@ -808,10 +814,12 @@ namespace DSCript.Models
                 {
                     PCMPTexture texture = MaterialData.Textures[t];
 
+                    uint crc32 = texture.CRC32;
+
                     f.Write(0x1010101u);
                     f.Write(texture.CRC32);
 
-                    f.Write(texOffsets[t]);
+                    f.Write(texOffsets[crc32]);
                     f.Write(texture.Buffer.Length);
                     f.Write(texture.Type);
 
@@ -822,8 +830,10 @@ namespace DSCript.Models
 
                     int holdPos = (int)f.Position;
 
-                    f.Seek((ddsOffset + texOffsets[t]), SeekOrigin.Begin);
-                    f.Write(texture.Buffer);
+                    f.Seek((ddsOffset + texOffsets[crc32]), SeekOrigin.Begin);
+                    
+                    if (f.PeekByte() != 0x44)
+                        f.Write(texture.Buffer);
 
                     f.Seek(holdPos, SeekOrigin.Begin);
                 }

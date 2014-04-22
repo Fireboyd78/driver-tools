@@ -12,94 +12,139 @@ using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
+using Microsoft.Win32;
+
 namespace DSCript
 {
-    public class IniConfiguration
+    public sealed partial class DSC
     {
-        public string DirectoriesKey { get; private set; }
-        public string SettingsKey { get; private set; }
+        public static readonly string IniName = "DSCript.ini";
+        
+        public static readonly IniConfiguration Configuration;
+        public static readonly INIFile IniFile;
 
-        public object this[string key, bool isDirectory = false]
+        public static readonly CultureInfo CurrentCulture = new CultureInfo("en-US");
+        public static readonly string TempDirectory = Path.Combine(Path.GetTempPath(), "libDSC");
+
+        public static long GetTempDirectorySize()
         {
-            get
+            if (Directory.Exists(TempDirectory))
             {
-                return (!isDirectory) ? GetSetting(key) : GetDirectory(key);
-            }
-            set
-            {
-                if (!isDirectory)
-                    SetSetting(key, value.ToString());
-                else
-                    SetDirectory(key, value.ToString());
-            }
-        }
+                var files = Directory.GetFiles(TempDirectory);
 
-        public string GetDirectory(string key)
-        {
-            string dir = DSC.INIFile.ReadValue(DirectoriesKey, key);
-            
-            return (!String.IsNullOrEmpty(dir)) ? Path.GetFullPath(Environment.ExpandEnvironmentVariables(dir)) : dir;
-        }
+                long size = 0;
 
-        public bool SetDirectory(string key, string value)
-        {
-            return DSC.INIFile.WriteValue(DirectoriesKey, key, value);
-        }
+                foreach (var file in files)
+                    size += (new FileInfo(file).Length);
 
-        public string GetSetting(string key)
-        {
-            return DSC.INIFile.ReadValue(SettingsKey, key);
-        }
-
-        public T GetSetting<T>(string key, T defaultValue)
-                where T : struct
-        {
-            object val = null;
-
-            string keyVal = GetSetting(key);
-
-            if (string.IsNullOrEmpty(keyVal))
-                return defaultValue;
-
-            if (typeof(T) == typeof(bool))
-            {
-                bool bVal = (GetSetting<int>(key, 0) == 1);
-
-                if (bVal != false)
-                    val = bVal;
-            }
-            else if (typeof(T) == typeof(Point3D))
-            {
-                Point3D p3d = Point3D.Parse(keyVal);
-
-                if (p3d != null)
-                    val = p3d;
+                return size;
             }
             else
             {
-                val = keyVal;
+                return 0;
+            }
+        }
+
+        public static IniConfiguration CreateConfiguration(string identifier)
+        {
+            return new IniConfiguration(IniFile, identifier);
+        }
+
+        static DSC()
+        {
+            var iniPath = Path.Combine(Application.StartupPath, IniName);
+
+            if (!File.Exists(iniPath))
+            {
+                var sb = new StringBuilder();
+
+                string progDir = Environment.GetFolderPath(
+                    (Environment.Is64BitOperatingSystem) ? Environment.SpecialFolder.ProgramFilesX86 : Environment.SpecialFolder.ProgramFiles);
+
+                string steamDir = "";
+
+                RegistryKey regKey = Registry.CurrentUser;
+                regKey = regKey.OpenSubKey(@"Software\Valve\Steam");
+
+                if (regKey != null)
+                    steamDir = regKey.GetValue("SourceModInstallPath").ToString().Replace("sourcemods", "common");
+
+                string ubiDir = Path.Combine(progDir, "Ubisoft");
+
+                string d3Dir = Path.Combine(progDir, "Atari", "Driv3r");
+                string dplDir = Path.Combine(ubiDir, "Driver Parallel Lines");
+                string dsfDir = Path.Combine(ubiDir, "Driver San Francisco");
+
+                if (!Directory.Exists(steamDir))
+                    steamDir = "";
+                if (!Directory.Exists(d3Dir))
+                    d3Dir = "";
+                if (!Directory.Exists(dplDir))
+                {
+                    dplDir = "";
+
+                    if (!String.IsNullOrEmpty(steamDir) && Directory.Exists(Path.Combine(steamDir, "Driver Parallel Lines")))
+                        dplDir = Path.Combine(steamDir, "Driver Parallel Lines");
+                }
+                if (!Directory.Exists(dsfDir))
+                {
+                    dsfDir = "";
+
+                    if (!String.IsNullOrEmpty(steamDir) && Directory.Exists(Path.Combine(steamDir, "Driver San Francisco")))
+                        dsfDir = Path.Combine(steamDir, "Driver San Francisco");
+                }
+
+                sb.AppendLine(
+@"# DSCript Configuration File
+# Copyright (c) 2014 Mark Ludwig [CarLuver69]
+# http://drivermadness.net
+#
+# Support/Contact -
+#	Gmail: mk.ludwig1
+#	Skype: CarLuver69
+#
+# Encoding: UTF-8
+# ==========================================================================
+
+[Global.Directories]
+Driv3r={0}", d3Dir);
+
+                if (!String.IsNullOrEmpty(dplDir))
+                    sb.AppendLine("DriverPL={0}", dplDir);
+                if (!String.IsNullOrEmpty(dsfDir))
+                    sb.AppendLine("DriverSF={0}", dsfDir);
+
+                sb.AppendLine();
+
+                File.WriteAllText(iniPath, sb.ToString(), Encoding.UTF8);
             }
 
-            return (val != null) ? (T)Convert.ChangeType(val, typeof(T)) : defaultValue;
+            IniFile = new INIFile(iniPath);
+            Configuration = CreateConfiguration("Global");
+
+            if (!Directory.Exists(TempDirectory))
+            {
+                Directory.CreateDirectory(TempDirectory);
+            }
+            else
+            {
+                var files = Directory.GetFiles(TempDirectory);
+
+                if (files.Length > 0)
+                {
+                    DSC.Log("Cleaning temp directory...");
+
+                    int count = 0;
+
+                    foreach (var file in files)
+                    {
+                        File.Delete(file);
+                        ++count;
+                    }
+
+                    DSC.Log("Cleaned out {0} files from temp directory.", count);
+                }
+            }
         }
-
-        public bool SetSetting(string key, string value)
-        {
-            return DSC.INIFile.WriteValue(SettingsKey, key, value);
-        }
-
-        public IniConfiguration(string identifier)
-        {
-            DirectoriesKey = String.Format("{0}.Directories", identifier);
-            SettingsKey = String.Format("{0}.Configuration", identifier);
-        }
-    }
-
-    public static partial class DSC
-    {
-        internal static readonly INIFile INIFile = new INIFile("DSCript.ini", Application.StartupPath);
-
-        public static readonly IniConfiguration Configuration = new IniConfiguration("Global");
-        public static readonly CultureInfo CurrentCulture = new CultureInfo("en-US");
     }
 }

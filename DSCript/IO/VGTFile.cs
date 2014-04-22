@@ -11,21 +11,19 @@ using System.Text;
 
 namespace DSCript.Models
 {
-    public class VGTFile : ModelFile, IStandaloneModelFile
+    public class VGTFile : StandaloneModelFile
     {
-        public ModelPackage ModelData
+        public override ModelPackage ModelData
         {
             get { return Models[0]; }
         }
 
-        public List<PCMPMaterial> StandaloneTextures { get; set; }
+        public override List<PCMPMaterial> StandaloneTextures { get; set; }
 
-        public PCMPData MaterialData
+        public override PCMPData MaterialData
         {
             get { return ModelData.MaterialData; }
         }
-
-        public string Name { get; set; }
 
         public void LoadStandaloneTextures()
         {

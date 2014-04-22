@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,9 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
-using DSCript;
-
-namespace DSCript.IO
+namespace DSCript.Legacy
 {
     public static class ChunkReaderExtensions
     {
@@ -39,11 +38,12 @@ namespace DSCript.IO
             return null;
         }
 
-        public static ChunkBlockOld GetBlockChildOrNull(this ChunkReader i, SubChunkBlock subChunk)
+        public static ChunkBlock GetBlockChildOrNull(this ChunkReader i, SubChunkBlock subChunk)
         {
             int si = i.Chunk.FindIndex((c) => c.BaseOffset == subChunk.BaseOffset);
 
             return (si != -1) ? i.Chunk[si] : null;
         }
     }
-}
+} 
+#endif

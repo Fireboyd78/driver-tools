@@ -117,8 +117,8 @@ namespace Antilli
             TriangleIndices = Mesh.GetTriangleIndices();
             Material        = Mesh.GetMaterial();
 
-            //if (Material == null)
-            //    OnMaterialChanged();
+            if (Material == null)
+                OnMaterialChanged();
         }
 
         protected override void OnBlendWeightsChanged()
@@ -150,7 +150,7 @@ namespace Antilli
                 
                 CachedTexture cTex = TextureCache.GetCachedTexture(texInfo);
 
-                BitmapSourceLoadFlags loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.AlphaBlend : BitmapSourceLoadFlags.None;
+                BitmapSourceLoadFlags loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
 
                 BitmapSource bmap = cTex.GetBitmapSource(loadFlags);
 
@@ -178,7 +178,7 @@ namespace Antilli
                 {
                     matGroup.Children.Add(new SpecularMaterial() {
                         Brush = new ImageBrush() {
-                            ImageSource = cTex.GetBitmapSource(BitmapSourceLoadFlags.AlphaOnly),
+                            ImageSource = cTex.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
                             TileMode = TileMode.Tile,
                             Stretch = Stretch.Fill,
                             ViewportUnits = BrushMappingMode.Absolute

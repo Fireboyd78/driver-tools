@@ -11,7 +11,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 using Microsoft.Win32;
 
@@ -200,56 +199,15 @@ namespace Antilli
             }
         }
 
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        private void ReplaceTexture(object sender, RoutedEventArgs e)
         {
-            string initialDirectory = DSC.Configuration.GetDirectory("Driv3r");
-
-            OpenFileDialog replaceTexture = new OpenFileDialog() {
-                AddExtension = true,
-                CheckFileExists = true,
-                CheckPathExists = true,
-                Filter = "DDS Texture|*.dds",
-                Title = "Choose DDS Texture:",
-                //InitialDirectory = initialDirectory,
-                ValidateNames = true
-            };
-
-            if (replaceTexture.ShowDialog() ?? false)
-            {
-                using (FileStream ddsFile = File.Open(replaceTexture.FileName, FileMode.Open))
-                {
-                    byte[] buffer = new byte[ddsFile.Length];
-
-                    ddsFile.Read(buffer, 0, buffer.Length);
-                    SelectedTexture.Buffer = buffer;
-
-                    CachedTexture tex = TextureCache.GetCachedTexture(SelectedTexture);
-
-                    tex.Reload();
-
-                    BitmapSource bmap = tex.GetBitmapSource();
-
-                    tex.Texture.Width = Convert.ToUInt16(bmap.Width);
-                    tex.Texture.Height = Convert.ToUInt16(bmap.Height);
-
-                    Parent.DEBUG_ExportModelPackage();
-                    Parent.LoadSelectedModel();
-
-                    if (!ShowGlobalMaterials)
-                    {
-                        if (Parent.IsTextureViewerOpen)
-                            Parent.TextureViewer.ReloadTexture();
-                    }
-
-                    RaisePropertyChanged("Texture");
-                }
-            }
+            Parent.ReplaceTexture(SelectedTexture);
+            RaisePropertyChanged("Texture");
         }
 
-        private void MenuItem_Click_1(object sender, RoutedEventArgs e)
+        private void ExportTexture(object sender, RoutedEventArgs e)
         {
-            SelectedTexture.ExportFile(@"C:\Users\Mark\Desktop\temp.dds");
-            DSC.Log("Temporary file exported.");
+            Parent.ExportTexture(SelectedTexture, this);
         }
 
         private void AddMaterialTemplate(object sender, RoutedEventArgs e)
@@ -280,7 +238,7 @@ namespace Antilli
                         PCMPSubMaterial subMtl = new PCMPSubMaterial();
                         PCMPTexture texInfo = new PCMPTexture();
 
-                        texInfo.Buffer  = EmbedRes.GetBytes("notex.dds");
+                        //texInfo.Buffer  = EmbedRes.GetBytes("notex.dds");
                         
                         texInfo.Width   = 128;
                         texInfo.Height  = 128;

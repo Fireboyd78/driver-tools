@@ -15,14 +15,14 @@ namespace Antilli
 {
     public class ModelListItem
     {
+        protected List<ModelListItem> Parent { get; set; }
+        
+        public ModelVisual3DGroup Model { get; protected set; }
+
         public int Index
         {
             get { return Parent.IndexOf(this); }
         }
-
-        public IList<ModelListItem> Parent { get; private set; }
-
-        public ModelVisual3DGroup Model { get; private set; }
 
         public string Name
         {
@@ -31,19 +31,24 @@ namespace Antilli
                 if (!String.IsNullOrEmpty(Model.Name))
                     return Model.Name;
                 else
-                    return String.Format("Model {0}", Index);
+                    return String.Format("Model {0}", Index + 1);
             }
         }
 
-        public override string ToString()
-        {
-            return Name;
-        }
-
-        public ModelListItem(IList<ModelListItem> parent, ModelVisual3DGroup model)
+        public ModelListItem(List<ModelListItem> parent, ModelVisual3DGroup model)
         {
             Parent = parent;
             Model = model;
         }
+    }
+
+    public class ModelVisual3DGroupListItem : ModelListItem
+    {
+        public List<ModelVisual3D> Models
+        {
+            get { return (Model != null) ? Model.Models : null; }
+        }
+
+        public ModelVisual3DGroupListItem(List<ModelListItem> parent, ModelVisual3DGroup model) : base(parent, model) { }
     }
 }

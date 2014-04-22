@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -8,9 +9,9 @@ using Xceed.Wpf.Toolkit.PropertyGrid;
 using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 using Xceed.Wpf.Toolkit.PropertyGrid.Editors;
 
-namespace DSCript.IO
+namespace DSCript.Legacy
 {
-    public sealed class SubChunkBlock : BlockOld
+    public sealed class SubChunkBlock : Block
     {
         internal const string subChunkInfo = "Sub-Chunk Information";
 
@@ -27,7 +28,7 @@ namespace DSCript.IO
             }
         }
 
-        [Category(BlockOld.blockInfo)]
+        [Category(Block.blockInfo)]
         [PropertyOrder(3)]
         [DisplayName("Magic")]
         [Description("The sub-chunk type identifier")]
@@ -74,10 +75,11 @@ namespace DSCript.IO
         public string Description { get; set; }
 
         [Browsable(false)]
-        public SubChunkBlock(int id, ChunkBlockOld parent)
+        public SubChunkBlock(int id, ChunkBlock parent)
         {
             ID = id;
             Parent = parent;
         }
     }
 }
+#endif

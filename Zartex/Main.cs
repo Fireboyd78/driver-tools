@@ -11,7 +11,7 @@ using System.Text;
 using System.Windows.Forms;
 
 using DSCript;
-using DSCript.IO;
+using DSCript.Legacy;
 
 using Zartex.MissionObjects;
 using Zartex.LogicExport;

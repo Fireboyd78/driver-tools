@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,20 +7,18 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
-using DSCript;
-
-namespace DSCript.IO
+namespace DSCript.Legacy
 {
     public static class ChunkBlockExtensions
     {
-        public static SubChunkBlock FirstOrNull(this ChunkBlockOld i, ChunkType type)
+        public static SubChunkBlock FirstOrNull(this ChunkBlock i, ChunkType type)
         {
             int si = i.Subs.FindIndex((c) => c.Magic == (uint)type);
 
             return (si != -1) ? i.Subs[si] : null;
         }
 
-        public static SubChunkBlock FirstOrNull(this List<ChunkBlockOld> i, ChunkType type)
+        public static SubChunkBlock FirstOrNull(this List<ChunkBlock> i, ChunkType type)
         {
             for (int k = 0; k < i.Count; k++)
             {
@@ -32,3 +31,4 @@ namespace DSCript.IO
         }
     }
 }
+#endif

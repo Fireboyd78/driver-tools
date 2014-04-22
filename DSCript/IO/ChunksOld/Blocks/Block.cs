@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -6,9 +7,9 @@ using System.Text;
 
 using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 
-namespace DSCript.IO
+namespace DSCript.Legacy
 {
-    public class BlockOld
+    public class Block
     {
         protected const string blockInfo = "Block Information";
 
@@ -21,7 +22,7 @@ namespace DSCript.IO
         [PropertyOrder(2)]
         [Description("The parent that holds this block")]
         [ExpandableObject]
-        public BlockOld Parent { get; set; }
+        public Block Parent { get; set; }
 
         [Category(blockInfo)]
         [PropertyOrder(4)]
@@ -34,10 +35,11 @@ namespace DSCript.IO
         [Description("The size of the block within the file")]
         public uint Size { get; set; }
 
-        public BlockOld()
+        public Block()
         {
             ID = 0;
             Parent = null;
         }
     }
 }
+#endif

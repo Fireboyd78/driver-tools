@@ -9,8 +9,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-using DSCript.IO;
-
 namespace DSCript
 {
     public class ChunkFile : IDisposable

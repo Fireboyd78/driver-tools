@@ -48,16 +48,11 @@ namespace Antilli
             }
         }
 
+        public ModelPackage ModelPackage { get; private set; }
         public List<PartsGroup> Parts { get; private set; }
 
-        public IModelFile ModelFile { get; private set; }
-        public ModelPackage ModelPackage { get; private set; }
-
-        public Model3DGroup Models { get; private set; }
-
-        public ModelGroupListItem(IModelFile modelFile, ModelPackage modelPackage, PartsGroup partBasedOn)
+        public ModelGroupListItem(ModelPackage modelPackage, PartsGroup partBasedOn)
         {
-            ModelFile = modelFile;
             ModelPackage = modelPackage;
 
             UID = partBasedOn.UID;

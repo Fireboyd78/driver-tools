@@ -57,6 +57,11 @@ namespace Antilli
             }
         }
 
+        public Visibility HasGlobals
+        {
+            get { return (Parent.HasGlobals) ? Visibility.Visible : Visibility.Collapsed; }
+        }
+
         public BitmapSource Texture
         {
             get
@@ -85,36 +90,34 @@ namespace Antilli
         {
             get
             {
-                // if (ModelPackage.HasGlobalTextures)
-                // {
-                //     List<PCMPTextureInfo> textures = new List<PCMPTextureInfo>();
-                // 
-                //     foreach (PCMPTextureInfo texInfo in SelectedModelPackage.MaterialData.Textures)
-                //         textures.Add(texInfo);
-                // 
-                //     foreach (PCMPMaterial gMat in ModelPackage.GlobalTextures)
-                //         foreach (PCMPSubMaterial gSubMat in gMat.SubMaterials)
-                //             foreach (PCMPTextureInfo gTexInfo in gSubMat.Textures)
-                //             {
-                //                 if (textures.Contains(gTexInfo))
-                //                     continue;
-                // 
-                //                 textures.Add(gTexInfo);
-                //             }
-                // 
-                //     return textures;
-                // }
-
-                List<PCMPTexture> textures = (Parent.SelectedModelPackage.HasMaterials)
-                    ? new List<PCMPTexture>(Parent.SelectedModelPackage.MaterialData.Textures)
-                    : new List<PCMPTexture>();
+                List<PCMPTexture> textures = (Parent.SelectedModelPackage.HasMaterials) ? new List<PCMPTexture>(Parent.SelectedModelPackage.MaterialData.Textures) : new List<PCMPTexture>();
 
                 if (Parent.ModelFile.HasSpooledFile)
-                    foreach (PCMPTexture texture in Parent.ModelFile.SpooledFile.MaterialData.Textures)
-                        textures.Add(texture);
+                    RaisePropertyChanged("GlobalTextures");
+                else
+                    RaisePropertyChanged("HasGlobals");
 
                 return textures;
             }
+        }
+
+        public List<PCMPTexture> GlobalTextures
+        {
+            get { return (Parent.HasGlobals) ? new List<PCMPTexture>(Parent.ModelFile.SpooledFile.MaterialData.Textures) : null; }
+        }
+
+        public void SelectTexture(PCMPTexture texture)
+        {
+            var listBox = (TextureList.Items.Contains(texture)) ? TextureList : GlobalTextureList;
+
+            if (listBox.SelectedItem == texture)
+            {
+                CurrentTexture = texture;
+                return;
+            }
+
+            listBox.SelectedItem = texture;
+            listBox.ScrollIntoView(texture);
         }
 
         public void UpdateTextures()
@@ -130,17 +133,17 @@ namespace Antilli
 
         void OnTextureSelected(object sender, SelectionChangedEventArgs e)
         {
-            if (TextureList.SelectedIndex != -1)
+            var list = sender as ListBox;
+
+            if (list == null)
+                return;
+
+            if (list.SelectedIndex != -1)
             {
-                object item = TextureList.SelectedItem;
+                var texture = list.SelectedItem as PCMPTexture;
 
-                if (item is PCMPTexture)
-                {
-                    CurrentTexture = (PCMPTexture)item;
-
-                    TextureBox.Width = CurrentTexture.Width;
-                    TextureBox.Height = CurrentTexture.Height;
-                }
+                if (texture != null)
+                    CurrentTexture = texture;
             }
             else
             {
@@ -188,6 +191,19 @@ namespace Antilli
             btnClose.Click += (o, e) => Close();
 
             TextureList.SelectionChanged += OnTextureSelected;
+            GlobalTextureList.SelectionChanged += OnTextureSelected;
+        }
+
+        private void ReplaceTexture(object sender, RoutedEventArgs e)
+        {
+            Parent.ReplaceTexture(CurrentTexture);
+            RaisePropertyChanged("Texture");
+            RaisePropertyChanged("Textures");
+        }
+
+        private void ExportTexture(object sender, RoutedEventArgs e)
+        {
+            Parent.ExportTexture(CurrentTexture, this);
         }
     }
 }

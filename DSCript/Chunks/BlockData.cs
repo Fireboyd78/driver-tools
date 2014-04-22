@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using DSCript;
-using DSCript.IO;
 
 namespace DSCript
 {
@@ -30,7 +29,7 @@ namespace DSCript
 
                 byte[] buffer = new byte[Block.Size];
 
-                ChunkFile.Reader.Seek(Block.BaseOffset, SeekOrigin.Begin);
+                ChunkFile.Reader.Seek(FileOffset, SeekOrigin.Begin);
                 ChunkFile.Reader.Read(buffer, 0, buffer.Length);
 
                 return buffer;
@@ -41,6 +40,8 @@ namespace DSCript
                 Block.Size = (uint)_buffer.Length;
             }
         }
+
+        protected internal uint FileOffset { get; private set; }
 
         public uint Size
         {
@@ -57,6 +58,8 @@ namespace DSCript
         {
             ChunkFile = file;
             Block = block;
+
+            FileOffset = Block.BaseOffset;
         }
     }
 }

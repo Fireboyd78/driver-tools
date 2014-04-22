@@ -31,8 +31,6 @@ namespace Antilli
         public ModelVisual3DGroup()
         {
             Models = new List<ModelVisual3D>();
-
-            ModelVisual3D mvis = new ModelVisual3D();
         }
 
         public ModelVisual3DGroup(string name)

@@ -23,6 +23,16 @@ namespace System.IO
             stream.Write(Chunk.PaddingBytes, (Chunk.PaddingBytes.Length - align), align);
         }
 
+        public static long Seek(this Stream stream, long offset, long origin)
+        {
+            return stream.Seek((origin + offset), SeekOrigin.Begin);
+        }
+
+        public static long Align(this Stream stream, long alignment)
+        {
+            return (stream.Position = Memory.Align(stream.Position, alignment));
+        }
+
         #region Read methods
         internal static int Read(this Stream stream, byte[] buffer)
         {
@@ -30,12 +40,66 @@ namespace System.IO
             return (buffer != null) ? 1 : -1;
         }
 
-        public static char ReadChar(this Stream stream)
+        public static int PeekByte(this Stream stream)
         {
-            byte[] buffer = new byte[sizeof(char)];
+            var b = stream.ReadByte();
+            --stream.Position;
+
+            return b;
+        }
+
+        public static int PeekInt16(this Stream stream)
+        {
+            int i = stream.ReadInt16();
+            stream.Position -= 2;
+
+            return i;
+        }
+
+        public static uint PeekUInt16(this Stream stream)
+        {
+            var i = stream.ReadUInt16();
+            stream.Position -= 2;
+
+            return i;
+        }
+
+        public static int PeekInt32(this Stream stream)
+        {
+            var i = stream.ReadInt32();
+            stream.Position -= 4;
+
+            return i;
+        }
+
+        public static uint PeekUInt32(this Stream stream)
+        {
+            var i = stream.ReadUInt32();
+            stream.Position -= 4;
+
+            return i;
+        }
+
+        public static byte[] ReadAllBytes(this Stream stream)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                stream.CopyTo(ms);
+                return ms.ToArray();
+            }
+        }
+
+        public static byte[] ReadBytes(this Stream stream, int count)
+        {
+            byte[] buffer = new byte[count];
             stream.Read(buffer);
 
-            return BitConverter.ToChar(buffer, 0);
+            return buffer;
+        }
+
+        public static char ReadChar(this Stream stream)
+        {
+            return (char)stream.ReadByte();
         }
 
         public static char[] ReadChars(this Stream stream, int count)
@@ -111,9 +175,49 @@ namespace System.IO
 
             return BitConverter.ToDouble(buffer, 0);
         }
+
+        public static string ReadString(this Stream stream)
+        {
+            string str = "";
+
+            while (stream.PeekByte() != 0)
+                str += stream.ReadChar();
+
+            return str;
+        }
+
+        public static string ReadString(this Stream stream, int length)
+        {
+            return Encoding.UTF8.GetString(stream.ReadBytes(length));
+        }
+
+        public static string ReadUnicodeString(this Stream stream, int length)
+        {
+            return Encoding.Unicode.GetString(stream.ReadBytes(length));
+        }
         #endregion
 
         #region Write methods
+        public static void Fill(this Stream stream, byte[] bytes, long length)
+        {
+            // skip zero-length requests
+            if (length == 0)
+                return;
+
+            long offset = 0;
+            int count = bytes.Length;
+
+            while (offset < length && count > 0)
+            {
+                if ((offset + count) > length)
+                    count = (int)(length - offset);
+
+                stream.Write(bytes, 0, count);
+
+                offset += count;
+            }
+        }
+
         public static void WriteByte(this Stream stream, int value)
         {
             if (value > 255)
@@ -127,9 +231,15 @@ namespace System.IO
             stream.Write((float)value);
         }
 
-        public static void Write(this Stream stream, params byte[] values)
+        public static void Write(this Stream stream, byte byte1, byte byte2)
         {
-            stream.Write(values, 0, values.Length);
+            stream.Write(byte1);
+            stream.Write(byte2);
+        }
+
+        public static void Write(this Stream stream, params byte[] bytes)
+        {
+            stream.Write(bytes, 0, bytes.Length);
         }
 
         public static void Write(this Stream stream, params char[] values)
@@ -150,6 +260,13 @@ namespace System.IO
         public static void Write(this Stream stream, string value)
         {
             stream.Write(Encoding.UTF8.GetBytes(value), 0, value.Length);
+        }
+
+        public static void Write(this Stream stream, string value, Encoding encoding)
+        {
+            var buffer = encoding.GetBytes(value);
+
+            stream.Write(buffer, 0, buffer.Length);
         }
 
         public static void Write(this Stream stream, short value)

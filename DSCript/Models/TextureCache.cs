@@ -151,7 +151,7 @@ namespace DSCript.Models
 
         public BitmapSource GetBitmapSource()
         {
-            return GetBitmapSource(BitmapSourceLoadFlags.None);
+            return GetBitmapSource(BitmapSourceLoadFlags.Default);
         }
 
         public BitmapSource GetBitmapSource(BitmapSourceLoadFlags flags)

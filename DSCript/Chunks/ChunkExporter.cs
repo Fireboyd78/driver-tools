@@ -82,7 +82,13 @@ namespace DSCript
         public static void Export(string filename, ChunkFile chunkFile)
         {
             ChunkFile = chunkFile;
-            Stream    = File.Create(filename, (int)chunkFile.Chunks[0].Size);
+
+            string directory = Path.GetDirectoryName(filename);
+
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            Stream = File.Create(filename, (int)chunkFile.Chunks[0].Size);
 
             WriteChunkData(chunkFile.Chunks[0]);
             WritePadding(chunkFile.Chunks[0].Size);

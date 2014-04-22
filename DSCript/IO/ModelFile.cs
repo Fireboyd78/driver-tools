@@ -16,20 +16,26 @@ namespace DSCript.Models
         ChunkFile ChunkFile { get; set; }
         List<ModelPackage> Models { get; set; }
 
-        IStandaloneModelFile SpooledFile { get; set; }
+        StandaloneModelFile SpooledFile { get; set; }
 
         bool HasSpooledFile { get; }
 
         void LoadModels();
     }
 
-    public interface IStandaloneModelFile
+    public abstract class StandaloneModelFile : ModelFile
     {
-        ModelPackage ModelData { get; }
+        public abstract ModelPackage ModelData { get; }
 
-        List<PCMPMaterial> StandaloneTextures { get; set; }
+        public abstract List<PCMPMaterial> StandaloneTextures { get; set; }
 
-        PCMPData MaterialData { get; }
+        public abstract PCMPData MaterialData { get; }
+
+        public string Name { get; set; }
+
+        public StandaloneModelFile(string filename) : base(filename)
+        {
+        }
     }
 
     public class ModelFile : IModelFile, IDisposable
@@ -38,19 +44,24 @@ namespace DSCript.Models
 
         public List<ModelPackage> Models { get; set; }
 
-        public IStandaloneModelFile SpooledFile { get; set; }
+        StandaloneModelFile IModelFile.SpooledFile { get; set; }
 
-        public bool HasSpooledFile
+        bool IModelFile.HasSpooledFile
         {
-            get { return (SpooledFile != null); }
+            get { return (@this.SpooledFile != null); }
+        }
+
+        protected IModelFile @this
+        {
+            get { return ((IModelFile)this); }
         }
 
         public virtual void Dispose()
         {
             if (ChunkFile != null)
                 ChunkFile.Dispose();
-            if (SpooledFile != null)
-                SpooledFile = null;
+            if (@this.SpooledFile != null)
+                @this.SpooledFile = null;
 
             if (Models != null)
             {

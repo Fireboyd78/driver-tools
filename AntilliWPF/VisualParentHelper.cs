@@ -27,26 +27,72 @@ using DSCript.Models;
 
 namespace Antilli
 {
-    public class VisualParentHelper
+    public sealed class VisualParentHelper
     {
-        public ModelVisual3D Visual { get; private set; }
+        private static List<VisualParentHelper> VisualParents;
 
-        public ModelVisual3D Parent { get; private set; }
+        static VisualParentHelper()
+        {
+            VisualParents = new List<VisualParentHelper>();
+        }
+
+        public static bool ResetAllParents()
+        {
+            if (VisualParents.Count > 0)
+            {
+                foreach (VisualParentHelper k in VisualParents)
+                    k.RestoreParent();
+
+                VisualParents.Clear();
+                
+                return VisualParents.Count == 0;
+            }
+            return false;
+        }
+
+        public static void SetParent(ModelVisual3D visual, ModelVisual3D newParent)
+        {
+            if (VisualParents.Find((m) => m.Visual == visual) != null)
+                ResetParent(visual);
+
+            VisualParents.Add(new VisualParentHelper(visual, newParent));
+        }
+
+        public static bool ResetParent(ModelVisual3D visual)
+        {
+            VisualParentHelper helper = VisualParents.Find((k) => k.Visual == visual);
+
+            if (helper != null)
+            {
+                helper.RestoreParent();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
 
         public int Index { get; private set; }
+        
+        public ModelVisual3D Parent { get; private set; }
+        public ModelVisual3D Visual { get; private set; }
 
-        public void RestoreParent()
+        public bool RestoreParent()
         {
             ModelVisual3D oldParent = (ModelVisual3D)VisualTreeHelper.GetParent(Visual);
 
-            bool insert = Index <= Parent.Children.Count;
+            if (oldParent == null)
+                return false;
 
             oldParent.Children.Remove(Visual);
 
-            if (insert)
+            if (Index < Parent.Children.Count)
                 Parent.Children.Insert(Index, Visual);
             else
                 Parent.Children.Add(Visual);
+
+            return true;
         }
 
         public VisualParentHelper(ModelVisual3D visual, ModelVisual3D newParent)

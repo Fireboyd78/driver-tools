@@ -52,9 +52,9 @@
                         <TextBlock Text="DDS Texture">
                             <TextBlock.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Replace..." Click="MenuItem_Click"/>
+                                    <MenuItem Header="Replace..." Click="ReplaceTexture"/>
                                     <Separator/>
-                                    <MenuItem Header="Export" Click="MenuItem_Click_1"/>
+                                    <MenuItem Header="Export" Click="ExportTexture"/>
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
                         </TextBlock>
@@ -64,7 +64,7 @@
                 <GroupBox x:Name="MaterialsBox" Header="Materials" Grid.Column="0" Grid.Row="0">
                     <TreeView x:Name="MaterialsList" ItemsSource="{Binding Materials}">
                         <TreeView.ContextMenu>
-                            <ContextMenu>
+                            <ContextMenu Visibility="Hidden">
                                 <MenuItem x:Name="addMtlMenu" Header="New...">
                                     <MenuItem Header="Standard Material" Tag="STANDARD" ToolTip="A standard material with one (1) texture state for an object."/>
                                     <Separator/>

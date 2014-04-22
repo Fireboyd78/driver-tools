@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,9 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 
-using DSCript;
-
-namespace DSCript.IO
+namespace DSCript.Legacy
 {
     public sealed class ChunkReader
     {
@@ -19,7 +18,7 @@ namespace DSCript.IO
 
         public bool IsLoaded { get; private set; }
 
-        public List<ChunkBlockOld> Chunk { get; set; }
+        public List<ChunkBlock> Chunk { get; set; }
 
         /// <summary> Gets or sets the position of the cursor in the FileStream. </summary>
         public long Position
@@ -83,7 +82,7 @@ namespace DSCript.IO
 
                 // For each chunk (nested or not) within the file, we add it to the master chunk list
                 // So add this one at the very end
-                Chunk.Insert(ss, new ChunkBlockOld(ss, subBaseOffset, subChunk));
+                Chunk.Insert(ss, new ChunkBlock(ss, subBaseOffset, subChunk));
 
                 // Collect the rest of the data
                 Chunk[ss].Size = Reader.ReadUInt32();
@@ -126,14 +125,14 @@ namespace DSCript.IO
                     goto done;
                 }
 
-                Chunk = new List<ChunkBlockOld>();
-                Chunk.Insert(0, new ChunkBlockOld(0, 0x0));
+                Chunk = new List<ChunkBlock>();
+                Chunk.Insert(0, new ChunkBlock(0, 0x0));
 
                 Chunk[0].Size = Reader.ReadUInt32();
                 Chunk[0].SubCount = Reader.ReadUInt32();
 
                 // Error checking: Again, make sure this is actually a chunk file...
-                if (Reader.ReadUInt32() != ChunkBlockOld.Version)
+                if (Reader.ReadUInt32() != ChunkBlock.Version)
                 {
                     Console.WriteLine("Sorry, this chunk file version is unsupported!");
                     Timer.Stop();
@@ -160,3 +159,4 @@ namespace DSCript.IO
         }
     }
 }
+#endif

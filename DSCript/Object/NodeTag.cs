@@ -1,10 +1,11 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 using DSCript;
-using DSCript.IO;
+using DSCript.Legacy;
 
 namespace DSCript.Object
 {
@@ -18,3 +19,4 @@ namespace DSCript.Object
         }
     }
 }
+#endif

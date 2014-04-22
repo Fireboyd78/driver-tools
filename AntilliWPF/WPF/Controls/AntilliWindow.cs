@@ -22,7 +22,7 @@ using System.Windows.Navigation;
 
 namespace Antilli
 {
-    public class AntilliWindow : Window, INotifyPropertyChanged
+    public class AntilliWindow : ObservableWindow
     {
         private const string TitleFormat = "{0} - {1}";
 
@@ -40,17 +40,6 @@ namespace Antilli
             TitleProperty =
                 DependencyProperty.Register("Title", typeof(string), handle,
                 new FrameworkPropertyMetadata(String.Empty, TitleChanged));
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public void RaisePropertyChanged(string property)
-        {
-            var handler = PropertyChanged;
-            if (handler != null)
-            {
-                handler(this, new PropertyChangedEventArgs(property));
-            }
         }
 
         protected static void TitleChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

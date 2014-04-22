@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using DSCript;
-using DSCript.IO;
 
 namespace DSCript
 {

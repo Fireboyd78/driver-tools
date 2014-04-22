@@ -43,6 +43,8 @@
     </WarningsAsErrors>
     <FileAlignment>4096</FileAlignment>
     <NoWarn>0164,1573,1591</NoWarn>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -74,17 +76,20 @@
     <Reference Include="FreeImageNET">
       <HintPath>..\Libraries\FreeImage.NET\FreeImageNET.dll</HintPath>
     </Reference>
-    <Reference Include="HelixToolkit.Wpf">
+    <Reference Include="HelixToolkit.Wpf, Version=2013.1.31.1, Culture=neutral, PublicKeyToken=52aa3500039caf0d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Libraries\HelixToolkit\HelixToolkit.Wpf.dll</HintPath>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
-    <Reference Include="HelixToolkit.Wpf.Input">
+    <Reference Include="HelixToolkit.Wpf.Input, Version=2013.1.31.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Libraries\HelixToolkit\HelixToolkit.Wpf.Input.dll</HintPath>
     </Reference>
     <Reference Include="PresentationFramework.Aero" />
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -100,39 +105,51 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="Xceed.Wpf.Toolkit">
-      <HintPath>..\Libraries\Xceed.Wpf.Toolkit.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ChunkViewer.xaml.cs">
+      <DependentUpon>ChunkViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Config.cs" />
-    <Compile Include="EmbedRes.cs" />
+    <Compile Include="MKInputBox.xaml.cs">
+      <DependentUpon>MKInputBox.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OBJFile.cs" />
     <Compile Include="Extensions\Media3DExtensions.cs" />
+    <Compile Include="Extensions\TreeViewExtensions.cs" />
+    <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Importers\ModelImporter.cs" />
     <Compile Include="MaterialEditor.xaml.cs">
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
     </Compile>
     <Compile Include="ModelGroupListItem.cs" />
     <Compile Include="ModelListItem.cs" />
+    <Compile Include="OBJExporter.cs" />
+    <Compile Include="Packages\UnifiedPackage.cs" />
     <Compile Include="VisualParentHelper.cs" />
     <Compile Include="WPF\Controls\AntilliViewport3D.cs" />
     <Compile Include="WPF\Controls\AntilliWindow.cs" />
+    <Compile Include="WPF\Controls\ObservableWindow.cs" />
     <Compile Include="WPF\ModelVisual3DGroup.cs" />
     <Compile Include="WPF\Visuals\BlendModelVisual3D.cs" />
     <Compile Include="WPF\Visuals\DriverModelVisual3D.cs" />
     <Compile Include="WPF\Visuals\GeometryModelVisual3D.cs" />
     <None Include="ModelViewer.cs" />
-    <Compile Include="Observable.cs" />
+    <Compile Include="ObservableObject.cs" />
     <Compile Include="Resources.xaml.cs">
       <DependentUpon>Resources.xaml</DependentUpon>
     </Compile>
     <Compile Include="TextureViewer.xaml.cs">
       <DependentUpon>TextureViewer.xaml</DependentUpon>
     </Compile>
+    <Page Include="ChunkViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -146,6 +163,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="MaterialEditor.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MKInputBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -219,6 +240,10 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

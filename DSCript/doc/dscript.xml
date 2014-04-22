@@ -4,192 +4,26 @@
         <name>libDSC</name>
     </assembly>
     <members>
-        <member name="M:System.IO.BinaryReaderExtensions.Align(System.IO.BinaryReader,System.Int64)">
-            <summary>Aligns the cursor's current position to the specified byte-alignment</summary>
-            <param name="byteAlignment">The byte-alignment to calculate (e.x. 1024)</param>
-            <returns>Cursor position after byte-alignment</returns>
-        </member>
-        <member name="T:DSCript.Block">
+        <member name="F:DSCript.BitmapSourceLoadFlags.Default">
             <summary>
-            Represents the base class for chunks/chunk data
+            Loads a BitmapSource image with the default settings.
             </summary>
         </member>
-        <member name="P:DSCript.Block.ID">
+        <member name="F:DSCript.BitmapSourceLoadFlags.Transparency">
             <summary>
-            Gets or sets the zero-based ID of this block.
+            Loads a BitmapSource image with transparency applied.
             </summary>
         </member>
-        <member name="P:DSCript.Block.Magic">
+        <member name="F:DSCript.BitmapSourceLoadFlags.AlphaMask">
             <summary>
-            Gets or sets the magic number of this block.
+            Loads a BitmapSource image with only the Alpha channel visible.
             </summary>
         </member>
-        <member name="P:DSCript.Block.Parent">
+        <member name="M:DSCript.IniConfiguration.AppendText(System.String)">
             <summary>
-            Gets or sets the parent of this block.
+            Appends the string to the end of the Ini file.
             </summary>
-        </member>
-        <member name="P:DSCript.Block.BaseOffset">
-            <summary>
-            Gets the calculated base offset of this block.
-            </summary>
-        </member>
-        <member name="P:DSCript.Block.Offset">
-            <summary>
-            Gets or sets the offset to this block. This is usually relative to the parent (if it has one) - otherwise, it should be zero.
-            </summary>
-        </member>
-        <member name="P:DSCript.Block.Size">
-            <summary>
-            Gets or sets the size of this block. This should represent all data contained, depending on the <see cref="P:DSCript.Block.BlockType"/>.
-            </summary>
-        </member>
-        <member name="P:DSCript.Block.BlockType">
-            <summary>
-            Gets the <see cref="P:DSCript.Block.BlockType"/> for this block.
-            </summary>
-        </member>
-        <member name="T:DSCript.ChunkBlock">
-            <summary>
-            A class that represents a spooling-based data format, used to store data of various formats in Reflections games.
-            </summary>
-        </member>
-        <member name="M:DSCript.ChunkBlock.CalculateOffsets">
-            <summary>
-            Calculate's the offsets for each entry.
-            </summary>
-        </member>
-        <member name="M:DSCript.ChunkBlock.CalculateSize">
-            <summary>
-            Calculates the overall size of this chunk.
-            </summary>
-            <returns>The computed size of this chunk.</returns>
-        </member>
-        <member name="M:DSCript.ChunkBlock.#ctor(System.Int32,System.UInt32)">
-            <summary>
-            Creates a new <see cref="T:DSCript.ChunkBlock"/> with the specified id and offset.
-            Since no parent is defined, this should be used for root chunks only.
-            </summary>
-            <param name="id">The zero-based id used to identify this chunk.</param>
-            <param name="offset">The absolute offset to this chunk.</param>
-        </member>
-        <member name="M:DSCript.ChunkBlock.#ctor(System.Int32,System.UInt32,DSCript.ChunkEntry)">
-            <summary>
-            Creates a new <see cref="T:DSCript.ChunkBlock"/> with the specified id, offset, and parent.
-            The parent-child relationship allows for this chunk to be included in size calculations that are initiated from the parent.
-            </summary>
-            <param name="id">The zero-based id used to identify this chunk.</param>
-            <param name="offset">The relative offset to this chunk.</param>
-            <param name="parent">The <see cref="T:DSCript.ChunkEntry"/> parent of this chunk.</param>
-        </member>
-        <member name="P:DSCript.ChunkBlock.Entries">
-            <summary>
-            Gets or sets the list of block entries in this chunk.
-            </summary>
-        </member>
-        <member name="P:DSCript.ChunkBlock.Magic">
-            <summary>
-            Gets the magic number for this chunk.
-            </summary>
-        </member>
-        <member name="P:DSCript.ChunkBlock.Parent">
-            <summary>
-            Gets or sets the parent of this chunk.
-            </summary>
-        </member>
-        <member name="P:DSCript.ChunkBlock.HasParent">
-            <summary>
-            Gets a value representing whether or not this chunk has a parent.
-            </summary>
-        </member>
-        <member name="P:DSCript.ChunkBlock.Size">
-            <summary>
-            Gets the computed size of this chunk.
-            </summary>
-        </member>
-        <member name="P:DSCript.ChunkBlock.HeaderSize">
-            <summary>
-            Gets the computed size of the header.
-            </summary>
-        </member>
-        <member name="M:DSCript.BlockEditor.Commit">
-            <summary>
-            Commits all changes made to the buffer and applies them to the Block's data.
-            </summary>
-        </member>
-        <member name="P:DSCript.BlockEditor.BlockData">
-            <summary>
-            The block data currently being edited by this <see cref="T:DSCript.BlockEditor"/>
-            </summary>
-        </member>
-        <member name="P:DSCript.BlockEditor.Stream">
-            <summary>
-            The memory stream representing the buffer.
-            </summary>
-        </member>
-        <member name="P:DSCript.BlockEditor.Reader">
-            <summary>
-            A <see cref="T:System.IO.BinaryReader"/> based off of the memory stream representing the buffer.
-            </summary>
-        </member>
-        <member name="P:DSCript.BlockEditor.Writer">
-            <summary>
-            A <see cref="T:System.IO.BinaryWriter"/> based off of the memory stream representing the buffer.
-            </summary>
-        </member>
-        <member name="M:System.Drawing.BitmapExtensions.ToBitmapSource(System.Drawing.Bitmap)">
-            <summary>
-            Converts a <see cref="T:System.Drawing.Bitmap"/> into a WPF <see cref="T:System.Windows.Media.Imaging.BitmapSource"/>.
-            </summary>
-            <remarks>Uses GDI to do the conversion. Hence the call to the marshalled DeleteObject.
-            </remarks>
-            <param name="source">The source bitmap.</param>
-            <returns>A BitmapSource</returns>
-        </member>
-        <member name="M:System.StringExtensions.SplitColumn(System.String,System.Int32)">
-            <summary>
-            Formats a delimited string using the "|" character into a split column with the specified distance.
-            </summary>
-            <param name="format">The delimited string that contains a "|" delimiter which defines where the split column should be.</param>
-            <param name="column">The column where everything after the delimiter should go.</param>
-            <returns></returns>
-        </member>
-        <member name="M:System.Text.StringBuilderExtensions.AppendFormat2(System.Text.StringBuilder,System.String,System.Object[])">
-            <summary>
-            This extension method forces the 'en-US' culture while formatting lines. See the default AppendFormat for more info.
-            </summary>
-            <param name="format">A composite format string</param>
-            <param name="args">An array of objects to format.</param>
-        </member>
-        <member name="M:System.Text.StringBuilderExtensions.AppendLines(System.Text.StringBuilder,System.Int32)">
-            <summary>
-            Appends a definitive amount of new lines to the end of the current <see cref="T:System.Text.StringBuilder"/> object.
-            </summary>
-            <param name="count">Number of lines to be inserted</param>
-        </member>
-        <member name="M:DSCript.Memory.Align(System.Int64,System.Int64)">
-            <summary>
-            Returns the result of aligning an offset to a certain alignment.
-            </summary>
-            <param name="offset">The offset to align</param>
-            <param name="align">The byte-alignment</param>
-            <returns>The byte-aligned offset.</returns>
-        </member>
-        <member name="M:DSCript.Memory.Align(System.Int32,System.Int32)">
-            <summary>
-            Returns the result of aligning an offset to a certain alignment.
-            </summary>
-            <param name="offset">The offset to align</param>
-            <param name="align">The byte-alignment</param>
-            <returns>The byte-aligned offset.</returns>
-        </member>
-        <member name="M:DSCript.Memory.Align(System.UInt32,System.UInt32)">
-            <summary>
-            Returns the result of aligning an offset to a certain alignment.
-            </summary>
-            <param name="offset">The offset to align</param>
-            <param name="align">The byte-alignment</param>
-            <returns>The byte-aligned offset.</returns>
+            <param name="str">The string to append.</param>
         </member>
         <member name="T:System.IO.INIFile">
             <summary>
@@ -219,9 +53,98 @@
             </summary>
             <param name="path">The path to the INI file.</param>
         </member>
-        <member name="P:System.IO.INIFile.Path">
+        <member name="P:System.IO.INIFile.FileName">
             <summary>
-            Gets or sets the path to the <see cref="T:System.IO.INIFile"/>.
+            Gets the filename of the <see cref="T:System.IO.INIFile"/>.
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.Magic">
+            <summary>
+            The magic number of a Chunk (CHNK).
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.Version">
+            <summary>
+            The supported version for loading Chunk files (Version 3).
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.FilePadding">
+            <summary>
+            Defines the amount of padding between each non-root Chunk block. A default value of 4096 is used. Use caution when changing the value, as this may crash the game!
+            </summary>
+        </member>
+        <member name="M:DSCript.Chunk.GetByteAlignment(System.UInt32,System.UInt32)">
+            <summary>
+            Returns an unsigned integer representing the number of bytes to be inserted for proper byte-aligned padding.
+            </summary>
+            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
+            <param name="align">How much padding should be applied</param>
+            <returns>The number of bytes that should be inserted for proper byte-aligned padding</returns>
+        </member>
+        <member name="M:DSCript.Chunk.GetByteAlignment(System.UInt32,DSCript.Chunk.ByteAlignment)">
+            <summary>
+            Returns an unsigned integer representing the number of bytes to be inserted for proper byte-aligned padding.
+            This method uses an enumeration to define byte-alignment for common values. See each options documentation for more information.
+            </summary>
+            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
+            <param name="align">How much padding should be applied</param>
+            <returns>The number of bytes that should be inserted for proper byte-aligned padding</returns>
+        </member>
+        <member name="M:DSCript.Chunk.ByteAlign(System.UInt32,System.UInt32)">
+            <summary>
+            Returns an unsigned integer representing an offset that has been byte-aligned with a given value.
+            </summary>
+            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
+            <param name="align">How much padding should be applied</param>
+            <returns>The byte-aligned offset</returns>
+        </member>
+        <member name="M:DSCript.Chunk.ByteAlign(System.UInt32,DSCript.Chunk.ByteAlignment)">
+            <summary>
+            Returns an unsigned integer representing an offset that has been byte-aligned with a given value.
+            /// This method uses an enumeration to define byte-alignment for common values. See each options documentation for more information.
+            </summary>
+            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
+            <param name="align">How much padding should be applied</param>
+            <returns>The byte-aligned offset</returns>
+        </member>
+        <member name="F:DSCript.Chunk.BytePaddingType.PaddingType1">
+            <summary>
+            Specifies the padding type used in DRIV3R (0xDECO15A1)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.BytePaddingType.PaddingType2">
+            <summary>
+            Specifies the padding type used in Driver: Parallel Lines and Driver: San Francisco (0x3E)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.BytePaddingType.Custom">
+            <summary>
+            Specifies a custom padding type as defined in <see cref="P:DSCript.Chunk.PaddingBytes"/>.
+            </summary>
+        </member>
+        <member name="T:DSCript.Chunk.ByteAlignment">
+            <summary>
+            An enumeration with common values used to calculate byte-alignment.
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign16">
+            <summary>
+            Aligns data to 16-bytes (e.g. 0x384 > 0x390)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign32">
+            <summary>
+            Aligns data to 32-bytes (e.g. 0x384 > 0x3A0)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign512">
+            <summary>
+            Aligns data to 512-bytes (e.g. 0x384 > 0x400)
+            </summary>
+        </member>
+        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign4096">
+            <summary>
+            Aligns data to 4096-bytes (e.g. 0x384 > 0x1000)
             </summary>
         </member>
         <member name="M:DSCript.ChunkFile.GetBlockData(DSCript.ChunkEntry)">
@@ -240,9 +163,6 @@
             Returns a <see cref="T:System.IO.FileStream"/> based on the file that was used to build this <see cref="T:DSCript.ChunkFile"/>.
             </summary>
             <returns></returns>
-        </member>
-        <member name="P:DSCript.IO.ChunkReader.Position">
-            <summary> Gets or sets the position of the cursor in the FileStream. </summary>
         </member>
         <member name="T:DSCript.ChunkType">
             <summary>
@@ -984,94 +904,192 @@
             [DMWK] - This format may be leftover from development. It serves an unknown purpose in 'dngvehicles.sp' in Driver: San Francisco.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.Magic">
+        <member name="T:DSCript.Block">
             <summary>
-            The magic number of a Chunk (CHNK).
+            Represents the base class for chunks/chunk data
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.Version">
+        <member name="P:DSCript.Block.ID">
             <summary>
-            The supported version for loading Chunk files (Version 3).
+            Gets or sets the zero-based ID of this block.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.FilePadding">
+        <member name="P:DSCript.Block.Magic">
             <summary>
-            Defines the amount of padding between each non-root Chunk block. A default value of 4096 is used. Use caution when changing the value, as this may crash the game!
+            Gets or sets the magic number of this block.
             </summary>
         </member>
-        <member name="M:DSCript.Chunk.GetByteAlignment(System.UInt32,System.UInt32)">
+        <member name="P:DSCript.Block.Parent">
             <summary>
-            Returns an unsigned integer representing the number of bytes to be inserted for proper byte-aligned padding.
-            </summary>
-            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
-            <param name="align">How much padding should be applied</param>
-            <returns>The number of bytes that should be inserted for proper byte-aligned padding</returns>
-        </member>
-        <member name="M:DSCript.Chunk.GetByteAlignment(System.UInt32,DSCript.Chunk.ByteAlignment)">
-            <summary>
-            Returns an unsigned integer representing the number of bytes to be inserted for proper byte-aligned padding.
-            This method uses an enumeration to define byte-alignment for common values. See each options documentation for more information.
-            </summary>
-            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
-            <param name="align">How much padding should be applied</param>
-            <returns>The number of bytes that should be inserted for proper byte-aligned padding</returns>
-        </member>
-        <member name="M:DSCript.Chunk.ByteAlign(System.UInt32,System.UInt32)">
-            <summary>
-            Returns an unsigned integer representing an offset that has been byte-aligned with a given value.
-            </summary>
-            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
-            <param name="align">How much padding should be applied</param>
-            <returns>The byte-aligned offset</returns>
-        </member>
-        <member name="M:DSCript.Chunk.ByteAlign(System.UInt32,DSCript.Chunk.ByteAlignment)">
-            <summary>
-            Returns an unsigned integer representing an offset that has been byte-aligned with a given value.
-            /// This method uses an enumeration to define byte-alignment for common values. See each options documentation for more information.
-            </summary>
-            <param name="offset">The offset that will be used to calculate byte-aligned padding</param>
-            <param name="align">How much padding should be applied</param>
-            <returns>The byte-aligned offset</returns>
-        </member>
-        <member name="F:DSCript.Chunk.BytePaddingType.PaddingType1">
-            <summary>
-            Specifies the padding type used in DRIV3R (0xDECO15A1)
+            Gets or sets the parent of this block.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.BytePaddingType.PaddingType2">
+        <member name="P:DSCript.Block.BaseOffset">
             <summary>
-            Specifies the padding type used in Driver: Parallel Lines and Driver: San Francisco (0x3E)
+            Gets the calculated base offset of this block.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.BytePaddingType.Custom">
+        <member name="P:DSCript.Block.Offset">
             <summary>
-            Specifies a custom padding type as defined in <see cref="P:DSCript.Chunk.PaddingBytes"/>.
+            Gets or sets the offset to this block. This is usually relative to the parent (if it has one) - otherwise, it should be zero.
             </summary>
         </member>
-        <member name="T:DSCript.Chunk.ByteAlignment">
+        <member name="P:DSCript.Block.Size">
             <summary>
-            An enumeration with common values used to calculate byte-alignment.
+            Gets or sets the size of this block. This should represent all data contained, depending on the <see cref="P:DSCript.Block.BlockType"/>.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign16">
+        <member name="P:DSCript.Block.BlockType">
             <summary>
-            Aligns data to 16-bytes (e.g. 0x384 > 0x390)
+            Gets the <see cref="P:DSCript.Block.BlockType"/> for this block.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign32">
+        <member name="M:DSCript.BlockEditor.Commit">
             <summary>
-            Aligns data to 32-bytes (e.g. 0x384 > 0x3A0)
+            Commits all changes made to the buffer and applies them to the Block's data.
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign512">
+        <member name="P:DSCript.BlockEditor.BlockData">
             <summary>
-            Aligns data to 512-bytes (e.g. 0x384 > 0x400)
+            The block data currently being edited by this <see cref="T:DSCript.BlockEditor"/>
             </summary>
         </member>
-        <member name="F:DSCript.Chunk.ByteAlignment.ByteAlign4096">
+        <member name="P:DSCript.BlockEditor.Stream">
             <summary>
-            Aligns data to 4096-bytes (e.g. 0x384 > 0x1000)
+            The memory stream representing the buffer.
             </summary>
+        </member>
+        <member name="P:DSCript.BlockEditor.Reader">
+            <summary>
+            A <see cref="T:System.IO.BinaryReader"/> based off of the memory stream representing the buffer.
+            </summary>
+        </member>
+        <member name="P:DSCript.BlockEditor.Writer">
+            <summary>
+            A <see cref="T:System.IO.BinaryWriter"/> based off of the memory stream representing the buffer.
+            </summary>
+        </member>
+        <member name="T:DSCript.ChunkBlock">
+            <summary>
+            A class that represents a spooling-based data format, used to store data of various formats in Reflections games.
+            </summary>
+        </member>
+        <member name="M:DSCript.ChunkBlock.CalculateOffsets">
+            <summary>
+            Calculate's the offsets for each entry.
+            </summary>
+        </member>
+        <member name="M:DSCript.ChunkBlock.CalculateSize">
+            <summary>
+            Calculates the overall size of this chunk.
+            </summary>
+            <returns>The computed size of this chunk.</returns>
+        </member>
+        <member name="M:DSCript.ChunkBlock.#ctor(System.Int32,System.UInt32)">
+            <summary>
+            Creates a new <see cref="T:DSCript.ChunkBlock"/> with the specified id and offset.
+            Since no parent is defined, this should be used for root chunks only.
+            </summary>
+            <param name="id">The zero-based id used to identify this chunk.</param>
+            <param name="offset">The absolute offset to this chunk.</param>
+        </member>
+        <member name="M:DSCript.ChunkBlock.#ctor(System.Int32,System.UInt32,DSCript.ChunkEntry)">
+            <summary>
+            Creates a new <see cref="T:DSCript.ChunkBlock"/> with the specified id, offset, and parent.
+            The parent-child relationship allows for this chunk to be included in size calculations that are initiated from the parent.
+            </summary>
+            <param name="id">The zero-based id used to identify this chunk.</param>
+            <param name="offset">The relative offset to this chunk.</param>
+            <param name="parent">The <see cref="T:DSCript.ChunkEntry"/> parent of this chunk.</param>
+        </member>
+        <member name="P:DSCript.ChunkBlock.Entries">
+            <summary>
+            Gets or sets the list of block entries in this chunk.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.Magic">
+            <summary>
+            Gets the magic number for this chunk.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.Parent">
+            <summary>
+            Gets or sets the parent of this chunk.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.HasParent">
+            <summary>
+            Gets a value representing whether or not this chunk has a parent.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.Size">
+            <summary>
+            Gets the computed size of this chunk.
+            </summary>
+        </member>
+        <member name="P:DSCript.ChunkBlock.HeaderSize">
+            <summary>
+            Gets the computed size of the header.
+            </summary>
+        </member>
+        <member name="M:System.StringExtensions.SplitColumn(System.String,System.Int32)">
+            <summary>
+            Formats a delimited string using the "|" character into a split column with the specified distance.
+            </summary>
+            <param name="format">The delimited string that contains a "|" delimiter which defines where the split column should be.</param>
+            <param name="column">The column where everything after the delimiter should go.</param>
+            <returns></returns>
+        </member>
+        <member name="M:System.Drawing.BitmapExtensions.ToBitmapSource(System.Drawing.Bitmap)">
+            <summary>
+            Converts a <see cref="T:System.Drawing.Bitmap"/> into a WPF <see cref="T:System.Windows.Media.Imaging.BitmapSource"/>.
+            </summary>
+            <remarks>Uses GDI to do the conversion. Hence the call to the marshalled DeleteObject.
+            </remarks>
+            <param name="source">The source bitmap.</param>
+            <returns>A BitmapSource</returns>
+        </member>
+        <member name="M:System.IO.BinaryReaderExtensions.Align(System.IO.BinaryReader,System.Int64)">
+            <summary>Aligns the cursor's current position to the specified byte-alignment</summary>
+            <param name="byteAlignment">The byte-alignment to calculate (e.x. 1024)</param>
+            <returns>Cursor position after byte-alignment</returns>
+        </member>
+        <member name="M:System.Text.StringBuilderExtensions.AppendFormatEx(System.Text.StringBuilder,System.String,System.Object[])">
+            <summary>
+            This extension method forces the 'en-US' culture while formatting lines. See the default AppendFormat for more info.
+            </summary>
+            <param name="format">A composite format string</param>
+            <param name="args">An array of objects to format.</param>
+        </member>
+        <member name="M:System.Text.StringBuilderExtensions.AppendLines(System.Text.StringBuilder,System.Int32)">
+            <summary>
+            Appends a definitive amount of new lines to the end of the current <see cref="T:System.Text.StringBuilder"/> object.
+            </summary>
+            <param name="count">Number of lines to be inserted</param>
+        </member>
+        <member name="M:System.Memory.Align``1(``0,``0)">
+            <summary>
+            Returns the result of aligning a value to a specified alignment.
+            </summary>
+            <typeparam name="T">The type of value to align</typeparam>
+            <param name="value">The value to align</param>
+            <param name="align">The byte-alignment</param>
+            <returns>The byte-aligned value; If the alignment is zero, the unmodified value.</returns>
+        </member>
+        <member name="M:System.Memory.GuessAlignment(System.Int32)">
+            <summary>
+            Returns the result of attempting to guess the alignment of an offset. If unknown, returns zero.
+            </summary>
+            <param name="offset">The offset to guess the alignment of.</param>
+            <returns>The approximate alignment of an offset. If unknown, returns zero.</returns>
+        </member>
+        <member name="M:System.Memory.GuessAlignment(System.Int32,System.Int32)">
+            <summary>
+            Returns the result of attempting to guess the alignment of an offset. If the result is unknown, returns a specified default value.
+            </summary>
+            <param name="offset">The offset to guess the alignment of.</param>
+            <param name="defaultValue">The default value to return (if result is unknown)</param>
+            <returns>The approximate alignment of an offset (if any), otherwise a default value.</returns>
         </member>
         <member name="T:DSCript.Models.FVFType">
             <summary>
@@ -1089,6 +1107,98 @@
         </member>
         <member name="F:DSCript.Models.FVFType.Unknown">
             <summary>Represents an unknown type.</summary>
+        </member>
+        <member name="P:DSCript.Spooling.ChunkReader.BaseStream">
+            <summary>
+            Gets the underlying file stream.
+            </summary>
+        </member>
+        <member name="T:DSCript.Spoolers.SpoolableChunk">
+            <summary>
+            Represents a class for spoolers thats content is a list of spoolers.
+            </summary>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.GetHashCode">
+            <summary>
+            Returns the hash code for this spooler.
+            </summary>
+            <returns>A 32-bit signed integer hash code.</returns>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.Load(System.IO.Stream)">
+            <summary>
+            Loads a spooler from the specified stream.
+            </summary>
+            <param name="stream">The stream to load the spooler from.</param>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.WriteTo(System.IO.Stream)">
+            <summary>
+            Writes the contents of the spooler to the specified stream.
+            </summary>
+            <param name="stream">The stream to write the contents of the spooler to.</param>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.Save(System.String)">
+            <summary>
+            Saves the contents of the spooler to the specified file.
+            </summary>
+            <param name="filename">The file to write the contents of the spooler to.</param>
+        </member>
+        <member name="P:DSCript.Spoolers.Spooler.Alignment">
+            <summary>
+            Gets or sets the byte-alignment of this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spoolers.Spooler.Description">
+            <summary>
+            Gets or sets the description of this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spoolers.Spooler.Magic">
+            <summary>
+            Gets the magic number of this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spoolers.Spooler.Reserved">
+            <summary>
+            Gets the reserved field of this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spoolers.Spooler.Size">
+            <summary>
+            Gets the size of this spooler.
+            </summary>
+        </member>
+        <member name="M:DSCript.Spoolers.SpoolableChunk.#ctor">
+            <summary>
+            Creates a new chunked spooler with the magic number and reserved value set to zero.
+            </summary>
+        </member>
+        <member name="M:DSCript.Spoolers.SpoolableChunk.#ctor(System.Int32,System.Byte)">
+            <summary>
+            Creates a new chunked spooler with the specified magic number and reserved value.
+            </summary>
+            <param name="magic">The magic number</param>
+            <param name="reserved">The reserved value</param>
+        </member>
+        <member name="M:DSCript.Spoolers.SpoolableChunk.#ctor(System.String)">
+            <summary>
+            Creates a new chunked spooler from the specified file.
+            </summary>
+            <param name="filename">The file to load.</param>
+        </member>
+        <member name="P:DSCript.Spoolers.SpoolableChunk.Spoolers">
+            <summary>
+            Gets or sets the spoolers in this chunk.
+            </summary>
+        </member>
+        <member name="T:DSCript.Spoolers.SpoolableData">
+            <summary>
+            Represents a class for spoolers with a buffer as their content.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spoolers.SpoolableData.Buffer">
+            <summary>
+            Gets or sets the buffer.
+            </summary>
         </member>
         <member name="M:DSCript.Models.TextureCache.GetCachedTexture(DSCript.Models.CacheableTexture)">
             <summary>

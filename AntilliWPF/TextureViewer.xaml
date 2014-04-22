@@ -6,6 +6,7 @@
         xmlns:h="http://helixtoolkit.codeplex.com"
         xmlns:Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
 		xmlns:local="clr-namespace:Antilli"
+        xmlns:dsc="clr-namespace:DSCript.Models;assembly=libDSC"
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize"
@@ -35,16 +36,35 @@
                     <RowDefinition Height="512"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
+                
+                <Grid.Resources>
+                    <DataTemplate DataType="{x:Type dsc:PCMPTexture}">
+                        <TextBlock Text="{Binding CRC32}">
+                            <TextBlock.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Replace..." Click="ReplaceTexture"/>
+                                    <Separator/>
+                                    <MenuItem Header="Export" Click="ExportTexture"/>
+                                </ContextMenu>
+                            </TextBlock.ContextMenu>
+                        </TextBlock>
+                    </DataTemplate>
+                </Grid.Resources>
 
-                <GroupBox Header="Textures" Grid.Column="0" Grid.Row="0">
-                    <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding CRC32}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </GroupBox>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="1*" MinHeight="251"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <GroupBox Header="Textures" Grid.Row="0">
+                        <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}"/>
+                    </GroupBox>
+                    <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,5,0,0" Height="251" Visibility="{Binding HasGlobals}">
+                        <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}"/>
+                    </GroupBox>
+                </Grid>
+                
 
                 <Border BorderThickness="1" Grid.Column="1" Grid.Row="0" Margin="5,0,0,0">
                     <ScrollViewer MaxWidth="512" MaxHeight="512" HorizontalScrollBarVisibility="Auto"  VerticalScrollBarVisibility="Auto" Padding="5">

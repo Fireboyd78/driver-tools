@@ -8,7 +8,7 @@
 		xmlns:at="clr-namespace:Antilli"
         xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
         xmlns:dscm="clr-namespace:DSCript.Models;assembly=libDSC"
-        mc:Ignorable="d">
+        mc:Ignorable="d" DataContext="{Binding RelativeSource={RelativeSource Self}}">
 
     <at:AntilliWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
@@ -39,7 +39,6 @@
                 </Menu.Background>
                 <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
                     <MenuItem x:Name="fileOpen" Header="Open"/>
-                    <MenuItem x:Name="fileSave" Header="Save"/>
                     <Separator Style="{DynamicResource atDark_menuSep}"/>
                     <MenuItem x:Name="fileExit" Header="Exit"/>
                 </MenuItem>
@@ -50,8 +49,11 @@
                     <MenuItem x:Name="viewGlobalMaterials" Header="Global Materials" Visibility="Collapsed"/>
                 </MenuItem>
                 <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
-                    <MenuItem x:Name="exportMDPC" Header="DEBUG: Export Model Package"/>
-                    <MenuItem x:Name="exportXML" Header="DEBUG: Export to .XML"/>
+                    <MenuItem Name="exportGlobals" Header="Export Globals" IsEnabled="{Binding HasGlobals}"/>
+                    <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
+                    <MenuItem x:Name="exportXML" Header="Export .XML"/>
+                    <Separator/>
+                    <MenuItem x:Name="chunkTest" Header="Chunk Test"/>
                 </MenuItem>
             </Menu>
         </Grid>
@@ -94,11 +96,14 @@
                     <Label Grid.Column="0" Grid.Row="0" Content="Level of Detail:" Margin="5" Padding="0" HorizontalContentAlignment="Right" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                     <!-- Content -->
                     <Grid x:Name="LODButtons" Grid.Column="1" Grid.Row="0" Margin="5">
-                        <ToggleButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"     Margin="0,0,0,0"   />
-                        <ToggleButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"   Margin="25,0,0,0"  />
-                        <ToggleButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"      Margin="50,0,0,0"  />
-                        <ToggleButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low" Margin="75,0,0,0"  />
-                        <ToggleButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"   Margin="100,0,0,0" />
+                        <Grid.Resources>
+                            <Style TargetType="RadioButton" BasedOn="{StaticResource RadioToggleButtonStyle_LOD}"/>
+                        </Grid.Resources>
+                        <RadioButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"     Margin="0,0,0,0"   />
+                        <RadioButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"   Margin="25,0,0,0"  />
+                        <RadioButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"      Margin="50,0,0,0"  />
+                        <RadioButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low" Margin="75,0,0,0"  />
+                        <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"   Margin="100,0,0,0" />
                     </Grid>
                     <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of Blend Weights. For example, this can be used to view damage on vehicles. NOTE: Some models may appear distorted when checked." Visibility="Hidden" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_border}" Focusable="False" Margin="5"/>
                 </Grid>
@@ -203,10 +208,33 @@
                 <GroupBox Grid.Row="0" Header="Models" HorizontalAlignment="Stretch">
                     <GroupBox.Resources>
                         <DataTemplate DataType="{x:Type at:ModelListItem}">
-                            <TextBlock Text="{Binding Name}"/>
+                            <TextBlock Text="{Binding Name}" Tag="{Binding Model}">
+                                <TextBlock.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Path=Model.Models[0].Material}"/>
+                                    </ContextMenu>
+                                </TextBlock.ContextMenu>
+                            </TextBlock>
                         </DataTemplate>
+                        
+                        <HierarchicalDataTemplate DataType="{x:Type at:ModelVisual3DGroupListItem}" ItemsSource="{Binding Models}">
+                            <TextBlock Text="{Binding Name}"/>
+                        </HierarchicalDataTemplate>
+                        
+                        <DataTemplate DataType="{x:Type at:DriverModelVisual3D}">
+                            <TextBlock Text="Model">
+                                <TextBlock.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Material}"/>
+                                    </ContextMenu>
+                                </TextBlock.ContextMenu>
+                            </TextBlock>
+                        </DataTemplate>
+                        <!--<DataTemplate DataType="{x:Type at:ModelListItem}">
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>-->
                     </GroupBox.Resources>
-                    <ListBox x:Name="ModelsList" ItemsSource="{Binding Elements}"/>
+                    <TreeView x:Name="ModelsList" ItemsSource="{Binding Elements}"/>
                 </GroupBox>
                 <Button Grid.Row="1" x:Name="DeselectModel" Content="Deselect" Height="25" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"/>
             </Grid>

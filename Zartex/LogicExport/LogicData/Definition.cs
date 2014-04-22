@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
-using DSCript.IO;
+using DSCript.Legacy;
 using DSCript.Object;
 
 using Zartex.Converters;

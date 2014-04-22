@@ -141,22 +141,57 @@ namespace DSCript.Models
             return vertices;
         }
 
-        public void GetVertices(out Point3DCollection positions, out Vector3DCollection normals, out PointCollection coordinates)
+        public void GetVertices(Point3DCollection positions,
+            Vector3DCollection normals,
+            PointCollection coordinates)
         {
-            Vector3DCollection blendWeights;
-            GetVertices(out positions, out normals, out coordinates, out blendWeights);
-        }
-
-        public void GetVertices(out Point3DCollection positions, out Vector3DCollection normals, out PointCollection coordinates, out Vector3DCollection blendWeights)
-        {
-            var vBuffer = VertexBuffer.Buffer;
-
             int nVerts   = (int)NumVertices;
 
-            positions = new Point3DCollection(nVerts);
-            normals = new Vector3DCollection(nVerts);
-            coordinates = new PointCollection(nVerts);
-            blendWeights = new Vector3DCollection(nVerts);
+            if (positions == null)
+                positions = new Point3DCollection(nVerts);
+            if (normals == null)
+                normals = new Vector3DCollection(nVerts);
+            if (coordinates == null)
+                coordinates = new PointCollection(nVerts);
+
+            GetVertices(ref positions, ref normals, ref coordinates);
+        }
+
+        public void GetVertices(Point3DCollection positions,
+            Vector3DCollection normals,
+            PointCollection coordinates,
+            Vector3DCollection blendWeights)
+        {
+            int nVerts   = (int)NumVertices;
+
+            if (positions == null)
+                positions = new Point3DCollection(nVerts);
+            if (normals == null)
+                normals = new Vector3DCollection(nVerts);
+            if (coordinates == null)
+                coordinates = new PointCollection(nVerts);
+            if (blendWeights == null)
+                blendWeights = new Vector3DCollection(nVerts);
+
+            GetVertices(ref positions, ref normals, ref coordinates, ref blendWeights, true);
+        }
+
+        private void GetVertices(ref Point3DCollection positions,
+            ref Vector3DCollection normals,
+            ref PointCollection coordinates)
+        {
+            Vector3DCollection blendWeights = null;
+            GetVertices(ref positions, ref normals, ref coordinates, ref blendWeights);
+        }
+
+        private void GetVertices(ref Point3DCollection positions,
+            ref Vector3DCollection normals,
+            ref PointCollection coordinates,
+            ref Vector3DCollection blendWeights,
+            bool getBlendWeights = false)
+        {
+            var vBuffer = VertexBuffer.Buffer;
+            int nVerts = (int)NumVertices;
 
             for (uint v = 0; v <= NumVertices; v++)
             {
@@ -170,7 +205,9 @@ namespace DSCript.Models
                 positions.Add(vertex.Position);
                 normals.Add(vertex.Normal);
                 coordinates.Add(vertex.UV);
-                blendWeights.Add(vertex.BlendWeights);
+
+                if (getBlendWeights)
+                    blendWeights.Add(vertex.BlendWeights);
             }
         }
 

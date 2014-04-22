@@ -90,7 +90,7 @@ namespace Antilli.IO
                 if (uid != -1 && part.UID != uid)
                     continue;
 
-                sb.AppendFormat2("# ============== Group {0} ==============", ++modelIdx).AppendLines(2);
+                sb.AppendFormatEx("# ============== Group {0} ==============", ++modelIdx).AppendLines(2);
 
                 for (int g = 0; g < part.Parts.Count; g++)
                 {
@@ -153,7 +153,7 @@ namespace Antilli.IO
                                     ? String.Format("shared_{0}", mtlIdx)
                                     : String.Format("{0}_{1}", uid, mtlIdx);
 
-                            sbMtl.AppendFormat2(
+                            sbMtl.AppendFormatEx(
 @"newmtl {0}
     Ns 10.0000
     Ni 1.5000
@@ -198,21 +198,21 @@ namespace Antilli.IO
                     int nTris = indices.Count;
 
                     for (int vx = 0; vx < nVerts; vx++)
-                        sb.AppendFormat2("v {0:F4} {1:F4} {2:F4}", vertices[vx].X, vertices[vx].Y, vertices[vx].Z).AppendLine();
+                        sb.AppendFormatEx("v {0:F4} {1:F4} {2:F4}", vertices[vx].X, vertices[vx].Y, vertices[vx].Z).AppendLine();
 
                     sb.AppendLine();
 
                     for (int vn = 0; vn < nVerts; vn++)
-                        sb.AppendFormat2("vn {0:F4} {1:F4} {2:F4}", normals[vn].X, normals[vn].Y, normals[vn].Z).AppendLine();
+                        sb.AppendFormatEx("vn {0:F4} {1:F4} {2:F4}", normals[vn].X, normals[vn].Y, normals[vn].Z).AppendLine();
 
                     sb.AppendLine();
 
                     for (int vt = 0; vt < nVerts; vt++)
-                        sb.AppendFormat2("vt {0:F4} {1:F4} 0.0000", coords[vt].X, coords[vt].Y).AppendLine();
+                        sb.AppendFormatEx("vt {0:F4} {1:F4} 0.0000", coords[vt].X, coords[vt].Y).AppendLine();
 
                     sb.AppendLine();
 
-                    sb.AppendFormat2("g {0}_{1:D2}_{2}", uid, modelIdx, lodType).AppendLine();
+                    sb.AppendFormatEx("g {0}_{1:D2}_{2}", uid, modelIdx, lodType).AppendLine();
                     sb.AppendLine("s 1");
 
                     sb.Append(faces.ToString());

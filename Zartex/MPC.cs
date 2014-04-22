@@ -5,13 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-using DSCript;
-using DSCript.IO;
+using DSCript.Legacy;
 
 using Zartex;
 using Zartex.MissionObjects;
 using Zartex.LogicExport;
 using Zartex.Settings;
+
+using ChunkType = DSCript.ChunkType;
 
 namespace Zartex
 {
@@ -348,7 +349,7 @@ The locale file {4}.",
             {
                 f.Seek(logicData.BaseOffset, SeekOrigin.Begin);
 
-                ChunkBlockOld LogicData = ChunkFile.GetBlockChildOrNull(logicData);
+                ChunkBlock LogicData = ChunkFile.GetBlockChildOrNull(logicData);
 
                 SubChunkBlock Definitions = LogicData.Subs[0];
                 SubChunkBlock Properties = LogicData.Subs[1];

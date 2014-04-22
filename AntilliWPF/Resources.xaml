@@ -15,6 +15,7 @@
 	<SolidColorBrush x:Key="atDark_bgDarkActiveHighlight" Color="#16FFFFFF"/>
 	<SolidColorBrush x:Key="atDark_border" Color="Gold" />
 	<SolidColorBrush x:Key="atDark_borderHighlight" Color="LightGray" />
+    <SolidColorBrush x:Key="atDark_inactive" Color="#16FFFFFF"/>
 
 	<Style TargetType="Button" BasedOn="{StaticResource {x:Static ToolBar.ButtonStyleKey}}">
 		<Setter Property="Background" Value="{StaticResource atDark_bgDark}"/>
@@ -53,12 +54,12 @@
 	</Style>
 
     <Style TargetType="ToggleButton">
-        <Setter Property="Background" Value="{StaticResource atDark_bgDark}"/>
-        <Setter Property="BorderBrush" Value="Gold"/>
+        <Setter Property="Background" Value="{DynamicResource atDark_bgDark}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource atDark_border}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Border.CornerRadius" Value="0"/>
         <Setter Property="Focusable" Value="False"/>
-        <Setter Property="Foreground" Value="{StaticResource atDark_fg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource atDark_fg}"/>
         <Setter Property="Height" Value="22"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -76,14 +77,14 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource atDark_bgDarkHighlight}"/>
+                            <Setter Property="Background" Value="{DynamicResource atDark_bgDarkHighlight}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="{StaticResource atDark_bgDarkActive}"/>
+                            <Setter Property="Background" Value="{DynamicResource atDark_bgDarkActive}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter Property="Background" Value="#28FFFFFF"/>
-                            <Setter Property="BorderBrush" Value="{StaticResource atDark_fg}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource atDark_fg}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="#16FFFFFF"/>
@@ -379,6 +380,11 @@
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>
+    
+    <Style TargetType="MenuItem">
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
 
     <Style x:Key="atDark_menuItem" TargetType="MenuItem">
         <Setter Property="Padding" Value="8,4"/>
@@ -403,5 +409,110 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <Style x:Key="RadioToggleButtonStyle" TargetType="{x:Type RadioButton}" BasedOn="{StaticResource {x:Type ToggleButton}}">
+        <Setter Property="FocusVisualStyle">
+            <Setter.Value>
+                <Style>
+                    <Setter Property="Control.Template">
+                        <Setter.Value>
+                            <ControlTemplate>
+                                <Rectangle Margin="2" SnapsToDevicePixels="True" Stroke="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" StrokeThickness="1" StrokeDashArray="1 2"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="1"/>
+        <Setter Property="Background">
+            <Setter.Value>
+                <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
+                    <GradientStop Color="#FFF3F3F3" Offset="0"/>
+                    <GradientStop Color="#FFEBEBEB" Offset="0.5"/>
+                    <GradientStop Color="#FFDDDDDD" Offset="0.5"/>
+                    <GradientStop Color="#FFCDCDCD" Offset="1"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="#FF707070"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type RadioButton}">
+                    <Themes:ButtonChrome x:Name="Chrome" BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}" RenderMouseOver="{TemplateBinding IsMouseOver}" RenderPressed="{TemplateBinding IsPressed}" RenderDefaulted="{TemplateBinding Button.IsDefaulted}" SnapsToDevicePixels="True">
+                        <ContentPresenter ContentTemplate="{TemplateBinding ContentTemplate}" Content="{TemplateBinding Content}" ContentStringFormat="{TemplateBinding ContentStringFormat}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Themes:ButtonChrome>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="RenderDefaulted" TargetName="Chrome" Value="True"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="RenderPressed" TargetName="Chrome" Value="True"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="#FFADADAD"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="RadioToggleButtonStyle_LOD" TargetType="RadioButton" BasedOn="{StaticResource RadioToggleButtonStyle}">
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="Background" Value="{DynamicResource atDark_bgDark}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource atDark_border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Border.CornerRadius" Value="0"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Foreground" Value="{DynamicResource atDark_fg}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="mainBorder"
+                    CornerRadius="{TemplateBinding Border.CornerRadius}"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter ContentSource="Content"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource atDark_bgDarkHighlight}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource atDark_bgDarkActive}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Background" Value="#28FFFFFF"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource atDark_fg}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="#16FFFFFF"/>
+                            <Setter Property="BorderBrush" Value="#16FFFFFF"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsChecked" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter Property="Background" Value="#32FFFFFF"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 
 </ResourceDictionary>

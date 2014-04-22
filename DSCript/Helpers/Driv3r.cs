@@ -4,171 +4,193 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
+using Microsoft.Win32;
+
 using DSCript;
 using DSCript.Models;
 
 namespace DSCript
 {
-    public enum CityDefinitionType
+    internal sealed class FormattedPath
     {
-        CITY_DAY_PC,
-        CITY_NIGHT_PC
-    }
-
-    public enum VVVType
-    {
-        Default,
-        ArticTruck,
-        Bike,
-        Boat
+        private string Path;
+        public static implicit operator string(FormattedPath path) { return path.ToString(); }
+        public static implicit operator FormattedPath(string path) { return new FormattedPath(path); }
+        public string Format(string arg) { return String.Format(Path, arg); }
+        public override string ToString() { return Path; }
+        internal FormattedPath(string fileFormat) { Path = fileFormat; }
+        internal FormattedPath(string fileFormat, params string[] folder) : this(System.IO.Path.Combine(System.IO.Path.Combine(folder), fileFormat)) { }
     }
 
     public sealed class Driv3r
     {
-        public struct City
+        public enum City
         {
-            public static readonly City Istanbul                        = "Istanbul";
-            public static readonly City Miami                           = "Miami";
-            public static readonly City Nice                            = "Nice";
+            Istanbul,
+            Miami,
+            Nice,
 
-            private string Name;
-            public static implicit operator City(string name) { return new City(name); }
-            public static implicit operator string(City city) { return city.ToString(); }
-            public override string ToString() { return Name; }
-            internal City(string name) { Name = name; }
+            Unknown
         }
 
-        public struct FilePath
+        public enum CityDefinitionType
         {
-            public static readonly string AnimationLookup               = new PathFormat("AnimationLookup.txt", Folder.Animations);
-            public static readonly string SkeletonMacroList             = new PathFormat("MacroList.txt", Folder.Animations);
-
-            public static readonly string MaleSkeletonMacro             = new PathFormat("male_skeleton.skm", Folder.SkeletonMacros);
-            public static readonly string FemaleSkeletonMacro           = new PathFormat("female_skeleton.skm", Folder.SkeletonMacros);
-
-            public static readonly string Guns                          = new PathFormat("Guns.Cpr", Folder.Guns);
-            public static readonly string ParticleEffects               = new PathFormat("Sfx.pmu", Folder.SFX);
+            CITY_DAY_PC,
+            CITY_NIGHT_PC
         }
 
-        public struct Folder
+        public enum VVVType
         {
-            public static readonly Folder Animations                    = "Anims";
-            public static readonly Folder Cities                        = "Cities";
-            public static readonly Folder Configs                       = "Configs";
-            public static readonly Folder Guns                          = "Guns";
-            public static readonly Folder Missions                      = "Missions";
-            public static readonly Folder Moods                         = "Moods";
-            public static readonly Folder Overlays                      = "Overlays";
-            public static readonly Folder Saves                         = "Saves";
-            public static readonly Folder SFX                           = "sfx";
-            public static readonly Folder Skies                         = "Skies";
-            public static readonly Folder Sounds                        = "Sounds";
-            public static readonly Folder Territory                     = "Territory";
+            Default,
+            ArticTruck,
+            Bike,
+            Boat
+        }
+
+        public static readonly OpenFileDialog OpenFileDialog;
+        public static readonly string FileFilter;
+
+        static Driv3r()
+        {
+            //var filters = new[] {
+            //    "Driv3r|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk",
+            //    "Characters|*.dam",
+            //    "Cities|*.d3c;*.pcs",
+            //    "Fonts|*.bnk",
+            //    "Guns|*.cpr",
+            //    "Maps|*.map",
+            //    "Menus|*.mec",
+            //    "Overlays|*.gfx",
+            //    "Particles|*.pmu",
+            //    "Skies|*.d3s",
+            //    "Vehicles|*.vvs;*.vvv;*.vgt"
+            //};
+
+            //FileFilter = String.Join("|", filters);
+
+            FileFilter = "Driv3r|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk";
             
-            public static readonly Folder Vehicles                      = "Vehicles";
-
-            public static readonly Folder SkeletonMacros                = new PathFormat("Skeleton_Macros", Folder.Animations);
-            public static readonly Folder VehicleConfigs                = new PathFormat("Vehicles\\BigVO3", Folder.Configs);
-
-            private string Name;
-            public static implicit operator Folder(string name) { return new Folder(name); }
-            public static implicit operator Folder(PathFormat format) { return new Folder(format); }
-            public static implicit operator string(Folder folder) { return folder.ToString(); }
-            public override string ToString() { return Name; }
-            internal Folder(string name) { Name = name; }
+            OpenFileDialog = new OpenFileDialog() {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Filter = FileFilter,
+                InitialDirectory = Driv3r.RootDirectory,
+                ValidateNames = true,
+            };
         }
 
-        public struct Locale
+        public sealed class Files
         {
-            internal static readonly string Region_FMV                  = "FMV";
-            internal static readonly string Region_GUI                  = "GUI";
-            internal static readonly string Region_Locale               = "Locale";
+            public static readonly string AnimationLookup           = new FormattedPath("AnimationLookup.txt", Folders.Animations);
+            public static readonly string SkeletonMacroList         = new FormattedPath("MacroList.txt", Folders.Animations);
 
-            internal static readonly string Region_GameConfig           = "gameconfig.txt";
+            public static readonly string MaleSkeletonMacro         = new FormattedPath("male_skeleton.skm", Folders.SkeletonMacros);
+            public static readonly string FemaleSkeletonMacro       = new FormattedPath("female_skeleton.skm", Folders.SkeletonMacros);
 
-            public struct FilePath
+            public static readonly string Guns                      = new FormattedPath("Guns.Cpr", Folders.Guns);
+            public static readonly string ParticleEffects           = new FormattedPath("Sfx.pmu", Folders.SFX);
+        }
+
+        public sealed class Folders
+        {
+            public static readonly string Animations                = "Anims";
+            public static readonly string Cities                    = "Cities";
+            public static readonly string Configs                   = "Configs";
+            public static readonly string Guns                      = "Guns";
+            public static readonly string Missions                  = "Missions";
+            public static readonly string Moods                     = "Moods";
+            public static readonly string Overlays                  = "Overlays";
+            public static readonly string Saves                     = "Saves";
+            public static readonly string SFX                       = "sfx";
+            public static readonly string Skies                     = "Skies";
+            public static readonly string Sounds                    = "Sounds";
+            public static readonly string Territory                 = "Territory";
+        
+            public static readonly string Vehicles                  = "Vehicles";
+
+            public static readonly string SkeletonMacros            = new FormattedPath("Skeleton_Macros", Folders.Animations);
+            public static readonly string VehicleConfigs            = new FormattedPath("Vehicles\\BigVO3", Folders.Configs);
+        }
+
+        public sealed class Locale
+        {
+            internal static readonly string Region_FMV              = "FMV";
+            internal static readonly string Region_GUI              = "GUI";
+            internal static readonly string Region_Locale           = "Locale";
+
+            internal static readonly string Region_GameConfig       = "gameconfig.txt";
+
+            public sealed class Files
             {
-                public static readonly string Fonts                     = new Driv3r.PathFormat("font.bnk", Folder.Fonts);
+                public static readonly string Fonts                 = new FormattedPath("font.bnk", Folders.Fonts);
 
-                public static readonly string GUI_Bootup                = new Driv3r.PathFormat("bootup.TXT", Folder.GUI);
-                public static readonly string GUI_FilmDirector          = new Driv3r.PathFormat("FilmDirector.TXT", Folder.GUI);
-                public static readonly string GUI_FrontEnd              = new Driv3r.PathFormat("front.TXT", Folder.GUI);
-                public static readonly string GUI_Language              = new Driv3r.PathFormat("language.TXT", Folder.GUI);
-                public static readonly string GUI_Profiles              = new Driv3r.PathFormat("MUMain.TXT", Folder.GUI);
-                public static readonly string GUI_NameEntry             = new Driv3r.PathFormat("Name.TXT", Folder.GUI);
-                public static readonly string GUI_NoController          = new Driv3r.PathFormat("nocont.TXT", Folder.GUI);
-                public static readonly string GUI_PauseMenu             = new Driv3r.PathFormat("Pause.TXT", Folder.GUI);
-                public static readonly string GUI_ReplayPause           = new Driv3r.PathFormat("RplyPause.TXT", Folder.GUI);
+                public static readonly string GUI_Bootup            = new FormattedPath("bootup.TXT", Folders.GUI);
+                public static readonly string GUI_FilmDirector      = new FormattedPath("FilmDirector.TXT", Folders.GUI);
+                public static readonly string GUI_FrontEnd          = new FormattedPath("front.TXT", Folders.GUI);
+                public static readonly string GUI_Language          = new FormattedPath("language.TXT", Folders.GUI);
+                public static readonly string GUI_Profiles          = new FormattedPath("MUMain.TXT", Folders.GUI);
+                public static readonly string GUI_NameEntry         = new FormattedPath("Name.TXT", Folders.GUI);
+                public static readonly string GUI_NoController      = new FormattedPath("nocont.TXT", Folders.GUI);
+                public static readonly string GUI_PauseMenu         = new FormattedPath("Pause.TXT", Folders.GUI);
+                public static readonly string GUI_ReplayPause       = new FormattedPath("RplyPause.TXT", Folders.GUI);
 
-                public static readonly string Sounds                    = new Driv3r.PathFormat("SOUND.GSD", Folder.Sounds);
+                public static readonly string Sounds                = new FormattedPath("SOUND.GSD", Folders.Sounds);
 
-                public static readonly string Text_Controls             = new Driv3r.PathFormat("controls.txt", Folder.Text);
-                public static readonly string Text_Generic              = new Driv3r.PathFormat("generic.txt", Folder.Text);
-                public static readonly string Text_Overlays             = new Driv3r.PathFormat("overlays.txt", Folder.Text);
+                public static readonly string Text_Controls         = new FormattedPath("controls.txt", Folders.Text);
+                public static readonly string Text_Generic          = new FormattedPath("generic.txt", Folders.Text);
+                public static readonly string Text_Overlays         = new FormattedPath("overlays.txt", Folders.Text);
             }
 
-            public struct Folder
+            public sealed class Folders
             {
-                public static readonly Driv3r.Folder FMV                = "FMV";
-                public static readonly Driv3r.Folder Fonts              = "Fonts";
-                public static readonly Driv3r.Folder GUI                = "GUI";
-                public static readonly Driv3r.Folder Missions           = "Missions";
-                public static readonly Driv3r.Folder Music              = "Music";
-                public static readonly Driv3r.Folder Sounds             = "Sounds";
-                public static readonly Driv3r.Folder Text               = "Text";
+                public static readonly string FMV                   = "FMV";
+                public static readonly string Fonts                 = "Fonts";
+                public static readonly string GUI                   = "GUI";
+                public static readonly string Missions              = "Missions";
+                public static readonly string Music                 = "Music";
+                public static readonly string Sounds                = "Sounds";
+                public static readonly string Text                  = "Text";
             }
 
-            public struct PathFormat
+            public sealed class FormattedPaths
             {
-                public static readonly Driv3r.PathFormat Subtitles      = new Driv3r.PathFormat("{0}.txt", Folder.FMV);
+                public static readonly string Subtitles             = new FormattedPath("{0}.txt", Folders.FMV);
 
-                public static readonly Driv3r.PathFormat Speech         = new Driv3r.PathFormat("IGCS{0}.XA", Folder.Music);
-                public static readonly Driv3r.PathFormat Locale         = new Driv3r.PathFormat("mission{0}.txt", Folder.Missions);
+                public static readonly string Speech                = new FormattedPath("IGCS{0}.XA", Folders.Music);
+                public static readonly string Locale                = new FormattedPath("mission{0}.txt", Folders.Missions);
             }
         }
 
-        public struct PathFormat
+        public sealed class FormattedPaths
         {
-            public static readonly PathFormat Animations                = new PathFormat("animation_{0}.ab3", Folder.Animations);
-            public static readonly PathFormat AnimationMacros           = new PathFormat("{0}.anm", Folder.Animations, "macros");
-            
-            public static readonly PathFormat CityDefinition            = new PathFormat("{0}.d3c", Folder.Cities);
+            public static readonly string Animations                = new FormattedPath("animation_{0}.ab3", Folders.Animations);
+            public static readonly string AnimationMacros           = new FormattedPath("{0}.anm", Folders.Animations, "macros");
 
-            public static readonly PathFormat CityDayPC                 = new PathFormat("{0}_DAY_PC", Folder.Cities);
-            public static readonly PathFormat CityNightPC               = new PathFormat("{0}_NIGHT_PC", Folder.Cities);
+            public static readonly string CityDefinition            = new FormattedPath("{0}.d3c", Folders.Cities);
 
-            public static readonly PathFormat SoundDefinition           = new PathFormat("{0}.DAT", Folder.Sounds);
-            
-            public static readonly PathFormat MissionMood               = new PathFormat("mood{0}.txt", Folder.Moods);
-            public static readonly PathFormat MissionCharacters         = new PathFormat("{0}.dam", Folder.Vehicles);
-            public static readonly PathFormat MissionScript             = new PathFormat("{0}.mpc", Folder.Vehicles);
-            public static readonly PathFormat MissionVehicles           = new PathFormat("{0}.vvv", Folder.Vehicles);
+            public static readonly string CityDayPC                 = new FormattedPath("{0}_DAY_PC", Folders.Cities);
+            public static readonly string CityNightPC               = new FormattedPath("{0}_NIGHT_PC", Folders.Cities);
 
-            public static readonly PathFormat OverlayBin                = new PathFormat("{0}.bin", Folder.Overlays);
-            public static readonly PathFormat OverlayGfx                = new PathFormat("{0}.gfx", Folder.Overlays);
-            public static readonly PathFormat OverlayMap                = new PathFormat("{0}.map", Folder.Overlays);
+            public static readonly string SoundDefinition           = new FormattedPath("{0}.DAT", Folders.Sounds);
 
-            public static readonly PathFormat SaveFile                  = new PathFormat("D3P_{0}", Folder.Saves);
+            public static readonly string MissionMood               = new FormattedPath("mood{0}.txt", Folders.Moods);
+            public static readonly string MissionCharacters         = new FormattedPath("{0}.dam", Folders.Vehicles);
+            public static readonly string MissionScript             = new FormattedPath("{0}.mpc", Folders.Vehicles);
+            public static readonly string MissionVehicles           = new FormattedPath("{0}.vvv", Folders.Vehicles);
 
-            public static readonly PathFormat SkyFile                   = new PathFormat("sky_{0}.d3s", Folder.Skies);
+            public static readonly string OverlayBin                = new FormattedPath("{0}.bin", Folders.Overlays);
+            public static readonly string OverlayGfx                = new FormattedPath("{0}.gfx", Folders.Overlays);
+            public static readonly string OverlayMap                = new FormattedPath("{0}.map", Folders.Overlays);
 
-            public static readonly PathFormat VehicleGlobals            = new PathFormat("{0}\\CarGlobals{0}.vgt", Folder.Vehicles);
-            public static readonly PathFormat SpooledVehicles           = new PathFormat("{0}.vvs", Folder.Vehicles);
+            public static readonly string SaveFile                  = new FormattedPath("D3P_{0}", Folders.Saves);
 
-            public static readonly PathFormat VehicleConfig             = new PathFormat("{0}.BO3", Folder.VehicleConfigs);
-            public static readonly PathFormat VehicleSounds             = new PathFormat("{0}.VSB", Folder.Sounds);
+            public static readonly string SkyFile                   = new FormattedPath("sky_{0}.d3s", Folders.Skies);
 
-            public string Format(string arg)
-            {
-                return String.Format(Path, arg);
-            }
+            public static readonly string VehicleGlobals            = new FormattedPath("{0}\\CarGlobals{0}.vgt", Folders.Vehicles);
+            public static readonly string SpooledVehicles           = new FormattedPath("{0}.vvs", Folders.Vehicles);
 
-            private string Path;
-            public static implicit operator string(PathFormat path) { return path.ToString(); }
-            public static implicit operator PathFormat(string path) { return new PathFormat(path); }
-            public override string ToString() { return Path; }
-            internal PathFormat(string fileFormat) { Path = fileFormat; }
-            internal PathFormat(string fileFormat, params string[] folder) : this(System.IO.Path.Combine(System.IO.Path.Combine(folder), fileFormat)) {}
+            public static readonly string VehicleConfig             = new FormattedPath("{0}.BO3", Folders.VehicleConfigs);
+            public static readonly string VehicleSounds             = new FormattedPath("{0}.VSB", Folders.Sounds);
         }
 
         public const string DirectoryKey            = "Driv3r";
@@ -176,19 +198,27 @@ namespace DSCript
 
         public static readonly string RootDirectory = DSC.Configuration.GetDirectory(DirectoryKey);
 
-        internal static string GetDirectory(string path)
+        private static string GetPath(string path)
         {
             return (AppendRootDirectory) ? Path.Combine(RootDirectory, path) : path;
         }
 
-        internal static string GetCityType(City city, CityDefinitionType type)
+        private static string GetPathFormat(string path, string file)
         {
+            return GetPath(String.Format(path, file));
+        }
+
+        private static string GetCityType(City city, CityDefinitionType type)
+        {
+            if (city == City.Unknown)
+                return null;
+
             switch (type)
             {
             case CityDefinitionType.CITY_DAY_PC:
-                return PathFormat.CityDayPC.Format(city);
+                return String.Format(FormattedPaths.CityDayPC, city);
             case CityDefinitionType.CITY_NIGHT_PC:
-                return PathFormat.CityNightPC.Format(city);
+                return String.Format(FormattedPaths.CityNightPC, city);
             default:
                 return null;
             }
@@ -213,7 +243,7 @@ namespace DSCript
                     return GetCityFromMissionId(missionId);
             }
 
-            return null;
+            return City.Unknown;
         }
 
         public static City GetCityFromMissionId(int missionId)
@@ -227,67 +257,88 @@ namespace DSCript
             //-- Be careful not to break the formatting!!
             switch (missionId)
             {
-            case 01: case 02: case 03: case 04: case 05: case 06:
-            case 07: case 08: case 09: case 10: case 32: case 33:
-            case 38: case 39: case 40: case 50: case 51: case 56:
-            case 59: case 60: case 61: case 71: case 72:
+            case 01: case 02: case 03: case 04: case 05: case 06: case 07:
+            case 08: case 09: case 10: case 32: case 33: case 38: case 39:
+            case 40: case 50: case 51: case 56: case 59: case 60: case 61:
+            case 71: case 72: case 77: case 78:
                 return City.Miami;
-            case 11: case 12: case 13: case 14: case 15: case 16:
-            case 17: case 18: case 19: case 20: case 21: case 34:
-            case 35: case 42: case 43: case 44: case 52: case 53:
-            case 57: case 62: case 63: case 64: case 73: case 74:
+            case 11: case 12: case 13: case 14: case 15: case 16: case 17:
+            case 18: case 19: case 20: case 21: case 34: case 35: case 42:
+            case 43: case 44: case 52: case 53: case 57: case 62: case 63:
+            case 64: case 73: case 74: case 80: case 81:
                 return City.Nice;
-            case 22: case 23: case 24: case 25: case 26: case 27:
-            case 28: case 29: case 30: case 31: case 36: case 37:
-            case 46: case 47: case 48: case 54: case 55: case 58:
-            case 65: case 66: case 67: case 75: case 76:
+            case 22: case 23: case 24: case 25: case 26: case 27: case 28:
+            case 29: case 30: case 31: case 36: case 37: case 46: case 47:
+            case 48: case 54: case 55: case 58: case 65: case 66: case 67:
+            case 75: case 76: case 83: case 84:
                 return City.Istanbul;
             default:
-                return null;
+                return City.Unknown;
             }
         }
 
         public static string GetAnimations(City city)
         {
-            return GetDirectory(PathFormat.Animations.Format(((string)city).ToLower()));
+            if (city == City.Unknown)
+                return null;
+
+            return GetPathFormat(FormattedPaths.Animations, city.ToString().ToLower());
         }
 
         public static string GetAnimationMacro(string macroName)
         {
-            return GetDirectory(PathFormat.AnimationMacros.Format(macroName));
+            return GetPathFormat(FormattedPaths.AnimationMacros, macroName);
         }
 
         public static string GetCityDefinition(City city, CityDefinitionType type)
         {
+            if (city == City.Unknown)
+                return null;
+
             var folder = GetCityType(city, type);
-            return GetDirectory(PathFormat.CityDefinition.Format(folder));
+            return GetPathFormat(FormattedPaths.CityDefinition, folder);
         }
 
         public static string GetCitySuperRegions(City city, CityDefinitionType type)
         {
+            if (city == City.Unknown)
+                return null;
+
             var folder = GetCityType(city, type);
-            return GetDirectory(Path.Combine(folder, "SuperRegions.pcs"));
+            return GetPath(Path.Combine(folder, "SuperRegions.pcs"));
         }
 
         public static string GetCityInteriors(City city, CityDefinitionType type)
         {
+            if (city == City.Unknown)
+                return null;
+
             var folder = GetCityType(city, type);
-            return GetDirectory(Path.Combine(folder, "Interiors.pcs"));
+            return GetPath(Path.Combine(folder, "Interiors.pcs"));
         }
 
         public static string GetSpooledVehicles(City city)
         {
-            return GetDirectory(PathFormat.SpooledVehicles.Format(city));
+            if (city == City.Unknown)
+                return null;
+
+            return GetPathFormat(FormattedPaths.SpooledVehicles, city.ToString());
         }
 
         public static string GetMissionVehicles(City city)
         {
+            if (city == City.Unknown)
+                return null;
+
             return GetMissionVehicles(city, VVVType.Default);
         }
 
         public static string GetMissionVehicles(City city, VVVType type)
         {
-            string path = ((string)city).ToLower();
+            if (city == City.Unknown)
+                return null;
+
+            string path = city.ToString().ToLower();
 
             switch (type)
             {
@@ -305,25 +356,29 @@ namespace DSCript
                 break;
             }
 
-            return GetDirectory(PathFormat.MissionVehicles.Format(path));
+            return GetPathFormat(FormattedPaths.MissionVehicles, path);
         }
 
         public static string GetMissionVehicles(int missionId)
         {
             var path = String.Format("mission{0}", missionId);
 
-            return GetDirectory(PathFormat.MissionVehicles.Format(path));
+            return GetPathFormat(FormattedPaths.MissionVehicles, path);
         }
 
         public static string GetVehicleGlobals(City city)
         {
-            return GetDirectory(PathFormat.VehicleGlobals.Format(city));
+            if (city == City.Unknown)
+                return null;
+
+            return GetPathFormat(FormattedPaths.VehicleGlobals, city.ToString());
         }
 
         public static string GetVehicleGlobals(int missionId)
         {
-            var city = GetCityFromMissionId(missionId);
-            return (city != null) ? GetVehicleGlobals(city) : null;
+            City city = GetCityFromMissionId(missionId);
+
+            return (city != City.Unknown) ? GetVehicleGlobals((City)city) : null;
         }
     }
 }

@@ -19,10 +19,7 @@ namespace DSCript.Models
 {
     public class PCMPTexture : CacheableTexture
     {
-        public byte Unk1 { get; set; }
-        public byte Unk2 { get; set; }
-        public byte Unk3 { get; set; }
-        public byte Unk4 { get; set; }
+        public uint Reserved { get; set; }
 
         public uint CRC32 { get; set; }
         public uint Type { get; set; }
@@ -32,8 +29,12 @@ namespace DSCript.Models
 
         public void ExportFile(string filename)
         {
+            string dir = Path.GetDirectoryName(filename);
+
             using (MemoryStream f = new MemoryStream(Buffer))
             {
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
                 if (!File.Exists(filename))
                     f.WriteTo(File.Create(filename, (int)f.Length));
             }

@@ -1,14 +1,16 @@
-﻿using System;
+﻿#if LEGACY
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 
-namespace DSCript.IO
+namespace DSCript.Legacy
 {
-    public sealed class ChunkBlockOld : BlockOld
+    public sealed class ChunkBlock : Block
     {
         public const ChunkType Magic = ChunkType.Chunk;
 
@@ -22,9 +24,9 @@ namespace DSCript.IO
             get { return (Parent == null) ? true : false; }
         }
 
-        public ChunkBlockOld(int id, uint offset) : this(id, offset, null) { }
+        public ChunkBlock(int id, uint offset) : this(id, offset, null) { }
 
-        public ChunkBlockOld(int id, uint offset, SubChunkBlock parent)
+        public ChunkBlock(int id, uint offset, SubChunkBlock parent)
         {
             ID = id;
             BaseOffset = offset;
@@ -32,3 +34,4 @@ namespace DSCript.IO
         }
     }
 }
+#endif

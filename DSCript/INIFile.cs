@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Forms;
 
 namespace System.IO
 {
@@ -9,18 +11,27 @@ namespace System.IO
     /// </summary>
     public class INIFile
     {
-        static char[] nullChar = new[] {'\0'};
+        static readonly char[] nullChar = new[] {'\0'};
 
         /// <summary>
-        /// Gets or sets the path to the <see cref="INIFile"/>.
+        /// Gets the filename of the <see cref="INIFile"/>.
         /// </summary>
-        public string Path { get; set; }
+        public string FileName { get; private set; }
+
+        public string[] GetSections()
+        {
+            char[] val = new char[1024];
+
+            NativeMethods.GetPrivateProfileString(null, null, "", val, 1024, FileName);
+
+            return new string(val).Split(nullChar, StringSplitOptions.RemoveEmptyEntries);
+        }
 
         public string[] ReadValue(string section)
         {
             char[] val = new char[1024];
 
-            NativeMethods.GetPrivateProfileString(section, null, null, val, 1024, Path);
+            NativeMethods.GetPrivateProfileString(section, null, null, val, 1024, FileName);
 
             return new string(val).Split(nullChar, StringSplitOptions.RemoveEmptyEntries);
         }
@@ -35,7 +46,7 @@ namespace System.IO
         {
             char[] val = new char[1024];
 
-            NativeMethods.GetPrivateProfileString(section, key, String.Empty, val, 1024, Path);
+            NativeMethods.GetPrivateProfileString(section, key, String.Empty, val, 1024, FileName);
 
             string[] str = new string(val).Split(nullChar, StringSplitOptions.RemoveEmptyEntries);
 
@@ -51,7 +62,7 @@ namespace System.IO
         /// <returns>True if successful, False if the operation failed.</returns>
         public bool WriteValue(string section, string key, string value)
         {
-            return NativeMethods.WritePrivateProfileString(section, key, value, Path);
+            return NativeMethods.WritePrivateProfileString(section, key, value, FileName);
         }
 
         /// <summary>
@@ -63,9 +74,9 @@ namespace System.IO
             if (!File.Exists(path))
                 throw new FileNotFoundException();
 
-            Path = path;
+            FileName = path;
         }
 
-        public INIFile(string filename, string path) : this(String.Format(@"{0}\{1}", path, filename)) { }
+        public INIFile(string filename, string path) : this(Path.Combine(path, filename)) { }
     }
 }
