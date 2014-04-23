@@ -127,7 +127,12 @@ namespace Antilli
                     CurrentSpooler.Alignment, CurrentSpooler.Reserved, CurrentSpooler.Size);
 
                 if (CurrentSpooler.Magic == (int)ChunkType.BuildInfo)
-                    str += String.Format("Build Info:\r\n\r\n{0}", Encoding.UTF8.GetString(((SpoolableData)CurrentSpooler).Buffer));
+                {
+                    var buffer = ((SpoolableData)CurrentSpooler).Buffer;
+                    var encoding = (buffer.Length > 1 && buffer[1] == 0) ? Encoding.Unicode : Encoding.UTF8;
+
+                    str += String.Format("Build Info:\r\n\r\n{0}", encoding.GetString(buffer));
+                }
 
                 return str;
             }
@@ -142,7 +147,6 @@ namespace Antilli
         private void ReplaceBuffer(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFile = new OpenFileDialog() {
-                Title = "bla bla bla",
                 CheckFileExists = true,
                 CheckPathExists = true,
                 ValidateNames = true
@@ -153,20 +157,13 @@ namespace Antilli
                 var spooler = (SpoolableData)CurrentSpooler;
 
                 spooler.Buffer = File.ReadAllBytes(openFile.FileName);
-                spooler.Description = "INTERCEPTION!";
-
+                
                 DSC.Log("Replaced buffer.");
-
-                DSC.Log("Exporting...");
-                LoadedChunk.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), "export.chunk"));
-                DSC.Log("Done.");
 
                 OnPropertyChanged("Spoolers");
             }
 
             refreshSpoolers = true;
-
-            GC.Collect();
         }
 
         private void RemoveCurrentSpoolerFromParent(SpoolableChunk parent)
@@ -292,7 +289,10 @@ namespace Antilli
 
         private void RenameSpooler(object sender, RoutedEventArgs e)
         {
-            var inputBox = new MKInputBox("Antilli", "Please enter a new description:");
+            var inputBox = new MKInputBox("Edit Description", "Please enter a new description:", CurrentSpooler.Description) {
+                Owner = this,
+                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+            };
 
             if (inputBox.ShowDialog() ?? false)
             {

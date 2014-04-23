@@ -67,7 +67,7 @@
             </GroupBox>
             <GroupBox Header="Information" Margin="5" Grid.Column="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <TextBlock Text="{Binding SpoolerInfo}"/>
+                    <TextBlock Text="{Binding SpoolerInfo}" Margin="5"/>
                 </ScrollViewer>
             </GroupBox>
         </Grid>

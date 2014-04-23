@@ -3,7 +3,7 @@
         xmlns:at="clr-namespace:Antilli"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Title" Height="135" Width="300"
-        Background="#252525">
+        Background="#181818">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="2*"/>
@@ -12,10 +12,10 @@
 
         <StackPanel Orientation="Vertical" Grid.ColumnSpan="2">
             <Label Name="PromptText" Content="Prompt text:" Padding="6,4"/>
-            <TextBox Name="ValueText" Text="Hello world" Padding="2" Margin="5" MaxLength="255" MaxLines="1"/>
+            <TextBox Name="ValueText" Text="Hello world" Padding="2" Margin="5" MaxLength="127" MaxLines="1"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="1" Grid.Column="1">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0" Grid.Row="1" Grid.Column="1">
             <StackPanel.Resources>
                 <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
                     <Setter Property="Margin" Value="4"/>

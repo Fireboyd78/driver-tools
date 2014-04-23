@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,7 +26,7 @@ namespace Antilli
             get { return ValueText.Text; }
         }
 
-        public MKInputBox(string title, string prompt)
+        public MKInputBox(string title, string prompt, string defaultValue = "")
         {
             InitializeComponent();
 
@@ -33,8 +34,11 @@ namespace Antilli
             PromptText.Content = prompt;
 
             Loaded += (o, e) => {
-                ValueText.Text = "";
+                ValueText.Text = defaultValue;
                 ValueText.Focus();
+
+                if (defaultValue.Length > 0)
+                    ValueText.Select(0, defaultValue.Length);
             };
 
             btnOk.Click += (o, e) => {

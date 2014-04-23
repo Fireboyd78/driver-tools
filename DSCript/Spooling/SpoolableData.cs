@@ -21,17 +21,14 @@ namespace DSCript.Spoolers
     /// </summary>
     public class SpoolableData : Spooler
     {
+        private static readonly int maxBufferSize = 1024 * 384;
+
         private byte[] buffer;
         private int size;
 
         private string TempFileName
         {
             get { return String.Format("{0}\\{1}.tmp", DSC.TempDirectory, GetHashCode()); }
-        }
-
-        private bool TempFileExists
-        {
-            get { return File.Exists(TempFileName); }
         }
 
         private FileStream TempFile;
@@ -43,10 +40,11 @@ namespace DSCript.Spoolers
         {
             get
             {
-                if (buffer == null && TempFileExists)
+                if (buffer == null && TempFile != null)
                 {
                     var buf = new byte[size];
 
+                    TempFile.Position = 0;
                     TempFile.Read(buf, 0, size);
 
                     return buf;
@@ -58,20 +56,22 @@ namespace DSCript.Spoolers
             {
                 size = (value != null) ? value.Length : 0;
 
-                // 256kb
-                if (size > 262144)
+                if (size > maxBufferSize)
                 {
-                    if (!TempFileExists)
+                    if (TempFile == null)
                         TempFile = File.Create(TempFileName, size, FileOptions.DeleteOnClose);
+                    else
+                        TempFile.SetLength(size);
 
+                    TempFile.Position = 0;
                     TempFile.Write(value, 0, size);
 
                     buffer = null;
                 }
                 else
                 {
-                    if (TempFileExists)
-                        TempFile.Dispose();
+                    if (TempFile != null)
+                        TempFile = null;
 
                     buffer = value;
                 }
@@ -82,8 +82,8 @@ namespace DSCript.Spoolers
         {
             Buffer = null;
 
-            if (TempFileExists)
-                TempFile.Dispose();
+            if (TempFile != null)
+                TempFile = null;
         }
 
         public override int Size

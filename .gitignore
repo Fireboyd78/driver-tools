@@ -169,3 +169,6 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+/AntilliSharpDX
+/AntilliWPF/Archive
+/AntilliWPF/_deprecated

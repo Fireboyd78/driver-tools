@@ -8,7 +8,9 @@
 
 	<SolidColorBrush x:Key="atDark_fg" Color="#FFC8C8C8"/>
     <SolidColorBrush x:Key="atDark_textHighlight" Color="#FFF0F0F0"/>
-	<SolidColorBrush x:Key="atDark_bgLight" Color="#43000000"/>
+	<SolidColorBrush x:Key="atDark_bgLight" Color="#42000000"/>
+    <SolidColorBrush x:Key="atDark_bgLightHighlight" Color="#16000000"/>
+    <SolidColorBrush x:Key="atDark_bgLightActive" Color="#24000000"/>
 	<SolidColorBrush x:Key="atDark_bgDark" Color="#48000000"/>
 	<SolidColorBrush x:Key="atDark_bgDarkHighlight" Color="#12FFFFFF"/>
 	<SolidColorBrush x:Key="atDark_bgDarkActive" Color="#04FFFFFF"/>
@@ -141,10 +143,12 @@
 					</Border>
 					<ControlTemplate.Triggers>
 						<Trigger Property="IsMouseOver" Value="True">
-							<Setter Property="BorderBrush" Value="{StaticResource atDark_borderHighlight}"/>
+                            <Setter Property="Background" Value="{StaticResource atDark_bgLightHighlight}"/>
+							<!--<Setter Property="BorderBrush" Value="{StaticResource atDark_borderHighlight}"/>-->
 						</Trigger>
 						<Trigger Property="IsFocused" Value="True">
-							<Setter Property="BorderBrush" Value="{StaticResource atDark_borderHighlight}"/>
+                            <Setter Property="Background" Value="{StaticResource atDark_bgLightActive}"/>
+							<!--<Setter Property="BorderBrush" Value="{StaticResource atDark_borderHighlight}"/>-->
 						</Trigger>
 					</ControlTemplate.Triggers>
 				</ControlTemplate>
