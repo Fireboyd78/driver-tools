@@ -14,23 +14,17 @@ namespace DSCript.Models
 {
     public class ModelPackagePC : ModelPackage
     {
-        public override uint Magic
+        protected override void Load()
         {
-            get { return 6; }
-        }
+            if (Spooler.Reserved != 6)
+                throw new Exception("Bad MDPC version, cannot load ModelPackage!");
 
-        public override void Load()
-        {
-            using (BlockEditor blockEditor = new BlockEditor(BlockData))
+            using (var f = Spooler.GetMemoryStream())
             {
-                BinaryReader f = blockEditor.Reader;
-
-                if (blockEditor.BlockData.Block.Reserved != 6)
-                    throw new Exception("Bad MDPC version, cannot load ModelPackage!");
-                if (f.ReadUInt32() != Magic)
+                if (f.ReadUInt32() != 6)
                     throw new Exception("Bad magic, cannot load ModelPackage!");
 
-                UID                     = f.ReadUInt32();
+                UID                     = f.ReadInt32();
 
                 int nParts              = f.ReadInt32();
                 uint partsOffset        = f.ReadUInt32();
@@ -72,7 +66,7 @@ namespace DSCript.Models
                  * ------------------------------ */
                 for (int vB = 0; vB < numVertexBuffers; vB++)
                 {
-                    f.SeekFromOrigin(fvfOffset, (vB * 0x1C));
+                    f.Seek((vB * 0x1C), fvfOffset);
 
                     int nVerts              = f.ReadInt32();
                     uint vertsSize          = f.ReadUInt32();
@@ -97,18 +91,18 @@ namespace DSCript.Models
                  * ------------------------------ */
                 f.Seek(indicesOffset, SeekOrigin.Begin);
 
-                Indices = new IndexData(nIndices);
+                IndexBuffer = new IndexData(nIndices);
 
                 for (int i = 0; i < nIndices; i++)
-                    Indices.Buffer[i] = f.ReadUInt16();
+                    IndexBuffer.Buffer[i] = f.ReadUInt16();
 
                 /* ------------------------------
                  * Read model data
                  * ------------------------------ */
-                var meshes = new Dictionary<uint, IndexedMesh>(nMeshes);
-                var groups = new Dictionary<uint, MeshGroup>(nMeshGroups);
+                var meshes = new Dictionary<long, MeshDefinition>(nMeshes);
+                var groups = new Dictionary<long, MeshGroup>(nMeshGroups);
 
-                Meshes = new List<IndexedMesh>(nMeshes);
+                Meshes = new List<MeshDefinition>(nMeshes);
                 MeshGroups = new List<MeshGroup>(nMeshGroups);
                 Parts = new List<PartsGroup>(nParts);
 
@@ -125,9 +119,9 @@ namespace DSCript.Models
                 f.Seek(meshesOffset, SeekOrigin.Begin);
                 for (int i = 0; i < nMeshes; i++)
                 {
-                    uint offset = (uint)(f.SeekFromOrigin(meshesOffset, (i * 0x38)));
+                    var offset = f.Seek((i * 0x38), meshesOffset);
 
-                    IndexedMesh mesh        = new IndexedMesh(this);
+                    MeshDefinition mesh        = new MeshDefinition(this);
                     Meshes.Add(mesh);
 
                     // add to mesh lookup
@@ -148,12 +142,13 @@ namespace DSCript.Models
                     mesh.MaterialId         = f.ReadInt16();
                     mesh.SourceUID          = f.ReadUInt16();
                 }
+
                 /* ------------------------------
                  * Read mesh groups (Size: 0x58)
                  * ------------------------------ */
                 for (int i = 0; i < nMeshGroups; i++)
                 {
-                    uint offset = (uint)(f.SeekFromOrigin(meshGroupsOffset, (i * 0x58)));
+                    var offset = f.Seek((i * 0x58), meshGroupsOffset);
                     uint mOffset = f.ReadUInt32();
 
                     // skip padding
@@ -170,18 +165,19 @@ namespace DSCript.Models
                     // Add meshes to group
                     for (uint k = 0; k < count; k++)
                     {
-                        IndexedMesh mesh = meshes[mOffset + (k * 0x38)];
+                        MeshDefinition mesh = meshes[mOffset + (k * 0x38)];
                         mesh.MeshGroup = group;
 
                         group.Meshes.Add(mesh);
                     }
                 }
+
                 /* ------------------------------
                  * Read parts groups (Size: 0x188)
                  * ------------------------------ */
                 for (int i = 0; i < nParts; i++)
                 {
-                    long entryPoint = f.SeekFromOrigin(partsOffset, (i * 0x188));
+                    var entryPoint = f.Seek((i * 0x188), partsOffset);
 
                     PartsGroup part = new PartsGroup() {
                         UID = f.ReadUInt32(),
@@ -199,7 +195,9 @@ namespace DSCript.Models
                     // YOUR ASSISTANCE HAS BEEN NOTED...
                     // ...
                     // <END OF TRANSMISSION>...
-                    part.VertexBufferId = f.ReadInt16();
+                    var vBufferId = f.ReadInt16();
+
+                    part.VertexBuffer = VertexBuffers[vBufferId];
 
                     part.Unknown1 = f.ReadInt16();
                     part.Unknown2 = f.ReadInt32();
@@ -248,7 +246,7 @@ namespace DSCript.Models
                             mGroup.Parent = entry;
 
                             // TODO: Not have such ugly code!
-                            foreach (IndexedMesh mesh in mGroup.Meshes)
+                            foreach (MeshDefinition mesh in mGroup.Meshes)
                                 mesh.PartsGroup = entry.Parent;
 
                             // This is obviously a bad way to fix something that was clearly intentional...
@@ -307,39 +305,39 @@ namespace DSCript.Models
                 if (f.ReadUInt32() != 0x3)
                     DSC.Log("PCMP version check failed, errors may occur.");
 
-                int nMats               = f.ReadInt32();
-                uint matsOffset         = f.ReadUInt32();
+                var nMats           = f.ReadInt32();
+                var matsOffset      = f.ReadUInt32();
 
-                int table1Count         = f.ReadInt32();
-                uint table1Offset       = f.ReadUInt32();
+                var table1Count     = f.ReadInt32();
+                var table1Offset    = f.ReadUInt32();
 
-                int nSubMats            = f.ReadInt32();
-                uint subMatsOffset      = f.ReadUInt32();
+                var nSubMats        = f.ReadInt32();
+                var subMatsOffset   = f.ReadUInt32();
 
-                int table2Count         = f.ReadInt32();
-                uint table2Offset       = f.ReadUInt32();
+                var table2Count     = f.ReadInt32();
+                var table2Offset    = f.ReadUInt32();
 
-                int DDSInfoCount        = f.ReadInt32();
-                uint DDSInfoOffset      = f.ReadUInt32();
+                var DDSInfoCount    = f.ReadInt32();
+                var DDSInfoOffset   = f.ReadUInt32();
 
-                uint DDSOffset          = f.ReadUInt32();
-                uint Size               = f.ReadUInt32();
+                var DDSOffset       = f.ReadUInt32();
+                var Size            = f.ReadUInt32();
 
-                MaterialData = new PCMPData();
-
-                var textures = new Dictionary<uint, PCMPTexture>(DDSInfoCount);
-                var subMaterials = new Dictionary<uint, PCMPSubMaterial>(nSubMats);
+                var textures = new Dictionary<long, PCMPTexture>(DDSInfoCount);
+                var subMaterials = new Dictionary<long, PCMPSubMaterial>(nSubMats);
 
                 // Read backwards
+
+                Textures = new List<PCMPTexture>(DDSInfoCount);
 
                 // Textures (Size: 0x20)
                 for (int t = 0; t < DDSInfoCount; t++)
                 {
-                    uint baseOffset = (uint)(f.SeekFromOrigin(pcmpOffset, (DDSInfoOffset + (t * 0x20)))) - pcmpOffset;
+                    var baseOffset = f.Seek(DDSInfoOffset + (t * 0x20), pcmpOffset) - pcmpOffset;
                     
                     PCMPTexture textureInfo = new PCMPTexture();
 
-                    MaterialData.Textures.Add(textureInfo);
+                    Textures.Add(textureInfo);
 
                     //add to texture lookup
                     textures.Add(baseOffset, textureInfo);
@@ -359,14 +357,16 @@ namespace DSCript.Models
                     textureInfo.Unk6    = f.ReadUInt32();
 
                     // get DDS from absolute offset (defined in MDPC header)
-                    f.SeekFromOrigin(ddsOffset, offset);
+                    f.Seek(offset, ddsOffset);
                     textureInfo.Buffer  = f.ReadBytes(size);
                 }
+
+                SubMaterials = new List<PCMPSubMaterial>(nSubMats);
 
                 // Submaterials (Size: 0x20)
                 for (int s = 0; s < nSubMats; s++)
                 {
-                    uint baseOffset = (uint)(f.SeekFromOrigin(pcmpOffset, (subMatsOffset + (s * 0x20)))) - pcmpOffset;
+                    var baseOffset = f.Seek(subMatsOffset + (s * 0x20), pcmpOffset) - pcmpOffset;
 
                     PCMPSubMaterial subMaterial = new PCMPSubMaterial() {
                         Flags = f.ReadUInt32(),
@@ -374,7 +374,7 @@ namespace DSCript.Models
                         Type = f.ReadUInt16()
                     };
 
-                    MaterialData.SubMaterials.Add(subMaterial);
+                    SubMaterials.Add(subMaterial);
 
                     //add to submaterial lookup
                     subMaterials.Add(baseOffset, subMaterial);
@@ -388,15 +388,17 @@ namespace DSCript.Models
                     // get texture from table
                     for (int t = 0; t < count; t++)
                     {
-                        f.SeekFromOrigin(pcmpOffset, (offset + (t * 0x8)));
+                        f.Seek(offset + (t * 0x8), pcmpOffset);
                         subMaterial.Textures.Add(textures[f.ReadUInt32()]);
                     }
                 }
 
+                Materials = new List<PCMPMaterial>(nMats);
+
                 // Materials (Size: 0x18)
                 for (int m = 0; m < nMats; m++)
                 {
-                    f.SeekFromOrigin(pcmpOffset, (matsOffset + (m * 0x18)));
+                    f.Seek(matsOffset + (m * 0x18), pcmpOffset);
 
                     // table info
                     uint offset = f.ReadUInt32();
@@ -409,12 +411,12 @@ namespace DSCript.Models
                         Reserved4 = f.ReadUInt32()
                     };
 
-                    MaterialData.Materials.Add(material);
+                    Materials.Add(material);
 
                     // get submaterial from table
                     for (int s = 0; s < count; s++)
                     {
-                        f.SeekFromOrigin(pcmpOffset, (offset + (s * 0x8)));
+                        f.Seek(offset + (s * 0x8), pcmpOffset);
                         material.SubMaterials.Add(subMaterials[f.ReadUInt32()]);
                     }
                 }
@@ -425,7 +427,7 @@ namespace DSCript.Models
             }
         }
 
-        public override void Compile()
+        protected override void Save()
         {
             int bufferSize          = 0;
 
@@ -460,7 +462,7 @@ namespace DSCript.Models
                 nGroups             = MeshGroups.Count;
                 nMeshes             = Meshes.Count;
 
-                nIndices            = Indices.Buffer.Length;
+                nIndices            = IndexBuffer.Buffer.Length;
                 indicesSize         = nIndices * 2;
 
                 nVertexBuffers      = VertexBuffers.Count;
@@ -494,9 +496,9 @@ namespace DSCript.Models
 
             // -- PCMP -- \\
 
-            int nMaterials              = MaterialData.Materials.Count;
-            int nSubMaterials           = MaterialData.SubMaterials.Count;
-            int nTextures               = MaterialData.Textures.Count;
+            int nMaterials              = Materials.Count;
+            int nSubMaterials           = SubMaterials.Count;
+            int nTextures               = Textures.Count;
 
             int materialsOffset         = 0;
             int subMatTableOffset       = 0;
@@ -532,7 +534,7 @@ namespace DSCript.Models
 
             for (int t = 0; t < nTextures; t++)
             {
-                PCMPTexture tex = MaterialData.Textures[t];
+                PCMPTexture tex = Textures[t];
 
                 uint crc32 = tex.CRC32;
 
@@ -555,7 +557,7 @@ namespace DSCript.Models
 
             using (MemoryStream f = new MemoryStream(buffer))
             {
-                f.Write(Magic);
+                f.Write(6);
                 f.Write(UID);
 
                 f.Write(nParts);
@@ -612,7 +614,7 @@ namespace DSCript.Models
                     f.Seek(indicesOffset, SeekOrigin.Begin);
 
                     for (int i = 0; i < nIndices; i++)
-                        f.Write((ushort)Indices[i]);
+                        f.Write((ushort)IndexBuffer[i]);
 
                     // Write part groups
                     f.Seek(partsOffset, SeekOrigin.Begin);
@@ -629,7 +631,12 @@ namespace DSCript.Models
                         // skip float padding
                         f.Seek(0x10, SeekOrigin.Current);
 
-                        f.Write(part.VertexBufferId);
+                        var vBufferId = VertexBuffers.IndexOf(part.VertexBuffer);
+
+                        if (vBufferId == -1)
+                            throw new Exception("FATAL ERROR: Cannot get Vertex Buffer ID - CANNOT EXPORT MODEL PACKAGE!!!");
+
+                        f.Write(vBufferId);
                         f.Write(part.Unknown1);
 
                         f.Write(part.Unknown2);
@@ -701,7 +708,7 @@ namespace DSCript.Models
 
                     for (int m = 0; m < nMeshes; m++)
                     {
-                        IndexedMesh mesh = Meshes[m];
+                        MeshDefinition mesh = Meshes[m];
 
                         f.Write((int)mesh.PrimitiveType);
 
@@ -752,7 +759,7 @@ namespace DSCript.Models
 
                 for (int m = 0; m < nMaterials; m++)
                 {
-                    PCMPMaterial material = MaterialData.Materials[m];
+                    PCMPMaterial material = Materials[m];
 
                     f.Write(subMatTableOffset + (stIdx * 0x8));
                     f.Write(material.SubMaterials.Count);
@@ -781,7 +788,7 @@ namespace DSCript.Models
 
                 for (int s = 0; s < nSubMaterials; s++)
                 {
-                    PCMPSubMaterial subMat = MaterialData.SubMaterials[s];
+                    PCMPSubMaterial subMat = SubMaterials[s];
 
                     f.Write(subMat.Flags);
 
@@ -812,7 +819,7 @@ namespace DSCript.Models
 
                 for (int t = 0; t < nTextures; t++)
                 {
-                    PCMPTexture texture = MaterialData.Textures[t];
+                    PCMPTexture texture = Textures[t];
 
                     uint crc32 = texture.CRC32;
 
@@ -839,13 +846,7 @@ namespace DSCript.Models
                 }
             }
 
-            BlockData.Buffer = buffer;
-        }
-
-        public ModelPackagePC(BlockData blockData)
-            : base(blockData)
-        {
-
+            Spooler.SetBuffer(buffer);
         }
     }
 }

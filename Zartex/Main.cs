@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -48,7 +49,7 @@ namespace Zartex
             {
                 if (control.Name.StartsWith("btn"))
                 {
-                    uint b = BitConverter.ToUInt32(Encoding.UTF8.GetBytes(control.Name.Substring(3, (control.Name.Length - 3))), 0);
+                    var b = BitConverter.ToInt32(Encoding.UTF8.GetBytes(control.Name.Substring(3, (control.Name.Length - 3))), 0);
 
                     control.Click += (o, e) => ChunkButtonClick((Button)o, b);
 
@@ -256,8 +257,6 @@ namespace Zartex
             InspectorWidget Widget = new InspectorWidget();
             TreeView Nodes = Widget.Nodes;
 
-            Nodes.ItemHeight = 19;
-
             Cursor = Cursors.WaitCursor;
 
             int nWires = MissionPackage.WireCollections.Count;
@@ -268,7 +267,7 @@ namespace Zartex
             {
                 WireCollectionGroup wires = MissionPackage.WireCollections[w];
 
-                LogicDefinition lNode = MissionPackage.LogicNodeDefinitions.First<LogicDefinition>((def) => (int)def.Properties[0].Value == w);
+                LogicDefinition lNode = MissionPackage.LogicNodeDefinitions.First((def) => (int)def.Properties[0].Value == w);
 
                 int nodeId = lNode.Opcode;
 
@@ -280,7 +279,7 @@ namespace Zartex
                         opcodes.ContainsKey(nodeId) ? opcodes[nodeId] : "unknown"
                         //MissionPackage.StringCollection[MissionPackage.LogicNodeDefinitions[w].StringId]
                     ),
-                    Tag = lNode
+                    Tag = wires
                 };
 
                 for (int n = 0; n < wires.Count; n++)
@@ -302,7 +301,6 @@ namespace Zartex
                 Nodes.Nodes.Add(wireGroupNode);
             }
 
-            
             Nodes.ExpandAll();
 
             SafeAddControl(Widget);
@@ -315,8 +313,6 @@ namespace Zartex
             // Get widget ready
             InspectorWidget LogicWidget = new InspectorWidget();
             TreeView Nodes = LogicWidget.Nodes;
-
-            Nodes.ItemHeight = 19;
 
             Cursor = Cursors.WaitCursor;
 
@@ -337,7 +333,7 @@ namespace Zartex
                 string opcodeName = opcodes.ContainsKey(def.Opcode) ? opcodes[def.Opcode] : def.Opcode.ToString();
 
                 TreeNode node = new TreeNode() {
-                    BackColor = Color.FromArgb(def.Byte4, def.Byte1, def.Byte2, def.Byte3),
+                    BackColor = Color.FromArgb(def.A, def.R, def.G, def.B),
                     Text = String.Format("{0}: {1} {2}", i, opcodeName, nodeName),
                     Tag = def
                 };
@@ -359,7 +355,7 @@ namespace Zartex
 
                         propName = String.Format("{0} -> {1}", propName, localeStr);
                     }
-                    if (prop.Opcode == 7 && ((int)prop.Value) != -1)
+                    if (prop.Opcode == 7 && ((int)prop.Value) > -1)
                     {
                         int val = MissionPackage.ActorDefinitions[(int)prop.Value].Opcode;
 
@@ -383,12 +379,19 @@ namespace Zartex
             for (int i = 0; i < nodeCount; i++)
             {
                 LogicDefinition def = definition[i];
+
+                // Skip actor definitions
+                if (def is ActorDefinition)
+                    break;
+
                 LogicProperty prop = def.Properties[0];
 
-                var nodeWireCollection = Nodes.Nodes[i].Nodes[0];
+                var nodeWireCollection = Nodes.Nodes[i];
 
-                // it's actor defs, don't try to load
-                if (prop.Opcode != 19) break;
+                if (nodeWireCollection.Nodes.Count > 0)
+                    nodeWireCollection = nodeWireCollection.Nodes[0];
+                else
+                    continue;
 
                 int wireId = (int)prop.Value;
 
@@ -397,7 +400,8 @@ namespace Zartex
 
                 for (int w = 0; w < nWires; w++)
                 {
-                    WireCollectionEntry wire = wires.Entries[w];
+                    var wire = wires.Entries[w];
+                    var defNode = Nodes.Nodes[wire.NodeId];
 
                     // int wireTypeId = definition[wire.NodeId].StringId;
 
@@ -406,7 +410,8 @@ namespace Zartex
                     // string opcodeName = opcodes.ContainsKey(wire.Opcode) ? opcodes[wire.Opcode] : wire.Opcode.ToString();
 
                     TreeNode wireNode = new TreeNode() {
-                        Text = Nodes.Nodes[wire.NodeId].Text,
+                        BackColor = defNode.BackColor,
+                        Text = defNode.Text,
                         Tag = wire
                     };
 
@@ -708,7 +713,7 @@ namespace Zartex
         private void LoadScriptFile(int missionId)
         {
             MissionPackage = new MPCFile(missionId);
-            Filename = MissionPackage.ChunkFile.Filename;
+            Filename = MissionPackage.Filename;
 
             InitTools();
         }
@@ -724,7 +729,7 @@ namespace Zartex
         private void LoadScriptFile(int missionId, string localeFile)
         {
             MissionPackage = new MPCFile(missionId, localeFile);
-            Filename = MissionPackage.ChunkFile.Filename;
+            Filename = MissionPackage.Filename;
 
             InitTools();
         }
@@ -741,14 +746,14 @@ namespace Zartex
         {
             if (MissionPackage.IsLoaded)
             {
-                Text = String.Format("{0} - {1}", title, MissionPackage.ChunkFile.Filename);
+                Text = String.Format("{0} - {1}", title, Filename);
                 GenerateLogicNodes();
 
                 mnTools.Enabled = true;
             }
         }
 
-        /// <summary> Safely adds a control to the form </summary>
+        /// <summary> Safely adds a control to the form.</summary>
         private void SafeAddControl(Control control)
         {
             control.Parent = this;
@@ -765,42 +770,38 @@ namespace Zartex
 
         private void GetChunkData(SubChunkBlock subChunk)
         {
-            switch (subChunk.Type)
-            {
-            case ChunkType.ExportedMissionObjects:
-                GenerateExportedMissionObjects();
-                break;
-            case ChunkType.LogicExportStringCollection:
-                GenerateStringCollection();
-                break;
-            case ChunkType.LogicExportActorSetTable:
-                GenerateActorSetTable();
-                break;
-            case ChunkType.LogicExportActorsChunk:
-                GenerateActors();
-                break;
-            case ChunkType.LogicExportNodesChunk:
-                GenerateLogicNodes();
-                break;
-            case ChunkType.LogicExportWireCollections:
-                GenerateWireCollection();
-                break;
-            default:
-                MessageBox.Show("Not implemented!");
-                break;
-            }
+            
         }
 
-        private void ChunkButtonClick(Button button, uint magic)
+        private void ChunkButtonClick(Button button, int magic)
         {
             if (MissionPackage != null && MissionPackage.IsLoaded)
             {
-                SubChunkBlock subChunk = MissionPackage.ChunkFile.FirstOrNull(magic);
+                var cType = (ChunkType)magic;
 
-                if (subChunk != null)
+                switch (cType)
                 {
-                    GetChunkData(subChunk);
-                    return;
+                case ChunkType.ExportedMissionObjects:
+                    GenerateExportedMissionObjects();
+                    break;
+                case ChunkType.LogicExportStringCollection:
+                    GenerateStringCollection();
+                    break;
+                case ChunkType.LogicExportActorSetTable:
+                    GenerateActorSetTable();
+                    break;
+                case ChunkType.LogicExportActorsChunk:
+                    GenerateActors();
+                    break;
+                case ChunkType.LogicExportNodesChunk:
+                    GenerateLogicNodes();
+                    break;
+                case ChunkType.LogicExportWireCollections:
+                    GenerateWireCollection();
+                    break;
+                default:
+                    MessageBox.Show("Not implemented!");
+                    break;
                 }
 
                 Console.WriteLine("Couldn't find anything...");
@@ -854,56 +855,6 @@ namespace Zartex
                 MissionPackage.LoadLocaleFile(LocaleOpen.FileName);
                 GenerateLogicNodes();
             }
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            char[] str = Clipboard.GetData(DataFormats.Text).ToString().Replace(" ", "").ToCharArray();
-
-            StringBuilder s = new StringBuilder();
-
-            int idx = 0;
-
-            while (idx < str.Length)
-            {
-                idx += 8;
-
-                str[idx - 4] = '0';
-                str[idx - 3] = '0';
-
-                str[idx - 2] = '0';
-                str[idx - 1] = '0';
-
-                str[idx]   = '0';
-                str[idx+1] = '0';
-
-                str[idx+2] = '0';
-                str[idx+3] = '0';
-
-                str[idx+4] = '0';
-                str[idx+5] = '0';
-
-                str[idx+6] = '0';
-                str[idx+7] = '0';
-
-                str[idx + 8] = '0';
-                str[idx + 9] = '0';
-
-                str[idx + 10] = '0';
-                str[idx + 11] = '0';
-
-                str[idx + 12] = '0';
-                str[idx + 13] = '0';
-
-                str[idx + 14] = '0';
-                str[idx + 15] = '0';
-                
-                idx += 16;
-            }
-
-            s.Append(str);
-
-            Clipboard.SetData(DataFormats.Text, s.ToString());
         }
 
         private void onPaintFlowgraph(object sender, PaintEventArgs e)

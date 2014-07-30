@@ -22,14 +22,14 @@ namespace DSCript.Models
     /// 
     /// Source: http://msdn.microsoft.com/en-us/library/windows/desktop/bb174369%28v=vs.85%29.aspx
     /// </summary>
-    public class IndexedMesh
+    public class MeshDefinition
     {
         /// <summary>
         /// The <see cref="ModelPackage"/> this mesh belongs to.
         /// </summary>
         public ModelPackage ModelPackage { get; protected set; }
 
-        public IModelFile ModelFile
+        public Driv3rModelFile ModelFile
         {
             get { return ModelPackage.ModelFile; }
         }
@@ -39,11 +39,7 @@ namespace DSCript.Models
             get
             {
                 if (PartsGroup != null)
-                {
-                    int vB = PartsGroup.VertexBufferId;
-                    
-                    return (vB < ModelPackage.VertexBuffers.Count) ? ModelPackage.VertexBuffers[vB] : null;
-                }
+                    return PartsGroup.VertexBuffer;
 
                 return null;
             }
@@ -97,26 +93,22 @@ namespace DSCript.Models
         /// <summary>
         /// The UID of the package containing the material.
         /// </summary>
-        public uint SourceUID { get; set; }
+        public int SourceUID { get; set; }
 
         public PCMPMaterial GetMaterial()
         {
+            if (SourceUID == ModelPackage.UID || SourceUID == 0xFFFD)
+                return ModelPackage.Materials[MaterialId];
+
             if (ModelFile != null)
             {
-                if (SourceUID == (uint)PackageType.VehicleGlobals && ModelFile.HasSpooledFile)
-                    return ModelFile.SpooledFile.StandaloneTextures[MaterialId];
-            }
+                if (ModelFile is Driv3rVehiclesFile && SourceUID == (int)PackageType.VehicleGlobals)
+                    return ((Driv3rVehiclesFile)ModelFile).VehicleGlobals.GetStandaloneTexture(MaterialId);
 
-            if (SourceUID == ModelPackage.UID || SourceUID == 0xFFFD)
-            {
-                return ModelPackage.MaterialData.Materials[MaterialId];
-            }
-            else if (ModelFile != null)
-            {
-                ModelPackage mPak = ModelFile.Models.Find((m) => m.UID == SourceUID);
+                ModelPackage mPak = ModelFile.GetModelPackage(SourceUID);
 
                 if (mPak != null)
-                    return mPak.MaterialData.Materials[MaterialId];
+                    return mPak.Materials[MaterialId];
             }
 
             return null;
@@ -213,7 +205,7 @@ namespace DSCript.Models
 
         public Int32Collection GetTriangleIndices()
         {
-            ushort[] indices = ModelPackage.Indices.Buffer;
+            ushort[] indices = ModelPackage.IndexBuffer.Buffer;
 
             Int32Collection tris = new Int32Collection();
 
@@ -270,7 +262,7 @@ namespace DSCript.Models
             return tris;
         }
 
-        public IndexedMesh(ModelPackage modelPackage)
+        public MeshDefinition(ModelPackage modelPackage)
         {
             ModelPackage = modelPackage;
         }

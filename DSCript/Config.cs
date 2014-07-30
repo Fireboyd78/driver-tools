@@ -21,7 +21,7 @@ namespace DSCript
         public static readonly string IniName = "DSCript.ini";
         
         public static readonly IniConfiguration Configuration;
-        public static readonly INIFile IniFile;
+        public static readonly IniFile IniFile;
 
         public static readonly CultureInfo CurrentCulture = new CultureInfo("en-US");
         public static readonly string TempDirectory = Path.Combine(Path.GetTempPath(), "libDSC");
@@ -119,7 +119,7 @@ Driv3r={0}", d3Dir);
                 File.WriteAllText(iniPath, sb.ToString(), Encoding.UTF8);
             }
 
-            IniFile = new INIFile(iniPath);
+            IniFile = new IniFile(iniPath);
             Configuration = CreateConfiguration("Global");
 
             if (!Directory.Exists(TempDirectory))

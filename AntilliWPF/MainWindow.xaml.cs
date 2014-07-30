@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -33,6 +34,7 @@ using FreeImageAPI;
 
 using DSCript;
 using DSCript.Models;
+using DSCript.Spooling;
 
 namespace Antilli
 {
@@ -41,12 +43,12 @@ namespace Antilli
     /// </summary>
     public partial class MainWindow : AntilliWindow
     {
-        List<ModelVisual3DGroup> currentModel;
-        ModelVisual3DGroup selectedModel;
+        private List<ModelVisual3DGroup> _currentModel;
+        private ModelVisual3DGroup _selectedModel;
 
-        IModelFile modelFile;
+        private Driv3rModelFile _modelFile;
 
-        static OpenFileDialog openFile = new OpenFileDialog() {
+        static OpenFileDialog openDialog = new OpenFileDialog() {
             CheckFileExists = true,
             CheckPathExists = true,
             Filter = "DRIV3R|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk",
@@ -56,9 +58,9 @@ namespace Antilli
             ValidateNames = true,
         };
 
-        public TextureViewer TextureViewer { get; private set; }
-        public MaterialEditor MaterialEditor { get; private set; }
-        public MaterialEditor GlobalMaterialEditor { get; private set; }
+        //public TextureViewer TextureViewer { get; private set; }
+        //public MaterialEditor MaterialEditor { get; private set; }
+        //public MaterialEditor GlobalMaterialEditor { get; private set; }
 
         /// <summary>
         /// Gets the command line arguments that were passed to the application from either the command prompt or the desktop.
@@ -67,61 +69,68 @@ namespace Antilli
 
         public void OpenFile()
         {
-            if (openFile.ShowDialog() ?? false)
+            if (openDialog.ShowDialog() ?? false)
             {
-                string filename = openFile.FileName;
-                IModelFile modelFile = null;
+                var timer = new Stopwatch();
 
+                timer.Start();
+
+                string filename = openDialog.FileName;
+                
                 switch (Path.GetExtension(filename).ToLower())
                 {
                 case ".vvs":
-                    modelFile = new VVSFile(filename);
-                    goto vehicles;
                 case ".vvv":
-                    modelFile = new VVVFile(filename);
-                    goto vehicles;
-                vehicles:
                     {
+                        var vehicleFile = new Driv3rVehiclesFile(filename);
+                        
+
                         var city = Driv3r.GetCityFromFileName(filename);
                         var path = Driv3r.GetVehicleGlobals(city);
-                    
+
                         if (path != null)
-                            modelFile.SpooledFile = new VGTFile(path);
+                            vehicleFile.VehicleGlobals = new StandaloneTextureFile(path);
                         
-                        if (modelFile.HasSpooledFile)
+                        if (vehicleFile.HasVehicleGlobals)
                         {
                             viewGlobalMaterials.Visibility = Visibility.Visible;
-
-                            if (IsGlobalMaterialEditorOpen)
-                                GlobalMaterialEditor.UpdateMaterials();
+        
+                            //if (IsGlobalMaterialEditorOpen)
+                            //    GlobalMaterialEditor.UpdateMaterials();
                         }
                         else
                         {
-                            if (IsGlobalMaterialEditorOpen)
-                            {
-                                GlobalMaterialEditor.Close();
-                                viewGlobalMaterials.Visibility = Visibility.Collapsed;
-                            }
+                            //if (IsGlobalMaterialEditorOpen)
+                            //{
+                            //    GlobalMaterialEditor.Close();
+                            //    viewGlobalMaterials.Visibility = Visibility.Collapsed;
+                            //}
+
+                            viewGlobalMaterials.Visibility = Visibility.Collapsed;
                         }
-                    }
-                    break;
+
+                        ModelFile = vehicleFile;
+                    } break;
                 default:
-                    modelFile = new ModelFile(filename);
+                    ModelFile = new Driv3rModelFile(filename);
                     break;
                 }
 
-                if (modelFile.Models != null)
+                if (ModelFile.HasModels)
                 {
-                    ModelFile = modelFile;
                     SubTitle = filename;
-
+        
                     Viewport.InfiniteSpin = Settings.Configuration.GetSetting("InfiniteSpin", true);
-
+        
                     viewTextures.IsEnabled = true;
                     viewMaterials.IsEnabled = true;
                 }
 
                 OnPropertyChanged("HasGlobals");
+                
+                timer.Stop();
+                
+                DSC.Log("Loaded model file in {0}ms.", timer.ElapsedMilliseconds);
             }
         }
 
@@ -151,32 +160,32 @@ namespace Antilli
 
         public List<ModelVisual3DGroup> CurrentModel
         {
-            get { return currentModel; }
+            get { return _currentModel; }
             set
             {
-                currentModel = value;
+                _currentModel = value;
 
                 UpdateModels();
             }
         }
 
-        public IModelFile ModelFile
+        public Driv3rModelFile ModelFile
         {
-            get { return modelFile; }
+            get { return _modelFile; }
             set
             {
-                modelFile = value;
-
+                _modelFile = value;
+        
                 TextureCache.Flush();
                 OnPropertyChanged("ModelPackages");
-
+        
                 Packages.SelectedIndex = 0;
             }
         }
 
-        public ModelPackage SelectedModelPackage { get; private set; }
+        public ModelPackagePC SelectedModelPackage { get; private set; }
 
-        public List<ModelPackage> ModelPackages
+        public List<ModelPackagePC> ModelPackages
         {
             get
             {
@@ -187,25 +196,12 @@ namespace Antilli
             }
         }
 
-        public List<ModelResourcePackage> ModelResourcePackages
-        {
-            get
-            {
-                var modelFile = ModelFile as DSFModelFile;
-
-                if (modelFile != null)
-                    return modelFile.Models;
-
-                return null;
-            }
-        }
-
         public ModelVisual3DGroup SelectedModel
         {
-            get { return selectedModel; }
+            get { return _selectedModel; }
             set
             {
-                selectedModel = value;
+                _selectedModel = value;
 
                 foreach (ModelVisual3DGroup dModel in (List<ModelVisual3DGroup>)CurrentModel)
                 {
@@ -265,17 +261,28 @@ namespace Antilli
 
                 List<ModelGroupListItem> items = new List<ModelGroupListItem>();
 
-                for (int p = 0; p < SelectedModelPackage.Parts.Count; p++)
+                PartsGroup curPart = null;
+
+                foreach (var part in SelectedModelPackage.Parts)
                 {
-                    PartsGroup part = SelectedModelPackage.Parts[p];
-
-                    items.Add(new ModelGroupListItem(SelectedModelPackage, part));
-
-                    int pp = p;
-
-                    while (++pp < SelectedModelPackage.Parts.Count && SelectedModelPackage.Parts[pp].UID == part.UID)
-                        ++p;
+                    if (curPart == null || curPart.UID != part.UID)
+                    {
+                        items.Add(new ModelGroupListItem(SelectedModelPackage, part));
+                        curPart = part;
+                    }
                 }
+
+                //for (int p = 0; p < SelectedModelPackage.Parts.Count; p++)
+                //{
+                //    PartsGroup part = SelectedModelPackage.Parts[p];
+                //
+                //    items.Add(new ModelGroupListItem(SelectedModelPackage, part));
+                //
+                //    int pp = p;
+                //
+                //    while (++pp < SelectedModelPackage.Parts.Count && SelectedModelPackage.Parts[pp].UID == part.UID)
+                //        ++p;
+                //}
 
                 return items;
             }
@@ -286,53 +293,48 @@ namespace Antilli
             get { return BlendWeights.IsChecked ?? false; }
             set { BlendWeights.IsChecked = value; }
         }
+        
+        //public bool IsTextureViewerOpen
+        //{
+        //    get { return (TextureViewer != null) ? TextureViewer.IsVisible : false; }
+        //}
+        
+        //public bool IsMaterialEditorOpen
+        //{
+        //    get { return (MaterialEditor != null) ? MaterialEditor.IsVisible : false; }
+        //}
+        
+        //public bool IsGlobalMaterialEditorOpen
+        //{
+        //    get { return (GlobalMaterialEditor != null) ? GlobalMaterialEditor.IsVisible : false; }
+        //}
 
-        public bool IsTextureViewerOpen
-        {
-            get { return (TextureViewer != null) ? TextureViewer.IsVisible : false; }
-        }
-
-        public bool IsMaterialEditorOpen
-        {
-            get { return (MaterialEditor != null) ? MaterialEditor.IsVisible : false; }
-        }
-
-        public bool IsGlobalMaterialEditorOpen
-        {
-            get { return (GlobalMaterialEditor != null) ? GlobalMaterialEditor.IsVisible : false; }
-        }
-
-        public bool HasGlobals
-        {
-            get { return (ModelFile != null && ModelFile.HasSpooledFile) ? true : false; }
-        }
-
-        public void OpenTextureViewer()
-        {
-            TextureViewer = new TextureViewer(this);
-            TextureViewer.Show();
-
-            if (SelectedModelPackage != null)
-                TextureViewer.UpdateTextures();
-        }
-
-        public void OpenMaterialEditor()
-        {
-            MaterialEditor = new MaterialEditor(this);
-            MaterialEditor.Show();
-
-            if (SelectedModelPackage != null)
-                MaterialEditor.UpdateMaterials();
-        }
-
-        public void OpenGlobalMaterialEditor()
-        {
-            GlobalMaterialEditor = new MaterialEditor(this) {
-                ShowGlobalMaterials = true
-            };
-
-            GlobalMaterialEditor.Show();
-        }
+        //public void OpenTextureViewer()
+        //{
+        //    TextureViewer = new TextureViewer(this);
+        //    TextureViewer.Show();
+        //
+        //    if (SelectedModelPackage != null)
+        //        TextureViewer.UpdateTextures();
+        //}
+        
+        //public void OpenMaterialEditor()
+        //{
+        //    MaterialEditor = new MaterialEditor(this);
+        //    MaterialEditor.Show();
+        //
+        //    if (SelectedModelPackage != null)
+        //        MaterialEditor.UpdateMaterials();
+        //}
+        
+        //public void OpenGlobalMaterialEditor()
+        //{
+        //    GlobalMaterialEditor = new MaterialEditor(this) {
+        //        ShowGlobalMaterials = true
+        //    };
+        //
+        //    GlobalMaterialEditor.Show();
+        //}
 
         public void OnKeyDownReceived(object sender, KeyEventArgs e)
         {
@@ -379,9 +381,13 @@ namespace Antilli
                 return;
 
             TextureCache.FlushIfNeeded();
-            ModelPackage modelPackage = ModelPackages[index];
+            var modelPackage = ModelPackages[index];
 
             SelectedModelPackage = modelPackage;
+
+            // see if we need to load it
+            if (!SelectedModelPackage.HasModels)
+                SelectedModelPackage.GetInterface().Load();
 
             /* TODO: FIX ME
             if (!modelPackage.HasBlendWeights && UseBlendWeights)
@@ -392,15 +398,20 @@ namespace Antilli
 
             OnPropertyChanged("ModelGroups");
 
-            Groups.SelectedIndex = (modelPackage.Parts != null) ? 0 : -1;
-
-            if (modelPackage.Parts == null)
+            if (modelPackage.HasModels)
+            {
+                Groups.SelectedIndex = 0;
+            }
+            else
+            {
+                Groups.SelectedIndex = -1;
                 CurrentModel = null;
+            }
 
-            if (IsTextureViewerOpen)
-                TextureViewer.UpdateTextures();
-            if (IsMaterialEditorOpen)
-                MaterialEditor.UpdateMaterials();
+            //if (IsTextureViewerOpen)
+            //    TextureViewer.UpdateTextures();
+            //if (IsMaterialEditorOpen)
+            //    MaterialEditor.UpdateMaterials();
         }
 
         public void ResetLODButtons()
@@ -432,6 +443,11 @@ namespace Antilli
 
             ResetLODButtons();
 
+            VisualsLayer1.Children.Clear();
+            VisualsLayer2.Children.Clear();
+            VisualsLayer3.Children.Clear();
+            VisualsLayer4.Children.Clear();
+
             var lodButton = lodButtons[CurrentLod];
 
             if (lodButton.IsEnabled && lodButton.IsChecked == false)
@@ -439,17 +455,13 @@ namespace Antilli
             else if (!lodButton.IsEnabled)
             {
                 CurrentLod = 0;
+                BlendWeights.Visibility = System.Windows.Visibility.Hidden;
                 return;
             }
 
+            BlendWeights.Visibility = ((SelectedModelGroup.Parts[0].VertexBuffer.HasBlendWeights)) ? Visibility.Visible : System.Windows.Visibility.Hidden;
+
             List<ModelVisual3DGroup> models = new List<ModelVisual3DGroup>();
-
-            BlendWeights.Visibility = ((SelectedModelPackage.VertexBuffers[SelectedModelGroup.Parts[0].VertexBufferId].HasBlendWeights)) ? Visibility.Visible : System.Windows.Visibility.Hidden;
-
-            VisualsLayer1.Children.Clear();
-            VisualsLayer2.Children.Clear();
-            VisualsLayer3.Children.Clear();
-            VisualsLayer4.Children.Clear();
 
             foreach (PartsGroup part in SelectedModelGroup.Parts)
             {
@@ -460,7 +472,7 @@ namespace Antilli
 
                 ModelVisual3DGroup parts = new ModelVisual3DGroup();
 
-                foreach (IndexedMesh prim in group.Meshes)
+                foreach (MeshDefinition prim in group.Meshes)
                 {
                     DriverModelVisual3D dmodel = new DriverModelVisual3D(ModelFile, SelectedModelPackage, prim, UseBlendWeights);
 
@@ -553,27 +565,28 @@ namespace Antilli
                 return;
             }
 
-            if (!IsTextureViewerOpen)
-                OpenTextureViewer();
-
-            TextureViewer.SelectTexture(material.SubMaterials[0].Textures[0]);
+            //if (!IsTextureViewerOpen)
+            //    OpenTextureViewer();
+            //
+            //TextureViewer.SelectTexture(material.SubMaterials[0].Textures[0]);
         }
 
-        public void ExportGlobals()
-        {
-            if (HasGlobals)
-            {
-                ModelPackage modelPackage = ModelFile.SpooledFile.ModelData;
-
-                string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.SpooledFile.ChunkFile.Filename));
-
-                modelPackage.Compile();
-                ModelFile.SpooledFile.ChunkFile.Export(path);
-
-                string msg = String.Format("Successfully exported to '{0}'!", path);
-                MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-        }
+        //--nope
+        //public void ExportGlobals()
+        //{
+        //    if (HasGlobals)
+        //    {
+        //        ModelPackage modelPackage = ModelFile.SpooledFile.ModelData;
+        //
+        //        string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.SpooledFile.ChunkFile.Filename));
+        //
+        //        modelPackage.Compile();
+        //        ModelFile.SpooledFile.ChunkFile.Export(path);
+        //
+        //        string msg = String.Format("Successfully exported to '{0}'!", path);
+        //        MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+        //    }
+        //}
 
         public void ExportModelPackage()
         {
@@ -581,94 +594,97 @@ namespace Antilli
                 MessageBox.Show("Nothing to export!");
             else
             {
-                string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.ChunkFile.Filename));
+                //string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.ChunkFile.Filename));
+                //
+                //DSC.Log("Compiling ModelPackage...");
+                //SelectedModelPackage.Compile();
+                //
+                //DSC.Log("Exporting ModelPackage...");
+                //ModelFile.ChunkFile.Export(path);
+                //DSC.Log("Done!");
+                //
+                //string msg = String.Format("Successfully exported to '{0}'!", path);
+                //MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                DSC.Log("Compiling ModelPackage...");
-                SelectedModelPackage.Compile();
-
-                DSC.Log("Exporting ModelPackage...");
-                ModelFile.ChunkFile.Export(path);
-                DSC.Log("Done!");
-
-                string msg = String.Format("Successfully exported to '{0}'!", path);
-                MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Exporting is broken :(");
             }
         }
 
-        public void ExportModelPackageXML()
-        {
-            if (SelectedModelPackage == null)
-            {
-                MessageBox.Show("Nothing to export!");
-                return;
-            }
-
-            XmlDocument xml = new XmlDocument();
-
-            XmlElement mdpcNode = xml.AddElement("ModelPackage")
-                                        .AddAttribute("Type", Path.GetExtension(ModelFile.ChunkFile.Filename).Split('.')[1].ToUpper())
-                                        .AddAttribute("Version", 1);
-
-            XmlElement groupsNode = mdpcNode.AddElement("Groups");
-
-            var parts = SelectedModelPackage.Parts;
-            int nParts = SelectedModelPackage.Parts.Count;
-
-            for (int g = 0; g < nParts; g++)
-            {
-                var group = parts[g];
-
-                bool merged = (group.UID != 0 && g + 1 < nParts && parts[g + 1].UID == group.UID);
-
-                // Custom static extension allows us to conditionally add XML elements
-                var partsGroupNode = groupsNode.AddElementIf("MergedPartsGroup", merged)
-                                                    .AddAttributeIf("UID", group.UID, merged)
-                                                    .AddAttributeIf("File", String.Format("{0}.obj", group.UID), merged);
-
-                int m = 0;
-
-                bool loop = false;
-
-                do
-                {
-                    if (loop)
-                        group = parts[++g];
-
-                    var groupNode = partsGroupNode.AddElement("PartsGroup")
-                                                    .AddAttribute("Name", String.Format("Model{0}", ++m))
-                                                    .AddAttributeIf("UID", group.UID, !merged)
-                                                    .AddAttributeIf("File", String.Format("{0}.obj", group.UID), !merged);
-
-                    foreach (PartDefinition part in group.Parts)
-                    {
-                        if (part.Group == null)
-                            continue;
-
-                        groupNode.AddElement("Part")
-                                    .AddAttribute("Slot", part.ID + 1)
-                                    .AddAttribute("Type", part.Reserved)
-                                    .AddAttribute("Source", String.Format("Model{0}_{1}", m, part.ID + 1));
-                    }
-
-                    loop = (merged && g + 1 < nParts && parts[g + 1].UID == group.UID);
-
-                } while (loop);
-            }
-
-            string dir = Settings.Configuration.GetDirectory("Export");
-
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            string path = String.Format("{0}\\{1}.mdpc.xml",
-                dir, Path.GetFileName(ModelFile.ChunkFile.Filename));
-
-            xml.Save(path);
-
-            string msg = String.Format("Successfully exported XML file to '{0}'!", path);
-
-            MessageBox.Show(msg, "ModelPackage XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+        //--nope
+        //public void ExportModelPackageXML()
+        //{
+        //    if (SelectedModelPackage == null)
+        //    {
+        //        MessageBox.Show("Nothing to export!");
+        //        return;
+        //    }
+        //
+        //    XmlDocument xml = new XmlDocument();
+        //
+        //    XmlElement mdpcNode = xml.AddElement("ModelPackage")
+        //                                .AddAttribute("Type", Path.GetExtension(ModelFile.ChunkFile.Filename).Split('.')[1].ToUpper())
+        //                                .AddAttribute("Version", 1);
+        //
+        //    XmlElement groupsNode = mdpcNode.AddElement("Groups");
+        //
+        //    var parts = SelectedModelPackage.PartsGroups;
+        //    int nParts = SelectedModelPackage.PartsGroups.Count;
+        //
+        //    for (int g = 0; g < nParts; g++)
+        //    {
+        //        var group = parts[g];
+        //
+        //        bool merged = (group.UID != 0 && g + 1 < nParts && parts[g + 1].UID == group.UID);
+        //
+        //        // Custom static extension allows us to conditionally add XML elements
+        //        var partsGroupNode = groupsNode.AddElementIf("MergedPartsGroup", merged)
+        //                                            .AddAttributeIf("UID", group.UID, merged)
+        //                                            .AddAttributeIf("File", String.Format("{0}.obj", group.UID), merged);
+        //
+        //        int m = 0;
+        //
+        //        bool loop = false;
+        //
+        //        do
+        //        {
+        //            if (loop)
+        //                group = parts[++g];
+        //
+        //            var groupNode = partsGroupNode.AddElement("PartsGroup")
+        //                                            .AddAttribute("Name", String.Format("Model{0}", ++m))
+        //                                            .AddAttributeIf("UID", group.UID, !merged)
+        //                                            .AddAttributeIf("File", String.Format("{0}.obj", group.UID), !merged);
+        //
+        //            foreach (PartDefinition part in group.Parts)
+        //            {
+        //                if (part.Group == null)
+        //                    continue;
+        //
+        //                groupNode.AddElement("Part")
+        //                            .AddAttribute("Slot", part.ID + 1)
+        //                            .AddAttribute("Type", part.Reserved)
+        //                            .AddAttribute("Source", String.Format("Model{0}_{1}", m, part.ID + 1));
+        //            }
+        //
+        //            loop = (merged && g + 1 < nParts && parts[g + 1].UID == group.UID);
+        //
+        //        } while (loop);
+        //    }
+        //
+        //    string dir = Settings.Configuration.GetDirectory("Export");
+        //
+        //    if (!Directory.Exists(dir))
+        //        Directory.CreateDirectory(dir);
+        //
+        //    string path = String.Format("{0}\\{1}.mdpc.xml",
+        //        dir, Path.GetFileName(ModelFile.ChunkFile.Filename));
+        //
+        //    xml.Save(path);
+        //
+        //    string msg = String.Format("Successfully exported XML file to '{0}'!", path);
+        //
+        //    MessageBox.Show(msg, "ModelPackage XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+        //}
 
         public void ExportTexture(PCMPTexture texture)
         {
@@ -721,8 +737,8 @@ namespace Antilli
 
                     LoadSelectedModel();
 
-                    if (IsTextureViewerOpen)
-                            TextureViewer.ReloadTexture();
+                    //if (IsTextureViewerOpen)
+                    //        TextureViewer.ReloadTexture();
                 }
             }
         }
@@ -761,21 +777,27 @@ namespace Antilli
             };
 
             fileOpen.Click += (o, e) => OpenFile();
+            //fileOpen.Click += (o, e) => OpenFileNew();
             fileExit.Click += (o, e) => Environment.Exit(0);
 
-            viewTextures.Click += (o, e) => OpenTextureViewer();
-            viewMaterials.Click += (o, e) => OpenMaterialEditor();
-            viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
+            //viewTextures.Click += (o, e) => OpenTextureViewer();
+            //viewMaterials.Click += (o, e) => OpenMaterialEditor();
+            //viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
 
-            exportGlobals.Click += (o, e) => ExportGlobals();
-            exportMDPC.Click += (o, e) => ExportModelPackage();
-            exportXML.Click += (o, e) => ExportModelPackageXML();
+            //--nope sorry
+            //exportGlobals.Click += (o, e) => ExportGlobals();
+            //exportMDPC.Click += (o, e) => ExportModelPackage();
+            //exportXML.Click += (o, e) => ExportModelPackageXML();
 
-            chunkTest.Click += (o, e) => {
-                var cViewer = new ChunkViewer();
+            //chunkTest.Click += (o, e) => {
+            //    var cViewer = new ChunkViewer();
+            //
+            //    cViewer.Show();
+            //};
 
-                cViewer.Show();
-            };
+            var d3Log = new Action<string>((s) => {
+                Console.WriteLine(s);
+            });
 
             Viewport.Loaded += (o, e) => {
                 // Set up FOV and Near/Far distance
@@ -794,6 +816,349 @@ namespace Antilli
                         Viewport.DebugInfo = String.Format("Loaded with arguments: {0}", str);
                 }
 
+                #region disabled code
+#if MECREADER
+                foreach (var fi in Directory.GetFiles(@"C:\Dev\Research\Driv3r\Territory\Europe\GUI\backup", "*.MEC"))
+                {
+                    var mecFile = new SpoolableChunk(fi);
+                    var locFile = new LocaleReader(
+                        String.Format(@"C:\Dev\Research\Driv3r\Territory\Europe\Locale\English\GUI\{0}.txt", Path.GetFileNameWithoutExtension(fi)));
+
+                    var RMDL = ((SpoolableChunk)mecFile.Spoolers[0]).Spoolers[0] as SpoolableData;
+
+                    var log = new StringBuilder();
+                    var logFile = Path.ChangeExtension(fi, "log");
+
+                    var colSize = 20;
+
+                    if (RMDL != null && RMDL.Magic == (int)ChunkType.ReflectionsMenuDataChunk)
+                    {
+                        log.AppendLine(
+@"MEC Reader Log File
+File: {0}
+----", fi);
+
+                        using (var ms = new MemoryStream(RMDL.Buffer))
+                        {
+                            var type = ms.ReadInt32();
+                            var count = ms.ReadInt32();
+
+                            Debug.Assert((type == 0x191), "Type mismatch!");
+
+                            var unk_08 = ms.ReadInt32(); // 0x0C
+                            var unk_0C = ms.ReadInt32(); // 0x54
+                            var unk_10 = ms.ReadInt32(); // 0x20
+                            var unk_14 = ms.ReadInt32(); // 0x54
+                            var unk_18 = ms.ReadInt32(); // 0x14
+                            var unk_1C = ms.ReadInt32(); // 0x144
+                            var unk_20 = ms.ReadInt32(); // 0x20
+
+                            var readFloats1 = new Action(() => {
+                                //for (int ki = 0; ki < (unk_10 / 4); ki++)
+                                //    log.AppendLine(ms.ReadSingle().ToString());
+
+                                log.AppendColumn("Position", colSize).AppendLine("{0}, {1}",
+                                    ms.ReadSingle(),
+                                    ms.ReadSingle());
+
+                                log.AppendColumn("Size", colSize).AppendLine("{0}, {1}",
+                                    ms.ReadSingle(),
+                                    ms.ReadSingle());
+
+                                log.AppendColumn("Color", colSize).AppendLine("{0:N1}, {1:N1}, {2:N1}, {3:N1}",
+                                    ms.ReadSingle(),
+                                    ms.ReadSingle(),
+                                    ms.ReadSingle(),
+                                    ms.ReadSingle()).AppendLine();
+
+                            });
+
+                            var readFloats2 = new Action(() => {
+                                log.AppendColumn("Offset", colSize).AppendLine("0x{0:X}", ms.Position).AppendLine();
+
+                                var locId = ms.ReadInt32();
+
+                                log.AppendColumn("LocaleId", colSize).AppendLine("{0}\t; \"{1}\"", locId, locFile[locId]);
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadInt32());
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadInt32());
+
+                                log.AppendColumn("Scale X", colSize).AppendLine(ms.ReadSingle());
+                                log.AppendColumn("Scale Y", colSize).AppendLine(ms.ReadSingle());
+
+                                var nxt = ms.Position + 0x20;
+
+                                var pUnk1 = ms.ReadString();
+
+                                log.AppendColumn("Unknown", colSize).AppendLine((!String.IsNullOrEmpty(pUnk1)) ? pUnk1 : "<NULL>");
+
+                                ms.Position = nxt;
+
+                                nxt += 0x20;
+
+                                var pUnk2 = ms.ReadString();
+
+                                log.AppendColumn("Unknown", colSize).AppendLine((!String.IsNullOrEmpty(pUnk2)) ? pUnk2 : "<NULL>");
+
+                                ms.Position = nxt;
+                            });
+
+                            var readFloats3 = new Action(() => {
+                                log.AppendColumn("Offset", colSize).AppendLine("0x{0:X}", ms.Position);
+
+                                //log.AppendLine("Unk1: {0}", ms.ReadSingle());
+                                //log.AppendLine("Unk2: {0}", ms.ReadSingle());
+                                //log.AppendLine("Unk3: {0}", ms.ReadSingle());
+                                //log.AppendLine("Unk4: {0}", ms.ReadSingle());
+
+                                ms.Position += 0x10;
+
+                                log.AppendColumn("TexId", colSize).AppendLine(ms.ReadInt32());
+                            });
+
+                            var printHex = new Action<byte[], int, int, int>((bytes, offset, length, stride) => {
+
+                                for (int i = 0; i < length; i += stride)
+                                {
+                                    // hex column
+                                    for (int h = 0; h < stride; h++)
+                                    {
+                                        var idx = (offset + h + i);
+
+                                        if (idx < length)
+                                            log.AppendFormat("{0:X2} ", bytes[idx]);
+                                        else
+                                            log.Append("   ");
+                                    }
+
+                                    log.Append(" ");
+
+                                    // ascii column
+                                    for (int d = 0; d < stride; d++)
+                                    {
+                                        var idx = (offset + d + i);
+
+                                        if (!(idx < bytes.Length))
+                                            break;
+
+                                        var val = bytes[idx];
+
+                                        log.Append((val >= 0x20) ? (char)val : '.');
+                                    }
+
+                                    log.AppendLine();
+                                }
+
+                                log.AppendLine();
+
+                            });
+
+                            var printActionsCallbacks = new Action(() => {
+
+                                var infoTable = new string[8] {
+                                    "OnArrowKeyUp",
+                                    "OnArrowKeyDown",
+                                    "OnArrowKeyLeft",
+                                    "OnArrowKeyRight",
+                                    "OnPressed",
+                                    "Unknown",
+                                    "Unknown",
+                                    "Unknown"
+                                };
+
+                                log.AppendLine("----- Actions -----");
+
+                                //printHex(ms.ReadBytes(0x44), 0, 0x44, 16);
+
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadByte()).AppendLine();
+
+                                ms.Position += 3;
+
+                                for (int j = 0; j < 8; j++)
+                                {
+                                    var unk1 = ms.ReadByte();
+
+                                    ms.Position += 3;
+
+                                    var mVal = ms.ReadInt32();
+
+                                    log.AppendColumn(infoTable[j], 20).AppendFormat("{0}", (unk1 != 0xFF) ? String.Format("{0}, {1}", unk1, mVal) : "<NULL>");
+
+                                    if (unk1 != 0xFF)
+                                        log.AppendFormat("\t; {0} {1}", (unk1 >= 1) ? "open menu" : "highlight object", mVal);
+
+                                    log.AppendLine();
+                                }
+
+                                log.AppendLine();
+                                log.AppendLine("----- Callbacks -----");
+
+                                var baseOffset = ms.Position;
+
+                                for (int i = 0; i < 8; i++)
+                                {
+                                    ms.Position = baseOffset + (i * 0x20);
+
+                                    var val = ms.ReadString();
+
+                                    if (String.IsNullOrEmpty(val))
+                                        val = "<NoAction>";
+
+                                    log.AppendColumn(infoTable[i], 20).AppendLine(val);
+                                }
+
+                                ms.Position = baseOffset + 0x100;
+                            });
+
+                            for (int i = 0; i < count; i++)
+                            {
+                                log.AppendLine("==================== Menu {0} ====================", i + 1);
+
+                                var baseOffset = ms.Position;
+
+                                log.AppendColumn("Name", colSize).AppendLine(ms.ReadString(8).Trim('\0'));
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadInt32());
+
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadByte());
+
+                                var m_offset1 = (ms.Position += 4);
+
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadString());
+
+                                ms.Position = m_offset1 + 0x20;
+
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadString());
+
+                                ms.Position = m_offset1 + 0x40;
+
+                                log.AppendColumn("Unknown", colSize).AppendLine(ms.ReadByte()).AppendLine();
+
+                                ms.Position = baseOffset + unk_0C;
+
+                                var m_count = ms.ReadInt32();
+
+                                log.AppendColumn("Entries", colSize).AppendLine(m_count).AppendLine();
+
+                                for (int m = 0; m < m_count; m++)
+                                {
+                                    log.AppendLine("--------------- Entry {0} ---------------", m + 1);
+
+                                    var mm_count = ms.ReadInt32();
+
+                                    log.AppendColumn("Objects", colSize).AppendLine(mm_count).AppendLine();
+
+                                    for (int k = 0; k < mm_count; k++)
+                                    {
+                                        log.AppendLine("---------- Object {0} ----------", k + 1);
+
+                                        var k_type = ms.ReadByte();
+
+                                        log.AppendColumn("Type", colSize).AppendLine(k_type);
+
+                                        switch (k_type)
+                                        {
+                                        case 4:
+                                            {
+                                                readFloats1();
+                                            } break;
+                                        case 3:
+                                            {
+                                                readFloats1();
+
+                                                var k_count = ms.ReadInt32();
+
+                                                if (k_count != 0)
+                                                {
+                                                    log.AppendColumn("States", colSize).AppendLine(k_count).AppendLine();
+
+                                                    for (int kk = 0; kk < k_count; kk++)
+                                                    {
+                                                        log.AppendLine("----- State {0} -----", kk + 1);
+
+                                                        var kk_count = ms.ReadInt32();
+
+                                                        log.AppendColumn("Elements", colSize).AppendLine(kk_count).AppendLine();
+
+                                                        if (kk_count == 0)
+                                                            continue;
+
+                                                        for (int kki = 0; kki < kk_count; kki++)
+                                                        {
+                                                            log.AppendLine("--- Element {0} ---", kki + 1);
+
+                                                            var j = ms.ReadByte();
+
+                                                            log.AppendColumn("Type", colSize).AppendLine(j);
+
+                                                            switch (j)
+                                                            {
+                                                            case 2:
+                                                                {
+                                                                    readFloats1();
+                                                                    readFloats2();
+
+                                                                    //log.AppendLine("Skipping 0x{0:X} of data @ 0x{1:X}...", unk_14, ms.Position);
+                                                                    //ms.Position += unk_14;
+                                                                } break;
+                                                            case 1:
+                                                                {
+                                                                    readFloats1();
+                                                                    readFloats3();
+
+                                                                    //log.AppendLine("Skipping 0x{0:X} of data @ 0x{1:X}...", unk_18, ms.Position);
+                                                                    //ms.Position += unk_18;
+                                                                } break;
+                                                            default:
+                                                                log.AppendLine("Unrecognized type.");
+                                                                break;
+                                                            }
+
+                                                            log.AppendLine();
+                                                        }
+                                                    }
+                                                }
+
+                                                printActionsCallbacks();
+
+                                                //log.AppendLine("Skipping 0x{0:X} of data @ 0x{1:X}...", unk_1C, ms.Position);
+                                                //ms.Position += unk_1C;
+                                            } break;
+                                        case 2:
+                                            {
+                                                readFloats1();
+                                                readFloats2();
+
+                                                //var locId = ms.ReadInt32();
+
+                                                //log.AppendLine("LocaleId: {0}", locId);
+                                                //
+                                                //log.AppendLine("Skipping 0x{0:X} of data @ 0x{1:X}...", (unk_0C - 4), ms.Position);
+                                                //ms.Position += (unk_0C - 4);
+                                            } break;
+                                        case 1:
+                                            {
+                                                readFloats1();
+                                                readFloats3();
+                                                //log.AppendLine("Skipping 0x{0:X} of data @ 0x{1:X}...", unk_18, ms.Position);
+                                                //ms.Position += unk_18;
+                                            } break;
+                                        default:
+                                            Debug.Fail(String.Format("Unknown type @ offset 0x{0:X}!!!", ms.Position - 1));
+                                            Environment.Exit(1);
+                                            break;
+                                        }
+
+                                        log.AppendLine();
+                                    }
+                                }
+                            }
+                        }
+
+                        File.WriteAllText(logFile, log.ToString());
+                    }
+
+                    mecFile.Dispose();
+                }
+#endif
                 /*
                 var filename = @"C:\Dev\Research\Driv3r\__Research\PS2\city3.chunk";
                 //var vvsFile = new DSCript.Spoolers.SpoolableChunk(filename);
@@ -889,7 +1254,7 @@ namespace Antilli
                 };
 
                 vvsFile.Spoolers.Add(newCop);
-#endif
+            #endif
 
                 //vvsFile.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(filename)));
 
@@ -924,6 +1289,7 @@ namespace Antilli
                 //CurrentModel = groups;
                 //
                 //DSC.Log("Done");
+                #endregion
             };
         }
 

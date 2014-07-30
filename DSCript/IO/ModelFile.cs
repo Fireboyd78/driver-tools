@@ -9,112 +9,249 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using DSCript.Spooling;
+
 namespace DSCript.Models
 {
-    public interface IModelFile
+    public class StandaloneTextureData : SpoolableResource<SpoolablePackage>
     {
-        ChunkFile ChunkFile { get; set; }
-        List<ModelPackage> Models { get; set; }
+        public short UID { get; set; }
 
-        StandaloneModelFile SpooledFile { get; set; }
+        public List<PCMPMaterial> StandaloneTextures { get; set; }
 
-        bool HasSpooledFile { get; }
-
-        void LoadModels();
-    }
-
-    public abstract class StandaloneModelFile : ModelFile
-    {
-        public abstract ModelPackage ModelData { get; }
-
-        public abstract List<PCMPMaterial> StandaloneTextures { get; set; }
-
-        public abstract PCMPData MaterialData { get; }
-
-        public string Name { get; set; }
-
-        public StandaloneModelFile(string filename) : base(filename)
+        protected override void Load()
         {
-        }
-    }
+            var upst = Spooler.GetFirstChild(ChunkType.StandaloneTextures) as SpoolableBuffer;
+            var mdpc = Spooler.GetFirstChild(ChunkType.ModelPackagePC) as SpoolableBuffer;
 
-    public class ModelFile : IModelFile, IDisposable
-    {
-        public ChunkFile ChunkFile { get; set; }
+            if (upst == null || mdpc == null)
+                return;
 
-        public List<ModelPackage> Models { get; set; }
+            var modelData = SpoolableResourceFactory.Create<ModelPackagePC>(mdpc, true);
 
-        StandaloneModelFile IModelFile.SpooledFile { get; set; }
+            var materials = modelData.Materials;
 
-        bool IModelFile.HasSpooledFile
-        {
-            get { return (@this.SpooledFile != null); }
-        }
-
-        protected IModelFile @this
-        {
-            get { return ((IModelFile)this); }
-        }
-
-        public virtual void Dispose()
-        {
-            if (ChunkFile != null)
-                ChunkFile.Dispose();
-            if (@this.SpooledFile != null)
-                @this.SpooledFile = null;
-
-            if (Models != null)
+            using (var f = upst.GetMemoryStream())
             {
-                for (int i = 0; i < Models.Count; i++)
-                    Models[i] = null;
+                f.Position = 0x10;
 
-                Models.Clear();
-            }
-        }
+                UID = f.ReadInt16();
 
-        public virtual void LoadModels()
-        {
-            Models = new List<ModelPackage>();
+                var count = f.ReadInt16();
 
-            for (int i = 0; i < ChunkFile.Chunks.Count; i++)
-            {
-                for (int k = 0; k < ChunkFile.Chunks[i].Entries.Count; k++)
+                if (count != materials.Count)
+                    throw new Exception("Failed to load StandaloneTextureData - texture count mismatch!");
+
+                StandaloneTextures = new List<PCMPMaterial>(count);
+
+                for (int i = 0; i < count; i++)
                 {
-                    ChunkEntry entry = ChunkFile.Chunks[i].Entries[k];
+                    var matId = f.ReadInt16();
 
-                    switch (entry.GetChunkType())
-                    {
-                    case ChunkType.ModelPackagePC:
-                        Models.Add(new ModelPackagePC(ChunkFile.GetBlockData(entry)) {
-                            ModelFile = this
-                        });
-                        break;
-                    default:
-                        break;
-                    }
+                    StandaloneTextures.Add(materials[matId]);
+
+                    f.Position += 0x2;
                 }
             }
 
-            if (Models.Count >= 1)
-                DSC.Log("{0} model {1} loaded.", Models.Count, (Models.Count != 1) ? "packages" : "package");
-            else
-                Models = null;
+            DSC.Log("Successfully loaded StandaloneTextureData!");
         }
 
-        protected virtual void LoadFile(string filename)
+        protected override void Save()
         {
-            ChunkFile = new ChunkFile(filename);
-            LoadModels();
-        }
-
-        protected ModelFile()
-        {
-
-        }
-
-        public ModelFile(string filename)
-        {
-            LoadFile(filename);
+            throw new NotImplementedException();
         }
     }
+
+    public class StandaloneTextureFile : FileChunker
+    {
+        public StandaloneTextureData StandaloneTextureData { get; set; }
+
+        public PCMPMaterial GetStandaloneTexture(int id)
+        {
+            return (HasTextures) ? StandaloneTextureData.StandaloneTextures[id] : null;
+        }
+
+        public override bool CanSave
+        {
+            get { return (HasTextures); }
+        }
+
+        public bool HasTextures
+        {
+            get { return (StandaloneTextureData != null && StandaloneTextureData.StandaloneTextures.Count > 0); }
+        }
+
+        protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
+        {
+            if (sender is SpoolablePackage && sender.Magic == 0x0)
+                StandaloneTextureData = sender.AsResource<StandaloneTextureData>(true);
+
+            base.OnSpoolerLoaded(sender, e);
+        }
+
+        public StandaloneTextureFile() { }
+        public StandaloneTextureFile(string filename) : base(filename) { }
+    }
+
+    public class Driv3rModelFile : FileChunker
+    {
+        public List<ModelPackagePC> Models { get; set; }
+
+        public ModelPackagePC GetModelPackage(int uid)
+        {
+            return (HasModels) ? Models.FirstOrDefault((m) => m.UID == uid) : null;
+        }
+
+        public bool HasModels
+        {
+            get { return (Models != null && Models.Count > 0); }
+        }
+
+        public override bool CanSave
+        {
+            get { return HasModels; }
+        }
+
+        protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
+        {
+            if ((ChunkType)sender.Magic == ChunkType.ModelPackagePC)
+            {
+                var mdpc = SpoolableResourceFactory.Create<ModelPackagePC>(sender);
+                mdpc.ModelFile = this;
+                
+                Models.Add(mdpc);
+            }
+
+            base.OnSpoolerLoaded(sender, e);
+        }
+
+        protected override void OnFileLoadBegin()
+        {
+            Models = new List<ModelPackagePC>();
+
+            base.OnFileLoadBegin();
+        }
+
+        protected override void OnFileLoadEnd()
+        {
+            if (Models.Count >= 1)
+                DSC.Log("{0} model {1} loaded.", Models.Count, (Models.Count != 1) ? "packages" : "package");
+
+            base.OnFileLoadEnd();
+        }
+
+        public Driv3rModelFile() { }
+        public Driv3rModelFile(string filename) : base(filename) { }
+    }
+
+    public class Driv3rVehiclesFile : Driv3rModelFile
+    {
+        public StandaloneTextureFile VehicleGlobals { get; set; }
+        public List<HierarchyData> Hierarchies { get; set; }
+
+        public override bool CanSave
+        {
+            get { return (base.CanSave && (Hierarchies != null && Hierarchies.Count > 0)); }
+        }
+
+        public bool HasHierarchies
+        {
+            get { return (Hierarchies != null && Hierarchies.Count > 0); }
+        }
+
+        public bool HasVehicleGlobals
+        {
+            get { return (VehicleGlobals != null && VehicleGlobals.HasTextures); }
+        }
+
+        public bool HasIndividualModels
+        {
+            get { return (HasModels && HasHierarchies) ? (Models.Count == Hierarchies.Count) : false; }
+        }
+
+        protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
+        {
+            switch ((ChunkType)sender.Magic)
+            {
+            case ChunkType.VehicleHierarchy:
+                Hierarchies.Add(sender.AsResource<HierarchyData>(true));
+                break;
+            }
+
+            base.OnSpoolerLoaded(sender, e);
+        }
+
+        protected override void OnFileLoadBegin()
+        {
+            Hierarchies = new List<HierarchyData>();
+
+            base.OnFileLoadBegin();
+        }
+
+        protected override void OnFileLoadEnd()
+        {
+            if (Models.Count == Hierarchies.Count)
+                DSC.Log("Finished loading a VVS file!");
+
+            base.OnFileLoadEnd();
+        }
+
+        public Driv3rVehiclesFile() { }
+        public Driv3rVehiclesFile(string filename) : base(filename) { }
+    }
+
+    public class HierarchyData : SpoolableResource<SpoolableBuffer>
+    {
+        public class PartEntry
+        {
+            public short Type { get; set; }
+            public short Unknown1 { get; set; }
+
+            public short Unknown2 { get; set; }
+            public short Unknown3 { get; set; }
+        }
+
+        public ModelPackage ModelPackage { get; set; }
+
+        public int UID { get; set; }
+        public int Reserved { get; set; }
+
+        protected override void Load()
+        {
+            var awhf = this.Spooler;
+
+            using (var f = awhf.GetMemoryStream())
+            {
+                f.Position = 0xC;
+
+                if (f.ReadInt16() != 6)
+                    throw new Exception("Cannot load hierarchy data - unsupported type");
+
+                var nParts = f.ReadInt16();
+
+                UID = f.ReadInt32();
+
+                var colDataOffset = f.ReadInt32();
+
+                Reserved = f.ReadInt32();
+
+                var t1Count = f.ReadInt16();
+                var t2Count = f.ReadInt16();
+                var t3Count = f.ReadInt16();
+                var t4Count = f.ReadInt16();
+
+                f.Align(16);
+
+                return;
+            }
+        }
+
+        protected override void Save()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    
 }

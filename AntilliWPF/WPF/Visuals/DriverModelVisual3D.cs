@@ -43,34 +43,34 @@ namespace Antilli
             Type thisType = typeof(DriverModelVisual3D);
 
             ModelFileProperty =
-                DependencyProperty.Register("ModelFile", typeof(IModelFile), thisType,
+                DependencyProperty.Register("ModelFile", typeof(Driv3rModelFile), thisType,
                 new PropertyMetadata(null, null));
             ModelPackageProperty =
-                DependencyProperty.Register("ModelPackage", typeof(ModelPackage), thisType,
+                DependencyProperty.Register("ModelPackage", typeof(ModelPackagePC), thisType,
                 new PropertyMetadata(null, null));
             MeshProperty =
-                DependencyProperty.Register("Mesh", typeof(IndexedMesh), thisType,
+                DependencyProperty.Register("Mesh", typeof(MeshDefinition), thisType,
                 new UIPropertyMetadata(null, MeshChanged));
             MaterialProperty =
                 DependencyProperty.Register("Material", typeof(PCMPMaterial), thisType,
                 new UIPropertyMetadata(null, MaterialChanged));
         }
 
-        public IModelFile ModelFile
+        public Driv3rModelFile ModelFile
         {
-            get { return (IModelFile)GetValue(ModelFileProperty); }
+            get { return (Driv3rModelFile)GetValue(ModelFileProperty); }
             protected set { SetValue(ModelFileProperty, value); }
         }
 
-        public ModelPackage ModelPackage
+        public ModelPackagePC ModelPackage
         {
-            get { return (ModelPackage)GetValue(ModelPackageProperty); }
+            get { return (ModelPackagePC)GetValue(ModelPackageProperty); }
             protected set { SetValue(ModelPackageProperty, value); }
         }
 
-        public IndexedMesh Mesh
+        public MeshDefinition Mesh
         {
-            get { return (IndexedMesh)GetValue(MeshProperty); }
+            get { return (MeshDefinition)GetValue(MeshProperty); }
             set { SetValue(MeshProperty, value); }
         }
 
@@ -193,14 +193,14 @@ namespace Antilli
             else
             {
                 matGroup.Children.Add(new DiffuseMaterial() {
-                    Brush = new SolidColorBrush(Color.FromArgb(64, 255, 64, 128))
+                    Brush = new SolidColorBrush(Color.FromArgb(255, 255, 64, 128))
                 });
             }
 
             base.Material = matGroup;
         }
 
-        public DriverModelVisual3D(IModelFile modelFile, ModelPackage modelPackage, IndexedMesh mesh, bool useBlendWeights)
+        public DriverModelVisual3D(Driv3rModelFile modelFile, ModelPackagePC modelPackage, MeshDefinition mesh, bool useBlendWeights)
             : base()
         {
             DoubleSided = true;

@@ -384,7 +384,7 @@ namespace Zartex.LogicExport
         {
             get
             {
-                return unicode;
+                return Encoding.Unicode.GetString(unicode);
             }
             set
             {

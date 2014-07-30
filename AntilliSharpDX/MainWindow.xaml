@@ -1,0 +1,44 @@
+﻿<Window x:Class="Antilli.MainWindow" Title="{Binding Title, FallbackValue=Antilli}" Width="525" Height="350"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:htx="http://helixtoolkit.codeplex.com/wpf/SharpDX"
+        xmlns:sdx="clr-namespace:SharpDX;assembly=SharpDX"
+        xmlns:sdx9="clr-namespace:SharpDX.Direct3D9;assembly=SharpDX.Direct3D9"
+        xmlns:Themes="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero"
+        xmlns:local="clr-namespace:Antilli"
+        mc:Ignorable="d">
+    <Window.DataContext>
+        <local:ModelViewer/>
+    </Window.DataContext>
+    <Window.Resources>
+        <DataTemplate x:Key="MeshTemplate">
+            <htx:MeshGeometryModel3D Geometry="{Binding Geometry}" Transform="{Binding Transform}" Material="{Binding Material}"/>
+        </DataTemplate>
+        <TranslateTransform3D x:Key="DefaultTransform" OffsetX="-5" OffsetY="0" OffsetZ="-5"/>
+    </Window.Resources>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="File">
+                <MenuItem Header="Open"/>
+                <MenuItem Header="Close"/>
+            </MenuItem>
+        </Menu>
+        <htx:Viewport3DX Name="Viewport" BackgroundColor="{Binding BackgroundColor}" Camera="{Binding Camera}" RenderTechnique="{Binding RenderTechnique}">
+            <htx:Viewport3DX.Background>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                    <GradientStop Color="#FF282828" Offset="0.75" />
+                    <GradientStop Color="#FF101010" Offset="1" />
+                </LinearGradientBrush>
+            </htx:Viewport3DX.Background>
+            <htx:AmbientLight3D Color="{Binding AmbientLightColor}"/>
+            <htx:DirectionalLight3D Color="{Binding DirectionalLightColor}" Direction="-1.5,0.5,-0.8"/>
+            <htx:DirectionalLight3D Color="{Binding DirectionalLightColor}" Direction="1.5,0.5,-0.8"/>
+            <htx:DirectionalLight3D Color="{Binding DirectionalLightColor}" Direction="0,-0.5,-1"/>
+            <htx:LineGeometryModel3D Geometry="{Binding Grid}" Thickness="0.5" Transform="{DynamicResource DefaultTransform}" Color="{Binding GridColor}"/>
+            <htx:ItemsModel3D ItemTemplate="{StaticResource MeshTemplate}" ItemsSource="{Binding Models}"/>
+        </htx:Viewport3DX>
+    </DockPanel>
+</Window>

@@ -1,0 +1,73 @@
+# Magic number lookup file
+# Encoding: UTF8 w/out BOM
+
+# DO NOT MODIFY ANYTHING ABOVE THIS LINE
+# --------------------------------------
+
+#!
+ ==============================================================================
+ >> This file is VERY strict, do not edit unless you know what you're doing! <<
+ 
+ Usage:
+  [MAGC]="ext" ;Inline comment
+  |      |     |---- Commment delimiter (parser will skip rest of line)
+  |      |---- File extension if conditions met (Do not use periods)
+  |--- Magic number (parsed as a 32-bit unsigned integer; NO MORE THAN 4 CHARS)
+  
+  # Alternative syntax
+  0x4347414D="ext" ;Directly assign a little-endian 32-bit unsigned integer
+ 
+ Notes:
+  - If no conditions are met, the default extension is "bin" (i.e. Binary data)
+ 
+  - Use '#' for single-line comments
+  - Use '#!' to open multi-line comments, '!#' to close them
+ ==============================================================================
+!#
+
+# --------------- Globals --------------- #
+# Chunked files
+[CHNK]="chunk"
+
+# Music/Speech
+0x92783465="xa" ;[e4x’]
+
+# FMV's
+[BIKi]="xmv"
+
+# Hackish way of finding mood files
+[SKYD]="txt" ;Partial match "SKYDOME_NAME:"
+[LIGH]="txt" ;Partial match "LIGHT_AMBIENT_COLOUR:" (DPL)
+
+# --------------- Driv3r --------------- #
+# Animations
+[HPC1]="ab3"
+
+# Sound database
+[01KB]="gsd"
+
+# Sound defs.
+[01MM]="dat" ;FEMUSIC.DAT
+[01SM]="dat" ;MENU.DAT
+
+# Vehicle sound banks
+[81SV]="vsb"
+
+# FMV's
+[RXAV]="xmv" ;PS2 only
+
+# --------------- Driver: Parallel Lines --------------- #
+# Sound database
+[BK31]="gsd"
+[CS11]="gsd" ;PS2 only
+
+# Sound defs.
+[CS12]="dat" ;CHRSOUND.DAT
+[MM30]="dat" ;FEMUSIC.DAT
+[MS30]="dat" ;MENU.DAT
+
+# Music/Speech
+[XA30]="xa"
+
+# Vehicle sound banks
+[VB10]="vsb"

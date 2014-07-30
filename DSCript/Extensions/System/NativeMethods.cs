@@ -45,7 +45,8 @@ namespace System
         internal static extern bool DeleteObject(IntPtr hObject);
 
         [DllImport("user32.dll")]
-        public static extern int SendMessage(IntPtr hWnd,
+        public static extern int SendMessage(
+            IntPtr hWnd,
             int Msg,
             int wParam,
             int lParam);
@@ -55,13 +56,15 @@ namespace System
 
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool WritePrivateProfileString(string section,
+        public static extern bool WritePrivateProfileString(
+            string section,
             string key,
             string val,
             string filePath);
 
         [DllImport("kernel32.dll")]
-        public static extern int GetPrivateProfileString(string section,
+        public static extern int GetPrivateProfileString(
+            string section,
             string key,
             string def,
             [In, Out] char[] retVal,
@@ -69,7 +72,8 @@ namespace System
             string filePath);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr CreateFile(string lpFileName,
+        public static extern IntPtr CreateFile(
+            string lpFileName,
             uint dwDesiredAccess,
             uint dwShareMode,
             IntPtr lpSecurityAttributes,
@@ -104,5 +108,38 @@ namespace System
             UInt32 dwFileOffsetHigh,
             UInt32 dwFileOffsetLow,
             UIntPtr dwNumberOfBytesToMap);
+
+        [DllImport("user32.dll")]
+        public static extern bool SetWindowPos(
+            IntPtr hWnd,
+            [In, Optional] IntPtr hWndInsertAfter,
+            int X,
+            int Y,
+            int cx,
+            int cy,
+            uint uFlags);
+
+        [DllImport("user32.dll")]
+        public static extern int GetWindowLong(
+            IntPtr hWnd,
+            int nIndex);
+
+        [DllImport("user32.dll")]
+        public static extern int SetWindowLong(
+            IntPtr hWnd,
+            int nIndex,
+            uint dwNewLong);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetClassInfoEx(
+            IntPtr hinst,
+            string lpszClass,
+            [Out] IntPtr lpwcx);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
+        public static extern int GetClassName(
+            IntPtr hWnd,
+            [Out] string lpClassName,
+            int nMaxCount);
     }
 }

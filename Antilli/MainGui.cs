@@ -14,7 +14,10 @@ using System.Windows.Media.Imaging;
 using HelixToolkit.Wpf;
 
 using DSCript;
+
+#if LEGACY
 using DSCript.IO;
+#endif
 
 using Antilli.IO;
 using Antilli.Models;

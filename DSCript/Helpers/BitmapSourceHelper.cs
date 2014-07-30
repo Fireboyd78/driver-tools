@@ -55,7 +55,6 @@ namespace DSCript
                     {
                     case FREE_IMAGE_FORMAT.FIF_UNKNOWN:
                         {
-                            stream.Seek(0, SeekOrigin.Begin);
                             return null;
                         }
                     case FREE_IMAGE_FORMAT.FIF_BMP:
@@ -76,37 +75,28 @@ namespace DSCript
                                 return null;
                             }
                         }
-                    case FREE_IMAGE_FORMAT.FIF_DDS:
-                        {
-
-                        } break;
                     }
 
-                    if (format == FREE_IMAGE_FORMAT.FIF_UNKNOWN)
+                    FIBITMAP bmap = FreeImage.LoadFromStream(stream, ref format);
+
+                    if (!bmap.IsNull)
                     {
-                        
-                    }
-                    else if (format == FREE_IMAGE_FORMAT.FIF_BMP || format == FREE_IMAGE_FORMAT.FIF_PNG)
-                    {
-                        using (Bitmap bitmap = new Bitmap(stream))
+                        bool useAlpha = flags.HasFlag(BitmapSourceLoadFlags.Transparency);
+                        bool alphaOnly = flags.HasFlag(BitmapSourceLoadFlags.AlphaMask);
+
+                        if (alphaOnly)
+                            bmap = FreeImage.GetChannel(bmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+
+                        bmap = (useAlpha) ? FreeImage.ConvertTo32Bits(bmap) : FreeImage.ConvertTo24Bits(bmap);
+
+                        using (Bitmap bitmap = FreeImage.GetBitmap(bmap))
                         {
                             return bitmap.ToBitmapSource();
                         }
                     }
-
-                    FIBITMAP bmap = FreeImage.LoadFromStream(stream, FREE_IMAGE_LOAD_FLAGS.RAW_DISPLAY, ref format);
-
-                    bool useAlpha = flags.HasFlag(BitmapSourceLoadFlags.Transparency);
-                    bool alphaOnly = flags.HasFlag(BitmapSourceLoadFlags.AlphaMask);
-
-                    if (alphaOnly)
-                        bmap = FreeImage.GetChannel(bmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
-
-                    bmap = (useAlpha) ? FreeImage.ConvertTo32Bits(bmap) : FreeImage.ConvertTo24Bits(bmap);
-
-                    using (Bitmap bitmap = FreeImage.GetBitmap(bmap))
+                    else
                     {
-                        return bitmap.ToBitmapSource();
+                        return null;
                     }
                 }
                 catch (BadImageFormatException)

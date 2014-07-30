@@ -56,7 +56,7 @@
             </summary>
         </member>
         <member name="M:Zartex.Main.SafeAddControl(System.Windows.Forms.Control)">
-            <summary> Safely adds a control to the form </summary>
+            <summary> Safely adds a control to the form.</summary>
         </member>
         <member name="F:Zartex.Main.components">
             <summary>

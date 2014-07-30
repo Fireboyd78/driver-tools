@@ -8,7 +8,7 @@ namespace DSCript
     /// <summary>
     /// An enumeration for holding values of every possible type within a Chunk file
     /// </summary>
-    public enum ChunkType : uint
+    public enum ChunkType : int
     {
 
         /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -23,18 +23,10 @@ namespace DSCript
          * 
          * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-        // =======================================================================================
-        // ----------------------------------------GLOBAL-----------------------------------------
-        // =======================================================================================
-        /// <summary>
-        /// A type representing an unknown value (Note: This is used by tools only!)
-        /// </summary>
-        Unknown = 0xFFFFFFFF,
-
         /// <summary>
         /// A type representing a root chunk block (Note: This is used by tools only!)
         /// </summary>
-        ChunkRoot = 0x7FFFFFFF,
+        Unknown = 0x7FFFFFFF,
 
         /// <summary>
         /// [CHNK] - The header for a CHUNK block
@@ -331,9 +323,9 @@ namespace DSCript
         RegionSceneData = 0x444E4353,
 
         /// <summary>
-        /// [OGCD] - No research has been done on this format
+        /// [OCGD] - No research has been done on this format
         /// </summary>
-        OccluderGameData = 0x444743F4,
+        OccluderGameData = 0x4447434F,
 
         /// <summary>
         /// [IRCT] - No research has been done on this format
@@ -632,7 +624,7 @@ namespace DSCript
         /// <summary>
         /// [VXCK] - No research has been done on this format
         /// </summary>
-        PooledVertexChunk = 0x4B435856,
+        PooledVertexBufferChunk = 0x4B435856,
 
         /// <summary>
         /// [VXHD] - No research has been done on this format
@@ -647,7 +639,7 @@ namespace DSCript
         /// <summary>
         /// [VXDT] - No research has been done on this format
         /// </summary>
-        PooledVertexBuffer = 0x54445856,
+        PooledVertexBufferData = 0x54445856,
 
         /// <summary>
         /// [VCDL] - No research has been done on this format

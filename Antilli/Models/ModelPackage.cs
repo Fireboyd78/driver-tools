@@ -720,7 +720,9 @@ namespace Antilli.Models
                 return;
 
                 // Read PCMP
+            #pragma warning disable
             LoadPCMP:
+            #pragma warning enable
                 if (pcmpOffset == 0)
                     return;
 

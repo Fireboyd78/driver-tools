@@ -3,8 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:at="clr-namespace:Antilli"
         xmlns:dsc="clr-namespace:DSCript.Spoolers;assembly=libDSC"
+        xmlns:dsc2="clr-namespace:DSCript.Spooling;assembly=libDSC"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="Chunk Viewer" Height="620" Width="725">
+    <at:ObservableWindow.Resources>
+        
+    </at:ObservableWindow.Resources>
     <at:ObservableWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#FF282828" Offset="0.75" />
@@ -20,9 +24,27 @@
             <GroupBox Header="Chunks" Margin="5">
                 <GroupBox.Resources>
                     <x:Array x:Key="MenuExtensions" Type="{x:Type sys:Object}">
+                        <MenuItem Header="Export" Click="ExportSpooler"/>
+                        <Separator/>
                         <MenuItem Header="Remove" Click="RemoveSpooler"/>
                         <MenuItem Header="Rename..." Click="RenameSpooler"/>
                     </x:Array>
+                    <ContextMenu x:Key="CMBase">
+                        <ContextMenu.ItemsSource>
+                            <CompositeCollection>
+                                <CollectionContainer Collection="{StaticResource MenuExtensions}"/>
+                            </CompositeCollection>
+                        </ContextMenu.ItemsSource>
+                    </ContextMenu>
+                    <ContextMenu x:Key="CMExt">
+                        <ContextMenu.ItemsSource>
+                            <CompositeCollection>
+                                <MenuItem Header="Replace..." Click="ReplaceBuffer"/>
+                                <Separator/>
+                                <CollectionContainer Collection="{StaticResource MenuExtensions}"/>
+                            </CompositeCollection>
+                        </ContextMenu.ItemsSource>
+                    </ContextMenu>
                     <dsc:SpoolerMagicConverter x:Key="MagicConverter"/>
                     <DataTemplate x:Key="SpoolerTemplate">
                         <StackPanel Orientation="Horizontal" Margin="0">
@@ -30,44 +52,28 @@
                             <TextBlock Text="{Binding Description}" VerticalAlignment="Center" Padding="2"/>
                         </StackPanel>
                     </DataTemplate>
-                    <DataTemplate DataType="{x:Type dsc:Spooler}">
+                    <DataTemplate DataType="{x:Type dsc2:Spooler}">
                         <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}"/>
                     </DataTemplate>
-                    <DataTemplate DataType="{x:Type dsc:SpoolableData}">
-                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}">
-                            <ContentPresenter.ContextMenu>
-                                <ContextMenu>
-                                    <ContextMenu.ItemsSource>
-                                        <CompositeCollection>
-                                            <MenuItem Header="Replace..." Click="ReplaceBuffer"/>
-                                            <Separator/>
-                                            <CollectionContainer Collection="{StaticResource MenuExtensions}"/>
-                                        </CompositeCollection>
-                                    </ContextMenu.ItemsSource>
-                                </ContextMenu>
-                            </ContentPresenter.ContextMenu>
-                        </ContentPresenter>
+                    <DataTemplate DataType="{x:Type dsc2:SpoolableBuffer}">
+                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}" ContextMenu="{StaticResource CMExt}"/>
                     </DataTemplate>
-                    <HierarchicalDataTemplate DataType="{x:Type dsc:SpoolableChunk}" ItemsSource="{Binding Spoolers}">
-                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}">
-                            <ContentPresenter.ContextMenu>
-                                <ContextMenu>
-                                    <ContextMenu.ItemsSource>
-                                        <CompositeCollection>
-                                            <CollectionContainer Collection="{StaticResource MenuExtensions}"/>
-                                        </CompositeCollection>
-                                    </ContextMenu.ItemsSource>
-                                </ContextMenu>
-                            </ContentPresenter.ContextMenu>
-                        </ContentPresenter>
+                    <HierarchicalDataTemplate DataType="{x:Type dsc2:SpoolablePackage}" ItemsSource="{Binding Spoolers}">
+                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}" ContextMenu="{StaticResource CMBase}"/>
                     </HierarchicalDataTemplate>
+                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                        <EventSetter Event="TreeViewItem.MouseRightButtonDown" Handler="TreeViewItem_MouseRightButtonDown"/>
+                    </Style>
                 </GroupBox.Resources>
             
                 <TreeView Name="ChunkList" ItemsSource="{Binding Spoolers}" SelectedItemChanged="SpoolerSelected"/>
             </GroupBox>
             <GroupBox Header="Information" Margin="5" Grid.Column="1">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <TextBlock Text="{Binding SpoolerInfo}" Margin="5"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <StackPanel Orientation="Vertical" Margin="5">
+                        <TextBlock Text="{Binding SpoolerInfo}" FontFamily="Consolas"/>
+                        <Image Name="ViewImage" Source="{Binding CurrentImage}" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                    </StackPanel>
                 </ScrollViewer>
             </GroupBox>
         </Grid>

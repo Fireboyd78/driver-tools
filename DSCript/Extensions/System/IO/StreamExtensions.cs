@@ -15,22 +15,53 @@ namespace System.IO
 {
     public static class StreamExtensions
     {
-        public static void WriteByteAlignment(this Stream stream, uint byteAlignment)
-        {
-            uint offset = (uint)stream.Position;
-            int align = (int)Chunk.GetByteAlignment(offset, byteAlignment);
-
-            stream.Write(Chunk.PaddingBytes, (Chunk.PaddingBytes.Length - align), align);
-        }
-
         public static long Seek(this Stream stream, long offset, long origin)
         {
             return stream.Seek((origin + offset), SeekOrigin.Begin);
         }
 
-        public static long Align(this Stream stream, long alignment)
+        public static long Align(this Stream stream, int alignment)
         {
             return (stream.Position = Memory.Align(stream.Position, alignment));
+        }
+
+        /// <summary>
+        /// Fills the stream in its current position using the bytes from a specified buffer.
+        /// </summary>
+        /// <param name="buffer">The buffer.</param>
+        /// <param name="count">The number of bytes to fill the stream with.</param>
+        public static void Fill(this Stream stream, byte[] buffer, int count)
+        {
+            // check buffer isn't null
+            if (buffer == null)
+                throw new ArgumentNullException("buffer", "The specified buffer is null and cannot be used to fill data into the stream.");
+
+            // no negative numbers are allowed
+            if (count < 0)
+                throw new ArgumentOutOfRangeException("count", count, "The number of bytes to copy from the buffer cannot be negative.");
+            
+            // skip zero-length requests
+            if (count == 0)
+                return;
+
+            var bufLen = buffer.Length;
+            var offset = 0;
+
+            if (bufLen == 0)
+                throw new ArgumentOutOfRangeException("buffer", buffer, "The specified buffer is empty and cannot be used to fill data into the stream.");
+            
+            while (offset < count)
+            {
+                if ((offset + bufLen) > count)
+                {
+                    if ((bufLen = (count - offset)) == 0)
+                        break;
+                }
+
+                stream.Write(buffer, 0, bufLen);
+
+                offset += bufLen;
+            }
         }
 
         #region Read methods
@@ -198,26 +229,6 @@ namespace System.IO
         #endregion
 
         #region Write methods
-        public static void Fill(this Stream stream, byte[] bytes, long length)
-        {
-            // skip zero-length requests
-            if (length == 0)
-                return;
-
-            long offset = 0;
-            int count = bytes.Length;
-
-            while (offset < length && count > 0)
-            {
-                if ((offset + count) > length)
-                    count = (int)(length - offset);
-
-                stream.Write(bytes, 0, count);
-
-                offset += count;
-            }
-        }
-
         public static void WriteByte(this Stream stream, int value)
         {
             if (value > 255)

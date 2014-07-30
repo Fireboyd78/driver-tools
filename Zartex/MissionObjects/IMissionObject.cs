@@ -8,9 +8,11 @@ using System.Text;
 
 namespace Zartex.MissionObjects
 {
-    public interface IMissionObject
+    public abstract class MissionObject
     {
-        int ID { get; }
-        int Size { get; }
+        public int Offset { get; set; }
+
+        public abstract int Id { get; }
+        public abstract int Size { get; }
     }
 }

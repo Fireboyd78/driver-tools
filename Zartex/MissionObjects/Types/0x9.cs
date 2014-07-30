@@ -8,40 +8,38 @@ using System.Text;
 
 namespace Zartex.MissionObjects
 {
-    public class BlockType_0x9 : IMissionObject
+    public class BlockType_0x9 : MissionObject
     {
-        public int ID
+        public override int Id
         {
             get { return 0x9; }
         }
 
-        public int Size
+        public override int Size
         {
-            get
-            {
-                return 0x24;
-            }
+            get { return 0x24; }
         }
 
         [TypeConverter(typeof(CollectionConverter))]
-        public List<Double> Floats1 { get; set; }
+        public List<double> Floats1 { get; set; }
 
         [TypeConverter(typeof(CollectionConverter))]
-        public List<Double> Floats2 { get; set; }
+        public List<double> Floats2 { get; set; }
 
         public BlockType_0x9(BinaryReader reader)
         {
-            Floats1 = new List<Double>(4);
+            Offset = (int)reader.GetPosition();
+
+            Floats1 = new List<double>(4);
+            Floats2 = new List<double>(3);
 
             for (int i = 0; i < Floats1.Capacity; i++)
-                Floats1.Insert(i, BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0));
+                Floats1.Add((double)reader.ReadSingle());
 
-            reader.BaseStream.Seek(sizeof(uint), SeekOrigin.Current);
-
-            Floats2 = new List<Double>(3);
+            reader.BaseStream.Seek(4, SeekOrigin.Current);
 
             for (int i = 0; i < Floats2.Capacity; i++)
-                Floats2.Insert(i, BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0));
+                Floats2.Add((double)reader.ReadSingle());
         }
     }
 }

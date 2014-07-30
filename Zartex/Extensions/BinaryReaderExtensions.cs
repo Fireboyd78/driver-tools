@@ -8,11 +8,9 @@ namespace Zartex
 {
     public static class BinaryReaderExtensions
     {
-        public static uint ByteAlignPadding(this BinaryReader f, uint byteAlign)
+        public static long Align(this BinaryReader f, int byteAlign)
         {
-            uint offset = (uint)f.BaseStream.Position;
-
-            return (byteAlign - (offset % byteAlign)) % byteAlign;
+            return f.Seek(Memory.Align(f.BaseStream.Position, byteAlign), SeekOrigin.Begin);
         }
 
         public static byte PeekByte(this BinaryReader f)

@@ -9,7 +9,7 @@
         xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
         xmlns:dscm="clr-namespace:DSCript.Models;assembly=libDSC"
         mc:Ignorable="d" DataContext="{Binding RelativeSource={RelativeSource Self}}">
-
+    
     <at:AntilliWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#FF282828" Offset="0.75" />
@@ -39,7 +39,7 @@
                 </Menu.Background>
                 <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
                     <MenuItem x:Name="fileOpen" Header="Open"/>
-                    <Separator Style="{DynamicResource atDark_menuSep}"/>
+                    <Separator/>
                     <MenuItem x:Name="fileExit" Header="Exit"/>
                 </MenuItem>
                 <MenuItem Header="View" Style="{DynamicResource atDark_menuItem}">
@@ -49,7 +49,7 @@
                     <MenuItem x:Name="viewGlobalMaterials" Header="Global Materials" Visibility="Collapsed"/>
                 </MenuItem>
                 <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
-                    <MenuItem Name="exportGlobals" Header="Export Globals" IsEnabled="{Binding HasGlobals}"/>
+                    <MenuItem Name="exportGlobals" Header="Export Globals"/>
                     <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
                     <MenuItem x:Name="exportXML" Header="Export .XML"/>
                     <Separator/>

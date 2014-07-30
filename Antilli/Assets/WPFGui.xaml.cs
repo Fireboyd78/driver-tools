@@ -17,7 +17,10 @@ using System.Windows.Shapes;
 using HelixToolkit.Wpf;
 
 using DSCript;
+
+#if LEGACY
 using DSCript.IO;
+#endif
 
 using Antilli;
 using Antilli.IO;

@@ -45,7 +45,7 @@ namespace DSCript.Models
             NamedCache.Clear();
             Cache.Clear();
 
-            DSC.Log("Texture cache flushed.");
+            //DSC.Log("Texture cache flushed.");
         }
 
         static bool IsCached(CacheableTexture texture)

@@ -53,7 +53,7 @@
             this.Inspector.Margin = new System.Windows.Forms.Padding(0);
             this.Inspector.Name = "Inspector";
             this.Inspector.PropertySort = System.Windows.Forms.PropertySort.Categorized;
-            this.Inspector.Size = new System.Drawing.Size(210, 339);
+            this.Inspector.Size = new System.Drawing.Size(201, 339);
             this.Inspector.TabIndex = 0;
             // 
             // Nodes
@@ -66,11 +66,11 @@
             this.Nodes.ContextMenuStrip = this.contextMenuStrip1;
             this.Nodes.HideSelection = false;
             this.Nodes.Indent = 18;
-            this.Nodes.ItemHeight = 21;
+            this.Nodes.ItemHeight = 19;
             this.Nodes.Location = new System.Drawing.Point(0, 0);
             this.Nodes.Margin = new System.Windows.Forms.Padding(0, 0, 1, 0);
             this.Nodes.Name = "Nodes";
-            this.Nodes.Size = new System.Drawing.Size(205, 357);
+            this.Nodes.Size = new System.Drawing.Size(214, 357);
             this.Nodes.TabIndex = 1;
             this.Nodes.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.LogicNodes_AfterSelect);
             this.Nodes.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.LogicNodes_NodeMouseDoubleClick);
@@ -116,7 +116,7 @@
             this.SplitPanel.Panel2.Controls.Add(this.label1);
             this.SplitPanel.Panel2.Controls.Add(this.Inspector);
             this.SplitPanel.Size = new System.Drawing.Size(411, 357);
-            this.SplitPanel.SplitterDistance = 206;
+            this.SplitPanel.SplitterDistance = 215;
             this.SplitPanel.SplitterWidth = 1;
             this.SplitPanel.TabIndex = 2;
             // 
@@ -129,7 +129,7 @@
             this.label1.Location = new System.Drawing.Point(0, 0);
             this.label1.Margin = new System.Windows.Forms.Padding(0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(204, 18);
+            this.label1.Size = new System.Drawing.Size(195, 18);
             this.label1.TabIndex = 1;
             this.label1.Text = "Property Inspector";
             this.label1.TextAlign = System.Drawing.ContentAlignment.TopCenter;

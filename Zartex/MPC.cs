@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 using DSCript.Legacy;
+using DSCript.Spoolers;
 
 using Zartex;
 using Zartex.MissionObjects;
@@ -198,9 +200,14 @@ The locale file {4}.",
         private bool _isLoaded = false;
         private bool _hasLocale = false;
 
+        public string Filename { get; set; }
+
+        // LEGACY
         public ChunkReader ChunkFile { get; set; }
 
-        public IList<IMissionObject> ExportedMissionObjects { get; set; }
+        public SpoolableChunkOld Chunk { get; set; }
+
+        public IList<MissionObject> ExportedMissionObjects { get; set; }
 
         public IDictionary<int, string> StringCollection { get; set; }
         public IDictionary<int, string> LocaleStrings { get; set; }
@@ -212,6 +219,7 @@ The locale file {4}.",
 
         public IList<WireCollectionGroup> WireCollections { get; set; }
 
+        // LEGACY
         public FileStream Stream
         {
             get { return new FileStream(ChunkFile.Filename, FileMode.Open, FileAccess.Read, FileShare.Read); }
@@ -227,6 +235,36 @@ The locale file {4}.",
             get { return _hasLocale; }
         }
 
+        private T ParseDefinition<T>(BinaryReader f, T definition)
+            where T : LogicDefinition
+        {
+            definition.Offset = (int)f.GetPosition();
+
+            definition.Opcode = f.ReadByte();
+
+            if (f.ReadByte() != 0x3E)
+                throw new Exception(String.Format(
+                    "The sign for the definition @ 0x{0:X} is incorrect!",
+                    f.GetPosition() - 2)
+                );
+
+            definition.StringId = f.ReadInt16();
+
+            if (definition is ActorDefinition)
+                definition.Reserved = f.ReadInt32();
+
+            definition.R = f.ReadByte();
+            definition.G = f.ReadByte();
+            definition.B = f.ReadByte();
+            definition.A = f.ReadByte();
+
+            definition.Unknown = f.ReadInt16();
+            definition.Flags = f.ReadInt16();
+
+            return definition;
+        }
+
+        #region Legacy loaders
         public void LoadStringCollection(SubChunkBlock stringCollection)
         {
             using (BinaryReader f = new BinaryReader(Stream))
@@ -302,35 +340,6 @@ The locale file {4}.",
                     WireCollections.Add(wireGroup);
                 }
             }
-        }
-
-        private T ParseDefinition<T>(BinaryReader f, T definition)
-            where T : LogicDefinition
-        {
-            definition.Offset = (uint)f.GetPosition();
-
-            definition.Opcode = f.ReadByte();
-
-            if (f.ReadByte() != 0x3E)
-                throw new Exception(String.Format(
-                    "The sign for the definition @ 0x{0:X} is incorrect!",
-                    f.GetPosition() - 2)
-                );
-
-            definition.StringId = f.ReadUInt16();
-
-            if (definition is ActorDefinition)
-                definition.Reserved = f.ReadUInt32();
-
-            definition.Byte1 = f.ReadByte();
-            definition.Byte2 = f.ReadByte();
-            definition.Byte3 = f.ReadByte();
-            definition.Byte4 = f.ReadByte();
-
-            definition.Unknown = f.ReadUInt16();
-            definition.Flags = f.ReadUInt16();
-
-            return definition;
         }
 
         public void LoadActors(SubChunkBlock actors)
@@ -503,7 +512,7 @@ The locale file {4}.",
                             break;
                         }
 
-                        f.Seek(f.ByteAlignPadding(4), SeekOrigin.Current);
+                        f.Align(4);
 
                         prop.Offset = offset;
                         prop.StringId = id;
@@ -528,7 +537,7 @@ The locale file {4}.",
 
                 int count = f.ReadInt32();
 
-                ExportedMissionObjects = new List<IMissionObject>(count);
+                ExportedMissionObjects = new List<MissionObject>(count);
 
                 bool doBreak = false;
 
@@ -539,7 +548,7 @@ The locale file {4}.",
                     switch (type)
                     {
                     case (0x0):
-                        f.Seek(f.ByteAlignPadding(16), SeekOrigin.Current);
+                        f.Align(16);
                         break;
                     case 0x1: ExportedMissionObjects.Add(new BlockType_0x1(f)); break;
                     case 0x2: ExportedMissionObjects.Add(new BlockType_0x2(f)); break;
@@ -561,6 +570,362 @@ The locale file {4}.",
                 }
             }
         }
+        #endregion
+
+        #region new loaders
+        public void LoadStringCollection(SpoolableDataOld stringCollection)
+        {
+            using (var ms = new MemoryStream(stringCollection.Buffer))
+            using (BinaryReader f = new BinaryReader(ms))
+            {
+                int nStrings = f.ReadInt32();
+
+                var baseOffset = f.GetPosition();
+
+                StringCollection = new Dictionary<int, string>();
+
+                for (int s = 0; s < nStrings; s++)
+                {
+                    f.Seek(baseOffset + (s * 4), SeekOrigin.Begin);
+
+                    var key = f.ReadInt32();
+
+                    f.Seek(key, SeekOrigin.Begin);
+
+                    StringCollection.Add(s, f.ReadCString());
+                }
+            }
+        }
+
+        public void LoadActorSetTable(SpoolableDataOld actorSetTable)
+        {
+            using (var ms = new MemoryStream(actorSetTable.Buffer))
+            using (BinaryReader f = new BinaryReader(ms))
+            {
+                //if (f.ReadInt32() != 0x1)
+                //    throw new Exception(String.Format("Error in Actor Set Table @ 0x{0:X}!", f.GetPosition() - 4));
+
+                f.Seek(0x4, SeekOrigin.Current);
+
+                int nActors = f.ReadInt32();
+
+                ActorSetTable = new Dictionary<int, int>();
+
+                for (int i = 0; i < nActors; i++)
+                    ActorSetTable.Add(i, f.ReadInt32());
+            }
+        }
+
+        public void LoadWireCollection(SpoolableDataOld wireCollection)
+        {
+            // TODO: Deprecate use of BinaryReader
+            using (var ms = new MemoryStream(wireCollection.Buffer))
+            using (BinaryReader f = new BinaryReader(ms))
+            {
+                int nWires = f.ReadInt32();
+                WireCollections = new List<WireCollectionGroup>(nWires);
+
+                for (int i = 0; i < nWires; i++)
+                {
+                    uint offset = (uint)f.GetPosition();
+                    int count = f.ReadInt32();
+
+                    WireCollectionGroup wireGroup = 
+                        new WireCollectionGroup(count) { Offset = offset };
+
+                    for (int ii = 0; ii < count; ii++)
+                    {
+                        WireCollectionEntry wireEntry = new WireCollectionEntry() {
+                            Unk = f.ReadByte(),
+                            Opcode = f.ReadByte(),
+                            NodeId = f.ReadInt16()
+                        };
+
+                        wireGroup.Entries.Add(wireEntry);
+                    }
+
+                    WireCollections.Add(wireGroup);
+                }
+            }
+        }
+
+        public void LoadActors(SpoolableChunkOld actors)
+        {
+            LoadLogicData(actors, 0);
+        }
+
+        public void LoadLogicNodes(SpoolableChunkOld logicNodes)
+        {
+            LoadLogicData(logicNodes, 1);
+        }
+
+        private void LoadLogicData(SpoolableChunkOld logicData, int type)
+        {
+            if (logicData.Spoolers.Count < 2)
+                throw new Exception("Bad logic data chunk - cannot load data!");
+            if (type > 1)
+                throw new Exception("Invalid type param - cannot load logic data!");
+
+            var definitions = logicData.Spoolers[0] as SpoolableDataOld;
+            var properties = logicData.Spoolers[1] as SpoolableDataOld;
+
+            var defList = new List<LogicDefinition>();
+            var propList = new List<LogicProperty>();
+
+            int count = 0;
+
+            // load definitions
+            // TODO: Deprecate use of BinaryReader
+            using (var ms = new MemoryStream(definitions.Buffer))
+            using (var f = new BinaryReader(ms))
+            {
+                count = f.ReadInt32();
+
+                for (int i = 0; i < count; i++)
+                {
+                    LogicDefinition def = null;
+
+                    if (type == 0)
+                        def = new ActorDefinition();
+                    else
+                        def = new LogicDefinition();
+
+                    def.Offset = (int)f.GetPosition();
+                    def.Opcode = f.ReadByte();
+
+                    // 0x3E for Driv3r; 0x0 for DPL
+                    var sign = f.ReadByte();
+
+                    def.StringId = f.ReadInt16();
+
+                    if (def is ActorDefinition)
+                        def.Reserved = f.ReadInt32();
+
+                    if (sign == 0x3E)
+                    {
+                        def.R = f.ReadByte();
+                        def.G = f.ReadByte();
+                        def.B = f.ReadByte();
+                        def.A = f.ReadByte();
+
+                        def.Unknown = f.ReadInt16();
+                        def.Flags = f.ReadInt16();
+                    }
+                    else if (sign == 0x0)
+                    {
+                        // DPL flips order of things
+
+                        def.Unknown = f.ReadInt16();
+                        def.Flags = f.ReadInt16();
+
+                        def.R = f.ReadByte();
+                        def.G = f.ReadByte();
+                        def.B = f.ReadByte();
+                        def.A = f.ReadByte();
+                    }
+                    else
+                    {
+                        throw new Exception(String.Format("The sign for the definition @ 0x{0:X} is incorrect!", def.Offset));
+                    }
+
+                    defList.Add(def);
+                }
+            }
+
+            // load properties
+            // TODO: Deprecate use of BinaryReader
+            using (var ms = new MemoryStream(properties.Buffer))
+            using (var f = new BinaryReader(ms))
+            {
+                if (f.ReadInt32() != count)
+                    throw new Exception("The number of properties is mismatched to the number of definitions!");
+
+                for (int d = 0; d < count; d++)
+                {
+                    LogicDefinition node = defList[d];
+
+                    int pCount = f.ReadInt32();
+
+                    node.Properties = new List<LogicProperty>(pCount);
+
+                    for (int p = 0; p < pCount; p++)
+                    {
+                        LogicProperty prop;
+
+                        uint offset = (uint)f.GetPosition();
+                        int op = f.ReadByte();
+
+                        var sign = f.ReadByte();
+
+                        int id = f.ReadInt16();
+                        int reserved = f.ReadInt32();
+
+                        switch (op)
+                        {
+                        case 1:
+                            {
+                                int val = f.ReadInt32();
+                                prop = new IntegerProperty(val);
+                            }
+                            break;
+                        case 2:
+                            {
+                                float val = f.ReadSingle();
+                                prop = new FloatProperty(val);
+                            }
+                            break;
+                        case 3:
+                            {
+                                int val = f.ReadUInt16();
+                                prop = new FilenameProperty((StringCollection.ContainsKey(val)) ? StringCollection[val] : "<NULL>");
+                            }
+                            break;
+                        case 4:
+                            {
+                                bool val = f.ReadBoolean();
+                                prop = new BooleanProperty(val);
+                            }
+                            break;
+                        // TODO: IMPLEMENT ENUM PROPERTY
+                        // TODO: IMPLEMENT FLAGS PROPERTY
+                        case 6:
+                        case 9:
+                            {
+                                uint val = f.ReadUInt32();
+                                prop = new UnknownProperty(op, val);
+                            }
+                            break;
+                        //===============================
+                        case 7:
+                            {
+                                int val = f.ReadInt32();
+                                prop = new ActorProperty(val);
+                            }
+                            break;
+                        case 8:
+                            {
+                                int val = f.ReadUInt16();
+                                prop = new StringProperty(StringCollection[val]);
+                            }
+                            break;
+                        case 11:
+                            {
+                                long val = (long)f.ReadUInt64();
+                                prop = new AudioProperty(val);
+                            }
+                            break;
+                        case 17:
+                            {
+                                float[] float4 = new float[4] {
+                                    f.ReadSingle(),
+                                    f.ReadSingle(),
+                                    f.ReadSingle(),
+                                    f.ReadSingle()
+                                };
+                                prop = new Float4Property(float4);
+                            }
+                            break;
+                        case 19:
+                            {
+                                int val = f.ReadInt32();
+                                prop = new WireCollectionProperty(val);
+                            }
+                            break;
+                        case 20:
+                            {
+                                int val = f.ReadInt32();
+                                prop = new LocalisedStringProperty(val);
+                            }
+                            break;
+                        case 21:
+                            {
+                                byte[] val = f.ReadBytes(reserved);
+                                prop = new UnicodeStringProperty(val);
+                            }
+                            break;
+                        case 22:
+                        RAW_DATA:
+                            {
+                                byte[] val = f.ReadBytes(reserved);
+                                prop = new RawDataProperty(val);
+                            }
+                            break;
+                        default:
+                            {
+                                if (reserved == 4)
+                                {
+                                    uint unk = f.ReadUInt32();
+                                    prop = new UnknownProperty(op, unk);
+                                }
+                                else
+                                    goto RAW_DATA;
+                            }
+                            break;
+                        }
+
+                        f.Align(4);
+
+                        prop.Offset = offset;
+                        prop.StringId = id;
+                        prop.Reserved = reserved;
+
+                        node.Properties.Add(prop);
+                    }
+                }
+
+                if (type == 0)
+                    ActorDefinitions = defList;
+                else
+                    LogicNodeDefinitions = defList;
+            }
+        }
+
+        public void LoadExportedMissionObjects(SpoolableDataOld exportedMissionObjects)
+        {
+            // TODO: Deprecate use of BinaryReader
+            using (MemoryStream ms = new MemoryStream(exportedMissionObjects.Buffer))
+            using (BinaryReader f = new BinaryReader(ms))
+            {
+                int count = f.ReadInt32();
+
+                ExportedMissionObjects = new List<MissionObject>(count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    int type = f.ReadInt32();
+
+                    MissionObject mObj = null;
+
+                    switch (type)
+                    {
+                    case 0x0:
+                        f.Align(16);
+                        break;
+                    case 0x1: mObj = new BlockType_0x1(f); break;
+                    case 0x2: mObj = new BlockType_0x2(f); break;
+                    case 0x3: mObj = new BlockType_0x3(f); break;
+                    case 0x4: mObj = new BlockType_0x4(f); break;
+                    case 0x5: mObj = new BlockType_0x5(f); break;
+                    case 0x6: mObj = new BlockType_0x6(f); break;
+                    case 0x7: mObj = new BlockType_0x7(f); break;
+                    case 0x8: mObj = new BlockType_0x8(f); break;
+                    case 0x9: mObj = new BlockType_0x9(f); break;
+                    case 0xA: mObj = new BlockType_0xA(f); break;
+                    case 0xB: mObj = new BlockType_0xB(f); break;
+                    case 0xC: mObj = new BlockType_0xC(f); break;
+                    default:
+                        Console.WriteLine("NO READER FOR TYPE 0x{0:X}!", type);
+                        break;
+                    }
+
+                    if (mObj == null)
+                        break;
+
+                    ExportedMissionObjects.Add(mObj);
+                }
+            }
+        }
+        #endregion
 
         public void LoadLocaleFile(int missionId)
         {
@@ -571,62 +936,41 @@ The locale file {4}.",
         {
             if (!_localeError)
             {
-                // Try to load locale
-                StringBuilder locale = new StringBuilder();
+                string text = String.Empty;
 
-                using (StreamReader f = new StreamReader(filename))
+                using (var fs = File.Open(filename, FileMode.Open, FileAccess.Read))
                 {
-                    string line;
+                    // DPL temporary workaround
+                    var encoding = (((fs.ReadInt32() >> 16) & 0xFFFF) == 0xFEFF) ? Encoding.Unicode : Encoding.UTF8;
 
-                    while ((line = f.ReadLine()) != null)
+                    if (encoding != Encoding.Unicode)
+                        fs.Seek(0, SeekOrigin.Begin);
+
+                    using (StreamReader f = new StreamReader(fs, encoding, true))
                     {
-                        if (line.StartsWith("<"))
-                            locale.Append(line);
+                        text = f.ReadToEnd();
                     }
                 }
 
                 LocaleStrings = new Dictionary<int, string>();
 
-                int idx = 0;
+                var e_ENTRIES = @"(<ID\b[^>]*>.*?<\/TEXT>)";
+                var e_ID = @"<ID\b[^>]*>(.*?)<\/ID>";
+                var e_TEXT = @"<TEXT\b[^>]*>(.*?)<\/TEXT>";
 
-                string text = locale.ToString();
-
-                while (idx < text.Length)
+                foreach (Match m in Regex.Matches(text, e_ENTRIES))
                 {
-                    if (text.Substring(idx++, 1) == "<")
-                    {
-                        // cursor: <|ID>00001</ID><TEXT>text</TEXT>
-                        
-                        string tag = string.Empty;
+                    DSCript.DSC.Log(m.Value);
 
-                        while (text.Substring(idx++, 1) != ">")
-                        {
-                            tag += text.Substring(idx - 1, 1);
-                        }
+                    var val = m.Value;
 
-                        // cursor: <ID|>00001</ID><TEXT>text</TEXT>
-                        if (tag == "ID")
-                        {
-                            string id = string.Empty;
-                            string val = string.Empty;
+                    var idStr = Regex.Match(val, e_ID).Groups[1].Value;
+                    var str = Regex.Match(text, e_TEXT).Groups[1].Value;
 
-                            while (text.Substring(idx++, 1) != "<")
-                                id += text.Substring(idx - 1, 1);
+                    var id = int.Parse(idStr);
 
-                            // cursor: <ID>00001<|/ID><TEXT>text</TEXT>
-                            // skip /ID><TEXT>
-                            idx += 10;
-
-                            // cursor: <ID>00001</ID><TEXT>|text</TEXT>
-                            while (text.Substring(idx++, 1) != "<")
-                                val += text.Substring(idx - 1, 1);
-
-                            // cursor: <ID>00001</ID><TEXT>text|</TEXT>
-                            // some missions have beta content and dupes, skip them
-                            if (!LocaleStrings.ContainsKey(int.Parse(id)))
-                                LocaleStrings.Add(int.Parse(id), val);
-                        }
-                    }
+                    if (!LocaleStrings.ContainsKey(id))
+                        LocaleStrings.Add(id, str);
                 }
 
                 _hasLocale = true;
@@ -655,6 +999,9 @@ The locale file {4}.",
 
         public MPCFile(string filename)
         {
+        #if FALSE
+            // Legacy method
+
             ChunkFile = new ChunkReader(filename);
 
             SubChunkBlock missionObjects    = ChunkFile.FirstOrNull(ChunkType.ExportedMissionObjects);
@@ -670,6 +1017,31 @@ The locale file {4}.",
             LoadWireCollection(wireCollection);
             LoadActors(actors);
             LoadLogicNodes(logicNodes);
+        #else
+            // New method
+
+            Filename = filename;
+
+            Chunk = new SpoolableChunkOld(Filename);
+
+            var spoolers = Chunk.GetAllSpoolers();
+
+            var missionObjects = spoolers.First((s) => s.Magic == (int)ChunkType.ExportedMissionObjects) as SpoolableDataOld;
+            var actorSetTable = spoolers.First((s) => s.Magic == (int)ChunkType.LogicExportActorSetTable) as SpoolableDataOld;
+            var stringCollection = spoolers.First((s) => s.Magic == (int)ChunkType.LogicExportStringCollection) as SpoolableDataOld;
+            var wireCollection = spoolers.First((s) => s.Magic == (int)ChunkType.LogicExportWireCollections) as SpoolableDataOld;
+
+            var actors = spoolers.First((s) => s.Magic == (int)ChunkType.LogicExportActorsChunk) as SpoolableChunkOld;
+            var logicNodes = spoolers.First((s) => s.Magic == (int)ChunkType.LogicExportNodesChunk) as SpoolableChunkOld;
+
+            LoadExportedMissionObjects(missionObjects);
+            LoadActorSetTable(actorSetTable);
+            LoadStringCollection(stringCollection);
+            LoadWireCollection(wireCollection);
+
+            LoadActors(actors);
+            LoadLogicNodes(logicNodes);
+        #endif
 
             _isLoaded = true;
         }

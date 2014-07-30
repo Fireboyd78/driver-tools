@@ -6,90 +6,99 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
+using Zartex.Converters;
+
 namespace Zartex.MissionObjects
 {
-    public class BlockType_0x1 : IMissionObject
+    public class BlockType_0x1 : MissionObject
     {
         public class FieldData
         {
-            public ushort Offset = 0;
-            public byte[] Buffer = null;
+            public int Offset { get; set; }
+
+            public byte Type { get; set; }
+
+            [TypeConverter(typeof(CollectionConverter))]
+            public List<double> Floats { get; set; }
         }
 
-        private ushort _vOffset = 0;
+        [TypeConverter(typeof(CollectionConverter))]
+        public List<FieldData> Fields { get; set; }
 
-        private FieldData Field1;
-        private FieldData Field2;
-        private FieldData Field3;
+        [Browsable(false)]
+        protected int FieldSize { get; set; }
 
-        public int ID
+        public override int Id
         {
             get { return 0x1; }
         }
 
-        public int Size
+        public override int Size
         {
             get
             {
-                if (_vOffset == 0 || Field1.Buffer == null || Field2.Buffer == null || Field3.Buffer == null)
+                if (Fields == null)
                     throw new Exception("Cannot retrieve size from an uninitialized block.");
 
-                return (
-                    sizeof(uint) + sizeof(ushort) * 2 + // add header
-                    _vOffset + Field2.Offset + // calculate size of data
-                    sizeof(uint) // include voffset
-                );
+                return (32 + FieldSize);
             }
         }
 
-        public ushort VOffset
-        {
-            get { return _vOffset; }
-            set { _vOffset = value; }
-        }
+        [TypeConverter(typeof(CollectionConverter))]
+        public List<double> Floats { get; set; }
 
-        public ushort Reserved { get; set; }
-        public ushort Unknown { get; set; }
+        public short Reserved { get; set; }
+        public short Unknown { get; set; }
 
-        public uint VehicleID { get; set; }
+        public int VehicleID { get; set; }
 
         public BlockType_0x1(BinaryReader reader)
         {
-            VOffset = reader.ReadUInt16();
+            Offset = (int)reader.GetPosition();
 
-            Reserved = reader.ReadUInt16();
+            FieldSize = reader.ReadInt16();
+            Reserved = reader.ReadInt16();
 
-            long baseOffset = reader.BaseStream.Position;
+            Unknown = reader.ReadInt16();
 
-            Unknown = reader.ReadUInt16();
+            long baseOffset = Offset + 4;
 
-            Field1 = new FieldData();
-            Field2 = new FieldData();
-            Field3 = new FieldData();
+            Fields = new List<FieldData>(3);
 
-            Field1.Offset = reader.ReadUInt16();
-            Field2.Offset = reader.ReadUInt16();
-            Field3.Offset = reader.ReadUInt16();
+            for (int i = 0; i < Fields.Capacity; i++)
+            {
+                reader.Seek(baseOffset + 2 + (i * 2), SeekOrigin.Begin);
 
-            // Just put this crap in a buffer
-            reader.BaseStream.Seek(baseOffset + Field1.Offset, SeekOrigin.Begin);
+                var field = new FieldData();
 
-            Field1.Buffer = new byte[Field1.Offset - Field2.Offset];
-            reader.Read(Field1.Buffer, 0, Field1.Buffer.Length);
+                field.Offset = reader.ReadInt16();
 
-            reader.BaseStream.Seek(baseOffset + Field2.Offset, SeekOrigin.Begin);
+                reader.Seek(baseOffset + field.Offset, SeekOrigin.Begin);
 
-            Field2.Buffer = new byte[Field3.Offset - Field1.Offset];
-            reader.Read(Field2.Buffer, 0, Field2.Buffer.Length);
+                field.Type = reader.ReadByte();
 
-            reader.BaseStream.Seek(baseOffset + Field3.Offset, SeekOrigin.Begin);
+                var size = reader.ReadByte() - 4;
+                var nFloats = (size > 0) ? size / 4 : 0;
 
-            Field3.Buffer = new byte[VOffset - Field3.Offset];
-            reader.Read(Field3.Buffer, 0, Field3.Buffer.Length);
+                reader.Seek(2, SeekOrigin.Current);
 
-            // Finally, read the vehicle ID
-            reader.BaseStream.Seek(baseOffset + (VOffset + Field2.Offset), SeekOrigin.Begin);
-            VehicleID = reader.ReadUInt32();
+                field.Floats = new List<double>(nFloats);
+                
+                if (nFloats > 0)
+                {
+                    for (int k = 0; k < field.Floats.Capacity; k++)
+                        field.Floats.Add((double)reader.ReadSingle());
+                }
+
+                Fields.Add(field);
+            }
+
+            Floats = new List<double>(3);
+
+            for (int v = 0; v < Floats.Capacity; v++)
+                Floats.Add((double)reader.ReadSingle());
+
+            VehicleID = reader.ReadInt32();
         }
     }
 }

@@ -13,15 +13,14 @@ using Zartex.Converters;
 
 namespace Zartex.LogicExport
 {
-    public abstract class LogicDefinition
+    public class LogicDefinition
     {
-        protected uint _reserved;
-
         [TypeConverter(typeof(HexStringConverter))]
-        public uint Offset { get; set; }
+        public int Offset { get; set; }
 
-        public int Opcode { get; set; }
+        public byte Opcode { get; set; }
         
+        /*
         public byte OpBit1Flag1
         {
             get { return (byte)(Opcode & 0xF); }
@@ -30,23 +29,20 @@ namespace Zartex.LogicExport
         public byte OpBit1Flag2
         {
             get { return (byte)((Opcode & 0xF0) >> 4); }
-        }
+        }*/
 
-        public int StringId { get; set; }
+        public short StringId { get; set; }
 
         [Browsable(false)]
         [ReadOnly(true)]
-        public virtual uint Reserved
-        {
-            get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); }
-        }
+        public virtual int Reserved { get; set; }
 
-        public byte Byte1 { get; set; }
-        public byte Byte2 { get; set; }
-        public byte Byte3 { get; set; }
-        public byte Byte4 { get; set; }
+        public byte R { get; set; }
+        public byte G { get; set; }
+        public byte B { get; set; }
+        public byte A { get; set; }
 
+        /*
         public byte Byte1Bit1
         {
             get { return (byte)(Byte1 & 0xF); }
@@ -85,13 +81,15 @@ namespace Zartex.LogicExport
         public byte Byte4Bit2
         {
             get { return (byte)((Byte4 & 0xF0) >> 4); }
-        }
+        }*/
 
-        public ushort Unknown { get; set; }
+        [Browsable(false)]
+        public short Unknown { get; set; }
 
-        [TypeConverter(typeof(HexStringConverter))]
-        public ushort Flags { get; set; }
+        [Browsable(false)]
+        public short Flags { get; set; }
 
+        /*
         public byte FlagByte1
         {
             get { return (byte)(Flags & 0xFF); }
@@ -102,6 +100,7 @@ namespace Zartex.LogicExport
             get { return (byte)((Flags & 0xFF00) >> 8); }
         }
 
+        
         public byte FlagByte1Bit1
         {
             get { return (byte)(Flags & 0xF); }
@@ -120,12 +119,12 @@ namespace Zartex.LogicExport
         public byte FlagByte2Bit2
         {
             get { return (byte)((Flags & 0xF000) >> 12); }
-        }
+        }*/
 
         [Browsable(false)]
         public List<LogicProperty> Properties { get; set; }
 
-        protected LogicDefinition()
+        public LogicDefinition()
         {
             Properties = new List<LogicProperty>();
         }
@@ -135,28 +134,19 @@ namespace Zartex.LogicExport
     {
         [Browsable(true)]
         [ReadOnly(true)]
-        public override uint Reserved
+        public override int Reserved
         {
-            get { return _reserved; }
-            set { _reserved = value; }
+            get { return base.Reserved; }
+            set { base.Reserved = value; }
         }
 
         public ActorDefinition()
         {
-            _reserved = 0;
         }
     }
 
     public sealed class LogicNodeDefinition : LogicDefinition
     {
-        [Browsable(false)]
-        [ReadOnly(true)]
-        public override uint Reserved
-        {
-            get { return 0; }
-            set { return; }
-        }
-
         public LogicNodeDefinition()
         {
         }

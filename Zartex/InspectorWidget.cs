@@ -21,20 +21,18 @@ namespace Zartex
 
         private void LogicNodes_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            if (e.Node.Tag != null)
-            {
-                if ((e.Node.Parent != null && e.Node.Parent.Tag != null)
-                    && e.Node.Parent.Tag.GetType() == typeof(WireCollectionProperty)
-                    && e.Node.Tag.GetType() == typeof(WireCollectionEntry))
-                {
-                    WireCollectionEntry wire = (WireCollectionEntry)e.Node.Tag;
-                    Inspector.SelectedObject = Nodes.Nodes[wire.NodeId].Tag;
-                }
-                else
-                {
-                    Inspector.SelectedObject = e.Node.Tag;
-                }
-            }
+            //var wire = e.Node.Tag as WireCollectionEntry;
+            //
+            //if (wire != null)
+            //{
+            //    var prop = e.Node.Parent;
+            //
+            //    if (prop != null && prop.Tag is WireCollectionProperty)
+            //        Inspector.SelectedObject = Nodes.Nodes[wire.NodeId].Tag;
+            //
+            //}
+
+            Inspector.SelectedObject = e.Node.Tag;
         }
 
         public void AfterNodeWidgetSelected(object sender, MouseEventArgs e)
@@ -54,39 +52,45 @@ namespace Zartex
 
         private void LogicNodes_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            if (e.Node.Tag is WireCollectionEntry)
+            var wire = e.Node.Tag as WireCollectionEntry;
+
+            if (wire != null)
             {
-                if (e.Node.Nodes.Count > 0)
+                if (e.Node.Nodes.Count <= 0)
+                {
+                    var node = Nodes.Nodes[wire.NodeId];
+                    var nProps = node.Nodes.Count;
+
+                    /*
+                    if (nProps == 1 && node.Nodes[0].Tag is LogicProperty)
+                    {
+                        var prop = node.Nodes[0].Tag as LogicProperty;
+
+                        if (prop.Opcode == 19)
+                        {
+                            foreach (TreeNode propNode in node.Nodes[0].Nodes)
+                                e.Node.Nodes.Add((TreeNode)propNode.Clone());
+
+                            e.Node.Expand();
+
+                            return;
+                        }
+                    }*/
+
+                    // experimental node expansion
+                    foreach (TreeNode propNode in node.Nodes)
+                    {
+                        var newNode = (TreeNode)propNode.Clone();
+
+                        e.Node.Nodes.Add(newNode);
+                    }
+
+                    e.Node.Expand();
+                }
+                else
                 {
                     e.Node.Nodes.Clear();
-                    return;
-                }
-
-                var wire = e.Node.Tag as WireCollectionEntry;
-                var node = Nodes.Nodes[wire.NodeId];
-
-                int nProps = node.Nodes.Count;
-
-                if (nProps == 1 && node.Nodes[0].Tag is LogicProperty)
-                {
-                    var prop = node.Nodes[0].Tag as LogicProperty;
-
-                    if (prop.Opcode == 19)
-                    {
-                        foreach (TreeNode propNode in node.Nodes[0].Nodes)
-                            e.Node.Nodes.Add((TreeNode)propNode.Clone());
-
-                        e.Node.Expand();
-
-                        return;
-                    }
-                }
-
-                // experimental node expansion
-                foreach (TreeNode propNode in node.Nodes)
-                    e.Node.Nodes.Add((TreeNode)propNode.Clone());
-
-                e.Node.Expand();
+                }       
             }
         }
     }

@@ -30,6 +30,16 @@ namespace System.Text
             return sb.AppendFormat(format, args).AppendLine();
         }
 
+        public static StringBuilder AppendLine(this StringBuilder @this, object value)
+        {
+            return @this.AppendLine(value.ToString());
+        }
+
+        public static StringBuilder AppendColumn(this StringBuilder @this, string colText, int colPosition, bool rightAligned = false)
+        {
+            return @this.AppendFormat("{0," + ((!rightAligned) ? "-" : "") + colPosition + "}" + ((rightAligned) ? " " : ""), (!colText.EndsWith(":")) ? colText + ":" : colText);
+        }
+
         public static StringBuilder AppendLineEx(this StringBuilder sb, string format, params object[] args)
         {
             return sb.AppendFormatEx(format, args).AppendLine();

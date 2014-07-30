@@ -35,16 +35,7 @@ namespace Zartex.Converters
 
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            Type type = value.GetType();
-
-            if (type == typeof(string))
-                return (uint.Parse((string)value)).ToString("X");
-            else if (type == typeof(uint))
-                return ((uint)value).ToString("X");
-            else if (type == typeof(ushort))
-                return ((ushort)value).ToString("X");
-
-            throw new NotImplementedException();
+            return String.Format("{0:X}", value);
         }
     }
 }

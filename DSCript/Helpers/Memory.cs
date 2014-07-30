@@ -98,13 +98,12 @@ namespace System
         /// <param name="value">The value to align</param>
         /// <param name="align">The byte-alignment</param>
         /// <returns>The byte-aligned value; If the alignment is zero, the unmodified value.</returns>
-        public static T Align<T>(T value, T align)
+        public static T Align<T>(T value, int align)
             where T : struct, IComparable, IFormattable, IConvertible, IComparable<T>, IEquatable<T>
         {
-            dynamic offset = (dynamic)value;
-            dynamic alignment = (dynamic)align;
+            dynamic offset = value;
 
-            return (alignment != 0) ? (offset + (alignment - (offset % alignment)) % alignment) : value;
+            return (align != 0) ? (offset + (align - (offset % align)) % align) : value;
         }
 
         /// <summary>
@@ -125,9 +124,9 @@ namespace System
             else if ((offset & 0xF) == 0)
                 return 0x10; //16
             else if ((offset & 0x7) == 0)
-                return 8;
-            else if ((offset & 0x3) == 0 || ((offset & 0xF) == 0xC))
-                return 4;
+                return 0x8;
+            else if ((offset & 0x3) == 0)
+                return 0x4;
             else
                 return 0;
         }

@@ -4,6 +4,31 @@
         <name>libDSC</name>
     </assembly>
     <members>
+        <member name="M:FreeImageAPI.FIBITMAPExtensions.Unload(FreeImageAPI.FIBITMAP)">
+            <summary>
+            Deletes the <see cref="T:FreeImageAPI.FIBITMAP"/> from memory. Returns the result of the operation.
+            </summary>
+            <returns>True if the operation succeeded; otherwise, false.</returns>
+        </member>
+        <member name="M:FreeImageAPI.FIBITMAPExtensions.ToBitmap(FreeImageAPI.FIBITMAP,System.Boolean)">
+            <summary>
+            Converts the <see cref="T:FreeImageAPI.FIBITMAP"/> to a .NET <see cref="T:System.Drawing.Bitmap"/>.
+            <para>If <paramref name="unload"/> is set to <b>true</b>, the original bitmap will be unloaded from memory.</para>
+            </summary>
+            <returns>A .NET <see cref="T:System.Drawing.Bitmap"/>.</returns>
+        </member>
+        <member name="M:DSCript.BitmapHelper.GetFIBITMAP(System.Byte[])">
+            <summary>
+            Loads a <see cref="T:FreeImageAPI.FIBITMAP"/> from the specified buffer.
+            <para>See <see cref="M:FreeImageAPI.FreeImage.LoadFromStream(System.IO.Stream)"/> for more information.</para>
+            </summary>
+            <param name="buffer">The buffer to load from.</param>
+        </member>
+        <member name="M:DSCript.BitmapHelper.GetFIBITMAP(System.IO.Stream)">
+            <summary>
+            See <see cref="M:FreeImageAPI.FreeImage.LoadFromStream(System.IO.Stream)"/> for more information.
+            </summary>
+        </member>
         <member name="F:DSCript.BitmapSourceLoadFlags.Default">
             <summary>
             Loads a BitmapSource image with the default settings.
@@ -25,12 +50,12 @@
             </summary>
             <param name="str">The string to append.</param>
         </member>
-        <member name="T:System.IO.INIFile">
+        <member name="T:System.IO.IniFile">
             <summary>
             Represents a class used to read/write key values to/from INI files.
             </summary>
         </member>
-        <member name="M:System.IO.INIFile.ReadValue(System.String,System.String)">
+        <member name="M:System.IO.IniFile.ReadValue(System.String,System.String)">
             <summary>
             Reads a key value from the specified section.
             </summary>
@@ -38,7 +63,7 @@
             <param name="key">The key value to retrieve.</param>
             <returns>The key value from the specified section, otherwise returns a blank string.</returns>
         </member>
-        <member name="M:System.IO.INIFile.WriteValue(System.String,System.String,System.String)">
+        <member name="M:System.IO.IniFile.WriteValue(System.String,System.String,System.String)">
             <summary>
             Writes a key value to the specified section.
             </summary>
@@ -47,15 +72,15 @@
             <param name="value">The value to write.</param>
             <returns>True if successful, False if the operation failed.</returns>
         </member>
-        <member name="M:System.IO.INIFile.#ctor(System.String)">
+        <member name="M:System.IO.IniFile.#ctor(System.String)">
             <summary>
-            Initializes a new instance of the <see cref="T:System.IO.INIFile"/> class, used to read and write key values to/from INI files.
+            Initializes a new instance of the <see cref="T:System.IO.IniFile"/> class, used to read and write key values to/from INI files.
             </summary>
             <param name="path">The path to the INI file.</param>
         </member>
-        <member name="P:System.IO.INIFile.FileName">
+        <member name="P:System.IO.IniFile.FileName">
             <summary>
-            Gets the filename of the <see cref="T:System.IO.INIFile"/>.
+            Gets the filename of the <see cref="T:System.IO.IniFile"/>.
             </summary>
         </member>
         <member name="F:DSCript.Chunk.Magic">
@@ -170,11 +195,6 @@
             </summary>
         </member>
         <member name="F:DSCript.ChunkType.Unknown">
-            <summary>
-            A type representing an unknown value (Note: This is used by tools only!)
-            </summary>
-        </member>
-        <member name="F:DSCript.ChunkType.ChunkRoot">
             <summary>
             A type representing a root chunk block (Note: This is used by tools only!)
             </summary>
@@ -739,7 +759,7 @@
             [SBBH] - No research has been done on this format
             </summary>
         </member>
-        <member name="F:DSCript.ChunkType.PooledVertexChunk">
+        <member name="F:DSCript.ChunkType.PooledVertexBufferChunk">
             <summary>
             [VXCK] - No research has been done on this format
             </summary>
@@ -754,7 +774,7 @@
             [VXDP] - No research has been done on this format
             </summary>
         </member>
-        <member name="F:DSCript.ChunkType.PooledVertexBuffer">
+        <member name="F:DSCript.ChunkType.PooledVertexBufferData">
             <summary>
             [VXDT] - No research has been done on this format
             </summary>
@@ -1054,6 +1074,13 @@
             <param name="byteAlignment">The byte-alignment to calculate (e.x. 1024)</param>
             <returns>Cursor position after byte-alignment</returns>
         </member>
+        <member name="M:System.IO.StreamExtensions.Fill(System.IO.Stream,System.Byte[],System.Int32)">
+            <summary>
+            Fills the stream in its current position using the bytes from a specified buffer.
+            </summary>
+            <param name="buffer">The buffer.</param>
+            <param name="count">The number of bytes to fill the stream with.</param>
+        </member>
         <member name="M:System.Text.StringBuilderExtensions.AppendFormatEx(System.Text.StringBuilder,System.String,System.Object[])">
             <summary>
             This extension method forces the 'en-US' culture while formatting lines. See the default AppendFormat for more info.
@@ -1067,7 +1094,7 @@
             </summary>
             <param name="count">Number of lines to be inserted</param>
         </member>
-        <member name="M:System.Memory.Align``1(``0,``0)">
+        <member name="M:System.Memory.Align``1(``0,System.Int32)">
             <summary>
             Returns the result of aligning a value to a specified alignment.
             </summary>
@@ -1108,15 +1135,35 @@
         <member name="F:DSCript.Models.FVFType.Unknown">
             <summary>Represents an unknown type.</summary>
         </member>
-        <member name="P:DSCript.Spooling.ChunkReader.BaseStream">
-            <summary>
-            Gets the underlying file stream.
-            </summary>
-        </member>
         <member name="T:DSCript.Spoolers.SpoolableChunk">
             <summary>
             Represents a class for spoolers thats content is a list of spoolers.
             </summary>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.RegisterSpoolerLoadedCallback(System.Int32,System.Byte,System.Action{DSCript.Spoolers.Spooler})">
+            <summary>
+            Registers a spooler that matches the specified magic number and reserved byte for a callback that is invoked upon being loaded.
+            <para>When a spooler that matches the condition is queued, the callback is invoked.</para>
+            </summary>
+            <param name="magic">The magic number of the spooler.</param>
+            <param name="reserved">The reserved byte of the spooler.</param>
+            <param name="callback">The callback to invoke when the above conditions are met and a spooler is queued for loading.</param>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.RegisterSpoolerLoadedCallback(DSCript.ChunkType,System.Byte,System.Action{DSCript.Spoolers.Spooler})">
+            <summary>
+            Registers a spooler that matches the specified spooler type and reserved byte for a callback that is invoked upon being loaded.
+            <para>When a spooler that matches the condition is queued, the callback is invoked.</para>
+            </summary>
+            <param name="type">The type of spooler.</param>
+            <param name="reserved">The reserved byte of the spooler.</param>
+            <param name="callback">The callback to invoke when the above conditions are met and a spooler is queued for loading.</param>
+        </member>
+        <member name="M:DSCript.Spoolers.Spooler.QueueSpoolerLoadedCallback(DSCript.Spoolers.Spooler)">
+            <summary>
+            Queues a spooler for being loaded and invokes any callbacks that may exist for a specific spooler.
+            </summary>
+            <param name="spooler">The spooler to queue.</param>
+            <returns>True if a callback was invoked; otherwise, false.</returns>
         </member>
         <member name="M:DSCript.Spoolers.Spooler.GetHashCode">
             <summary>
@@ -1141,6 +1188,7 @@
             Saves the contents of the spooler to the specified file.
             </summary>
             <param name="filename">The file to write the contents of the spooler to.</param>
+            <remarks>This method calls the <see cref="M:DSCript.Spoolers.Spooler.WriteTo(System.IO.Stream)"/> method, and cannot be overloaded.</remarks>
         </member>
         <member name="P:DSCript.Spoolers.Spooler.Alignment">
             <summary>
@@ -1198,6 +1246,772 @@
         <member name="P:DSCript.Spoolers.SpoolableData.Buffer">
             <summary>
             Gets or sets the buffer.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spooling.SpoolableResource.Description">
+            <summary>
+            Gets or sets the description for this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spooling.SpoolableResource.Magic">
+            <summary>
+            Gets or sets the magic number for this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spooling.SpoolableResource.Reserved">
+            <summary>
+            Gets or sets the reserved byte for this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spooling.SpoolableResource.Flags">
+            <summary>
+            Gets or sets the flags for this spooler.
+            </summary>
+        </member>
+        <member name="P:DSCript.Spooling.SpoolableResource.Parent">
+            <summary>
+            Gets the <see cref="T:DSCript.Spooling.SpoolablePackage"/> containing this spooler. If no parent is attached, the value is null.
+            </summary>
+        </member>
+        <member name="T:DSCript.Spooling.SpoolableResourceCollection">
+            <summary>
+            Represents a collection of spoolers. This class is not intended to be initialized outside of a <see cref="T:DSCript.Spooling.SpoolablePackage"/>.
+            </summary>
+        </member>
+        <member name="M:DSCript.Spooling.SpoolableResourceCollection.GetSpoolablePackage">
+            <summary>
+            Returns the <see cref="T:DSCript.Spooling.SpoolablePackage"/> this collection is attached to.
+            </summary>
+            <returns>The <see cref="T:DSCript.Spooling.SpoolablePackage"/> this collection is attached to.</returns>
+        </member>
+        <member name="P:DSCript.Spooling.SpoolablePackage.Children">
+            <summary>
+            Gets the children attached to this spooler.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.Chunk">
+            <summary>
+            [CHNK] - The header for a CHUNK block
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ModelPackagePC">
+            <summary>
+            [MDPC] - A block that contains various models and textures
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ModelPackagePC_X">
+            <summary>
+            [MDXN] - A block that contains various models and textures (new format found in DPL and DSF)
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UnifiedPackage">
+            <summary>
+            [0x0] - A block that acts as a unifiable package for various data types
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VehicleHierarchy">
+            <summary>
+            [UPVH] - A block that contains vehicle hierarchy information
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.StandaloneTextures">
+            <summary>
+            [UPST] - A block that contains standalone texture IDs
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.BuildInfo">
+            <summary>
+            [BINF] - A block that contains developer export information
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ModelContainer">
+            <summary>
+            [MODL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.GPUShader">
+            <summary>
+            [GPUS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UnknownMRRD">
+            <summary>
+            [MRRD] - No research has been done on this format (some sort of flags table?)
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ExportedMissionRoot">
+            <summary>
+            [EPMR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpoolSystemInitChunker">
+            <summary>
+            [SSIC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpoolSystemLookup">
+            <summary>
+            [SSLP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledVehicleStringCollection">
+            <summary>
+            [VSCT] - No research has been done on this format (may not be for strings?)
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledCharacterStringCollection">
+            <summary>
+            [CSCT] - No research has been done on this format (may not be for strings?)
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledSoundBank">
+            <summary>
+            [SSBK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledAnimationChunk">
+            <summary>
+            [ANMC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledGameSoundChunk">
+            <summary>
+            [SGSC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledGameSoundBank">
+            <summary>
+            [SGSB] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledCharacterChunk">
+            <summary>
+            [CHAC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledLocaleChunk">
+            <summary>
+            [LOCC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledLocaleText">
+            <summary>
+            [LOCT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledLitterChunk">
+            <summary>
+            [LTCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledLitterData">
+            <summary>
+            [LTDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledParticleChunk">
+            <summary>
+            [PTCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledParticleData">
+            <summary>
+            [PTDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledSkyCloudChunk">
+            <summary>
+            [SPCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledSkyCloudData">
+            <summary>
+            [SPDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpooledVehicleChunk">
+            <summary>
+            [VEHC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VO3HandlingData">
+            <summary>
+            [VO3D] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CharacterSpoolChunk">
+            <summary>
+            [CHAR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CharacterSpoolIndex">
+            <summary>
+            [CHAI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.NonRendererData">
+            <summary>
+            [NONR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourcePackage">
+            <summary>
+            [PCKG] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UIDLookup">
+            <summary>
+            [UIDL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpoolableItem">
+            <summary>
+            [SPOI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpoolableItemLookup">
+            <summary>
+            [SPOL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SpoolableDataTakeARide">
+            <summary>
+            [SDFD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AnimationIndex">
+            <summary>
+            [AIDX] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AnimationClips">
+            <summary>
+            [ACLP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.GlobalSuperRegion">
+            <summary>
+            [GESR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PhysicsModelData">
+            <summary>
+            [GEPM] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PhysicsModelLookupData">
+            <summary>
+            [PMLD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.WaterInstanceData">
+            <summary>
+            [GWTR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.BuildingInstanceData">
+            <summary>
+            [GEBI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SplineRoadData">
+            <summary>
+            [GERD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AIExport">
+            <summary>
+            [AIEX] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AnimatedObjectData">
+            <summary>
+            [ANOD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PropDataContainer">
+            <summary>
+            [GEPD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PropHierarchyInformation">
+            <summary>
+            [HRDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.Region">
+            <summary>
+            [GEIR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.WaterRegionData">
+            <summary>
+            [GWRD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.RegionTerrainData">
+            <summary>
+            [GRTD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.BuildingRoutefindData">
+            <summary>
+            [GEBR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.BroadphaseData">
+            <summary>
+            [JNR!] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AttractorData">
+            <summary>
+            [ATRD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.RegionSceneData">
+            <summary>
+            [SCND] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.OccluderGameData">
+            <summary>
+            [OGCD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ExternalFileLinkInternal">
+            <summary>
+            [IRCT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.InteriorLightingData">
+            <summary>
+            [ISHM] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.MissionEditorModelInfo">
+            <summary>
+            [PINF] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.MissionEditorModelData">
+            <summary>
+            [PIND] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.MissionEditorStrings">
+            <summary>
+            [PINS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.GrandioseLookup">
+            <summary>
+            [GEGL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SuperRegionInfo">
+            <summary>
+            [GESI] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LookupHeader">
+            <summary>
+            [GILH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SuperRegionLookup">
+            <summary>
+            [GSIL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.RegionLookup">
+            <summary>
+            [GRIL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.InteriorLookupInfo">
+            <summary>
+            [IRLU] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.RegionalArea">
+            <summary>
+            [PCSL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.GlobalRegion">
+            <summary>
+            [GEGR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SceneData">
+            <summary>
+            [IRDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.GadgetLookup">
+            <summary>
+            [GLUT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.WormsData">
+            <summary>
+            [WORM] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PropData">
+            <summary>
+            [PROP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AttractorSuperRegionData">
+            <summary>
+            [ASRD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ExportedMissionChunk">
+            <summary>
+            [EM__] - Exported mission data for Driver: Parallel Lines
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.MissionSummary">
+            <summary>
+            [EMMS] - A block that contains data in which the game should handle this mission, such as what city to play in.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ExportedMissionObjects">
+            <summary>
+            [EMOB] - Contains data for positioning objects and defining actors in a mission.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ExportedMissionPropHandles">
+            <summary>
+            [EMPR] - Unknown. Possibly deprecated.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportData">
+            <summary>
+            [LELD] - Contains all of the logic data (definitions, properties, etc).
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportStringCollection">
+            <summary>
+            [LESC] - Contains strings associated with the logic data.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportSoundBank">
+            <summary>
+            [LESB] - Contains sound id's to be used in the logic data.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportActorsChunk">
+            <summary>
+            [LEAC] - Contains actor definitions and properties.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportActorDefinitions">
+            <summary>
+            [LEAD] - Contains definitions for characters, vehicles, weapons, etc. to be used in the mission.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportNodesChunk">
+            <summary>
+            [LENC] - Contains logic node definitions and properties.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportNodeDefinitionsTable">
+            <summary>
+            [LEND] - Contains definitions for mission logic.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportPropertiesTable">
+            <summary>
+            [LEPR] - Contains properties associated with each definition.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportActorSetTable">
+            <summary>
+            [LEAS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportWireCollections">
+            <summary>
+            [LEWC] - Contains wires that link logic nodes together.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.LogicExportScriptCounters">
+            <summary>
+            [LECO] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UnknownLogicExportLEPS">
+            <summary>
+            [LEPS] - Unknown purpose in Driver: Parallel Lines.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UnknownLogicExportLENE">
+            <summary>
+            [LENE] - Unknown purpose in Driver: Parallel Lines.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UnknownLogicExportFING">
+            <summary>
+            [FING] - Unknown purpose in Driver: Parallel Lines.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.UnknownLogicExportLEAT">
+            <summary>
+            [LEAT] - Unknown purpose in Driver: Parallel Lines.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ExtraCharacterData">
+            <summary>
+            [UPXD] - A block that contains character model and texture data.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CharacterSkeletons">
+            <summary>
+            [UPCB] - A block that contains character skeletons for the male and female models.
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ReflectionsMenuDataPackage">
+            <summary>
+            [RMDP] - A block that holds data pertaining to the GUI (main menu, pause menu, etc)
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ReflectionsMenuDataChunk">
+            <summary>
+            [RMDL] - A block that contains data for handling all GUI-related data
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.FontContainer">
+            <summary>
+            [FONT] - A block that holds data pertaining to the fonts
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.FontData">
+            <summary>
+            [FBNK] - A block that contains textures used for the fonts
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceChunk">
+            <summary>
+            [DRSP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceTexture">
+            <summary>
+            [TEXC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceTextureUID">
+            <summary>
+            [UIDC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceTextureDDS">
+            <summary>
+            [DXTC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceMaterialContainer">
+            <summary>
+            [MACO] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceMaterialHeader">
+            <summary>
+            [MAHE] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceMaterialXML">
+            <summary>
+            [MATX] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceMaterialRenderMethodHeader">
+            <summary>
+            [MARH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ResourceMaterialRenderMethodParameter">
+            <summary>
+            [MARP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SubmodelChunk">
+            <summary>
+            [SBMC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.SubmodelHeader">
+            <summary>
+            [SBBH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledVertexBufferChunk">
+            <summary>
+            [VXCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledVertexHeader">
+            <summary>
+            [VXHD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledVertexDependencies">
+            <summary>
+            [VXDP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledVertexBufferData">
+            <summary>
+            [VXDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledVertexDeclaration">
+            <summary>
+            [VCDL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledIndexChunk">
+            <summary>
+            [IXCK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledIndexHeader">
+            <summary>
+            [IXHD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledIndexDependencies">
+            <summary>
+            [IXDP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PooledIndexBuffer">
+            <summary>
+            [IXDT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.RendererDataUIDs">
+            <summary>
+            [MDID] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AnimationGraph">
+            <summary>
+            [AGRA] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.PedestrianMeshData">
+            <summary>
+            [PDMD] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CityLockingEntry">
+            <summary>
+            [CTYE] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CityLockingSplines">
+            <summary>
+            [CTYS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CityLockingRoads">
+            <summary>
+            [CTYR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AmbientVolumeData">
+            <summary>
+            [AMBV] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.BillboardInfo">
+            <summary>
+            [BILL] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.HeightInfo">
+            <summary>
+            [HINF] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.AdvertisingHeader">
+            <summary>
+            [ADVH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CommentaryRoot">
+            <summary>
+            [CMRT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CommentaryCommonContainer">
+            <summary>
+            [CMCC] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CommentaryMissionData">
+            <summary>
+            [CMMS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CutsceneRoot">
+            <summary>
+            [CUTR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.CutsceneData">
+            <summary>
+            [CUTS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ShaderParamSetRoot">
+            <summary>
+            [SPSR] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ShaderParamSet">
+            <summary>
+            [SPSS] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.ShaderParamSetParams">
+            <summary>
+            [SPSP] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VehicleSoundRoot">
+            <summary>
+            [VSRT] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VehicleCommonSoundHeader">
+            <summary>
+            [VSCH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VehicleSoundHeader">
+            <summary>
+            [VSVH] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VehicleSoundBank">
+            <summary>
+            [SBAK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.VehicleGranularData">
+            <summary>
+            [GRBK] - No research has been done on this format
+            </summary>
+        </member>
+        <member name="F:DSCript.SpoolerType.DM_WMK_Info">
+            <summary>
+            [DMWK] - This format may be leftover from development. It serves an unknown purpose in 'dngvehicles.sp' in Driver: San Francisco.
             </summary>
         </member>
         <member name="M:DSCript.Models.TextureCache.GetCachedTexture(DSCript.Models.CacheableTexture)">

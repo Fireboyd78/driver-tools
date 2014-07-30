@@ -10,41 +10,40 @@ using Zartex.Converters;
 
 namespace Zartex.MissionObjects
 {
-    public class BlockType_0x6 : IMissionObject
+    public class BlockType_0x6 : MissionObject
     {
-        public int ID
+        public override int Id
         {
             get { return 0x6; }
         }
 
-        public int Size
+        public override int Size
         {
-            get
-            {
-                return 0x1C;
-            }
+            get { return 0x1C; }
         }
 
         [TypeConverter(typeof(CollectionConverter))]
-        public List<Double> Floats { get; set; }
+        public List<double> Floats { get; set; }
 
         public double UnkFloat { get; set; }
 
         [TypeConverter(typeof(HexStringConverter))]
-        public uint UnkID { get; set; }
+        public int UnkID { get; set; }
 
         public BlockType_0x6(BinaryReader reader)
         {
-            Floats = new List<Double>(3);
+            Offset = (int)reader.GetPosition();
+
+            Floats = new List<double>(3);
 
             for (int i = 0; i < Floats.Capacity; i++)
-                Floats.Insert(i, BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0));
+                Floats.Add((double)reader.ReadSingle());
 
-            reader.BaseStream.Seek(sizeof(uint), SeekOrigin.Current);
+            reader.BaseStream.Seek(4, SeekOrigin.Current);
 
-            UnkFloat = BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0);
+            UnkFloat = (double)reader.ReadSingle();
 
-            UnkID = reader.ReadUInt32();
+            UnkID = reader.ReadInt32();
         }
     }
 }

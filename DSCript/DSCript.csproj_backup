@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DSCript</RootNamespace>
+    <AssemblyName>libDSC</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>doc\dscript.xml</DocumentationFile>
+    <FileAlignment>512</FileAlignment>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <PlatformTarget>x86</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DelaySign>false</DelaySign>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;log</DefineConstants>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <DocumentationFile>doc\libDSC.xml</DocumentationFile>
+    <ErrorReport>prompt</ErrorReport>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\Release\</OutputPath>
+    <DocumentationFile>
+    </DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Legacy|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Legacy\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;log,LEGACY</DefineConstants>
+    <DocumentationFile>doc\dscript.xml</DocumentationFile>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Legacy|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Legacy\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;log</DefineConstants>
+    <DocumentationFile>doc\libDSC.xml</DocumentationFile>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="FreeImageNET, Version=3.15.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Libraries\FreeImage.NET\FreeImageNET.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf">
+      <HintPath>..\Libraries\HelixToolkit\HelixToolkit.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf.Input">
+      <HintPath>..\Libraries\HelixToolkit\HelixToolkit.Wpf.Input.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="TDx.TDxInput">
+      <HintPath>..\Libraries\HelixToolkit\TDx.TDxInput.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Legacy' ">
+    <Reference Include="Xceed.Wpf.Toolkit">
+      <HintPath>..\Libraries\Xceed.Wpf.Toolkit.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)' == 'Legacy' ">
+    <Compile Include="IO\ChunksOld\Blocks\Block.cs" />
+    <Compile Include="IO\ChunksOld\Blocks\BlockData.cs" />
+    <Compile Include="IO\ChunksOld\SubChunkBlockExtensions.cs" />
+    <Compile Include="IO\ChunksOld\ChunkBlock.cs" />
+    <Compile Include="IO\ChunksOld\ChunkReader.cs" />
+    <Compile Include="IO\ChunksOld\ChunkReaderExtensions.cs" />
+    <Compile Include="IO\ChunksOld\SubChunkBlock.cs" />
+    <Compile Include="Object\NodeTag.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Extensions\FileDialogExtensions.cs" />
+    <Compile Include="Extensions\FreeImageAPI\FIBITMAPExtensions.cs" />
+    <Compile Include="Extensions\System\IO\FileStreamExtensions.cs" />
+    <Compile Include="Helpers\BitmapHelper.cs" />
+    <Compile Include="Helpers\BitmapSourceHelper.cs" />
+    <Compile Include="Helpers\ArrayHelper.cs" />
+    <Compile Include="Helpers\DriverPL.cs" />
+    <Compile Include="Helpers\SpoolerMagicConverter.cs" />
+    <Compile Include="Config.cs" />
+    <Compile Include="IniConfiguration.cs" />
+    <Compile Include="IniFile.cs" />
+    <Compile Include="IO\LocaleReader.cs" />
+    <Compile Include="Log.cs" />
+    <Compile Include="Chunks\Chunk.cs" />
+    <Compile Include="Chunks\ChunkExporter.cs" />
+    <Compile Include="Chunks\ChunkFile.cs" />
+    <Compile Include="Chunks\ChunkTypes.cs" />
+    <Compile Include="Chunks\Block.cs" />
+    <Compile Include="Chunks\BlockData.cs" />
+    <Compile Include="Chunks\BlockDataEventArgs.cs" />
+    <Compile Include="Chunks\BlockEditor.cs" />
+    <Compile Include="Chunks\BlockType.cs" />
+    <Compile Include="Chunks\ChunkBlock.cs" />
+    <Compile Include="Chunks\ChunkEntry.cs" />
+    <Compile Include="Chunks\MagicConverter.cs" />
+    <Compile Include="Extensions\System\NativeMethods.cs" />
+    <Compile Include="Extensions\System\StringExtensions.cs" />
+    <Compile Include="Extensions\System\Drawing\BitmapExtensions.cs" />
+    <Compile Include="Extensions\System\IO\BinaryReaderExtensions.cs" />
+    <Compile Include="Extensions\System\IO\BinaryReaderEx.cs" />
+    <Compile Include="Extensions\System\IO\StreamExtensions.cs" />
+    <Compile Include="Extensions\System\Text\StringBuilderExtensions.cs" />
+    <Compile Include="Extensions\System\Windows\Forms\MessageBoxEx.cs" />
+    <Compile Include="Extensions\System\XML\XMLExtensions.cs" />
+    <Compile Include="Helpers\Driv3r.cs" />
+    <Compile Include="Helpers\Memory.cs" />
+    <Compile Include="IO\DSFModelFile.cs" />
+    <Compile Include="IO\ModelFile.cs" />
+    <Compile Include="IO\ObjFile.cs" />
+    <Compile Include="IO\VGTFile.cs" />
+    <Compile Include="IO\VVVFile.cs" />
+    <Compile Include="IO\VVSFile.cs" />
+    <Compile Include="Models\DSF\ModelResourcePackage.cs" />
+    <Compile Include="Models\FVFType.cs" />
+    <Compile Include="Models\Hierarchy\AWHF.cs" />
+    <Compile Include="Models\Materials\PCMPMaterial.cs" />
+    <Compile Include="Models\Materials\PCMPSubMaterial.cs" />
+    <Compile Include="Models\Materials\PCMPTextureInfo.cs" />
+    <Compile Include="Models\Materials\TextureFlags.cs" />
+    <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
+    <Compile Include="Spoolers\SpoolableChunk.cs" />
+    <Compile Include="Spoolers\Spooler.cs" />
+    <Compile Include="Spoolers\SpoolableData.cs" />
+    <Compile Include="Spoolers\SpoolerExtensions.cs" />
+    <Compile Include="Spoolers\V3\SpoolableResource.cs" />
+    <Compile Include="SpoolerType.cs" />
+    <Compile Include="SpoolerTypes.cs" />
+    <Compile Include="Stuntman\GUNVFile.cs" />
+    <Compile Include="Stuntman\PS2IMGFile.cs" />
+    <None Include="Models\ModelPackages\ModelPackagePC_X.cs" />
+    <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
+    <Compile Include="Models\TextureCache.cs" />
+    <Compile Include="Models\D3DPRIMITIVETYPE.cs" />
+    <Compile Include="Models\IndexData.cs" />
+    <Compile Include="Models\MeshDefinition.cs" />
+    <Compile Include="Models\Materials\PCMPData.cs" />
+    <Compile Include="Models\PackageTypes.cs" />
+    <Compile Include="Models\MeshGroup.cs" />
+    <Compile Include="Models\ModelPackages\ModelPackage.cs" />
+    <Compile Include="Models\PartDefinition.cs" />
+    <Compile Include="Models\PartsGroup.cs" />
+    <Compile Include="Models\Vertex.cs" />
+    <Compile Include="Models\VertexData.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="FreeImage.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

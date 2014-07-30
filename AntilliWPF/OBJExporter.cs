@@ -112,7 +112,7 @@ namespace Antilli
 
                     for (int m = 0; m < group.Meshes.Count; m++)
                     {
-                        IndexedMesh mesh = group.Meshes[m];
+                        MeshDefinition mesh = group.Meshes[m];
 
                         int mtlIdx = mesh.MaterialId + 1;
 

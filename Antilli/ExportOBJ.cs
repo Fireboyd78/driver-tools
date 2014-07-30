@@ -49,7 +49,7 @@ namespace Antilli
             ExportGUI.btnExport.Click += (o, e) => {
                 StringBuilder directory = new StringBuilder();
 
-                directory.Append(Settings.Configuration["Models", true]);
+                directory.Append(Settings.Configuration.GetDirectory("Models"));
                 directory.AppendFormat(@"\{0}", NamePrefix);
 
                 string dir = directory.ToString();

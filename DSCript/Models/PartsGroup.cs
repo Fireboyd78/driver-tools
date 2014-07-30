@@ -20,9 +20,9 @@ namespace DSCript.Models
         public uint Handle { get; set; }
 
         /// <summary>
-        /// Gets or sets the ID of the Vertex Buffer to use when accessing vertices
+        /// Gets or sets the Vertex Buffer to use when accessing vertices
         /// </summary>
-        public short VertexBufferId { get; set; }
+        public VertexData VertexBuffer { get; set; }
         
         public short Unknown1 { get; set; }
         public int Unknown2 { get; set; }

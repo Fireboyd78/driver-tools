@@ -20,7 +20,7 @@ namespace Antilli
 
         static Settings()
         {
-            Configuration = new IniConfiguration("Antilli");
+            Configuration = new IniConfiguration(DSC.IniFile, "Antilli");
         }
     }
 }

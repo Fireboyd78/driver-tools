@@ -13,54 +13,40 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
+using DSCript.Spooling;
+
 namespace DSCript.Models
 {
-    public abstract class ModelPackage
+    public abstract class ModelPackage : SpoolableResource<SpoolableBuffer>
     {
-        public IModelFile ModelFile { get; set; }
+        public int UID { get; set; }
 
-        public uint UID { get; protected set; }
+        public Driv3rModelFile ModelFile { get; set; }
 
         public PackageType PackageType
         {
             get { return Enum.IsDefined((typeof(PackageType)), UID) ? (PackageType)UID : PackageType.SpooledModels; }
         }
 
-        public virtual uint Magic
-        {
-            get { return 0xFF; }
-        }
-
-        public BlockData BlockData { get; set; }
-
         public List<PartsGroup> Parts { get; set; }
         public List<MeshGroup> MeshGroups { get; set; }
-        public List<IndexedMesh> Meshes { get; set; }
+        public List<MeshDefinition> Meshes { get; set; }
 
         public List<VertexData> VertexBuffers { get; set; }
-        public IndexData Indices { get; set; }
+        public IndexData IndexBuffer { get; set; }
 
-        public PCMPData MaterialData { get; set; }
+        public List<PCMPMaterial> Materials { get; set; }
+        public List<PCMPSubMaterial> SubMaterials { get; set; }
+        public List<PCMPTexture> Textures { get; set; }
 
         public bool HasMaterials
         {
-            get { return MaterialData != null; }
+            get { return Materials != null && Materials.Count > 0; }
         }
 
-        public virtual void Load()
+        public bool HasModels
         {
-            throw new NotImplementedException();
-        }
-
-        public virtual void Compile()
-        {
-            throw new NotImplementedException();
-        }
-
-        public ModelPackage(BlockData blockData)
-        {
-            BlockData = blockData;
-            Load();
+            get { return (Parts != null && Parts.Count > 0); }
         }
     }
 }

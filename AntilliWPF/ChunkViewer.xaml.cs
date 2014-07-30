@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -17,7 +18,14 @@ using Microsoft.Win32;
 
 using DSCript;
 using DSCript.Spoolers;
+using DSCript.Spooling;
 using DSC = DSCript.DSC;
+
+using FreeImageAPI;
+
+using Spooler = DSCript.Spooling.Spooler;
+using SpoolableChunk = DSCript.Spooling.SpoolablePackage;
+using SpoolableData = DSCript.Spooling.SpoolableBuffer;
 
 namespace Antilli
 {
@@ -29,6 +37,8 @@ namespace Antilli
         private string Filename { get; set; }
 
         private SpoolableChunk loadedChunk;
+        private FileChunker _chunker;
+        private bool inTextureMode;
 
         protected SpoolableChunk LoadedChunk
         {
@@ -36,7 +46,13 @@ namespace Antilli
             set
             {
                 if (loadedChunk != null)
+                {
+                    DSC.Log("Collecting garbage...");
+
                     loadedChunk.Dispose();
+
+                    GC.Collect();
+                }
 
                 refreshSpoolers = true;
 
@@ -45,63 +61,83 @@ namespace Antilli
         }
 
         private Spooler currentSpooler;
-
+        private BitmapSource currentImage;
+        
         private bool refreshSpoolers = false;
 
-        private IEnumerable<Spooler> allSpoolers;
-        private IEnumerable<Spooler> AllSpoolers
+        //-- Don't need these anymore
+        //private IEnumerable<Spooler> allSpoolers;
+        //private IEnumerable<Spooler> AllSpoolers
+        //{
+        //    get
+        //    {
+        //        if (allSpoolers == null || refreshSpoolers)
+        //        {
+        //            var stopwatch = new Stopwatch();
+        //            stopwatch.Start();
+        //
+        //            allSpoolers = LoadedChunk.GetAllSpoolers();
+        //
+        //            stopwatch.Stop();
+        //
+        //            DSC.Log("Took {0}ms to flatten {1:N0} spoolers.", stopwatch.Elapsed.TotalMilliseconds, allSpoolers.Count());
+        //        }
+        //
+        //        refreshSpoolers = false;
+        //
+        //        return allSpoolers;
+        //    }
+        //}
+        //
+        //private SpoolableChunk FindParent(Spooler child)
+        //{
+        //    SpoolableChunk parent = null;
+        //
+        //    var chunks = AllSpoolers.Where((s) => (s is SpoolableChunk && s != child));
+        //
+        //    if (chunks != null)
+        //    {
+        //        var timer = new Stopwatch();
+        //        timer.Start();
+        //
+        //        foreach (SpoolableChunk chunk in chunks)
+        //        {
+        //            if (chunk.Spoolers.Contains(child))
+        //            {
+        //                parent = chunk;
+        //                break;
+        //            }
+        //        }
+        //
+        //        timer.Stop();
+        //
+        //        DSC.Log("Searched through {0:N0} chunks in {1}ms.", chunks.Count(), timer.Elapsed.TotalMilliseconds);
+        //    }
+        //
+        //    return parent;
+        //}
+
+        public IList<Spooler> Spoolers
         {
             get
             {
-                if (allSpoolers == null || refreshSpoolers)
-                {
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
+                if (LoadedChunk == null)
+                    return null;
 
-                    allSpoolers = LoadedChunk.GetAllSpoolers();
+                //var dxtc = (int)ChunkType.ResourceTextureDDS;
+                //var spoolers = (inTextureMode) ? AllSpoolers.Where((s) => s.Magic == dxtc) : LoadedChunk.Children;
+                //
+                //if (inTextureMode && spoolers.Count() == 0)
+                //{
+                //    MessageBox.Show("There are no textures available to load!", "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
+                //
+                //    inTextureMode = false;
+                //
+                //    spoolers = LoadedChunk.Spoolers;
+                //}
 
-                    stopwatch.Stop();
-
-                    DSC.Log("Took {0}ms to flatten {1:N0} spoolers.", stopwatch.Elapsed.TotalMilliseconds, allSpoolers.Count());
-                }
-
-                refreshSpoolers = false;
-
-                return allSpoolers;
+                return new List<Spooler>(LoadedChunk.Children);
             }
-        }
-
-        private SpoolableChunk FindParent(Spooler child)
-        {
-            SpoolableChunk parent = null;
-
-            var chunks = AllSpoolers.Where((s) => (s is SpoolableChunk && s != child));
-
-            if (chunks != null)
-            {
-                var timer = new Stopwatch();
-                timer.Start();
-
-                foreach (SpoolableChunk chunk in chunks)
-                {
-                    if (chunk.Spoolers.Contains(child))
-                    {
-                        parent = chunk;
-                        break;
-                    }
-                }
-
-                timer.Stop();
-
-                DSC.Log("Searched through {0:N0} chunks in {1}ms.", chunks.Count(), timer.Elapsed.TotalMilliseconds);
-            }
-
-            return parent;
-        }
-
-        public List<Spooler> Spoolers
-        {
-            get { return (LoadedChunk != null) ? new List<Spooler>(LoadedChunk.Spoolers) : null; }
         }
 
         public Spooler CurrentSpooler
@@ -116,6 +152,12 @@ namespace Antilli
             }
         }
 
+        public BitmapSource CurrentImage
+        {
+            get { return currentImage; }
+            set { SetValue(ref currentImage, value, "CurrentImage"); }
+        }
+
         public string SpoolerInfo
         {
             get
@@ -123,25 +165,72 @@ namespace Antilli
                 if (CurrentSpooler == null)
                     return "";
 
-                var str = String.Format("Alignment: 0x{0:X} ({0})\r\nReserved: {1}\r\nSize: 0x{2:X}\r\n\r\n",
-                    CurrentSpooler.Alignment, CurrentSpooler.Reserved, CurrentSpooler.Size);
+                var sb = new StringBuilder();
+                var col = 10;
+                var magic = CurrentSpooler.Magic;
+
+                sb.AppendColumn("Alignment", col, true).AppendLine(CurrentSpooler.Alignment);
+                sb.AppendColumn("Type",      col, true);
+
+                if (magic > 255)
+                    sb.AppendLine((ChunkType)magic);
+                else
+                    sb.AppendLine("Vehicle Container (ID:{0})", magic);
+
+                sb.AppendColumn("Offset",    col, true).AppendLine("0x{0:X}", CurrentSpooler.BaseOffset);
+                sb.AppendColumn("Reserved",  col, true).AppendLine(CurrentSpooler.Reserved);
+                sb.AppendColumn("StrLen",    col, true).AppendLine(CurrentSpooler.StrLen);
+                sb.AppendColumn("Flags",     col, true).AppendLine("0x{0:X2} / 0x{1:X2}", (CurrentSpooler.Flags & 0xFF), ((CurrentSpooler.Flags >> 8) & 0xFF));
+                sb.AppendColumn("Size",      col, true).AppendLine("0x{0:X}", CurrentSpooler.Size);
 
                 if (CurrentSpooler.Magic == (int)ChunkType.BuildInfo)
                 {
-                    var buffer = ((SpoolableData)CurrentSpooler).Buffer;
+                    sb.AppendLine();
+
+                    var buffer = ((SpoolableData)CurrentSpooler).GetBuffer();
                     var encoding = (buffer.Length > 1 && buffer[1] == 0) ? Encoding.Unicode : Encoding.UTF8;
 
-                    str += String.Format("Build Info:\r\n\r\n{0}", encoding.GetString(buffer));
+                    sb.AppendLine("Build Info:\r\n");
+                    sb.Append(encoding.GetString(buffer));
                 }
 
-                return str;
+                return sb.ToString();
             }
         }
 
         private void SpoolerSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            var target = e.NewValue as Spooler;
-            CurrentSpooler = AllSpoolers.First((s) => s == target);
+            //var target = e.NewValue as Spooler;
+            //CurrentSpooler = (target != null) ? AllSpoolers.First((s) => s == target) : null;
+
+            CurrentSpooler = e.NewValue as Spooler;
+
+            if (CurrentSpooler != null)
+            {
+                if (CurrentSpooler.Magic == (int)ChunkType.ResourceTextureDDS)
+                {
+                    LoadDDS();
+                    return;
+                }
+            }
+            
+            if (CurrentImage != null)
+                CurrentImage = null;
+        }
+
+        private void LoadDDS()
+        {
+            var fibitmap = BitmapHelper.GetFIBITMAP(((SpoolableData)CurrentSpooler).GetBuffer());
+            var fibitmap24 = FreeImage.ConvertTo24Bits(fibitmap);
+
+            var isNull = fibitmap.Unload();
+
+            Debug.Assert(isNull, "MEMORY LEAK!!!", "The FIBITMAP was not released properly!");
+
+            using (var bitmap = fibitmap24.ToBitmap(true))
+            {
+                CurrentImage = (bitmap != null) ? bitmap.ToBitmapSource() : null;
+            }
         }
 
         private void ReplaceBuffer(object sender, RoutedEventArgs e)
@@ -156,7 +245,7 @@ namespace Antilli
             {
                 var spooler = (SpoolableData)CurrentSpooler;
 
-                spooler.Buffer = File.ReadAllBytes(openFile.FileName);
+                spooler.SetBuffer(File.ReadAllBytes(openFile.FileName));
                 
                 DSC.Log("Replaced buffer.");
 
@@ -169,53 +258,64 @@ namespace Antilli
         private void RemoveCurrentSpoolerFromParent(SpoolableChunk parent)
         {
             CurrentSpooler.Dispose();
-            parent.Spoolers.Remove(CurrentSpooler);
+            //parent.Spoolers.Remove(CurrentSpooler);
 
             OnPropertyChanged("Spoolers");
         }
 
         private void RemoveSpooler(object sender, RoutedEventArgs e)
         {
-            var spoolers = LoadedChunk.Spoolers;
-
-            if (!spoolers.Contains(CurrentSpooler))
-            {
-                var parent = FindParent(CurrentSpooler);
-
-                if (parent != null)
-                {
-                    RemoveCurrentSpoolerFromParent(parent);
-                }
-                else
-                {
-                    MessageBox.Show("FATAL ERROR: Parent is null!");
-                }
-            }
+            if (CurrentSpooler.Parent == null && LoadedChunk.Children.Count == 1)
+                MessageBox.Show("You cannot remove the root node!");
             else
             {
-                if (spoolers.Count >= 2)
-                {
-                    RemoveCurrentSpoolerFromParent(LoadedChunk);
-                }
-                else
-                {
-                    MessageBox.Show("You cannot remove the root node!");
-                }
+                // magic *snort snort*
+                CurrentSpooler.Dispose();
+                OnPropertyChanged("Spoolers");
             }
+
+            //var spoolers = LoadedChunk.Spoolers;
+            //
+            //if (!spoolers.Contains(CurrentSpooler))
+            //{
+            //    var parent = FindParent(CurrentSpooler);
+            //
+            //    if (parent != null)
+            //    {
+            //        RemoveCurrentSpoolerFromParent(parent);
+            //    }
+            //    else
+            //    {
+            //        MessageBox.Show("FATAL ERROR: Parent is null!");
+            //    }
+            //}
+            //else
+            //{
+            //    if (spoolers.Count >= 2)
+            //    {
+            //        RemoveCurrentSpoolerFromParent(LoadedChunk);
+            //    }
+            //    else
+            //    {
+            //        MessageBox.Show("You cannot remove the root node!");
+            //    }
+            //}
         }
 
-        public void ExportFile()
+        public void ExportChunkFile()
         {
             var stopwatch = new Stopwatch();
-
+            Mouse.OverrideCursor = Cursors.Wait;
+            
             DSC.Log("Exporting...");
-            Chunk.PaddingType = Chunk.BytePaddingType.PaddingType2;
+            //Chunk.PaddingType = Chunk.BytePaddingType.PaddingType2;
 
             stopwatch.Start();
-            LoadedChunk.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(Filename)));
+            _chunker.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(Filename)));
             stopwatch.Stop();
 
-            DSC.Log("Exported file in {0}s.", stopwatch.Elapsed.TotalSeconds);
+            Mouse.OverrideCursor = null;
+            DSC.Log("Exported file in {0}ms.", stopwatch.ElapsedMilliseconds); 
         }
 
         public void OpenChunkFile()
@@ -223,68 +323,144 @@ namespace Antilli
             var openFile = new OpenFileDialog() {
                 CheckFileExists = true,
                 CheckPathExists = true,
-                Filter = Driv3r.FileFilter,
+                Filter = "All Files|*.*",
                 InitialDirectory = Driv3r.RootDirectory,
                 ValidateNames = true,
             };
-
-            openFile.AddFilter("All Files|*.*");
 
             if (openFile.ShowDialog() ?? false)
             {
                 Filename = openFile.FileName;
 
-                var stopwatch = new System.Diagnostics.Stopwatch();
-
-                if (LoadedChunk != null)
+                try
                 {
-                    DSC.Log("Collecting garbage...");
+                    var stopwatch = new System.Diagnostics.Stopwatch();
+                    
+                    Mouse.OverrideCursor = Cursors.Wait;
+ 
+                    //var file = new DSCript.Spoolers.SpoolableChunk(Filename);
 
-                    LoadedChunk = null;
-                    GC.Collect();
+                    
+                    if (_chunker != null)
+                    {
+                        DSC.Log("Collecting garbage...");
+                        _chunker.Dispose();
+                    }
+
+                    _chunker = new DSCript.Spooling.FileChunker();
+
+                    // capture events
+                    _chunker.SpoolerLoaded += (o, e) => {
+                        switch ((ChunkType)o.Magic)
+                        {
+                        case ChunkType.SpooledVehicleChunk:
+                            {
+                                if (o.Reserved != 0)
+                                    break;
+
+                                var vo3d = ((SpoolableChunk)o).Children[0] as SpoolableBuffer;
+                                var buffer = BitConverter.ToInt16(vo3d.GetBuffer(), 0);
+
+                                var vehId = buffer & 0xFF;
+                                var modLvl = (buffer & 0x7000) / 0x1000;
+
+                                // VehicleName [optional:(Bodykit #N)]
+                                o.Description = String.Format("{0}{1}", DriverPL.VehicleNames[vehId], (modLvl > 0) ? String.Format(" (Bodykit #{0})", modLvl) : "");
+                            } break;
+                        }
+                    };
+
+                    DSC.Log("Loading...");
+
+                    stopwatch.Start();
+
+                    _chunker.Load(Filename);
+
+                    //LoadedChunk = file;
+                    LoadedChunk = _chunker.Content;
+                    OnPropertyChanged("Spoolers");
+
+                    stopwatch.Stop();
+
+                    Mouse.OverrideCursor = null;
+
+                    DSC.Log("Loaded {0} chunks in {1}s.", LoadedChunk.Children.Count, stopwatch.Elapsed.TotalSeconds);
+                    DSC.Log("Temp directory size: {0:N0} KB", DSC.GetTempDirectorySize() / 1024.0);
                 }
-
-                DSC.Log("Loading...");
-
-                stopwatch.Start();
-                var file = new DSCript.Spoolers.SpoolableChunk(Filename);
-                stopwatch.Stop();
-
-                DSC.Log("Loaded {0} chunks in {1}s.", file.Spoolers.Count, stopwatch.Elapsed.TotalSeconds);
-                DSC.Log("Temp directory size: {0:F4}kb", DSC.GetTempDirectorySize() / 1024.0);
-
-                LoadedChunk = file;
-                OnPropertyChanged("Spoolers");
-
-                //if (file.Spoolers.Count > 0)
-                //    ExportFile();
-
-                GC.Collect();
+                catch (FileFormatException e)
+                {
+                    Mouse.OverrideCursor = null;
+                    MessageBox.Show(e.Message, "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
-        public ChunkViewer(SpoolableChunk chunk) : this()
+        private void ExportSpooler(object sender, RoutedEventArgs e)
         {
-            LoadedChunk = chunk;
-            OnPropertyChanged("Spoolers");
-        }
+#if OLDEXPORT
+            var ext = (CurrentSpooler.Magic > 255)
+                        ? Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Magic))
+                        : CurrentSpooler.Magic.ToString("X");
 
-        public ChunkViewer()
-        {
-            InitializeComponent();
+            // DSF: Change 'DXTC' magic to 'dds'
+            if (ext == "DXTC")
+                ext = "dds";
 
-            KeyDown += (o, e) => {
-                switch (e.Key)
-                {
-                case Key.E:
-                    if (LoadedChunk != null)
-                        ExportFile();
-                    break;
-                case Key.O: OpenChunkFile();
-                    break;
-                default: break;
-                }
+            var filename = String.Format("{0}_{1}_{2}.{3}",
+                Path.GetFileName(Filename).Replace('.', '_'),
+                CurrentSpooler.GetHashCode() - 1, // minus 'LoadedChunk' instance
+                CurrentSpooler.Size,
+                ext);
+
+            filename = Path.Combine(Settings.Configuration.GetDirectory("Export"), filename);
+
+            CurrentSpooler.Save(filename);
+
+            MessageBox.Show(String.Format("Successfully exported '{0}'!", filename), "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
+#else
+            bool chunk = (CurrentSpooler is SpoolablePackage);
+
+            var openFile = new SaveFileDialog() {
+                AddExtension = true,
+                DefaultExt =  "." + ((chunk) ? "chunk" : Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Magic)).ToLower()),
+                InitialDirectory = Settings.Configuration.GetDirectory("Export"),
+                Title = "Please enter a filename",
+                ValidateNames = true,
+                OverwritePrompt = true,
             };
+
+            openFile.FileName = "export";
+
+            if (openFile.ShowDialog() ?? false)
+            {
+                var stopwatch = new Stopwatch();
+
+                DSC.Log("Exporting '{0}'...", openFile.FileName);
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                stopwatch.Start();
+
+                //if (chunk)
+                //{
+                //    FileChunker.WriteChunk(openFile.FileName, (SpoolablePackage)CurrentSpooler);
+                //}
+                //else
+                //{
+                //    using (var fs = File.Create(openFile.FileName))
+                //    {
+                //        fs.SetLength(CurrentSpooler.Size);
+                //        fs.Write(((SpoolableBuffer)CurrentSpooler).GetBuffer());
+                //    }
+                //}
+
+                UnifiedPackage.Create(openFile.FileName, CurrentSpooler);
+
+                stopwatch.Stop();
+
+                Mouse.OverrideCursor = null;
+                DSC.Log("Successfully exported file in {0}ms!", stopwatch.ElapsedMilliseconds);
+            }
+#endif
         }
 
         private void RenameSpooler(object sender, RoutedEventArgs e)
@@ -299,6 +475,47 @@ namespace Antilli
                 CurrentSpooler.Description = inputBox.InputValue;
                 OnPropertyChanged("Spoolers");
             }
+        }
+
+        private void TreeViewItem_MouseRightButtonDown(object sender, MouseEventArgs e)
+        {
+            var item = sender as TreeViewItem;
+
+            if (item != null)
+            {
+                item.IsSelected = true;
+                item.Focus();
+
+                e.Handled = true;
+            }
+        }
+
+        public ChunkViewer()
+        {
+            InitializeComponent();
+
+            KeyDown += (o, e) => {
+                switch (e.Key)
+                {
+                case Key.E:
+                    if (LoadedChunk != null)
+                        ExportChunkFile();
+                    break;
+                case Key.O: OpenChunkFile();
+                    break;
+                case Key.T:
+                    {
+                        inTextureMode = !inTextureMode;
+                        OnPropertyChanged("Spoolers");
+                    } break;
+                default: break;
+                }
+            };
+
+            Closing += (o, e) => {
+                if (LoadedChunk != null)
+                    LoadedChunk.Dispose();
+            };
         }
     }
 }

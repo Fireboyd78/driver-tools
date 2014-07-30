@@ -10,7 +10,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using DSCript;
+
+#if LEGACY
 using DSCript.IO;
+#endif
 
 using Antilli.Models;
 

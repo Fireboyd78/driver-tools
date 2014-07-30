@@ -10,16 +10,16 @@ using Zartex.Converters;
 
 namespace Zartex.MissionObjects
 {
-    public class BlockType_0x2 : IMissionObject
+    public class BlockType_0x2 : MissionObject
     {
-        private ushort _type = 0;
+        private short _type = 0;
 
-        public int ID
+        public override int Id
         {
             get { return 0x2; }
         }
 
-        public int Size
+        public override int Size
         {
             get
             {
@@ -29,72 +29,66 @@ namespace Zartex.MissionObjects
             }
         }
 
-        public ushort Type
-        {
-            get { return _type; }
-            set { _type = value; }
-        }
-
-        public ushort Reserved { get; set; }
+        public short Reserved { get; set; }
 
         [TypeConverter(typeof(HexStringConverter))]
-        public uint Flags1 { get; set; }
+        public int Flags1 { get; set; }
 
         [TypeConverter(typeof(CollectionConverter))]
-        public List<Double> Floats1 { get; set; }
+        public List<double> Floats1 { get; set; }
 
         [TypeConverter(typeof(CollectionConverter))]
-        public List<Double> Floats2 { get; set; }
+        public List<double> Floats2 { get; set; }
 
         [TypeConverter(typeof(HexStringConverter))]
-        public uint GUID { get; set; }
+        public int GUID { get; set; }
 
         [TypeConverter(typeof(HexStringConverter))]
-        public uint Flags2 { get; set; }
+        public int Flags2 { get; set; }
 
         public BlockType_0x2(BinaryReader reader)
         {
-            long baseOffset = reader.BaseStream.Position;
+            Offset = (int)reader.GetPosition();
 
-            Type = reader.ReadUInt16();
+            var offset = reader.ReadInt16();
 
-            Reserved = reader.ReadUInt16();
+            Reserved = reader.ReadInt16();
 
-            Flags1 = reader.ReadUInt32();
+            Flags1 = reader.ReadInt32();
 
-            if (Type == 0x14)
+            if (offset == 0x14)
             {
-                reader.BaseStream.Seek(sizeof(uint), SeekOrigin.Current);
-                Floats1 = new List<Double>(2);
+                reader.Seek(4, SeekOrigin.Current);
+                Floats1 = new List<double>(2);
             }
-            else if (Type == 0x1C)
+            else if (offset == 0x1C)
             {
-                Floats1 = new List<Double>(4);
+                Floats1 = new List<double>(4);
             }
-            else throw new Exception("Unknown type parameter, cannot continue operation");
+            else throw new Exception("Unknown offset type, cannot continue operation");
 
             for (int i = 0; i < Floats1.Capacity; i++)
-                Floats1.Insert(i, BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0));
+                Floats1.Add((double)reader.ReadSingle());
 
-            reader.BaseStream.Seek(baseOffset + Type, SeekOrigin.Begin);
+            reader.Seek(Offset + offset, SeekOrigin.Begin);
 
-            if (Type == 0x14)
+            if (offset == 0x14)
             {
-                reader.BaseStream.Seek(sizeof(uint), SeekOrigin.Current);
+                reader.Seek(4, SeekOrigin.Current);
 
-                Floats2 = new List<Double>(3);
+                Floats2 = new List<double>(3);
             }
-            else if (Type == 0x1C)
+            else if (offset == 0x1C)
             {
-                Floats2 = new List<Double>(4);
+                Floats2 = new List<double>(4);
             }
-            else throw new Exception("Unknown type parameter, cannot continue operation");
+            else throw new Exception("Unknown offset type, cannot continue operation");
 
             for (int i = 0; i < Floats2.Capacity; i++)
-                Floats2.Insert(i, BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0));
+                Floats2.Add((double)reader.ReadSingle());
 
-            GUID = reader.ReadUInt32();
-            Flags2 = reader.ReadUInt32();
+            GUID = reader.ReadInt32();
+            Flags2 = reader.ReadInt32();
         }
     }
 }

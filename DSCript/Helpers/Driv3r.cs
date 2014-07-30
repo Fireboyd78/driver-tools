@@ -157,7 +157,9 @@ namespace DSCript
                 public static readonly string Subtitles             = new FormattedPath("{0}.txt", Folders.FMV);
 
                 public static readonly string Speech                = new FormattedPath("IGCS{0}.XA", Folders.Music);
-                public static readonly string Locale                = new FormattedPath("mission{0}.txt", Folders.Missions);
+
+                public static readonly string GUILocale             = new FormattedPath("{0}.txt", Folders.GUI);
+                public static readonly string MissionLocale         = new FormattedPath("mission{0}.txt", Folders.Missions);
             }
         }
 
@@ -193,17 +195,17 @@ namespace DSCript
             public static readonly string VehicleSounds             = new FormattedPath("{0}.VSB", Folders.Sounds);
         }
 
-        public const string DirectoryKey            = "Driv3r";
+        public static readonly string DirectoryKey  = "Driv3r";
         public static bool AppendRootDirectory      = true;
 
         public static readonly string RootDirectory = DSC.Configuration.GetDirectory(DirectoryKey);
 
-        private static string GetPath(string path)
+        public static string GetPath(string path)
         {
             return (AppendRootDirectory) ? Path.Combine(RootDirectory, path) : path;
         }
 
-        private static string GetPathFormat(string path, string file)
+        public static string GetPathFormat(string path, string file)
         {
             return GetPath(String.Format(path, file));
         }

@@ -56,7 +56,7 @@ namespace DSCript
             }
         }
 
-        public INIFile INIFile { get; private set; }
+        public IniFile INIFile { get; private set; }
 
         public string GetDirectory(string key)
         {
@@ -174,8 +174,8 @@ Click OK to choose a directory and automatically update your settings.", verbose
             File.AppendAllText(INIFile.FileName, str, Encoding.UTF8);
         }
 
-        public IniConfiguration(string iniFile, string identifier) : this(new INIFile(iniFile), identifier) { }
-        public IniConfiguration(INIFile iniFile, string identifier)
+        public IniConfiguration(string iniFile, string identifier) : this(new IniFile(iniFile), identifier) { }
+        public IniConfiguration(IniFile iniFile, string identifier)
         {
             INIFile = iniFile;
             SectionIdentifier = identifier;

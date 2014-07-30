@@ -9,12 +9,12 @@ namespace System.IO
     /// <summary>
     /// Represents a class used to read/write key values to/from INI files.
     /// </summary>
-    public class INIFile
+    public class IniFile
     {
-        static readonly char[] nullChar = new[] {'\0'};
+        static readonly char[] nullChar = {'\0'};
 
         /// <summary>
-        /// Gets the filename of the <see cref="INIFile"/>.
+        /// Gets the filename of the <see cref="IniFile"/>.
         /// </summary>
         public string FileName { get; private set; }
 
@@ -66,10 +66,10 @@ namespace System.IO
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="INIFile"/> class, used to read and write key values to/from INI files.
+        /// Initializes a new instance of the <see cref="IniFile"/> class, used to read and write key values to/from INI files.
         /// </summary>
         /// <param name="path">The path to the INI file.</param>
-        public INIFile(string path)
+        public IniFile(string path)
         {
             if (!File.Exists(path))
                 throw new FileNotFoundException();
@@ -77,6 +77,6 @@ namespace System.IO
             FileName = path;
         }
 
-        public INIFile(string filename, string path) : this(Path.Combine(path, filename)) { }
+        public IniFile(string filename, string path) : this(Path.Combine(path, filename)) { }
     }
 }

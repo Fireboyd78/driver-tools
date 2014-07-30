@@ -31,7 +31,13 @@ namespace Antilli
     {
         public string Text
         {
-            get { return (!IsNull) ? UID.ToString() : "<NULL>"; }
+            get
+            {
+                var grp = (UID >> 24) & 0xFF;
+                var id = UID & 0xFFFFFF;
+
+                return (!IsNull) ? String.Format("{0:X2}:{1:X6}", grp, id) : "<NULL>";
+            }
         }
 
         public uint UID { get; private set; }
@@ -40,18 +46,19 @@ namespace Antilli
         {
             get
             {
-                foreach (PartsGroup part in Parts)
-                    if (part.Parts[0].Group != null)
-                        return false;
+                foreach (PartsGroup group in Parts)
+                    foreach (var part in group.Parts)
+                        if (part != null)
+                            return false;
 
                 return true;
             }
         }
 
-        public ModelPackage ModelPackage { get; private set; }
+        public ModelPackagePC ModelPackage { get; private set; }
         public List<PartsGroup> Parts { get; private set; }
 
-        public ModelGroupListItem(ModelPackage modelPackage, PartsGroup partBasedOn)
+        public ModelGroupListItem(ModelPackagePC modelPackage, PartsGroup partBasedOn)
         {
             ModelPackage = modelPackage;
 
@@ -59,7 +66,7 @@ namespace Antilli
 
             Parts = new List<PartsGroup>();
 
-            int startIndex = ModelPackage.Parts.FindIndex((p) => p == partBasedOn);
+            int startIndex = ModelPackage.Parts.IndexOf(partBasedOn);
 
             for (int p = startIndex; p < ModelPackage.Parts.Count; p++)
             {

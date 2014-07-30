@@ -24,6 +24,8 @@ namespace DSCript.Models
         public ushort Mode { get; set; }
         public ushort Type { get; set; }
 
+        public List<PCMPTexture> Textures { get; set; }
+
         public bool AlphaMask
         {
             get { return (Type == 0x400 || Type == 0x1000); }
@@ -48,8 +50,6 @@ namespace DSCript.Models
         {
             get { return (((Flags & 0x1) == 0x1 || Flags == 0x4) && !Specular); }
         }
-
-        public List<PCMPTexture> Textures { get; set; }
 
         public PCMPSubMaterial()
         {

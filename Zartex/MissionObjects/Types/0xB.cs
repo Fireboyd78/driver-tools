@@ -8,36 +8,29 @@ using System.Text;
 
 namespace Zartex.MissionObjects
 {
-    public class BlockType_0xB : IMissionObject
+    public class BlockType_0xB : MissionObject
     {
-        // number of floats in this unknown list
-        private const int nFloats = 3;
-
-        public int ID
+        public override int Id
         {
             get { return 0x3; }
         }
 
-        public int Size
+        public override int Size
         {
-            get
-            {
-                // identifier, floats, padding
-                return (sizeof(uint) + sizeof(float) * nFloats);
-            }
+            get { return (4 + (Floats.Count * 4)); }
         }
 
         [TypeConverter(typeof(CollectionConverter))]
-        public List<Double> Floats { get; set; }
+        public List<double> Floats { get; set; }
 
         public BlockType_0xB(BinaryReader reader)
         {
-            Floats = new List<Double>(nFloats);
+            Offset = (int)reader.GetPosition();
 
-            for (int i = 0; i < nFloats; i++)
-            {
-                Floats.Add(BitConverter.ToSingle(BitConverter.GetBytes(reader.ReadSingle()), 0));
-            }
+            Floats = new List<double>(3);
+
+            for (int i = 0; i < Floats.Capacity; i++)
+                Floats.Add((double)reader.ReadSingle());
         }
     }
 }

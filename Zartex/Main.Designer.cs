@@ -56,8 +56,6 @@
             this.btnLESC = new System.Windows.Forms.Button();
             this.btnEMPR = new System.Windows.Forms.Button();
             this.btnEMOB = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
             this.MenuPanel.SuspendLayout();
             this.MenuBar.SuspendLayout();
             this.LeftMenu.SuspendLayout();
@@ -169,7 +167,7 @@
             // mnTools_LoadLocale
             // 
             this.mnTools_LoadLocale.Name = "mnTools_LoadLocale";
-            this.mnTools_LoadLocale.Size = new System.Drawing.Size(143, 22);
+            this.mnTools_LoadLocale.Size = new System.Drawing.Size(152, 22);
             this.mnTools_LoadLocale.Text = "Load locale...";
             this.mnTools_LoadLocale.Click += new System.EventHandler(this.LoadLocaleTool);
             // 
@@ -189,8 +187,6 @@
             // LeftMenu
             // 
             this.LeftMenu.BackColor = System.Drawing.SystemColors.ControlDarkDark;
-            this.LeftMenu.Controls.Add(this.button2);
-            this.LeftMenu.Controls.Add(this.button1);
             this.LeftMenu.Controls.Add(this.lbl__EM);
             this.LeftMenu.Controls.Add(this.lblLELD);
             this.LeftMenu.Controls.Add(this.btnLECO);
@@ -363,26 +359,6 @@
             this.btnEMOB.Text = "Objects";
             this.btnEMOB.UseVisualStyleBackColor = true;
             // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(3, 292);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(150, 23);
-            this.button1.TabIndex = 13;
-            this.button1.Text = "Clipboard Test";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
-            // 
-            // button2
-            // 
-            this.button2.Location = new System.Drawing.Point(12, 321);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(75, 23);
-            this.button2.TabIndex = 14;
-            this.button2.Text = "flowtest";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
-            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -440,8 +416,6 @@
         private System.Windows.Forms.ToolStripMenuItem mnIstanbul;
         private System.Windows.Forms.ToolStripMenuItem mnTools;
         private System.Windows.Forms.ToolStripMenuItem mnTools_LoadLocale;
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Button button2;
 
     }
 }
