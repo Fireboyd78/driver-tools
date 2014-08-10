@@ -77,7 +77,6 @@
     <Compile Include="MKInputBox.xaml.cs">
       <DependentUpon>MKInputBox.xaml</DependentUpon>
     </Compile>
-    <None Include="ModelChunker.cs" />
     <Compile Include="OBJFile.cs" />
     <Compile Include="Extensions\Media3DExtensions.cs" />
     <Compile Include="Extensions\TreeViewExtensions.cs" />

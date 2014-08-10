@@ -289,7 +289,7 @@ namespace DSCript.Spooling
                 stream.Write(entry.Reserved);
                 stream.Write(entry.StrLen);
                 stream.Write((byte)entry.Alignment);
-                stream.Write(0xFB); // ;)
+                stream.Write((byte)0xFB); // ;)
                 stream.Write(entry.Size);
 
                 stream.Seek(entry.Offset, baseOffset);

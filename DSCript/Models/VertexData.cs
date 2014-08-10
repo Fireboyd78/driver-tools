@@ -24,6 +24,14 @@ namespace DSCript.Models
         public Vertex[] Buffer { get; set; }
 
         /// <summary>
+        /// Gets the size of the vertex buffer.
+        /// </summary>
+        public int Size
+        {
+            get { return (Buffer != null) ? (Buffer.Length * Length) : 0; }
+        }
+
+        /// <summary>
         /// Gets or sets the <see cref="Vertex"/> at the specified index.
         /// </summary>
         /// <param name="id">The index into the buffer.</param>

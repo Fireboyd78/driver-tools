@@ -68,7 +68,7 @@ namespace DSCript.Models
         /// <returns></returns>
         public byte[] GetBytes()
         {
-            using (MemoryStream ms = new MemoryStream((int)VertexType))
+            using (var ms = new MemoryStream((int)VertexType))
             {
                 ms.WriteFloat(-Position.X);
                 ms.WriteFloat(Position.Z);
@@ -114,10 +114,10 @@ namespace DSCript.Models
 
             VertexType = vertexType;
 
-            Position = new Point3D();
-            Normal = new Vector3D();
-            UV = new Point();
-            Diffuse = Color.FromArgb(255, 0, 0, 0);
+            Position    = new Point3D();
+            Normal      = new Vector3D();
+            UV          = new Point();
+            Diffuse     = Color.FromArgb(255, 0, 0, 0);
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
             {
@@ -140,21 +140,17 @@ namespace DSCript.Models
 
             VertexType = vertexType;
 
-            Position = vertex.Position;
-            Normal = vertex.Normal;
-            UV = vertex.UV;
-            Diffuse = vertex.Diffuse;
+            Position    = vertex.Position;
+            Normal      = vertex.Normal;
+            UV          = vertex.UV;
+            Diffuse     = vertex.Diffuse;
 
             if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
             {
-                _blendWeights = (vertex.BlendWeights != null)
-                    ? vertex.BlendWeights
-                    : new Vector3D();
+                _blendWeights = (vertex.BlendWeights != null) ? vertex.BlendWeights : new Vector3D();
 
                 if (VertexType == FVFType.Vertex16)
-                    _unknown = (vertex.Unknown != -1.0)
-                        ? vertex.Unknown
-                        : 0.0;
+                    _unknown = (vertex.Unknown != -1.0) ? vertex.Unknown : 0.0;
             }
         }
 
@@ -170,7 +166,7 @@ namespace DSCript.Models
 
             VertexType = vertexType;
 
-            using (MemoryStream f = new MemoryStream(vertexBuffer, 0, vertexBuffer.Length))
+            using (MemoryStream f = new MemoryStream(vertexBuffer))
             {
                 // IMPORTANT NOTE: The Y & Z Axes are flipped and the X axis is negated!
 
@@ -203,10 +199,10 @@ namespace DSCript.Models
                 if (VertexType == FVFType.Vertex16)
                     Unknown = f.ReadSingle();
 
-                float r = f.ReadSingle();
-                float g = f.ReadSingle();
-                float b = f.ReadSingle();
-                float a = f.ReadSingle();
+                var r = f.ReadSingle();
+                var g = f.ReadSingle();
+                var b = f.ReadSingle();
+                var a = f.ReadSingle();
 
                 Diffuse = Color.FromScRgb(a, r, g, b);
             }
@@ -216,11 +212,11 @@ namespace DSCript.Models
         {
             VertexType = FVFType.Vertex15;
 
-            Position = position;
-            Normal = normal;
-            UV = uv;
+            Position    = position;
+            Normal      = normal;
+            UV          = uv;
 
-            Diffuse = Color.FromArgb(255, 0, 0, 0);
+            Diffuse     = Color.FromArgb(255, 0, 0, 0);
 
             _blendWeights = new Vector3D();
         }

@@ -15,15 +15,15 @@ namespace DSCript.Models
     {
         public int ID { get; set; }
 
-        public uint Unknown { get; set; }
-        public uint Reserved { get; set; }
-
         public PartsGroup Parent { get; set; }
-        public MeshGroup Group { get; set; }
+        public List<MeshGroup> Groups { get; set; }
+
+        public string Name { get; set; }
 
         public PartDefinition(int id)
         {
             ID = id;
+            Groups = new List<MeshGroup>();
         }
     }
 }

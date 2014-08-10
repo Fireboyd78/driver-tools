@@ -347,10 +347,23 @@ namespace Antilli
                 Viewport.DebugMode = !Viewport.DebugMode;
                 break;
             case Key.C:
-                Viewport.CameraMode = (Viewport.CameraMode == CameraMode.Inspect) ? CameraMode.WalkAround : (Viewport.CameraMode == CameraMode.WalkAround) ? CameraMode.FixedPosition : CameraMode.Inspect;
-                break;
-            default:
-                break;
+                {
+                    if (Viewport.CameraMode == CameraMode.Inspect)
+                    {
+                        Viewport.CameraMode = CameraMode.WalkAround;
+                        Viewport.CameraInertiaFactor = 0.15;
+                    }
+                    else if (Viewport.CameraMode == CameraMode.WalkAround)
+                    {
+                        Viewport.CameraMode = CameraMode.FixedPosition;
+                        Viewport.CameraInertiaFactor = 0.93;
+                    }
+                    else
+                    {
+                        Viewport.CameraMode = CameraMode.Inspect;
+                        Viewport.CameraInertiaFactor = 0.93;
+                    }
+                } break;
             }
         }
 
@@ -398,7 +411,7 @@ namespace Antilli
 
             OnPropertyChanged("ModelGroups");
 
-            if (modelPackage.HasModels)
+            if (SelectedModelPackage.HasModels)
             {
                 Groups.SelectedIndex = 0;
             }
@@ -423,7 +436,7 @@ namespace Antilli
             {
                 foreach (PartsGroup part in SelectedModelGroup.Parts)
                 foreach (PartDefinition partDef in part.Parts)
-                    if (partDef.Group != null)
+                    if (partDef.Groups != null)
                         foreach (ToggleButton lod in LODButtons.Children)
                             if (int.Parse((string)lod.Tag) == partDef.ID)
                             {
@@ -465,7 +478,12 @@ namespace Antilli
 
             foreach (PartsGroup part in SelectedModelGroup.Parts)
             {
-                MeshGroup group = part.Parts[CurrentLod].Group;
+                var partDef = part.Parts[CurrentLod];
+
+                if (partDef.Groups == null || partDef.Groups.Count == 0)
+                    continue;
+
+                var group = partDef.Groups[0];
 
                 if (group == null)
                     continue;
@@ -594,20 +612,103 @@ namespace Antilli
                 MessageBox.Show("Nothing to export!");
             else
             {
-                //string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.ChunkFile.Filename));
-                //
-                //DSC.Log("Compiling ModelPackage...");
-                //SelectedModelPackage.Compile();
-                //
-                //DSC.Log("Exporting ModelPackage...");
-                //ModelFile.ChunkFile.Export(path);
-                //DSC.Log("Done!");
-                //
-                //string msg = String.Format("Successfully exported to '{0}'!", path);
-                //MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+                string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.FileName));
+                
+                DSC.Log("Compiling ModelPackage...");
+                SelectedModelPackage.GetInterface().Save();
+                
+                DSC.Log("Exporting ModelPackage...");
+                SelectedModelPackage.ModelFile.Save(path);
+                DSC.Log("Done!");
+                
+                string msg = String.Format("Successfully exported to '{0}'!", path);
+                MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                MessageBox.Show("Exporting is broken :(");
+                //MessageBox.Show("Exporting is broken :(");
             }
+        }
+
+        private int addPartInfo(XmlElement partsNode, VehicleHierarchyData.PartEntry partEntry)
+        {
+            var hType = typeof(VehicleHierarchyData.PartEntry);
+
+            var partNode = partsNode.AddElement("Part");
+            var addChildren = false;
+
+            int nChildren = 0;
+
+            foreach (var prop in hType.GetProperties())
+            {
+                if (prop.Name == "Children")
+                {
+                    addChildren = (partEntry.Children != null);
+                    continue;
+                }
+
+                var val = prop.GetValue(partEntry, null);
+
+                if (prop.Name == "Type" || prop.Name == "Slot" || prop.Name == "Position")
+                {
+                    if (val != null)
+                        partNode.AddAttribute(prop.Name, val.ToString());
+                }
+                else
+                {
+                    partNode.AddElement("Property")
+                                .AddAttribute("Name", prop.Name)
+                                .AddAttribute("Value", val.ToString());
+                }
+            }
+
+            if (addChildren)
+            {
+                var n = partNode.AddElement("Children");
+
+                for (int i = 0; i < partEntry.Children.Count; i++)
+                {
+                    var part = partEntry.Children[i];
+
+                    i += addPartInfo(n, part);
+                }
+
+                nChildren = partEntry.Children.Count;
+            }
+
+            return nChildren;
+        }
+
+        public void ExportVehicleHierachyXML()
+        {
+            var modelFile = ModelFile as Driv3rVehiclesFile;
+
+            if (SelectedModelPackage == null || ModelFile == null)
+            {
+                MessageBox.Show("Nothing to export!");
+                return;
+            }
+
+            var idx = (!modelFile.IsMissionVehicleFile) ? modelFile.Models.IndexOf(SelectedModelPackage) : Groups.SelectedIndex;
+
+            var hierarchy =  modelFile.Hierarchies[idx];
+            
+            var xml = new XmlDocument();
+
+            var awhfNode = xml.AddElement("VehicleHierarchy")
+                                .AddAttribute("UID", hierarchy.UID);
+
+            var partsNode = awhfNode.AddElement("Parts");
+
+            addPartInfo(partsNode, hierarchy.Parts[0]);
+
+            var dir = Settings.Configuration.GetDirectory("Export");
+            var path = String.Format("{0}\\{1}.awhf.xml",
+                dir, Path.GetFileName(ModelFile.FileName));
+
+            xml.Save(path);
+
+            string msg = String.Format("Successfully exported XML file to '{0}'!", path);
+
+            MessageBox.Show(msg, "VehicleHierarchy XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         //--nope
@@ -786,8 +887,10 @@ namespace Antilli
 
             //--nope sorry
             //exportGlobals.Click += (o, e) => ExportGlobals();
-            //exportMDPC.Click += (o, e) => ExportModelPackage();
+            exportMDPC.Click += (o, e) => ExportModelPackage();
             //exportXML.Click += (o, e) => ExportModelPackageXML();
+
+            exportXML.Click += (o, e) => ExportVehicleHierachyXML();
 
             //chunkTest.Click += (o, e) => {
             //    var cViewer = new ChunkViewer();
@@ -815,6 +918,8 @@ namespace Antilli
                     if (str != "")
                         Viewport.DebugInfo = String.Format("Loaded with arguments: {0}", str);
                 }
+
+                exportXML.IsEnabled = true;
 
                 #region disabled code
 #if MECREADER

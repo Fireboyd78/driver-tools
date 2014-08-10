@@ -19,13 +19,10 @@ namespace DSCript.Models
 {
     public class PCMPTexture : CacheableTexture
     {
-        public uint Reserved { get; set; }
-
         public uint CRC32 { get; set; }
-        public uint Type { get; set; }
+        public int Type { get; set; }
 
-        public uint Unk5 { get; set; }
-        public uint Unk6 { get; set; }
+        public int Unknown { get; set; }
 
         public void ExportFile(string filename)
         {

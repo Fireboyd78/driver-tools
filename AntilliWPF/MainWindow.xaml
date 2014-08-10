@@ -186,8 +186,8 @@
                 </ModelVisual3D>
 
                 <ModelVisual3D x:Name="VisualsLayer1"/>
-                <h:SortingVisual3D x:Name="VisualsLayer2" SortingFrequency="30" IsSorting="True" Method="BoundingBoxCenter"/>
-                <h:SortingVisual3D x:Name="VisualsLayer3" SortingFrequency="30" IsSorting="True" Method="BoundingBoxCorners"/>
+                <h:SortingVisual3D x:Name="VisualsLayer2" SortingFrequency="10" IsSorting="True" Method="BoundingBoxCenter"/>
+                <h:SortingVisual3D x:Name="VisualsLayer3" SortingFrequency="10" IsSorting="True" Method="BoundingBoxCorners"/>
                 <ModelVisual3D x:Name="VisualsLayer4"/>
             </at:AntilliViewport3D>
             

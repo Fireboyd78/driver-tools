@@ -82,7 +82,7 @@ namespace DSCript.Models
             return cachedTexture;
         }
 
-        public static CachedTexture GetCachedTexture(string textureName, byte[] buffer, uint width, uint height)
+        public static CachedTexture GetCachedTexture(string textureName, byte[] buffer, int width, int height)
         {
             CachedTexture cachedTexture;
 
@@ -104,12 +104,12 @@ namespace DSCript.Models
 
     public class CacheableTexture
     {
-        public uint Width { get; set; }
-        public uint Height { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
 
-        public uint Size
+        public int Size
         {
-            get { return (Buffer != null) ? (uint)Buffer.Length : 0; }
+            get { return (Buffer != null) ? Buffer.Length : 0; }
         }
 
         public byte[] Buffer { get; set; }
@@ -194,7 +194,7 @@ namespace DSCript.Models
             Index = NumTextures++;
         }
 
-        internal CachedTexture(string textureName, byte[] buffer, uint width, uint height)
+        internal CachedTexture(string textureName, byte[] buffer, int width, int height)
         {
             Texture = new CacheableTexture() {
                 Buffer = buffer,

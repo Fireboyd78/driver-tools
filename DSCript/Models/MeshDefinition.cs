@@ -107,7 +107,7 @@ namespace DSCript.Models
 
                 ModelPackage mPak = ModelFile.GetModelPackage(SourceUID);
 
-                if (mPak != null)
+                if (mPak != null && mPak.HasMaterials)
                     return mPak.Materials[MaterialId];
             }
 

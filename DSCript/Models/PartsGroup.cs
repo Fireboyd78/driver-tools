@@ -27,6 +27,9 @@ namespace DSCript.Models
         public short Unknown1 { get; set; }
         public int Unknown2 { get; set; }
 
+        // something shadow related?
+        public int Unknown3 { get; set; }
+
         public List<Point4D> Transform { get; set; }
         public List<PartDefinition> Parts { get; set; }
 
