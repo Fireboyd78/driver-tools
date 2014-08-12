@@ -52,6 +52,7 @@
                     <MenuItem Name="exportGlobals" Header="Export Globals"/>
                     <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
                     <MenuItem x:Name="exportXML" Header="Export .XML"/>
+                    <MenuItem x:Name="exportObj" Header="Export .OBJ"/>
                     <Separator/>
                     <MenuItem x:Name="chunkTest" Header="Chunk Test"/>
                 </MenuItem>
@@ -111,133 +112,7 @@
         </Grid>
         <!-- Right column -->
         <Grid Grid.Column="1" Grid.Row="1" Margin="0,5,5,5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="10*" MinWidth="375"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="1*" MinWidth="130" MaxWidth="475"/>
-            </Grid.ColumnDefinitions>
-            
-            <!-- Viewport -->
-            <at:AntilliViewport3D Grid.Column="0" x:Name="Viewport"
-                               BorderBrush="{StaticResource atDark_border}"
-                               BorderThickness="1">
-
-                <at:AntilliViewport3D.Resources>
-                    <DiffuseMaterial x:Key="gridMtl" Brush="#64808080" />
-                </at:AntilliViewport3D.Resources>
-
-                <at:AntilliViewport3D.Style>
-                    <Style TargetType="h:HelixViewport3D">
-                        <Setter Property="CameraRotationMode"       Value="Turntable"/>
-				        <Setter Property="CameraInertiaFactor"      Value="0.93"/>
-                        <Setter Property="ChangeLookAtGesture"      Value=""/>
-                        <Setter Property="CoordinateSystemHorizontalPosition" Value="Right"/>
-				        <Setter Property="CoordinateSystemLabelForeground" Value="#FFC8C8C8"/>
-                        <Setter Property="CoordinateSystemHeight"   Value="40"/>
-                        <Setter Property="CoordinateSystemWidth"    Value="90"/>
-                        <Setter Property="FontSize"                 Value="12"/>
-                        <Setter Property="ForceCursor"              Value="True"/>
-                        <Setter Property="InfoBackground"           Value="#7BFFF6C5"/>
-                        <Setter Property="InfoForeground"           Value="Black"/>
-                        <Setter Property="IsManipulationEnabled"    Value="False"/>
-                        <Setter Property="PanGesture"               Value="LeftClick"/>
-                        <Setter Property="ResetCameraKeyGesture"    Value="Ctrl+R"/>
-                        <Setter Property="RotateAroundMouseDownPoint" Value="False"/>
-                        <Setter Property="ShowCameraTarget"         Value="False"/>
-                        <Setter Property="ShowCoordinateSystem"     Value="True"/>
-                        <Setter Property="TextBrush"                Value="#FFFFEC00"/>
-                        <Setter Property="ViewCubeBackText"         Value="L"/>
-                        <Setter Property="ViewCubeFrontText"        Value="R"/>
-                        <Setter Property="ViewCubeLeftText"         Value="B"/>
-                        <Setter Property="ViewCubeRightText"        Value="F"/>
-                        <Setter Property="ViewCubeVerticalPosition" Value="Top"/>
-				        <Setter Property="ViewCubeHorizontalPosition" Value="Left"/>
-                        <Setter Property="ViewCubeHeight"           Value="60"/>
-                        <Setter Property="ZoomGesture"              Value="Shift+RightClick"/>
-                        
-                        <Style.Triggers>
-                            <Trigger Property="InfiniteSpin" Value="True">
-                                <Trigger.Setters>
-                                    <Setter Property="PanGesture"    Value=""/>
-                                    <Setter Property="RotateGesture" Value=""/>
-                                    <Setter Property="ZoomGesture"   Value="RightClick"/>
-                                </Trigger.Setters>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </at:AntilliViewport3D.Style>
-
-                <at:AntilliViewport3D.Camera>
-                    <!-- FOV and Near/Far distance set in code-behind -->
-                    <PerspectiveCamera x:Name="VCam" LookDirection="4.5,-4.5,-2" Position="-4.5,4.5,2" UpDirection="0,0,1"/>
-                </at:AntilliViewport3D.Camera>
-                
-                <ModelVisual3D>
-                    <ModelVisual3D.Content>
-                        <Model3DGroup>
-                            <AmbientLight Color="#404040"/>
-                            <DirectionalLight Color="#707070" Direction="-1.5,0.5,-0.8"/>
-                            <DirectionalLight Color="#707070" Direction="1.5,0.5,-0.8"/>
-                            <DirectionalLight Color="#707070" Direction="0,-0.5,-1"/>
-                        </Model3DGroup>
-                    </ModelVisual3D.Content>
-                    <h:GridLinesVisual3D Width="25" Length="25" Thickness="0.0175"
-                                            Material="{DynamicResource gridMtl}" BackMaterial="{DynamicResource gridMtl}" />
-                </ModelVisual3D>
-
-                <ModelVisual3D x:Name="VisualsLayer1"/>
-                <h:SortingVisual3D x:Name="VisualsLayer2" SortingFrequency="10" IsSorting="True" Method="BoundingBoxCenter"/>
-                <h:SortingVisual3D x:Name="VisualsLayer3" SortingFrequency="10" IsSorting="True" Method="BoundingBoxCorners"/>
-                <ModelVisual3D x:Name="VisualsLayer4"/>
-            </at:AntilliViewport3D>
-            
-            <GridSplitter Grid.Column="1"
-                          Background="Transparent"
-                          ResizeDirection="Columns"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Width="5"/>
-            
-            <!-- Model list -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <GroupBox Grid.Row="0" Header="Models" HorizontalAlignment="Stretch">
-                    <GroupBox.Resources>
-                        <DataTemplate DataType="{x:Type at:ModelListItem}">
-                            <TextBlock Text="{Binding Name}" Tag="{Binding Model}">
-                                <TextBlock.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Path=Model.Models[0].Material}"/>
-                                    </ContextMenu>
-                                </TextBlock.ContextMenu>
-                            </TextBlock>
-                        </DataTemplate>
-                        
-                        <HierarchicalDataTemplate DataType="{x:Type at:ModelVisual3DGroupListItem}" ItemsSource="{Binding Models}">
-                            <TextBlock Text="{Binding Name}"/>
-                        </HierarchicalDataTemplate>
-                        
-                        <DataTemplate DataType="{x:Type at:DriverModelVisual3D}">
-                            <TextBlock Text="Model">
-                                <TextBlock.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Material}"/>
-                                    </ContextMenu>
-                                </TextBlock.ContextMenu>
-                            </TextBlock>
-                        </DataTemplate>
-                        <!--<DataTemplate DataType="{x:Type at:ModelListItem}">
-                            <TextBlock Text="{Binding Name}"/>
-                        </DataTemplate>-->
-                    </GroupBox.Resources>
-                    <TreeView x:Name="ModelsList" ItemsSource="{Binding Elements}"/>
-                </GroupBox>
-                <Button Grid.Row="1" x:Name="DeselectModel" Content="Deselect" Height="25" Margin="0,5,0,0" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"/>
-            </Grid>
+            <at:ModelViewer x:Name="Viewer"/>
         </Grid>
     </Grid>
 </at:AntilliWindow>

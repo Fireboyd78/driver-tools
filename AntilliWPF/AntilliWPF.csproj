@@ -77,6 +77,9 @@
     <Compile Include="MKInputBox.xaml.cs">
       <DependentUpon>MKInputBox.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ModelViewer.xaml.cs">
+      <DependentUpon>ModelViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="OBJFile.cs" />
     <Compile Include="Extensions\Media3DExtensions.cs" />
     <Compile Include="Extensions\TreeViewExtensions.cs" />
@@ -97,7 +100,6 @@
     <Compile Include="WPF\Visuals\BlendModelVisual3D.cs" />
     <Compile Include="WPF\Visuals\DriverModelVisual3D.cs" />
     <Compile Include="WPF\Visuals\GeometryModelVisual3D.cs" />
-    <None Include="ModelViewer.cs" />
     <Compile Include="ObservableObject.cs" />
     <Compile Include="Resources.xaml.cs">
       <DependentUpon>Resources.xaml</DependentUpon>
@@ -124,6 +126,10 @@
       <SubType>Designer</SubType>
     </None>
     <Page Include="MKInputBox.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ModelViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

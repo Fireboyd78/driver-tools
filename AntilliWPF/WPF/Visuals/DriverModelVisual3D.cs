@@ -32,7 +32,6 @@ namespace Antilli
 {
     public class DriverModelVisual3D : BlendModelVisual3D
     {
-        public static readonly DependencyProperty ModelFileProperty;
         public static readonly DependencyProperty ModelPackageProperty;
         public static readonly DependencyProperty MeshProperty;
 
@@ -42,9 +41,6 @@ namespace Antilli
         {
             Type thisType = typeof(DriverModelVisual3D);
 
-            ModelFileProperty =
-                DependencyProperty.Register("ModelFile", typeof(Driv3rModelFile), thisType,
-                new PropertyMetadata(null, null));
             ModelPackageProperty =
                 DependencyProperty.Register("ModelPackage", typeof(ModelPackagePC), thisType,
                 new PropertyMetadata(null, null));
@@ -54,12 +50,6 @@ namespace Antilli
             MaterialProperty =
                 DependencyProperty.Register("Material", typeof(PCMPMaterial), thisType,
                 new UIPropertyMetadata(null, MaterialChanged));
-        }
-
-        public Driv3rModelFile ModelFile
-        {
-            get { return (Driv3rModelFile)GetValue(ModelFileProperty); }
-            protected set { SetValue(ModelFileProperty, value); }
         }
 
         public ModelPackagePC ModelPackage
@@ -200,13 +190,12 @@ namespace Antilli
             base.Material = matGroup;
         }
 
-        public DriverModelVisual3D(Driv3rModelFile modelFile, ModelPackagePC modelPackage, MeshDefinition mesh, bool useBlendWeights)
+        public DriverModelVisual3D(ModelPackagePC modelPackage, MeshDefinition mesh, bool useBlendWeights)
             : base()
         {
             DoubleSided = true;
             UseBlendWeights = useBlendWeights;
 
-            ModelFile = modelFile;
             ModelPackage = modelPackage;
 
             Mesh = mesh;

@@ -46,7 +46,7 @@ namespace Antilli
     {
         public List<ModelVisual3D> Models
         {
-            get { return (Model != null) ? Model.Models : null; }
+            get { return (Model != null) ? Model.Children : null; }
         }
 
         public ModelVisual3DGroupListItem(List<ModelListItem> parent, ModelVisual3DGroup model) : base(parent, model) { }

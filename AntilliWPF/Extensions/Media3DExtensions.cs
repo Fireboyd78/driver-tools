@@ -111,10 +111,10 @@ namespace System.Windows.Media.Media3D
 
         public static void SetOpacity(this ModelVisual3DGroup @this, double opacity)
         {
-            if (@this.Models.Count == 0)
+            if (@this.Children.Count == 0)
                 return;
 
-            foreach (ModelVisual3D dmodel in @this.Models)
+            foreach (ModelVisual3D dmodel in @this.Children)
                 dmodel.SetOpacity(opacity);
         }
 

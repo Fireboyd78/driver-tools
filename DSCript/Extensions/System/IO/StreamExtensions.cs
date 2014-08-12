@@ -64,13 +64,7 @@ namespace System.IO
             }
         }
 
-        #region Read methods
-        internal static int Read(this Stream stream, byte[] buffer)
-        {
-            stream.Read(buffer, 0, buffer.Length);
-            return (buffer != null) ? 1 : -1;
-        }
-
+        #region Peek methods
         public static int PeekByte(this Stream stream)
         {
             var b = stream.ReadByte();
@@ -109,6 +103,14 @@ namespace System.IO
             stream.Position -= 4;
 
             return i;
+        } 
+        #endregion
+
+        #region Read methods
+        internal static int Read(this Stream stream, byte[] buffer)
+        {
+            stream.Read(buffer, 0, buffer.Length);
+            return (buffer != null) ? 1 : -1;
         }
 
         public static byte[] ReadAllBytes(this Stream stream)
@@ -189,6 +191,12 @@ namespace System.IO
             stream.Read(buffer);
 
             return BitConverter.ToUInt64(buffer, 0);
+        }
+
+        public static float ReadHalf(this Stream stream)
+        {
+            var aShort = stream.ReadInt16();
+            return (float)(((aShort & 0x8000) << 16) + ((aShort & 0x7FFF) << 13) + ((127 - 15) << 23));
         }
 
         public static float ReadSingle(this Stream stream)

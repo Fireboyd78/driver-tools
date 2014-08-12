@@ -61,6 +61,7 @@
     <Compile Include="Extensions\SpoolerExtensions.cs" />
     <Compile Include="Extensions\System\IO\FileStreamExtensions.cs" />
     <Compile Include="Extensions\System\TypeExtensions.cs" />
+    <Compile Include="Extensions\System\Windows\PointExtensions.cs" />
     <Compile Include="Helpers\BitmapHelper.cs" />
     <Compile Include="Helpers\BitmapSourceHelper.cs" />
     <Compile Include="Helpers\ArrayHelper.cs" />
@@ -69,6 +70,7 @@
     <Compile Include="IniConfiguration.cs" />
     <Compile Include="IniFile.cs" />
     <Compile Include="IO\LocaleReader.cs" />
+    <Compile Include="IO\MECFile.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Chunks\Chunk.cs" />
     <Compile Include="Chunks\ChunkTypes.cs" />
@@ -92,6 +94,7 @@
     <Compile Include="Models\Materials\PCMPSubMaterial.cs" />
     <Compile Include="Models\Materials\PCMPTextureInfo.cs" />
     <Compile Include="Models\Materials\TextureFlags.cs" />
+    <Compile Include="Models\ModelPackages\ModelPackageDSF.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
     <Compile Include="Spooling\ChunkSchema.cs" />
     <Compile Include="Spooling\Templates.cs" />

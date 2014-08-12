@@ -24,13 +24,13 @@ namespace Antilli
 {
     public class ModelVisual3DGroup
     {
-        public List<ModelVisual3D> Models { get; set; }
+        public List<ModelVisual3D> Children { get; set; }
 
         public string Name { get; set; }
 
         public ModelVisual3DGroup()
         {
-            Models = new List<ModelVisual3D>();
+            Children = new List<ModelVisual3D>();
         }
 
         public ModelVisual3DGroup(string name)

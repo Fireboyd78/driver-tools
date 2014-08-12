@@ -43,19 +43,20 @@ namespace Antilli
     /// </summary>
     public partial class MainWindow : AntilliWindow
     {
-        private List<ModelVisual3DGroup> _currentModel;
-        private ModelVisual3DGroup _selectedModel;
-
         private Driv3rModelFile _modelFile;
 
-        static OpenFileDialog openDialog = new OpenFileDialog() {
-            CheckFileExists = true,
-            CheckPathExists = true,
-            Filter = "DRIV3R|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk",
-            //+ "|Driver: San Francisco|dngvehicles.sp;san_francisco.dngc",
-            //+ "|Any file|*.*",
+        public static readonly List<String> Filters = new List<string>() {
+            "DRIV3R|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk",
+            "Driver: San Francisco|dngvehicles.sp;san_francisco.dngc",
+            "Any file|*.*"
+        };
+
+        static OpenFileDialog OpenDialog = new OpenFileDialog() {
+            CheckFileExists  = true,
+            CheckPathExists  = true,
+            Filter           = String.Join("|", Filters.ToArray()),
             InitialDirectory = Driv3r.RootDirectory,
-            ValidateNames = true,
+            ValidateNames    = true,
         };
 
         //public TextureViewer TextureViewer { get; private set; }
@@ -69,13 +70,13 @@ namespace Antilli
 
         public void OpenFile()
         {
-            if (openDialog.ShowDialog() ?? false)
+            if (OpenDialog.ShowDialog() ?? false)
             {
                 var timer = new Stopwatch();
 
                 timer.Start();
 
-                string filename = openDialog.FileName;
+                string filename = OpenDialog.FileName;
                 
                 switch (Path.GetExtension(filename).ToLower())
                 {
@@ -120,7 +121,7 @@ namespace Antilli
                 {
                     SubTitle = filename;
         
-                    Viewport.InfiniteSpin = Settings.Configuration.GetSetting("InfiniteSpin", true);
+                    Viewer.Viewport.InfiniteSpin = Settings.Configuration.GetSetting("InfiniteSpin", true);
         
                     viewTextures.IsEnabled = true;
                     viewMaterials.IsEnabled = true;
@@ -145,27 +146,16 @@ namespace Antilli
             {
                 if (SetValue(ref currentLod, value, "CurrentLod"))
                 {
-                    if (SelectedModel != null)
-                        OnModelDeselected();
+                    if (Viewer.SelectedModel != null)
+                        Viewer.OnModelDeselected();
 
-                    var selectedItem = ModelsList.GetSelectedContainer();
+                    var selectedItem = Viewer.ModelsList.GetSelectedContainer();
 
                     if (selectedItem != null)
                         selectedItem.IsSelected = false;
 
                     LoadSelectedModel();
                 }
-            }
-        }
-
-        public List<ModelVisual3DGroup> CurrentModel
-        {
-            get { return _currentModel; }
-            set
-            {
-                _currentModel = value;
-
-                UpdateModels();
             }
         }
 
@@ -196,60 +186,9 @@ namespace Antilli
             }
         }
 
-        public ModelVisual3DGroup SelectedModel
-        {
-            get { return _selectedModel; }
-            set
-            {
-                _selectedModel = value;
-
-                foreach (ModelVisual3DGroup dModel in (List<ModelVisual3DGroup>)CurrentModel)
-                {
-                    if (SelectedModel != null && SelectedModel != dModel)
-                    {
-                        dModel.SetOpacity(GhostOpacity);
-
-                        foreach (ModelVisual3D d in dModel.Models)
-                            VisualParentHelper.SetParent(d, VisualsLayer4);
-                    }
-                    else
-                        dModel.SetOpacity(1.0);
-                }
-
-                if (SelectedModel == null)
-                    OnModelDeselected();
-            }
-        }
-
         public ModelGroupListItem SelectedModelGroup
         {
             get { return Groups.SelectedItem as ModelGroupListItem; }
-        }
-
-        public List<ModelListItem> Elements
-        {
-            get
-            {
-                if (CurrentModel == null)
-                    return null;
-
-                List<ModelListItem> models = new List<ModelListItem>();
-
-                foreach (ModelVisual3DGroup dg in (List<ModelVisual3DGroup>)CurrentModel)
-                {
-                    if (dg.Models.Count > 1)
-                        models.Add(new ModelVisual3DGroupListItem(models, dg));
-                    else
-                        models.Add(new ModelListItem(models, dg));
-                }
-
-                return models;
-            }
-        }
-
-        public double GhostOpacity
-        {
-            get { return Settings.Configuration.GetSetting<double>("GhostOpacity", 0.15); }
         }
 
         public List<ModelGroupListItem> ModelGroups
@@ -271,18 +210,6 @@ namespace Antilli
                         curPart = part;
                     }
                 }
-
-                //for (int p = 0; p < SelectedModelPackage.Parts.Count; p++)
-                //{
-                //    PartsGroup part = SelectedModelPackage.Parts[p];
-                //
-                //    items.Add(new ModelGroupListItem(SelectedModelPackage, part));
-                //
-                //    int pp = p;
-                //
-                //    while (++pp < SelectedModelPackage.Parts.Count && SelectedModelPackage.Parts[pp].UID == part.UID)
-                //        ++p;
-                //}
 
                 return items;
             }
@@ -336,57 +263,10 @@ namespace Antilli
         //    GlobalMaterialEditor.Show();
         //}
 
-        public void OnKeyDownReceived(object sender, KeyEventArgs e)
-        {
-            switch (e.Key)
-            {
-            case Key.I:
-                Viewport.InfiniteSpin = !Viewport.InfiniteSpin;
-                break;
-            case Key.G:
-                Viewport.DebugMode = !Viewport.DebugMode;
-                break;
-            case Key.C:
-                {
-                    if (Viewport.CameraMode == CameraMode.Inspect)
-                    {
-                        Viewport.CameraMode = CameraMode.WalkAround;
-                        Viewport.CameraInertiaFactor = 0.15;
-                    }
-                    else if (Viewport.CameraMode == CameraMode.WalkAround)
-                    {
-                        Viewport.CameraMode = CameraMode.FixedPosition;
-                        Viewport.CameraInertiaFactor = 0.93;
-                    }
-                    else
-                    {
-                        Viewport.CameraMode = CameraMode.Inspect;
-                        Viewport.CameraInertiaFactor = 0.93;
-                    }
-                } break;
-            }
-        }
-
-        public void UpdateModels()
-        {
-            OnPropertyChanged("CurrentModel");
-            OnPropertyChanged("Elements");
-        }
-
-
-        public void OnModelDeselected()
-        {
-            var item = ModelsList.GetSelectedContainer();
-
-            if (item != null)
-                item.IsSelected = false;
-        }
-        
-
         public void OnModelPackageSelected(object sender, SelectionChangedEventArgs e)
         {
-            if (SelectedModel != null)
-                SelectedModel = null;
+            if (Viewer.SelectedModel != null)
+                Viewer.SelectedModel = null;
 
             int index = Packages.SelectedIndex;
 
@@ -418,7 +298,7 @@ namespace Antilli
             else
             {
                 Groups.SelectedIndex = -1;
-                CurrentModel = null;
+                Viewer.Visuals = null;
             }
 
             //if (IsTextureViewerOpen)
@@ -448,18 +328,7 @@ namespace Antilli
 
         public void LoadSelectedModel()
         {
-            if (SelectedModel != null)
-            {
-                RestoreVisualParents();
-                SelectedModel = null;
-            }
-
             ResetLODButtons();
-
-            VisualsLayer1.Children.Clear();
-            VisualsLayer2.Children.Clear();
-            VisualsLayer3.Children.Clear();
-            VisualsLayer4.Children.Clear();
 
             var lodButton = lodButtons[CurrentLod];
 
@@ -474,9 +343,9 @@ namespace Antilli
 
             BlendWeights.Visibility = ((SelectedModelGroup.Parts[0].VertexBuffer.HasBlendWeights)) ? Visibility.Visible : System.Windows.Visibility.Hidden;
 
-            List<ModelVisual3DGroup> models = new List<ModelVisual3DGroup>();
+            var models = new List<ModelVisual3DGroup>();
 
-            foreach (PartsGroup part in SelectedModelGroup.Parts)
+            foreach (var part in SelectedModelGroup.Parts)
             {
                 var partDef = part.Parts[CurrentLod];
 
@@ -488,89 +357,37 @@ namespace Antilli
                 if (group == null)
                     continue;
 
-                ModelVisual3DGroup parts = new ModelVisual3DGroup();
+                var parts = new ModelVisual3DGroup();
 
-                foreach (MeshDefinition prim in group.Meshes)
-                {
-                    DriverModelVisual3D dmodel = new DriverModelVisual3D(ModelFile, SelectedModelPackage, prim, UseBlendWeights);
-
-                    if (dmodel.IsEmissive)
-                        VisualsLayer3.Children.Add(dmodel);
-                    else if (dmodel.HasTransparency)
-                        VisualsLayer2.Children.Add(dmodel);
-                    else
-                        VisualsLayer1.Children.Add(dmodel);
-
-                    parts.Models.Add(dmodel);
-                }
+                foreach (var prim in group.Meshes)
+                    parts.Children.Add(new DriverModelVisual3D(SelectedModelPackage, prim, UseBlendWeights));
 
                 models.Add(parts);
             }
 
-            CurrentModel = models;
-        }
-
-        public void RestoreVisualParents()
-        {
-            if (VisualParentHelper.ResetAllParents())
-                VisualsLayer4.Children.Clear();
+            Viewer.SetDriv3rModel(models);
         }
 
         public void ToggleBlendWeights()
         {
-            if (CurrentModel == null)
+            var visuals = Viewer.Visuals;
+            
+            if (visuals == null)
                 return;
 
-            var selectedModel = (SelectedModel != null) ? SelectedModel : null;
-            var item = ModelsList.GetSelectedContainer();
+            var selectedModel = Viewer.SelectedModel;
+            var item = Viewer.ModelsList.GetSelectedContainer();
 
-            SelectedModel = null;
-
-            foreach (ModelVisual3DGroup dgroup in CurrentModel)
+            foreach (var visual in visuals)
             {
-                foreach (DriverModelVisual3D dmodel in dgroup.Models)
+                foreach (DriverModelVisual3D dmodel in visual.Children)
                     dmodel.UseBlendWeights = UseBlendWeights;
             }
 
             if (selectedModel != null)
-                SelectedModel = selectedModel;
+                Viewer.SelectedModel = selectedModel;
             if (item != null)
                 item.IsSelected = true;
-        }
-
-        public void OnModelSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            var item = ModelsList.SelectedItem;
-
-            RestoreVisualParents();
-
-            if (item is ModelListItem)
-            {
-                SelectedModel = ((ModelListItem)item).Model;
-            }
-            else if (item is ModelVisual3D)
-            {
-                if (SelectedModel != null)
-                    SelectedModel = null;
-
-                foreach (ModelVisual3DGroup dModel in (List<ModelVisual3DGroup>)CurrentModel)
-                {
-                    foreach (ModelVisual3D model in dModel.Models)
-                    {
-                        if (model != (ModelVisual3D)item)
-                        {
-                            model.SetOpacity(GhostOpacity);
-                            VisualParentHelper.SetParent(model, VisualsLayer4);
-                        }
-                        else
-                            model.SetOpacity(1.0);
-                    }
-                }
-            }
-            else
-            {
-                SelectedModel = null;
-            }
         }
 
         private void ViewModelTexture(object sender, RoutedEventArgs e)
@@ -605,6 +422,17 @@ namespace Antilli
         //        MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         //    }
         //}
+
+        private void ExportObjFile()
+        {
+            if (SelectedModelPackage == null)
+                MessageBox.Show("Nothing to export!");
+            else
+            {
+                // TODO: Implement OBJ exporter
+                MessageBox.Show("Oops, that doesn't seem to work yet - sorry!");
+            }
+        }
 
         public void ExportModelPackage()
         {
@@ -850,12 +678,10 @@ namespace Antilli
 
             InitializeComponent();
 
-            KeyDown += OnKeyDownReceived;
+            //KeyDown += OnKeyDownReceived;
 
             Packages.SelectionChanged += OnModelPackageSelected;
             Groups.SelectionChanged += (o, e) => LoadSelectedModel();
-
-            ModelsList.SelectedItemChanged += OnModelSelected;
 
             lodButtons = new Dictionary<int, RadioButton>(LODButtons.Children.Count);
 
@@ -873,10 +699,6 @@ namespace Antilli
             BlendWeights.Checked += (o, e) => ToggleBlendWeights();
             BlendWeights.Unchecked += (o, e) => ToggleBlendWeights();
 
-            DeselectModel.Click += (o, e) => {
-                SelectedModel = null;
-            };
-
             fileOpen.Click += (o, e) => OpenFile();
             //fileOpen.Click += (o, e) => OpenFileNew();
             fileExit.Click += (o, e) => Environment.Exit(0);
@@ -891,6 +713,7 @@ namespace Antilli
             //exportXML.Click += (o, e) => ExportModelPackageXML();
 
             exportXML.Click += (o, e) => ExportVehicleHierachyXML();
+            exportObj.Click += (o, e) => ExportObjFile();
 
             //chunkTest.Click += (o, e) => {
             //    var cViewer = new ChunkViewer();
@@ -902,12 +725,7 @@ namespace Antilli
                 Console.WriteLine(s);
             });
 
-            Viewport.Loaded += (o, e) => {
-                // Set up FOV and Near/Far distance
-                VCam.FieldOfView = Settings.Configuration.GetSetting<int>("DefaultFOV", 45);
-                VCam.NearPlaneDistance = Settings.Configuration.GetSetting<double>("NearDistance", 0.125);
-                VCam.FarPlaneDistance = Settings.Configuration.GetSetting<double>("FarDistance", 150000);
-
+            Viewer.Loaded += (o, e) => {
                 if (CommandLineArgs != null)
                 {
                     string str = "";
@@ -916,10 +734,8 @@ namespace Antilli
                         str += CommandLineArgs[i].Trim('\0');
 
                     if (str != "")
-                        Viewport.DebugInfo = String.Format("Loaded with arguments: {0}", str);
+                        Viewer.Viewport.DebugInfo = String.Format("Loaded with arguments: {0}", str);
                 }
-
-                exportXML.IsEnabled = true;
 
                 #region disabled code
 #if MECREADER
@@ -1309,8 +1125,8 @@ File: {0}
                 d3cFile.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(filename)));
 
                 DSC.Log("Work done. Removed {0} GMC2 models.", nModelsRemoved);*/
-                
-            #if false
+
+#if false
                 // Merge cars
                 int nCars = vvsFile.Spoolers.Count / 2;
 
@@ -1327,8 +1143,8 @@ File: {0}
 
                 vvsFile.Spoolers.RemoveRange(nCars, nCars);
                 vvsFile.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(filename)));
-            #endif
-            #if false   
+#endif
+#if false   
                 // Split cars
                 int nCars = vvsFile.Spoolers.Count;
 
@@ -1341,8 +1157,8 @@ File: {0}
                     vvsFile.Spoolers.Add(model);
                     pak.Spoolers.Remove(model);
                 }
-            #endif
-            #if false
+#endif
+#if false
                 // one that has a cop car
                 var miamiVVV = @"C:\Dev\Research\Driv3r\Vehicles\_backup\mission60.vvv";
 
@@ -1359,7 +1175,7 @@ File: {0}
                 };
 
                 vvsFile.Spoolers.Add(newCop);
-            #endif
+#endif
 
                 //vvsFile.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(filename)));
 
