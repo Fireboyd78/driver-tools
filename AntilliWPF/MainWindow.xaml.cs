@@ -430,7 +430,30 @@ namespace Antilli
             else
             {
                 // TODO: Implement OBJ exporter
-                MessageBox.Show("Oops, that doesn't seem to work yet - sorry!");
+                if (SelectedModelGroup != null)
+                {
+                    var path = Path.Combine(Settings.Configuration.GetDirectory("Models"), SelectedModelGroup.UID.ToString());
+
+                    var prompt = new MKInputBox("OBJ Exporter", "Please enter a name for the model:", SelectedModelGroup.UID.ToString("D10")) {
+                        Owner = this,
+                        ShowCancelButton = false,
+                        WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+                    };
+
+                    if (prompt.ShowDialog() ?? false)
+                    {
+                        if (OBJFile.Export(path, prompt.InputValue, SelectedModelPackage, SelectedModelGroup.UID) == ExportResult.Success)
+                        {
+                            var msg = String.Format("Successfully exported to '{0}'!", path);
+                            MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        else
+                        {
+                            var msg = String.Format("Failed to export the file '{0}'!", path);
+                            MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
             }
         }
 

@@ -40,6 +40,9 @@ namespace DSCript
     {
         public static BitmapSource GetBitmapSource(string file, BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
         {
+            if (!File.Exists(file))
+                return null;
+
             return GetBitmapSource(File.ReadAllBytes(file), flags);
         }
 

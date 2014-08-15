@@ -159,9 +159,9 @@ namespace DSCript.Models
 
             switch (LoadObj())
             {
-            case -1: log = "The file '{0}' does not exist!"; break;
-            case 0: log = "The file '{0}' failed to load properly!"; break;
-            case 1: log = "Successfully loaded '{0}'!"; break;
+            case 0: log = "Successfully loaded '{0}'!"; break;
+            case 1: log = "The file '{0}' failed to load properly!"; break;
+            case 2: log = "The file '{0}' does not exist!"; break;
             }
 
             DSC.Log(log, ObjPath);
@@ -173,9 +173,9 @@ namespace DSCript.Models
 
             switch (_LoadMtl())
             {
-            case -1: log = "The material file '{0}' does not exist!"; break;
-            case 0: log = "The material file '{0}' failed to load properly!"; break;
-            case 1: log = "Successfully loaded material file '{0}'!"; break;
+            case 0: log = "Successfully loaded material file '{0}'!"; break;
+            case 1: log = "The material file '{0}' failed to load properly!"; break;
+            case 2: log = "The material file '{0}' does not exist!"; break;
             }
 
             DSC.Log(log, MtlPath);
@@ -186,7 +186,7 @@ namespace DSCript.Models
             using (FileStream fs = GetMtlStream())
             {
                 if (fs == null)
-                    return -1;
+                    return 2;
 
                 using (TextReader reader = new StreamReader(fs))
                 {
@@ -260,10 +260,10 @@ namespace DSCript.Models
                     }
 
                     if (Materials.Count > 0)
-                        return 1;
+                        return 0;
                 }
             }
-            return 0;
+            return 1;
         }
 
         private int LoadObj()
@@ -271,7 +271,7 @@ namespace DSCript.Models
             using (FileStream fs = GetObjStream())
             {
                 if (fs == null)
-                    return -1;
+                    return 2;
 
                 using (TextReader reader = new StreamReader(fs))
                 {
@@ -482,10 +482,10 @@ namespace DSCript.Models
                     }
 
                     if (Positions != null && nFaces > 0)
-                        return 1;
+                        return 0;
                 }
             }
-            return 0;
+            return 1;
         }
 
         public ObjFile(string filename)

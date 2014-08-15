@@ -43,100 +43,7 @@ namespace Antilli
             {-1, "UNDEFINED" },
         };
 
-        static string GenTitle()
-        {
-            return String.Format(
-@"# Driver Model .OBJ Exporter v0.6489b by CarLuver69
-# Exported: {0}" + "\r\n", DateTime.Now);
-        }
-
-        public static ExportResult Export(string path, string filename, ModelPackage modelPackage, long uid, bool exportMaterials)
-        {
-            if (modelPackage.Meshes.Count < 1)
-            {
-                MessageBoxEx.Show("There are no models to export!", "OBJ Exporter", MessageBoxExFlags.ErrorBoxOK);
-                return ExportResult.Failed;
-            }
-
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
-
-            StringBuilder sbMtl = new StringBuilder();
-
-            if (exportMaterials)
-                sbMtl.AppendLine(GenTitle());
-            else
-                sbMtl = null;
-
-            if (exportMaterials)
-                sbMtl.AppendLine(GenTitle());
-            else
-                sbMtl = null;
-
-            StringBuilder sb = new StringBuilder();
-
-            sb.AppendLine(GenTitle());
-
-            sb.AppendFormat("mtllib {0}.mtl", filename).AppendLines(2);
-
-            int startIndex = 0;
-            int modelIdx = 0;
-
-            List<PCMPMaterial> materials = new List<PCMPMaterial>();
-
-            foreach (PartsGroup part in modelPackage.Parts)
-            {
-                if (uid != -1 && part.UID != uid)
-                    continue;
-
-                sb.AppendFormatEx("# ============== Group {0} ==============", ++modelIdx).AppendLines(2);
-
-                for (int g = 0; g < part.Parts.Count; g++)
-                {
-                    var groups = part.Parts[g].Groups;
-
-                    foreach (var group in groups)
-                    {
-                        if (group == null)
-                            continue;
-
-                        string lodType = (LODTypes.ContainsKey(g)) ? LODTypes[g] : LODTypes[-1];
-
-                        Point3DCollection vertices = new Point3DCollection();
-                        Vector3DCollection normals = new Vector3DCollection();
-                        PointCollection coords = new PointCollection();
-
-                        Int32Collection indices = new Int32Collection();
-
-                        StringBuilder faces = new StringBuilder();
-
-                        int minIndex = 0;
-
-                        for (int m = 0; m < group.Meshes.Count; m++)
-                        {
-                            MeshDefinition mesh = group.Meshes[m];
-
-                            int mtlIdx = mesh.MaterialId + 1;
-
-                            mesh.GetVertices(vertices, normals, coords);
-                            indices = mesh.GetTriangleIndices();
-
-                            PCMPMaterial material = mesh.GetMaterial();
-
-                            bool isSharedTexture = (mesh.SourceUID != 0xFFFD && mesh.SourceUID != mesh.ModelPackage.UID);
-
-                            string mtlName = String.Format("{0}_{1}",
-                                    (isSharedTexture)
-                                        ? "shared_mat"
-                                        : "mat", mtlIdx);
-
-                            if (exportMaterials && !materials.Contains(material))
-                            {
-                                string ddsName = (isSharedTexture)
-                                        ? String.Format("shared_{0}", mtlIdx)
-                                        : String.Format("{0}_{1}", uid, mtlIdx);
-
-                                sbMtl.AppendFormatEx(
+        static readonly string MaterialTemplate =
 @"newmtl {0}
 Ns 10.0000
 Ni 1.5000
@@ -149,132 +56,180 @@ Kd 0.0000 0.0000 0.0000
 Ks 0.0000 0.0000 0.0000
 Ke 0.0000 0.0000 0.0000
 map_Ka {1}_1_1.dds
-map_Kd {1}_1_1.dds", mtlName, ddsName).AppendLines(2);
+map_Kd {1}_1_1.dds" + "\r\n";
 
-                                for (int s = 0; s < material.SubMaterials.Count; s++)
+        static readonly string NullMaterial =
+@"newmtl null_mtl
+Ns 10.0000
+Ni 1.5000
+d 0.5000
+Tr 0.5000
+Tf 1.0000 1.0000 1.0000
+illum 2
+Ka 1.0000 0.2500 0.5000
+Kd 1.0000 0.2500 0.5000
+Ks 0.0000 0.0000 0.0000
+Ke 0.0000 0.0000 0.0000" + "\r\n";
+
+        public static ExportResult Export(string path, string filename, ModelPackagePC modelPackage, long uid)
+        {
+            if (modelPackage.Meshes.Count < 1)
+            {
+                MessageBoxEx.Show("There are no models to export!", "OBJ Exporter", MessageBoxExFlags.ErrorBoxOK);
+                return ExportResult.Failed;
+            }
+
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
+
+            var mtlBuilder  = new StringBuilder();
+            var objBuilder  = new StringBuilder();
+
+            var header = String.Format(
+                "# Driver Model .OBJ Exporter v0.7b\r\n" +
+                "# Exported: {0}\r\n", DateTime.Now);
+
+            objBuilder.AppendLine(header);
+            mtlBuilder.AppendLine(header);
+
+            objBuilder.AppendFormat("mtllib {0}.mtl", filename).AppendLines(2);
+
+            var materials = new List<PCMPMaterial>();
+            
+            var startIndex = 0;
+            var modelIndex = 0;
+
+            var hasNullMaterial = false;
+
+            foreach (var part in modelPackage.Parts)
+            {
+                if (uid != -1 && part.UID != uid)
+                    continue;
+
+                objBuilder.AppendLine("# ---- Parts Group {0} ---- #", ++modelIndex);
+                objBuilder.AppendLine();
+
+                for (int g = 0; g < part.Parts.Count; g++)
+                {
+                    var groups = part.Parts[g].Groups;
+
+                    var lodType = (LODTypes.ContainsKey(g)) ? LODTypes[g] : LODTypes[-1];
+
+                    foreach (var group in groups)
+                    {
+                        if (group == null)
+                            continue;
+
+                        var vPos = new StringBuilder();
+                        var vNor = new StringBuilder();
+                        var vTex = new StringBuilder();
+
+                        var faces = new StringBuilder();
+
+                        var minIndex = 0;
+                        var nVerts = 0;
+
+                        foreach (var mesh in group.Meshes)
+                        {
+                            var model = new DriverModelVisual3D(modelPackage, mesh, false);
+                            var material = model.Material;
+
+                            // build material(s)
+                            if (material != null)
+                            {
+                                var mtlIdx = mesh.MaterialId + 1;
+
+                                bool isGlobalTexture = (mesh.SourceUID != 0xFFFD && mesh.SourceUID != mesh.ModelPackage.UID);
+
+                                var mtlName = String.Format("{0}_{1}",
+                                    (isGlobalTexture) ? "global_mat" : "mat",
+                                    mtlIdx);
+
+                                // add material if needed
+                                if (!materials.Contains(material))
                                 {
-                                    int texIdx = 1;
+                                    var ddsName = String.Format("{0}_{1}", (isGlobalTexture) ? "global" : uid.ToString(), mtlIdx);
 
-                                    DSC.Log("material {0} - submaterial {1} - has {2} textures", mtlIdx, s + 1, material.SubMaterials.Count);
+                                    mtlBuilder.AppendLine(MaterialTemplate, mtlName, ddsName);
 
-                                    foreach (PCMPTexture texture in material.SubMaterials[s].Textures)
-                                        texture.ExportFile(String.Format(@"{0}\{1}_{2}_{3}.dds", path, ddsName, s + 1, texIdx++));
+                                    for (int s = 1, texIdx = 1; s <= material.SubMaterials.Count; s++)
+                                    {
+                                        DSC.Log("material {0} - submaterial {1} - has {2} textures", mtlIdx, s, material.SubMaterials.Count);
+
+                                        foreach (var texture in material.SubMaterials[s - 1].Textures)
+                                        {
+                                            var texFilename = String.Format("{0}_{1}_{2}.dds", ddsName, s, texIdx++);
+                                            texture.ExportFile(Path.Combine(path, texFilename));
+                                        }
+                                    }
+
+                                    materials.Add(material);
                                 }
 
-                                materials.Add(material);
+                                faces.AppendFormat("usemtl {0}", mtlName).AppendLine();
+                            }
+                            else
+                            {
+                                if (!hasNullMaterial)
+                                {
+                                    mtlBuilder.AppendLine(NullMaterial);
+                                    hasNullMaterial = true;
+                                }
+
+                                faces.AppendLine("usemtl null_mtl");
                             }
 
-                            faces.AppendFormat("usemtl {0}", mtlName).AppendLine();
+                            var vCount = model.Vertices.Count;
+                            var tCount = model.TriangleIndices.Count;
 
-                            //for (int t = 0; t < tCount; t += 3)
-                            //{
-                            //    faces.AppendFormat("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                            //        ((mesh.TriangleIndices[t] + minIndex + 1) + startIndex),
-                            //        ((mesh.TriangleIndices[t + 1] + minIndex + 1) + startIndex),
-                            //        ((mesh.TriangleIndices[t + 2] + minIndex + 1) + startIndex)).AppendLine();
-                            //}
+                            // add vertices
+                            foreach (var vertex in model.Vertices)
+                            {
+                                vPos.AppendLineEx("v {0:F4} {1:F4} {2:F4}", vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
+                                vNor.AppendLineEx("vn {0:F4} {1:F4} {2:F4}", vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z);
+                                vTex.AppendLineEx("vt {0:F4} {1:F4} 0.0000", vertex.UV.X, -vertex.UV.Y);
 
-                            //minIndex += vCount;
+                                nVerts++;
+                            }
+
+                            // add faces
+                            for (int t = 0; t < tCount; t += 3)
+                            {
+                                faces.AppendFormat("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
+                                    ((model.TriangleIndices[t] + minIndex + 1) + startIndex),
+                                    ((model.TriangleIndices[t + 1] + minIndex + 1) + startIndex),
+                                    ((model.TriangleIndices[t + 2] + minIndex + 1) + startIndex)).AppendLine();
+                            }
+
+                            minIndex += vCount;
                         }
 
-                        int nVerts = vertices.Count;
-                        int nTris = indices.Count;
+                        objBuilder.AppendLine(vPos);
+                        objBuilder.AppendLine(vNor);
+                        objBuilder.AppendLine(vTex);
 
-                        for (int vx = 0; vx < nVerts; vx++)
-                            sb.AppendFormatEx("v {0:F4} {1:F4} {2:F4}", vertices[vx].X, vertices[vx].Y, vertices[vx].Z).AppendLine();
+                        objBuilder.AppendLine("g Model{0:D2}_{1}", modelIndex, lodType);
+                        objBuilder.AppendLine("s 1");
 
-                        sb.AppendLine();
-
-                        for (int vn = 0; vn < nVerts; vn++)
-                            sb.AppendFormatEx("vn {0:F4} {1:F4} {2:F4}", normals[vn].X, normals[vn].Y, normals[vn].Z).AppendLine();
-
-                        sb.AppendLine();
-
-                        for (int vt = 0; vt < nVerts; vt++)
-                            sb.AppendFormatEx("vt {0:F4} {1:F4} 0.0000", coords[vt].X, coords[vt].Y).AppendLine();
-
-                        sb.AppendLine();
-
-                        sb.AppendFormatEx("g {0}_{1:D2}_{2}", uid, modelIdx, lodType).AppendLine();
-                        sb.AppendLine("s 1");
-
-                        sb.Append(faces.ToString());
-
-                        //for (int t = 0; t < nTris; t += 3)
-                        //{
-                        //    sb.AppendFormat2("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                        //        indices[t] + 1 + startIndex,
-                        //        indices[t + 1] + 1 + startIndex,
-                        //        indices[t + 2] + 1 + startIndex).AppendLine();
-                        //}
-
-                        sb.AppendLine();
+                        objBuilder.AppendLine(faces.ToString());
 
                         startIndex += nVerts;
-
-                        //-- This splits meshes up by texture
-                        //-- Leaving this here if ever needed
-                        //for (int m = 0; m < group.Meshes.Count; m++)
-                        //{
-                        //    IndexedPrimitive prim = group.Meshes[m];
-                        //
-                        //    DriverModel3D model = new DriverModel3D(modelPackage, prim);
-                        //
-                        //    int nVerts = model.Positions.Count;
-                        //    int nTris = model.TriangleIndices.Count;
-                        //
-                        //    //sb.AppendLine("#");
-                        //    //sb.AppendFormat2("# Mesh {0}/{1}", m + 1, group.Meshes.Count).AppendLine();
-                        //    //sb.AppendLine("#");
-                        //
-                        //    //sb.AppendLine();
-                        //
-                        //    for (int vx = 0; vx < nVerts; vx++)
-                        //        sb.AppendFormat2("v {0:F4} {1:F4} {2:F4}", model.Positions[vx].X, model.Positions[vx].Y, model.Positions[vx].Z).AppendLine();
-                        //
-                        //    sb.AppendLine();
-                        //
-                        //    for (int vn = 0; vn < nVerts; vn++)
-                        //        sb.AppendFormat2("vn {0:F4} {1:F4} {2:F4}", model.Normals[vn].X, model.Normals[vn].Y, model.Normals[vn].Z).AppendLine();
-                        //
-                        //    sb.AppendLine();
-                        //
-                        //    for (int vt = 0; vt < nVerts; vt++)
-                        //        sb.AppendFormat2("vt {0:F4} {1:F4} 0.0000", model.TextureCoordinates[vt].X, model.TextureCoordinates[vt].Y).AppendLine();
-                        //
-                        //    sb.AppendLine();
-                        //
-                        //    sb.AppendFormat2("g Mesh_{0}_{1}_{2}_{3}", modelIdx, g, m, lodType).AppendLine();
-                        //    sb.AppendLine("s 1");
-                        //
-                        //    for (int t = 0; t < nTris; t += 3)
-                        //    {
-                        //        sb.AppendFormat2("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                        //            model.TriangleIndices[t] + 1 + startIndex,
-                        //            model.TriangleIndices[t + 1] + 1 + startIndex,
-                        //            model.TriangleIndices[t + 2] + 1 + startIndex).AppendLine();
-                        //    }
-                        //
-                        //    sb.AppendLine();
-                        //
-                        //    startIndex += nVerts;
-                        //}
                     }
                 }
             }
 
-            string filePath = String.Format(@"{0}\{1}.obj", path, filename);
+            var filePath = Path.Combine(path, String.Format("{0}.obj", filename));
 
-            if (sbMtl != null)
+            if (mtlBuilder != null)
             {
-                string mtlFilePath = String.Format(@"{0}\{1}.mtl", path, filename);
+                var mtlFilePath = Path.Combine(path, String.Format("{0}.mtl", filename));
 
-                using (StreamWriter f = new StreamWriter(mtlFilePath, false, Encoding.Default, sbMtl.Length))
-                    f.Write(sbMtl.ToString());
+                using (StreamWriter f = new StreamWriter(mtlFilePath, false, Encoding.Default, mtlBuilder.Length))
+                    f.Write(mtlBuilder.ToString());
             }
 
-            using (StreamWriter f = new StreamWriter(filePath, false, Encoding.Default, sb.Length))
-                f.Write(sb.ToString());
+            using (StreamWriter f = new StreamWriter(filePath, false, Encoding.Default, objBuilder.Length))
+                f.Write(objBuilder.ToString());
 
             return ExportResult.Success;
         }
