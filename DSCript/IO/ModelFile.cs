@@ -19,6 +19,8 @@ namespace DSCript.Models
     {
         public short UID { get; set; }
 
+        public ModelPackagePC ModelPackage { get; set; }
+
         public List<PCMPMaterial> StandaloneTextures { get; set; }
 
         protected override void Load()
@@ -29,9 +31,9 @@ namespace DSCript.Models
             if (upst == null || mdpc == null)
                 return;
 
-            var modelData = SpoolableResourceFactory.Create<ModelPackagePC>(mdpc, true);
+            ModelPackage = SpoolableResourceFactory.Create<ModelPackagePC>(mdpc, true);
 
-            var materials = modelData.Materials;
+            var materials = ModelPackage.Materials;
 
             using (var f = upst.GetMemoryStream())
             {
@@ -72,6 +74,11 @@ namespace DSCript.Models
         public PCMPMaterial GetStandaloneTexture(int id)
         {
             return (HasTextures) ? StandaloneTextureData.StandaloneTextures[id] : null;
+        }
+
+        public ModelPackagePC GetModelPackage()
+        {
+            return (HasTextures) ? StandaloneTextureData.ModelPackage : null;
         }
 
         public override bool CanSave

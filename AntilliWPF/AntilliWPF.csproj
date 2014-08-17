@@ -70,9 +70,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <None Include="ChunkViewer.xaml.cs">
+    <Compile Include="ChunkViewer.xaml.cs">
       <DependentUpon>ChunkViewer.xaml</DependentUpon>
-    </None>
+    </Compile>
     <Compile Include="Config.cs" />
     <Compile Include="MKInputBox.xaml.cs">
       <DependentUpon>MKInputBox.xaml</DependentUpon>
@@ -85,9 +85,9 @@
     <Compile Include="Extensions\TreeViewExtensions.cs" />
     <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Importers\ModelImporter.cs" />
-    <None Include="MaterialEditor.xaml.cs">
+    <Compile Include="MaterialEditor.xaml.cs">
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
-    </None>
+    </Compile>
     <Compile Include="ModelGroupListItem.cs" />
     <Compile Include="ModelListItem.cs" />
     <Compile Include="OBJExporter.cs" />
@@ -104,12 +104,13 @@
     <Compile Include="Resources.xaml.cs">
       <DependentUpon>Resources.xaml</DependentUpon>
     </Compile>
-    <None Include="TextureViewer.xaml.cs">
+    <Compile Include="TextureViewer.xaml.cs">
       <DependentUpon>TextureViewer.xaml</DependentUpon>
-    </None>
-    <None Include="ChunkViewer.xaml">
+    </Compile>
+    <Page Include="ChunkViewer.xaml">
       <SubType>Designer</SubType>
-    </None>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -122,9 +123,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <None Include="MaterialEditor.xaml">
+    <Page Include="MaterialEditor.xaml">
       <SubType>Designer</SubType>
-    </None>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MKInputBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -137,9 +139,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <None Include="TextureViewer.xaml">
+    <Page Include="TextureViewer.xaml">
       <SubType>Designer</SubType>
-    </None>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

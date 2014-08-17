@@ -106,27 +106,27 @@
                 <GroupBox.Resources>
                     <DataTemplate DataType="{x:Type at:ModelListItem}">
                         <TextBlock Text="{Binding Name}" Tag="{Binding Model}">
-                            <!--<TextBlock.ContextMenu>
+                            <TextBlock.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Path=Model.Models[0].Material}"/>
+                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Path=Model.Children[0].Material}"/>
+                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Path=Model.Children[0].Material}"/>
                                 </ContextMenu>
-                            </TextBlock.ContextMenu>-->
+                            </TextBlock.ContextMenu>
                         </TextBlock>
                     </DataTemplate>
 
                     <HierarchicalDataTemplate DataType="{x:Type at:ModelVisual3DGroupListItem}" ItemsSource="{Binding Models}">
                         <TextBlock Text="{Binding Name}"/>
                     </HierarchicalDataTemplate>
-
+                    
                     <DataTemplate DataType="{x:Type at:DriverModelVisual3D}">
                         <TextBlock Text="Model">
-                            <!--
                             <TextBlock.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Material}"/>
                                     <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Material}"/>
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
-                            -->
                         </TextBlock>
                     </DataTemplate>
                     <!--<DataTemplate DataType="{x:Type at:ModelListItem}">

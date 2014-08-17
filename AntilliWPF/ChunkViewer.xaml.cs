@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -17,15 +18,9 @@ using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 
 using DSCript;
-using DSCript.Spoolers;
 using DSCript.Spooling;
-using DSC = DSCript.DSC;
 
 using FreeImageAPI;
-
-using Spooler = DSCript.Spooling.Spooler;
-using SpoolableChunk = DSCript.Spooling.SpoolablePackage;
-using SpoolableData = DSCript.Spooling.SpoolableBuffer;
 
 namespace Antilli
 {
@@ -36,11 +31,11 @@ namespace Antilli
     {
         private string Filename { get; set; }
 
-        private SpoolableChunk loadedChunk;
+        private SpoolablePackage loadedChunk;
         private FileChunker _chunker;
         private bool inTextureMode;
 
-        protected SpoolableChunk LoadedChunk
+        protected SpoolablePackage LoadedChunk
         {
             get { return loadedChunk; }
             set
@@ -169,7 +164,6 @@ namespace Antilli
                 var col = 10;
                 var magic = CurrentSpooler.Magic;
 
-                sb.AppendColumn("Alignment", col, true).AppendLine(CurrentSpooler.Alignment);
                 sb.AppendColumn("Type",      col, true);
 
                 if (magic > 255)
@@ -180,14 +174,14 @@ namespace Antilli
                 sb.AppendColumn("Offset",    col, true).AppendLine("0x{0:X}", CurrentSpooler.BaseOffset);
                 sb.AppendColumn("Reserved",  col, true).AppendLine(CurrentSpooler.Reserved);
                 sb.AppendColumn("StrLen",    col, true).AppendLine(CurrentSpooler.StrLen);
-                sb.AppendColumn("Flags",     col, true).AppendLine("0x{0:X2} / 0x{1:X2}", (CurrentSpooler.Flags & 0xFF), ((CurrentSpooler.Flags >> 8) & 0xFF));
+                sb.AppendColumn("Alignment", col, true).AppendLine(1 << (int)CurrentSpooler.Alignment);
                 sb.AppendColumn("Size",      col, true).AppendLine("0x{0:X}", CurrentSpooler.Size);
 
                 if (CurrentSpooler.Magic == (int)ChunkType.BuildInfo)
                 {
                     sb.AppendLine();
 
-                    var buffer = ((SpoolableData)CurrentSpooler).GetBuffer();
+                    var buffer = ((SpoolableBuffer)CurrentSpooler).GetBuffer();
                     var encoding = (buffer.Length > 1 && buffer[1] == 0) ? Encoding.Unicode : Encoding.UTF8;
 
                     sb.AppendLine("Build Info:\r\n");
@@ -220,7 +214,7 @@ namespace Antilli
 
         private void LoadDDS()
         {
-            var fibitmap = BitmapHelper.GetFIBITMAP(((SpoolableData)CurrentSpooler).GetBuffer());
+            var fibitmap = BitmapHelper.GetFIBITMAP(((SpoolableBuffer)CurrentSpooler).GetBuffer());
             var fibitmap24 = FreeImage.ConvertTo24Bits(fibitmap);
 
             var isNull = fibitmap.Unload();
@@ -243,7 +237,7 @@ namespace Antilli
 
             if (openFile.ShowDialog() ?? false)
             {
-                var spooler = (SpoolableData)CurrentSpooler;
+                var spooler = (SpoolableBuffer)CurrentSpooler;
 
                 spooler.SetBuffer(File.ReadAllBytes(openFile.FileName));
                 
@@ -255,7 +249,7 @@ namespace Antilli
             refreshSpoolers = true;
         }
 
-        private void RemoveCurrentSpoolerFromParent(SpoolableChunk parent)
+        private void RemoveCurrentSpoolerFromParent(SpoolablePackage parent)
         {
             CurrentSpooler.Dispose();
             //parent.Spoolers.Remove(CurrentSpooler);
@@ -358,7 +352,7 @@ namespace Antilli
                                 if (o.Reserved != 0)
                                     break;
 
-                                var vo3d = ((SpoolableChunk)o).Children[0] as SpoolableBuffer;
+                                var vo3d = ((SpoolablePackage)o).Children[0] as SpoolableBuffer;
                                 var buffer = BitConverter.ToInt16(vo3d.GetBuffer(), 0);
 
                                 var vehId = buffer & 0xFF;
@@ -440,20 +434,18 @@ namespace Antilli
 
                 stopwatch.Start();
 
-                //if (chunk)
-                //{
-                //    FileChunker.WriteChunk(openFile.FileName, (SpoolablePackage)CurrentSpooler);
-                //}
-                //else
-                //{
-                //    using (var fs = File.Create(openFile.FileName))
-                //    {
-                //        fs.SetLength(CurrentSpooler.Size);
-                //        fs.Write(((SpoolableBuffer)CurrentSpooler).GetBuffer());
-                //    }
-                //}
-
-                UnifiedPackage.Create(openFile.FileName, CurrentSpooler);
+                if (chunk)
+                {
+                    FileChunker.WriteChunk(openFile.FileName, (SpoolablePackage)CurrentSpooler);
+                }
+                else
+                {
+                    using (var fs = File.Create(openFile.FileName))
+                    {
+                        fs.SetLength(CurrentSpooler.Size);
+                        fs.Write(((SpoolableBuffer)CurrentSpooler).GetBuffer());
+                    }
+                }
 
                 stopwatch.Stop();
 
@@ -494,21 +486,27 @@ namespace Antilli
         {
             InitializeComponent();
 
+            fileOpen.Click += (o, e) => {
+                OpenChunkFile();
+            };
+
+            fileExit.Click += (o, e) => {
+                Close();
+            };
+
+            toolsExport.Click += (o, e) => {
+                if (LoadedChunk != null)
+                    ExportChunkFile();
+            };
+
             KeyDown += (o, e) => {
                 switch (e.Key)
                 {
-                case Key.E:
-                    if (LoadedChunk != null)
-                        ExportChunkFile();
-                    break;
-                case Key.O: OpenChunkFile();
-                    break;
                 case Key.T:
                     {
                         inTextureMode = !inTextureMode;
                         OnPropertyChanged("Spoolers");
                     } break;
-                default: break;
                 }
             };
 

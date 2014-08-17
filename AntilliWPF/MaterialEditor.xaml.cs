@@ -41,14 +41,6 @@ namespace Antilli
 
         public new MainWindow Parent { get; private set; }
 
-        public Image TextureBox = new Image() {
-            Name="TextureBox",
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-
-        public TextBlock TextBlock = new TextBlock() { Name = "TextBlock" };
-
         bool globalMaterials = false;
 
         public bool ShowGlobalMaterials
@@ -65,29 +57,30 @@ namespace Antilli
             }
         }
 
-        PCMPTexture selectedTexture;
+        public PCMPTexture SelectedTexture { get; private set; }
 
-        public PCMPTexture SelectedTexture
-        {
-            get { return selectedTexture; }
-            set
-            {
-                selectedTexture = value;
-                RaisePropertyChanged("Texture");
-            }
-        }
-
-        public BitmapSource Texture
+        public BitmapSource CurrentTexture
         {
             get
             {
-                if (SelectedTexture == null)
+                var item = MaterialsList.SelectedItem as PCMPTexture;
+
+                if (item != null)
+                {
+                    SelectedTexture = item;
+
+                    TextureBox.Width = SelectedTexture.Width;
+                    TextureBox.Height = SelectedTexture.Height;
+
+                    TextureBox.Visibility = Visibility.Visible;
+
+                    return (TextureCache.GetCachedTexture(SelectedTexture).GetBitmapSource());
+                }
+                else
+                {
+                    TextureBox.Visibility = Visibility.Collapsed;
                     return null;
-
-                TextureBox.Width = SelectedTexture.Width;
-                TextureBox.Height = SelectedTexture.Height;
-
-                return (TextureCache.GetCachedTexture(SelectedTexture).GetBitmapSource());
+                }
             }
         }
 
@@ -95,19 +88,34 @@ namespace Antilli
         {
             get
             {
-                List<MaterialTreeItem> materials = new List<MaterialTreeItem>();
+                if (Parent == null)
+                    return null;
+
+                var materials = new List<MaterialTreeItem>();
 
                 int count = 0;
 
                 if (ShowGlobalMaterials)
                 {
-                    if (Parent.ModelFile.HasSpooledFile)
-                        foreach (PCMPMaterial material in Parent.ModelFile.SpooledFile.MaterialData.Materials)
-                            materials.Add(new MaterialTreeItem(++count, material));
+                    if (Parent.ModelFile is Driv3rVehiclesFile)
+                    {
+                        var modelFile = Parent.ModelFile as Driv3rVehiclesFile;
+
+                        if (modelFile.HasVehicleGlobals)
+                        {
+                            var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
+
+                            if (modelPackage != null)
+                            {
+                                foreach (var material in modelPackage.Materials)
+                                    materials.Add(new MaterialTreeItem(++count, material));
+                            }
+                        }
+                    }
                 }
                 else  if (Parent.SelectedModelPackage.HasMaterials)
                 {
-                    foreach (PCMPMaterial material in Parent.SelectedModelPackage.MaterialData.Materials)
+                    foreach (var material in Parent.SelectedModelPackage.Materials)
                         materials.Add(new MaterialTreeItem(++count, material));
                 }
                     
@@ -120,89 +128,55 @@ namespace Antilli
             RaisePropertyChanged("Materials");
         }
 
+        public string SubMaterialInfo
+        {
+            get
+            {
+                var item = MaterialsList.SelectedItem as SubMaterialTreeItem;
+
+                if (item != null)
+                {
+                    var subMat = ((SubMaterialTreeItem)MaterialsList.SelectedItem).SubMaterial;
+
+                    StringBuilder str = new StringBuilder();
+
+                    var col = 12;
+
+                    str.AppendLine("== SubMaterial Information ==");
+
+                    str.AppendColumn("Flags", col, true).AppendLine("0x{0:X8}", subMat.Flags);
+
+                    str.AppendColumn("Mode", col, true).AppendLine("0x{0:X4}", subMat.Mode);
+                    str.AppendColumn("Type", col, true).AppendLine("0x{0:X4}", subMat.Type);
+
+                    str.AppendColumn("Transparent", col, true).AppendLine(subMat.Transparency);
+                    str.AppendColumn("Damage", col, true).AppendLine(subMat.Damage);
+                    str.AppendColumn("Mask", col, true).AppendLine(subMat.AlphaMask);
+                    str.AppendColumn("Specular", col, true).AppendLine(subMat.Specular);
+                    str.AppendColumn("Emissive", col, true).AppendLine(subMat.Emissive);
+
+                    InfoBox.Visibility = Visibility.Visible;
+
+                    return str.ToString();
+                }
+                else
+                {
+                    InfoBox.Visibility = Visibility.Collapsed;
+                    return null;
+                }
+            }
+        }
+
         void MaterialsList_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            if (MaterialsList.SelectedItem is PCMPTexture)
-            {
-                PCMPTexture tex = (PCMPTexture)MaterialsList.SelectedItem;
-
-                if (ViewBox.Children.Count == 0 || (ViewBox.Children.Count > 0 && (!(ViewBox.Children[0] is Image))))
-                {
-                    ViewBox.Children.Clear();
-                    ViewBox.Children.Add(TextureBox);
-
-                    TextureBox.UpdateLayout();
-                }
-
-                if (ViewBox.Children.Count > 0 && ViewBox.Children[0] is Image)
-                    SelectedTexture = tex;
-            }
-            else if (MaterialsList.SelectedItem is SubMaterialTreeItem)
-            {
-                PCMPSubMaterial subMat = ((SubMaterialTreeItem)MaterialsList.SelectedItem).SubMaterial;
-
-                if (ViewBox.Children.Count == 0 || (ViewBox.Children.Count > 0 && (!(ViewBox.Children[0] is TextBlock))))
-                {
-                    ViewBox.Children.Clear();
-                    ViewBox.Children.Add(TextBlock);
-
-                    TextBlock.UpdateLayout();
-                }
-
-                bool transparency = false;
-
-                bool damage = false;
-                bool mask = false;
-
-                bool specular = false;
-                bool emissive = false;
-
-                uint type = subMat.Flags;
-                uint spec = subMat.Mode;
-                uint flags = subMat.Type;
-
-                if (flags == 0x400 || flags == 0x1000)
-                    mask = true;
-                if (flags == 0x800 || flags == 0x1000)
-                    damage = true;
-                if (spec == 0x201 || spec == 0x102)
-                    specular = true;
-                if (((type & 0x18000) == 0x18000) || ((type & 0x1E) == 0x1E))
-                    emissive = true;
-                if (((type & 0x1) == 0x1 && !specular) || type == 0x4 && !specular)
-                    transparency = true;
-
-                StringBuilder str = new StringBuilder();
-
-                str.AppendLine("== SubMaterial Information ==");
-
-                str.AppendFormat("Unk1: 0x{0:X8}", subMat.Flags).AppendLines(2);
-
-                str.AppendFormat("Unk2: 0x{0:X4}", subMat.Mode).AppendLine();
-                str.AppendFormat("Unk3: 0x{0:X4}", subMat.Type).AppendLines(2);
-
-                str.AppendFormat("Transparent: {0}", transparency).AppendLine();
-                str.AppendFormat("Damage: {0}", damage).AppendLine();
-                str.AppendFormat("Mask: {0}", mask).AppendLine();
-                str.AppendFormat("Specular: {0}", specular).AppendLine();
-                str.AppendFormat("Emissive: {0}", emissive).AppendLine();
-
-                if (ViewBox.Children.Count > 0 && ViewBox.Children[0] is TextBlock)
-                    TextBlock.Text = str.ToString();
-            }
-            else
-            {
-                if (SelectedTexture != null)
-                    SelectedTexture = null;
-                if (ViewBox.Children.Count > 0)
-                    ViewBox.Children.Clear();
-            }
+            RaisePropertyChanged("SubMaterialInfo");
+            RaisePropertyChanged("CurrentTexture");
         }
 
         private void ReplaceTexture(object sender, RoutedEventArgs e)
         {
             Parent.ReplaceTexture(SelectedTexture);
-            RaisePropertyChanged("Texture");
+            RaisePropertyChanged("CurrentTexture");
         }
 
         private void ExportTexture(object sender, RoutedEventArgs e)
@@ -212,20 +186,25 @@ namespace Antilli
 
         private void AddMaterialTemplate(object sender, RoutedEventArgs e)
         {
-            if (e.OriginalSource is MenuItem)
-            {
-                MenuItem item = (MenuItem)e.OriginalSource;
+            var item = e.OriginalSource as MenuItem;
 
-                PCMPData material = (ShowGlobalMaterials)
-                    ? Parent.ModelFile.SpooledFile.MaterialData
-                    : (Parent.SelectedModelPackage != null)
-                        ? Parent.SelectedModelPackage.MaterialData
-                        : null;
+            if (item != null)
+            {                
+                ModelPackagePC modelPackage = null;
 
-                if (material == null)
-                    throw new Exception("FATAL ERROR: Failed to get MaterialData from ModelPackage!");
                 if (item.Tag == null)
                     throw new Exception("ERROR: Item has no tag!");
+
+                if (Parent.ModelFile is Driv3rVehiclesFile)
+                {
+                    var modelFile = Parent.ModelFile as Driv3rVehiclesFile;
+
+                    if (ShowGlobalMaterials)
+                        modelPackage = modelFile.VehicleGlobals.GetModelPackage();
+                }
+
+                if (modelPackage == null && Parent.SelectedModelPackage != null)
+                    modelPackage = Parent.SelectedModelPackage;
 
                 string tag = ((string)item.Tag).ToUpper();
 
@@ -233,20 +212,18 @@ namespace Antilli
                 {
                 case "STANDARD":
                     {
-                        PCMPMaterial newMtl = new PCMPMaterial();
+                        var newMtl = new PCMPMaterial();
 
-                        PCMPSubMaterial subMtl = new PCMPSubMaterial();
-                        PCMPTexture texInfo = new PCMPTexture();
+                        var subMtl = new PCMPSubMaterial();
+                        var texInfo = new PCMPTexture();
 
-                        //texInfo.Buffer  = EmbedRes.GetBytes("notex.dds");
-                        
                         texInfo.Width   = 128;
                         texInfo.Height  = 128;
 
                         texInfo.Type    = 1;
 
                         subMtl.Textures.Add(texInfo);
-                        material.Textures.Add(texInfo);
+                        modelPackage.Textures.Add(texInfo);
 
                         subMtl.Flags = 4;
 
@@ -254,9 +231,9 @@ namespace Antilli
                         subMtl.Type = 0;
 
                         newMtl.SubMaterials.Add(subMtl);
-                        material.SubMaterials.Add(subMtl);
+                        modelPackage.SubMaterials.Add(subMtl);
 
-                        material.Materials.Add(newMtl);
+                        modelPackage.Materials.Add(newMtl);
 
                         UpdateMaterials();
                     } break;
@@ -274,13 +251,9 @@ namespace Antilli
             Parent = parent;
             Owner = parent;
 
-            DataContext = this;
-
             Titlebar.MouseLeftButtonDown += (o, e) => {
                 DragMove();
             };
-
-            TextureBox.SetBinding(Image.SourceProperty, new Binding("Texture"));
 
             MaterialsList.SelectedItemChanged += MaterialsList_SelectedItemChanged;
 

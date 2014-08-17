@@ -78,36 +78,31 @@
             <GroupBox Header="Model Packages" Width="120" HorizontalAlignment="Left">
                 <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}"/>
             </GroupBox>
-            <GroupBox Header="Model Groups" Width="120" HorizontalAlignment="Right">
+            <GroupBox Header="Parts Groups" Width="120" HorizontalAlignment="Right">
                 <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"/>
             </GroupBox>
 
             <!-- Rendering options -->
             <GroupBox Grid.Row="1" Margin="0,5,0,0" Header="Rendering Options">
-                <Grid x:Name="RenderingOptionsGrid" Style="{StaticResource LODBox}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="90"/>
-                        <ColumnDefinition/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="30"/>
-                        <RowDefinition Height="30"/>
-                    </Grid.RowDefinitions>
-                    <!-- Labels -->
-                    <Label Grid.Column="0" Grid.Row="0" Content="Level of Detail:" Margin="5" Padding="0" HorizontalContentAlignment="Right" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
-                    <!-- Content -->
-                    <Grid x:Name="LODButtons" Grid.Column="1" Grid.Row="0" Margin="5">
-                        <Grid.Resources>
-                            <Style TargetType="RadioButton" BasedOn="{StaticResource RadioToggleButtonStyle_LOD}"/>
-                        </Grid.Resources>
-                        <RadioButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"     Margin="0,0,0,0"   />
-                        <RadioButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"   Margin="25,0,0,0"  />
-                        <RadioButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"      Margin="50,0,0,0"  />
-                        <RadioButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low" Margin="75,0,0,0"  />
-                        <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"   Margin="100,0,0,0" />
-                    </Grid>
-                    <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of Blend Weights. For example, this can be used to view damage on vehicles. NOTE: Some models may appear distorted when checked." Visibility="Hidden" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_border}" Focusable="False" Margin="5"/>
-                </Grid>
+                <StackPanel Orientation="Vertical" x:Name="RenderingOptionsGrid" Style="{StaticResource LODBox}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                        <Label Content="Level of Detail:" Margin="5" Padding="2" />
+                        <StackPanel x:Name="LODButtons" Margin="5" Orientation="Horizontal">
+                            <StackPanel.Resources>
+                                <Style TargetType="RadioButton" BasedOn="{StaticResource RadioToggleButtonStyle_LOD}">
+                                    <Setter Property="Margin" Value="0,0,5,0"/>
+                                </Style>
+                            </StackPanel.Resources>
+                            <RadioButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"/>
+                            <RadioButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"/>
+                            <RadioButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"/>
+                            <RadioButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low"/>
+                            <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
+                              Visibility="Collapsed" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_border}" Focusable="False" Margin="5"/>
+                </StackPanel>
             </GroupBox>
         </Grid>
         <!-- Right column -->

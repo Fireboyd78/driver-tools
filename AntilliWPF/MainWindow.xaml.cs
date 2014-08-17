@@ -59,9 +59,9 @@ namespace Antilli
             ValidateNames    = true,
         };
 
-        //public TextureViewer TextureViewer { get; private set; }
-        //public MaterialEditor MaterialEditor { get; private set; }
-        //public MaterialEditor GlobalMaterialEditor { get; private set; }
+        public TextureViewer TextureViewer { get; private set; }
+        public MaterialEditor MaterialEditor { get; private set; }
+        public MaterialEditor GlobalMaterialEditor { get; private set; }
 
         /// <summary>
         /// Gets the command line arguments that were passed to the application from either the command prompt or the desktop.
@@ -96,16 +96,16 @@ namespace Antilli
                         {
                             viewGlobalMaterials.Visibility = Visibility.Visible;
         
-                            //if (IsGlobalMaterialEditorOpen)
-                            //    GlobalMaterialEditor.UpdateMaterials();
+                            if (IsGlobalMaterialEditorOpen)
+                                GlobalMaterialEditor.UpdateMaterials();
                         }
                         else
                         {
-                            //if (IsGlobalMaterialEditorOpen)
-                            //{
-                            //    GlobalMaterialEditor.Close();
-                            //    viewGlobalMaterials.Visibility = Visibility.Collapsed;
-                            //}
+                            if (IsGlobalMaterialEditorOpen)
+                            {
+                                GlobalMaterialEditor.Close();
+                                viewGlobalMaterials.Visibility = Visibility.Collapsed;
+                            }
 
                             viewGlobalMaterials.Visibility = Visibility.Collapsed;
                         }
@@ -127,8 +127,6 @@ namespace Antilli
                     viewMaterials.IsEnabled = true;
                 }
 
-                OnPropertyChanged("HasGlobals");
-                
                 timer.Stop();
                 
                 DSC.Log("Loaded model file in {0}ms.", timer.ElapsedMilliseconds);
@@ -215,53 +213,47 @@ namespace Antilli
             }
         }
 
-        public bool UseBlendWeights
+        public bool IsTextureViewerOpen
         {
-            get { return BlendWeights.IsChecked ?? false; }
-            set { BlendWeights.IsChecked = value; }
+            get { return (TextureViewer != null) ? TextureViewer.IsVisible : false; }
         }
         
-        //public bool IsTextureViewerOpen
-        //{
-        //    get { return (TextureViewer != null) ? TextureViewer.IsVisible : false; }
-        //}
+        public bool IsMaterialEditorOpen
+        {
+            get { return (MaterialEditor != null) ? MaterialEditor.IsVisible : false; }
+        }
         
-        //public bool IsMaterialEditorOpen
-        //{
-        //    get { return (MaterialEditor != null) ? MaterialEditor.IsVisible : false; }
-        //}
-        
-        //public bool IsGlobalMaterialEditorOpen
-        //{
-        //    get { return (GlobalMaterialEditor != null) ? GlobalMaterialEditor.IsVisible : false; }
-        //}
+        public bool IsGlobalMaterialEditorOpen
+        {
+            get { return (GlobalMaterialEditor != null) ? GlobalMaterialEditor.IsVisible : false; }
+        }
 
-        //public void OpenTextureViewer()
-        //{
-        //    TextureViewer = new TextureViewer(this);
-        //    TextureViewer.Show();
-        //
-        //    if (SelectedModelPackage != null)
-        //        TextureViewer.UpdateTextures();
-        //}
+        public void OpenTextureViewer()
+        {
+            TextureViewer = new TextureViewer(this);
+            TextureViewer.Show();
         
-        //public void OpenMaterialEditor()
-        //{
-        //    MaterialEditor = new MaterialEditor(this);
-        //    MaterialEditor.Show();
-        //
-        //    if (SelectedModelPackage != null)
-        //        MaterialEditor.UpdateMaterials();
-        //}
+            if (SelectedModelPackage != null)
+                TextureViewer.UpdateTextures();
+        }
         
-        //public void OpenGlobalMaterialEditor()
-        //{
-        //    GlobalMaterialEditor = new MaterialEditor(this) {
-        //        ShowGlobalMaterials = true
-        //    };
-        //
-        //    GlobalMaterialEditor.Show();
-        //}
+        public void OpenMaterialEditor()
+        {
+            MaterialEditor = new MaterialEditor(this);
+            MaterialEditor.Show();
+        
+            if (SelectedModelPackage != null)
+                MaterialEditor.UpdateMaterials();
+        }
+        
+        public void OpenGlobalMaterialEditor()
+        {
+            GlobalMaterialEditor = new MaterialEditor(this) {
+                ShowGlobalMaterials = true
+            };
+        
+            GlobalMaterialEditor.Show();
+        }
 
         public void OnModelPackageSelected(object sender, SelectionChangedEventArgs e)
         {
@@ -301,10 +293,10 @@ namespace Antilli
                 Viewer.Visuals = null;
             }
 
-            //if (IsTextureViewerOpen)
-            //    TextureViewer.UpdateTextures();
-            //if (IsMaterialEditorOpen)
-            //    MaterialEditor.UpdateMaterials();
+            if (IsTextureViewerOpen)
+                TextureViewer.UpdateTextures();
+            if (IsMaterialEditorOpen)
+                MaterialEditor.UpdateMaterials();
         }
 
         public void ResetLODButtons()
@@ -316,13 +308,17 @@ namespace Antilli
             {
                 foreach (PartsGroup part in SelectedModelGroup.Parts)
                 foreach (PartDefinition partDef in part.Parts)
-                    if (partDef.Groups != null)
-                        foreach (ToggleButton lod in LODButtons.Children)
-                            if (int.Parse((string)lod.Tag) == partDef.ID)
-                            {
-                                lod.IsEnabled = true;
-                                break;
-                            }
+                foreach (var group in partDef.Groups)
+                {
+                    if (group == null)
+                        continue;
+
+                    foreach (ToggleButton lod in LODButtons.Children)
+                    {
+                        if (int.Parse((string)lod.Tag) == partDef.ID)
+                            lod.IsEnabled = true;
+                    }
+                }
             }
         }
 
@@ -337,11 +333,11 @@ namespace Antilli
             else if (!lodButton.IsEnabled)
             {
                 CurrentLod = 0;
-                BlendWeights.Visibility = System.Windows.Visibility.Hidden;
+                BlendWeights.Visibility = System.Windows.Visibility.Collapsed;
                 return;
             }
 
-            BlendWeights.Visibility = ((SelectedModelGroup.Parts[0].VertexBuffer.HasBlendWeights)) ? Visibility.Visible : System.Windows.Visibility.Hidden;
+            BlendWeights.Visibility = ((SelectedModelGroup.Parts[0].VertexBuffer.HasBlendWeights)) ? Visibility.Visible : Visibility.Collapsed;
 
             var models = new List<ModelVisual3DGroup>();
 
@@ -360,36 +356,14 @@ namespace Antilli
                 var parts = new ModelVisual3DGroup();
 
                 foreach (var prim in group.Meshes)
-                    parts.Children.Add(new DriverModelVisual3D(SelectedModelPackage, prim, UseBlendWeights));
+                    parts.Children.Add(new DriverModelVisual3D(SelectedModelPackage, prim, Viewer.UseBlendWeights));
 
                 models.Add(parts);
             }
 
             Viewer.SetDriv3rModel(models);
         }
-
-        public void ToggleBlendWeights()
-        {
-            var visuals = Viewer.Visuals;
-            
-            if (visuals == null)
-                return;
-
-            var selectedModel = Viewer.SelectedModel;
-            var item = Viewer.ModelsList.GetSelectedContainer();
-
-            foreach (var visual in visuals)
-            {
-                foreach (DriverModelVisual3D dmodel in visual.Children)
-                    dmodel.UseBlendWeights = UseBlendWeights;
-            }
-
-            if (selectedModel != null)
-                Viewer.SelectedModel = selectedModel;
-            if (item != null)
-                item.IsSelected = true;
-        }
-
+        
         private void ViewModelTexture(object sender, RoutedEventArgs e)
         {
             var material = ((MenuItem)e.Source).Tag as PCMPMaterial;
@@ -400,10 +374,10 @@ namespace Antilli
                 return;
             }
 
-            //if (!IsTextureViewerOpen)
-            //    OpenTextureViewer();
-            //
-            //TextureViewer.SelectTexture(material.SubMaterials[0].Textures[0]);
+            if (!IsTextureViewerOpen)
+                OpenTextureViewer();
+            
+            TextureViewer.SelectTexture(material.SubMaterials[0].Textures[0]);
         }
 
         //--nope
@@ -474,8 +448,6 @@ namespace Antilli
                 
                 string msg = String.Format("Successfully exported to '{0}'!", path);
                 MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                //MessageBox.Show("Exporting is broken :(");
             }
         }
 
@@ -689,8 +661,8 @@ namespace Antilli
 
                     LoadSelectedModel();
 
-                    //if (IsTextureViewerOpen)
-                    //        TextureViewer.ReloadTexture();
+                    if (IsTextureViewerOpen)
+                            TextureViewer.ReloadTexture();
                 }
             }
         }
@@ -701,7 +673,22 @@ namespace Antilli
 
             InitializeComponent();
 
-            //KeyDown += OnKeyDownReceived;
+            KeyDown += (o,e) => {
+                switch (e.Key)
+                {
+                case Key.I:
+                    Viewer.ToggleInfiniteSpin();
+                    break;
+                case Key.G:
+                    Viewer.ToggleDebugMode();
+                    break;
+                case Key.C:
+                    Viewer.ToggleCameraMode();
+                    break;
+                }
+            };
+
+            Viewer.MainWindow = this;
 
             Packages.SelectionChanged += OnModelPackageSelected;
             Groups.SelectionChanged += (o, e) => LoadSelectedModel();
@@ -719,16 +706,16 @@ namespace Antilli
                 };
             }
 
-            BlendWeights.Checked += (o, e) => ToggleBlendWeights();
-            BlendWeights.Unchecked += (o, e) => ToggleBlendWeights();
+            BlendWeights.Checked += (o, e) => Viewer.ToggleBlendWeights();
+            BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
 
             fileOpen.Click += (o, e) => OpenFile();
             //fileOpen.Click += (o, e) => OpenFileNew();
             fileExit.Click += (o, e) => Environment.Exit(0);
 
-            //viewTextures.Click += (o, e) => OpenTextureViewer();
-            //viewMaterials.Click += (o, e) => OpenMaterialEditor();
-            //viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
+            viewTextures.Click += (o, e) => OpenTextureViewer();
+            viewMaterials.Click += (o, e) => OpenMaterialEditor();
+            viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
 
             //--nope sorry
             //exportGlobals.Click += (o, e) => ExportGlobals();
@@ -738,11 +725,11 @@ namespace Antilli
             exportXML.Click += (o, e) => ExportVehicleHierachyXML();
             exportObj.Click += (o, e) => ExportObjFile();
 
-            //chunkTest.Click += (o, e) => {
-            //    var cViewer = new ChunkViewer();
-            //
-            //    cViewer.Show();
-            //};
+            chunkTest.Click += (o, e) => {
+                var cViewer = new ChunkViewer();
+            
+                cViewer.Show();
+            };
 
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);

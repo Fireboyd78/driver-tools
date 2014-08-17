@@ -59,7 +59,7 @@ namespace Antilli
 
         public Visibility HasGlobals
         {
-            get { return (Parent.HasGlobals) ? Visibility.Visible : Visibility.Collapsed; }
+            get { return (Parent.ModelFile is Driv3rVehiclesFile) ? Visibility.Visible : Visibility.Collapsed; }
         }
 
         public BitmapSource Texture
@@ -90,9 +90,9 @@ namespace Antilli
         {
             get
             {
-                List<PCMPTexture> textures = (Parent.SelectedModelPackage.HasMaterials) ? new List<PCMPTexture>(Parent.SelectedModelPackage.MaterialData.Textures) : new List<PCMPTexture>();
+                List<PCMPTexture> textures = (Parent.SelectedModelPackage.HasMaterials) ? new List<PCMPTexture>(Parent.SelectedModelPackage.Textures) : new List<PCMPTexture>();
 
-                if (Parent.ModelFile.HasSpooledFile)
+                if (Parent.ModelFile is Driv3rVehiclesFile)
                     RaisePropertyChanged("GlobalTextures");
                 else
                     RaisePropertyChanged("HasGlobals");
@@ -103,7 +103,22 @@ namespace Antilli
 
         public List<PCMPTexture> GlobalTextures
         {
-            get { return (Parent.HasGlobals) ? new List<PCMPTexture>(Parent.ModelFile.SpooledFile.MaterialData.Textures) : null; }
+            get
+            {
+                var modelFile = Parent.ModelFile as Driv3rVehiclesFile;
+                
+                if (modelFile != null && modelFile.HasVehicleGlobals)
+                {
+                    var globals = modelFile.VehicleGlobals;
+
+                    if (globals.HasTextures)
+                    {
+                        return new List<PCMPTexture>(globals.StandaloneTextureData.ModelPackage.Textures);
+                    }
+                }
+
+                return null;
+            }
         }
 
         public void SelectTexture(PCMPTexture texture)

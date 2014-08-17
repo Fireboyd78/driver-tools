@@ -19,6 +19,18 @@ namespace Antilli
             return propInfo.GetValue(@this, flags) as TreeViewItem;
         }
 
+        public static Panel GetItemsHost(this ItemsControl @this)
+        {
+            var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+            var propInfo = typeof(ItemsControl).GetProperty("ItemsHost", flags);
+
+            if (propInfo == null)
+                return null;
+
+            return propInfo.GetValue(@this, flags) as Panel;
+        }
+
         // ###################################################################################################
         // Based on original code by gauthampj
         // Source: http://www.experts-exchange.com/Programming/Microsoft_Development/Q_26529451.html#a34161941

@@ -57,9 +57,39 @@ namespace Antilli
         private ModelVisual3DGroup _selectedModel;
         private List<ModelVisual3DGroup> _visuals;
 
+        private bool _useBlendWeights;
+
+        public MainWindow MainWindow { get; set; }
+
         public double GhostOpacity
         {
             get { return Settings.Configuration.GetSetting<double>("GhostOpacity", 0.15); }
+        }
+
+        public bool UseBlendWeights
+        {
+            get { return _useBlendWeights; }
+            set
+            {
+                _useBlendWeights = value;
+
+                if (Visuals == null)
+                    return;
+
+                var selectedModel   = SelectedModel;
+                var item            = ModelsList.GetSelectedContainer();
+
+                foreach (var visual in Visuals)
+                {
+                    foreach (DriverModelVisual3D dmodel in visual.Children)
+                        dmodel.UseBlendWeights = _useBlendWeights;
+                }
+
+                if (selectedModel != null)
+                    SelectedModel = selectedModel;
+                if (item != null)
+                    item.IsSelected = true;
+            }
         }
 
         public List<ModelVisual3DGroup> Visuals
@@ -102,17 +132,20 @@ namespace Antilli
             {
                 _selectedModel = value;
 
-                foreach (var visual in Visuals)
+                if (Visuals != null)
                 {
-                    if (SelectedModel != null && SelectedModel != visual)
+                    foreach (var visual in Visuals)
                     {
-                        visual.SetOpacity(GhostOpacity);
+                        if (SelectedModel != null && SelectedModel != visual)
+                        {
+                            visual.SetOpacity(GhostOpacity);
 
-                        foreach (var model in visual.Children)
-                            VisualParentHelper.SetParent(model, TopmostLayer);
+                            foreach (var model in visual.Children)
+                                VisualParentHelper.SetParent(model, TopmostLayer);
+                        }
+                        else
+                            visual.SetOpacity(1.0);
                     }
-                    else
-                        visual.SetOpacity(1.0);
                 }
 
                 if (SelectedModel == null)
@@ -191,34 +224,57 @@ namespace Antilli
             }
         }
 
-        protected override void OnKeyDown(KeyEventArgs e)
+        private void ViewModelTexture(object sender, RoutedEventArgs e)
         {
-            switch (e.Key)
+            var material = ((MenuItem)e.Source).Tag as PCMPMaterial;
+
+            if (material == null)
             {
-            case Key.I:
-                Viewport.InfiniteSpin = !Viewport.InfiniteSpin;
-                break;
-            case Key.G:
-                Viewport.DebugMode = !Viewport.DebugMode;
-                break;
-            case Key.C:
+                MessageBox.Show("No texture assigned!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (MainWindow != null)
+            {
+                if (!MainWindow.IsTextureViewerOpen)
+                    MainWindow.OpenTextureViewer();
+
+                MainWindow.TextureViewer.SelectTexture(material.SubMaterials[0].Textures[0]);
+            }
+        }
+
+        private void ViewModelMaterial(object sender, RoutedEventArgs e)
+        {
+            var material = ((MenuItem)e.Source).Tag as PCMPMaterial;
+
+            if (material == null)
+            {
+                MessageBox.Show("No material assigned!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (MainWindow != null)
+            {
+                if (!MainWindow.IsMaterialEditorOpen)
+                    MainWindow.OpenMaterialEditor();
+
+                var matEditor = MainWindow.MaterialEditor;
+
+                var itemsHost = matEditor.MaterialsList.GetItemsHost();
+
+                if (itemsHost != null)
                 {
-                    if (Viewport.CameraMode == CameraMode.Inspect)
+                    foreach (TreeViewItem item in itemsHost.Children)
                     {
-                        Viewport.CameraMode = CameraMode.WalkAround;
-                        Viewport.CameraInertiaFactor = 0.15;
+                        var matItem = item.Header as MaterialTreeItem;
+
+                        if (matItem != null && matItem.Material == material)
+                        {
+                            item.IsSelected = true;
+                            break;
+                        }
                     }
-                    else if (Viewport.CameraMode == CameraMode.WalkAround)
-                    {
-                        Viewport.CameraMode = CameraMode.FixedPosition;
-                        Viewport.CameraInertiaFactor = 0.93;
-                    }
-                    else
-                    {
-                        Viewport.CameraMode = CameraMode.Inspect;
-                        Viewport.CameraInertiaFactor = 0.93;
-                    }
-                } break;
+                }
             }
         }
 
@@ -240,6 +296,40 @@ namespace Antilli
             }
 
             Visuals = models;
+        }
+
+        public void ToggleBlendWeights()
+        {
+            UseBlendWeights = !UseBlendWeights;
+        }
+
+        public void ToggleInfiniteSpin()
+        {
+            Viewport.InfiniteSpin = !Viewport.InfiniteSpin;
+        }
+
+        public void ToggleDebugMode()
+        {
+            Viewport.DebugMode = !Viewport.DebugMode;
+        }
+
+        public void ToggleCameraMode()
+        {
+            if (Viewport.CameraMode == CameraMode.Inspect)
+            {
+                Viewport.CameraMode = CameraMode.WalkAround;
+                Viewport.CameraInertiaFactor = 0.15;
+            }
+            else if (Viewport.CameraMode == CameraMode.WalkAround)
+            {
+                Viewport.CameraMode = CameraMode.FixedPosition;
+                Viewport.CameraInertiaFactor = 0.93;
+            }
+            else
+            {
+                Viewport.CameraMode = CameraMode.Inspect;
+                Viewport.CameraInertiaFactor = 0.93;
+            }
         }
 
         public ModelViewer()
