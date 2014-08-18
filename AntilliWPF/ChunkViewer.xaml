@@ -5,7 +5,7 @@
         xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
         xmlns:sp="clr-namespace:DSCript.Spooling;assembly=libDSC"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        Title="Chunk Viewer" Height="620" Width="725">
+        Title="{Binding WindowTitle, FallbackValue='Chunk Viewer'}" Height="620" Width="725">
     <at:ObservableWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#FF282828" Offset="0.75" />
@@ -62,6 +62,9 @@
                     <CompositeCollection x:Key="MenuBase" x:Shared="False">
                         <MenuItem Header="Remove" Click="RemoveSpooler"/>
                         <MenuItem Header="Rename..." Click="RenameSpooler"/>
+                        <Separator/>
+                        <MenuItem Header="Cut" Click="CutSpooler"/>
+                        <MenuItem Header="Paste" Click="PasteSpooler"/>
                     </CompositeCollection>
                     <CompositeCollection x:Key="MenuExt1" x:Shared="False">
                         <MenuItem Header="Export" Click="ExportSpooler"/>

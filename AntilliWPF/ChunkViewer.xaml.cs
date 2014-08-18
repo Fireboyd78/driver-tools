@@ -29,88 +29,55 @@ namespace Antilli
     /// </summary>
     public partial class ChunkViewer : ObservableWindow
     {
-        private string Filename { get; set; }
-
-        private SpoolablePackage loadedChunk;
-        private FileChunker _chunker;
         private bool inTextureMode;
 
-        protected SpoolablePackage LoadedChunk
+        private BitmapSource _currentImage;
+        private Spooler _currentSpooler;
+        private Spooler _spoolerClipboard;
+        
+        protected string Filename { get; set; }
+        
+        protected bool IsDirty { get; set; }
+
+        protected Spooler SpoolerClipboard
         {
-            get { return loadedChunk; }
+            get { return _spoolerClipboard; }
             set
             {
-                if (loadedChunk != null)
-                {
-                    DSC.Log("Collecting garbage...");
+                // dispose of orphan spoolers on the clipboard (if any)
+                if (_spoolerClipboard != null && _spoolerClipboard.Parent == null)
+                    _spoolerClipboard.Dispose();
 
-                    loadedChunk.Dispose();
-
-                    GC.Collect();
-                }
-
-                refreshSpoolers = true;
-
-                loadedChunk = value;
+                _spoolerClipboard = value;
             }
         }
 
-        private Spooler currentSpooler;
-        private BitmapSource currentImage;
-        
-        private bool refreshSpoolers = false;
+        protected FileChunker ChunkFile { get; set; }
 
-        //-- Don't need these anymore
-        //private IEnumerable<Spooler> allSpoolers;
-        //private IEnumerable<Spooler> AllSpoolers
-        //{
-        //    get
-        //    {
-        //        if (allSpoolers == null || refreshSpoolers)
-        //        {
-        //            var stopwatch = new Stopwatch();
-        //            stopwatch.Start();
-        //
-        //            allSpoolers = LoadedChunk.GetAllSpoolers();
-        //
-        //            stopwatch.Stop();
-        //
-        //            DSC.Log("Took {0}ms to flatten {1:N0} spoolers.", stopwatch.Elapsed.TotalMilliseconds, allSpoolers.Count());
-        //        }
-        //
-        //        refreshSpoolers = false;
-        //
-        //        return allSpoolers;
-        //    }
-        //}
-        //
-        //private SpoolableChunk FindParent(Spooler child)
-        //{
-        //    SpoolableChunk parent = null;
-        //
-        //    var chunks = AllSpoolers.Where((s) => (s is SpoolableChunk && s != child));
-        //
-        //    if (chunks != null)
-        //    {
-        //        var timer = new Stopwatch();
-        //        timer.Start();
-        //
-        //        foreach (SpoolableChunk chunk in chunks)
-        //        {
-        //            if (chunk.Spoolers.Contains(child))
-        //            {
-        //                parent = chunk;
-        //                break;
-        //            }
-        //        }
-        //
-        //        timer.Stop();
-        //
-        //        DSC.Log("Searched through {0:N0} chunks in {1}ms.", chunks.Count(), timer.Elapsed.TotalMilliseconds);
-        //    }
-        //
-        //    return parent;
-        //}
+        public string WindowTitle
+        {
+            get
+            {
+                if (ChunkFile != null && !String.IsNullOrEmpty(Filename))
+                {
+                    var val = Filename;
+
+                    if (IsDirty)
+                        val += "*";
+
+                    return String.Format("Chunk Viewer - {0}", val);
+                }
+                else
+                {
+                    return "Chunk Viewer";
+                }
+            }
+        }
+        
+        protected SpoolablePackage LoadedChunk
+        {
+            get { return (ChunkFile != null) ? ChunkFile.Content : null; }
+        }
 
         public IList<Spooler> Spoolers
         {
@@ -137,10 +104,10 @@ namespace Antilli
 
         public Spooler CurrentSpooler
         {
-            get { return currentSpooler; }
+            get { return _currentSpooler; }
             set
             {
-                if (SetValue(ref currentSpooler, value, "CurrentSpooler"))
+                if (SetValue(ref _currentSpooler, value, "CurrentSpooler"))
                 {
                     OnPropertyChanged("SpoolerInfo");
                 }
@@ -149,8 +116,8 @@ namespace Antilli
 
         public BitmapSource CurrentImage
         {
-            get { return currentImage; }
-            set { SetValue(ref currentImage, value, "CurrentImage"); }
+            get { return _currentImage; }
+            set { SetValue(ref _currentImage, value, "CurrentImage"); }
         }
 
         public string SpoolerInfo
@@ -192,24 +159,114 @@ namespace Antilli
             }
         }
 
-        private void SpoolerSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
+        public void OpenChunkFile()
         {
-            //var target = e.NewValue as Spooler;
-            //CurrentSpooler = (target != null) ? AllSpoolers.First((s) => s == target) : null;
+            var openFile = new OpenFileDialog() {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Filter = "All Files|*.*",
+                InitialDirectory = Driv3r.RootDirectory,
+                ValidateNames = true,
+            };
 
-            CurrentSpooler = e.NewValue as Spooler;
-
-            if (CurrentSpooler != null)
+            if (openFile.ShowDialog() ?? false)
             {
-                if (CurrentSpooler.Magic == (int)ChunkType.ResourceTextureDDS)
+                Filename = openFile.FileName;
+
+                try
                 {
-                    LoadDDS();
-                    return;
+                    var stopwatch = new System.Diagnostics.Stopwatch();
+
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    if (ChunkFile != null)
+                    {
+                        DSC.Log("Collecting garbage...");
+                        ChunkFile.Dispose();
+                    }
+
+                    ChunkFile = new DSCript.Spooling.FileChunker();
+
+                    // capture events
+                    ChunkFile.SpoolerLoaded += (o, e) => {
+                        switch ((ChunkType)o.Magic)
+                        {
+                        case ChunkType.SpooledVehicleChunk:
+                            {
+                                if (o.Reserved != 0)
+                                    break;
+
+                                var vo3d = ((SpoolablePackage)o).Children[0] as SpoolableBuffer;
+                                var buffer = BitConverter.ToInt16(vo3d.GetBuffer(), 0);
+
+                                var vehId = buffer & 0xFF;
+                                var modLvl = (buffer & 0x7000) / 0x1000;
+
+                                // VehicleName [optional:(Bodykit #N)]
+                                o.Description = String.Format("{0}{1}", DriverPL.VehicleNames[vehId], (modLvl > 0) ? String.Format(" (Bodykit #{0})", modLvl) : "");
+                            } break;
+                        }
+                    };
+
+                    DSC.Log("Loading...");
+
+                    stopwatch.Start();
+
+                    ChunkFile.Load(Filename);
+                    OnPropertyChanged("Spoolers");
+
+                    IsDirty = false;
+                    OnPropertyChanged("WindowTitle");
+
+                    stopwatch.Stop();
+
+                    Mouse.OverrideCursor = null;
+
+                    DSC.Log("Loaded {0} chunks in {1}s.", LoadedChunk.Children.Count, stopwatch.Elapsed.TotalSeconds);
+                    DSC.Log("Temp directory size: {0:N0} KB", DSC.GetTempDirectorySize() / 1024.0);
+                }
+                catch (FileFormatException e)
+                {
+                    Mouse.OverrideCursor = null;
+                    MessageBox.Show(e.Message, "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            
-            if (CurrentImage != null)
-                CurrentImage = null;
+            else
+            {
+                Filename = String.Empty;
+            }
+        }
+
+        private bool CloseChunkFile()
+        {
+            var close = true;
+
+            if (ChunkFile != null)
+            {
+                if (IsDirty)
+                {
+                    var result = MessageBox.Show("You have unsaved changes - do you wish to continue?", "Chunk Viewer", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    close = (result == MessageBoxResult.Yes);
+                }
+
+                if (close)
+                {
+                    ChunkFile.Dispose();
+                    ChunkFile = null;
+                }
+            }
+
+            OnPropertyChanged("WindowTitle");
+
+            return close;
+        }
+
+        public void UpdateSpoolers()
+        {
+            OnPropertyChanged("Spoolers");
+            IsDirty = true;
+
+            OnPropertyChanged("WindowTitle");
         }
 
         private void LoadDDS()
@@ -243,18 +300,8 @@ namespace Antilli
                 
                 DSC.Log("Replaced buffer.");
 
-                OnPropertyChanged("Spoolers");
+                UpdateSpoolers();
             }
-
-            refreshSpoolers = true;
-        }
-
-        private void RemoveCurrentSpoolerFromParent(SpoolablePackage parent)
-        {
-            CurrentSpooler.Dispose();
-            //parent.Spoolers.Remove(CurrentSpooler);
-
-            OnPropertyChanged("Spoolers");
         }
 
         private void RemoveSpooler(object sender, RoutedEventArgs e)
@@ -265,194 +312,8 @@ namespace Antilli
             {
                 // magic *snort snort*
                 CurrentSpooler.Dispose();
-                OnPropertyChanged("Spoolers");
+                UpdateSpoolers();
             }
-
-            //var spoolers = LoadedChunk.Spoolers;
-            //
-            //if (!spoolers.Contains(CurrentSpooler))
-            //{
-            //    var parent = FindParent(CurrentSpooler);
-            //
-            //    if (parent != null)
-            //    {
-            //        RemoveCurrentSpoolerFromParent(parent);
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("FATAL ERROR: Parent is null!");
-            //    }
-            //}
-            //else
-            //{
-            //    if (spoolers.Count >= 2)
-            //    {
-            //        RemoveCurrentSpoolerFromParent(LoadedChunk);
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("You cannot remove the root node!");
-            //    }
-            //}
-        }
-
-        public void ExportChunkFile()
-        {
-            var stopwatch = new Stopwatch();
-            Mouse.OverrideCursor = Cursors.Wait;
-            
-            DSC.Log("Exporting...");
-            //Chunk.PaddingType = Chunk.BytePaddingType.PaddingType2;
-
-            stopwatch.Start();
-            _chunker.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(Filename)));
-            stopwatch.Stop();
-
-            Mouse.OverrideCursor = null;
-            DSC.Log("Exported file in {0}ms.", stopwatch.ElapsedMilliseconds); 
-        }
-
-        public void OpenChunkFile()
-        {
-            var openFile = new OpenFileDialog() {
-                CheckFileExists = true,
-                CheckPathExists = true,
-                Filter = "All Files|*.*",
-                InitialDirectory = Driv3r.RootDirectory,
-                ValidateNames = true,
-            };
-
-            if (openFile.ShowDialog() ?? false)
-            {
-                Filename = openFile.FileName;
-
-                try
-                {
-                    var stopwatch = new System.Diagnostics.Stopwatch();
-                    
-                    Mouse.OverrideCursor = Cursors.Wait;
- 
-                    //var file = new DSCript.Spoolers.SpoolableChunk(Filename);
-
-                    
-                    if (_chunker != null)
-                    {
-                        DSC.Log("Collecting garbage...");
-                        _chunker.Dispose();
-                    }
-
-                    _chunker = new DSCript.Spooling.FileChunker();
-
-                    // capture events
-                    _chunker.SpoolerLoaded += (o, e) => {
-                        switch ((ChunkType)o.Magic)
-                        {
-                        case ChunkType.SpooledVehicleChunk:
-                            {
-                                if (o.Reserved != 0)
-                                    break;
-
-                                var vo3d = ((SpoolablePackage)o).Children[0] as SpoolableBuffer;
-                                var buffer = BitConverter.ToInt16(vo3d.GetBuffer(), 0);
-
-                                var vehId = buffer & 0xFF;
-                                var modLvl = (buffer & 0x7000) / 0x1000;
-
-                                // VehicleName [optional:(Bodykit #N)]
-                                o.Description = String.Format("{0}{1}", DriverPL.VehicleNames[vehId], (modLvl > 0) ? String.Format(" (Bodykit #{0})", modLvl) : "");
-                            } break;
-                        }
-                    };
-
-                    DSC.Log("Loading...");
-
-                    stopwatch.Start();
-
-                    _chunker.Load(Filename);
-
-                    //LoadedChunk = file;
-                    LoadedChunk = _chunker.Content;
-                    OnPropertyChanged("Spoolers");
-
-                    stopwatch.Stop();
-
-                    Mouse.OverrideCursor = null;
-
-                    DSC.Log("Loaded {0} chunks in {1}s.", LoadedChunk.Children.Count, stopwatch.Elapsed.TotalSeconds);
-                    DSC.Log("Temp directory size: {0:N0} KB", DSC.GetTempDirectorySize() / 1024.0);
-                }
-                catch (FileFormatException e)
-                {
-                    Mouse.OverrideCursor = null;
-                    MessageBox.Show(e.Message, "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void ExportSpooler(object sender, RoutedEventArgs e)
-        {
-#if OLDEXPORT
-            var ext = (CurrentSpooler.Magic > 255)
-                        ? Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Magic))
-                        : CurrentSpooler.Magic.ToString("X");
-
-            // DSF: Change 'DXTC' magic to 'dds'
-            if (ext == "DXTC")
-                ext = "dds";
-
-            var filename = String.Format("{0}_{1}_{2}.{3}",
-                Path.GetFileName(Filename).Replace('.', '_'),
-                CurrentSpooler.GetHashCode() - 1, // minus 'LoadedChunk' instance
-                CurrentSpooler.Size,
-                ext);
-
-            filename = Path.Combine(Settings.Configuration.GetDirectory("Export"), filename);
-
-            CurrentSpooler.Save(filename);
-
-            MessageBox.Show(String.Format("Successfully exported '{0}'!", filename), "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
-#else
-            bool chunk = (CurrentSpooler is SpoolablePackage);
-
-            var openFile = new SaveFileDialog() {
-                AddExtension = true,
-                DefaultExt =  "." + ((chunk) ? "chunk" : Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Magic)).ToLower()),
-                InitialDirectory = Settings.Configuration.GetDirectory("Export"),
-                Title = "Please enter a filename",
-                ValidateNames = true,
-                OverwritePrompt = true,
-            };
-
-            openFile.FileName = "export";
-
-            if (openFile.ShowDialog() ?? false)
-            {
-                var stopwatch = new Stopwatch();
-
-                DSC.Log("Exporting '{0}'...", openFile.FileName);
-                Mouse.OverrideCursor = Cursors.Wait;
-
-                stopwatch.Start();
-
-                if (chunk)
-                {
-                    FileChunker.WriteChunk(openFile.FileName, (SpoolablePackage)CurrentSpooler);
-                }
-                else
-                {
-                    using (var fs = File.Create(openFile.FileName))
-                    {
-                        fs.SetLength(CurrentSpooler.Size);
-                        fs.Write(((SpoolableBuffer)CurrentSpooler).GetBuffer());
-                    }
-                }
-
-                stopwatch.Stop();
-
-                Mouse.OverrideCursor = null;
-                DSC.Log("Successfully exported file in {0}ms!", stopwatch.ElapsedMilliseconds);
-            }
-#endif
         }
 
         private void RenameSpooler(object sender, RoutedEventArgs e)
@@ -465,7 +326,174 @@ namespace Antilli
             if (inputBox.ShowDialog() ?? false)
             {
                 CurrentSpooler.Description = inputBox.InputValue;
-                OnPropertyChanged("Spoolers");
+                UpdateSpoolers();
+            }
+        }
+
+        public void SaveChunkFile()
+        {
+            if (IsDirty)
+            {
+                var bak = Filename + ".bak";
+                var stopwatch = new Stopwatch();
+
+                // make our backup
+                File.Copy(Filename, bak, true);
+
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                DSC.Log("Saving...");
+
+                stopwatch.Start();
+                ChunkFile.Save();
+                stopwatch.Stop();
+
+                IsDirty = false;
+                OnPropertyChanged("WindowTitle");
+
+                Mouse.OverrideCursor = null;
+                DSC.Log("Successfully saved file in {0}ms.", stopwatch.ElapsedMilliseconds);
+            }
+            else
+            {
+                MessageBox.Show("No changes have been made!", "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        public void ExportChunkFile()
+        {
+            var stopwatch = new Stopwatch();
+            var filename = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(Filename));
+
+            Mouse.OverrideCursor = Cursors.Wait;
+            
+            DSC.Log("Exporting...");
+            
+            stopwatch.Start();
+            ChunkFile.Save(filename, false);
+            stopwatch.Stop();
+
+            IsDirty = false;
+            OnPropertyChanged("WindowTitle");
+
+            Mouse.OverrideCursor = null;
+            DSC.Log("Exported file in {0}ms.", stopwatch.ElapsedMilliseconds);
+
+            var msg = String.Format("Successfully exported to '{0}'!", filename);
+
+            MessageBox.Show(msg, "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ExportSpooler(object sender, RoutedEventArgs e)
+        {
+            bool chunk = (CurrentSpooler is SpoolablePackage);
+
+            var saveDlg = new SaveFileDialog() {
+                AddExtension = true,
+                DefaultExt =  "." + ((chunk) ? "chunk" : Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Magic)).ToLower()),
+                InitialDirectory = Settings.Configuration.GetDirectory("Export"),
+                Title = "Please enter a filename",
+                ValidateNames = true,
+                OverwritePrompt = true,
+            };
+
+            saveDlg.FileName = "export";
+
+            if (saveDlg.ShowDialog() ?? false)
+            {
+                var stopwatch = new Stopwatch();
+
+                DSC.Log("Exporting '{0}'...", saveDlg.FileName);
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                stopwatch.Start();
+
+                if (chunk)
+                {
+                    FileChunker.WriteChunk(saveDlg.FileName, (SpoolablePackage)CurrentSpooler);
+                }
+                else
+                {
+                    using (var fs = File.Create(saveDlg.FileName))
+                    {
+                        fs.SetLength(CurrentSpooler.Size);
+                        fs.Write(((SpoolableBuffer)CurrentSpooler).GetBuffer());
+                    }
+                }
+
+                stopwatch.Stop();
+
+                IsDirty = false;
+                OnPropertyChanged("WindowTitle");
+
+                Mouse.OverrideCursor = null;
+                DSC.Log("Successfully exported file in {0}ms!", stopwatch.ElapsedMilliseconds);
+
+                var msg = String.Format("Successfully exported to '{0}'!", saveDlg.FileName);
+
+                MessageBox.Show(msg, "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void SpoolerSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            CurrentSpooler = e.NewValue as Spooler;
+
+            if (CurrentSpooler != null)
+            {
+                if (CurrentSpooler.Magic == (int)ChunkType.ResourceTextureDDS)
+                {
+                    LoadDDS();
+                    return;
+                }
+            }
+
+            if (CurrentImage != null)
+                CurrentImage = null;
+        }
+
+        private void CutSpooler(object sender, RoutedEventArgs e)
+        {
+            if (CurrentSpooler != null)
+            {
+                var parent = CurrentSpooler.Parent;
+
+                SpoolerClipboard = CurrentSpooler;
+
+                parent.Children.Remove(CurrentSpooler);
+
+                if (SpoolerClipboard != null && SpoolerClipboard.Parent == null)
+                {
+                    UpdateSpoolers();
+                    DSC.Log("Clipboard set.");
+                }
+            }
+        }
+
+        private void PasteSpooler(object sender, RoutedEventArgs e)
+        {
+            if (CurrentSpooler != null && SpoolerClipboard != null)
+            {
+                if (CurrentSpooler is SpoolablePackage)
+                {
+                    ((SpoolablePackage)CurrentSpooler).Children.Add(SpoolerClipboard);
+                }
+                else
+                {
+                    var parent = CurrentSpooler.Parent;
+                    var index = parent.Children.IndexOf(CurrentSpooler) + 1;
+
+                    if (index < parent.Children.Count)
+                    {
+                        parent.Children.Insert(index, SpoolerClipboard);
+                    }
+                    else
+                    {
+                        parent.Children.Add(SpoolerClipboard);
+                    }
+                }
+
+                UpdateSpoolers();
             }
         }
 
@@ -482,12 +510,36 @@ namespace Antilli
             }
         }
 
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (CloseChunkFile())
+                base.OnClosing(e);
+            else
+            {
+                // user canceled
+                e.Cancel = true;
+                base.OnClosing(e);
+            }
+        }
+
         public ChunkViewer()
         {
             InitializeComponent();
 
             fileOpen.Click += (o, e) => {
                 OpenChunkFile();
+            };
+
+            fileSave.Click += (o, e) => {
+                SaveChunkFile();
+            };
+
+            fileClose.Click += (o, e) => {
+                if (CloseChunkFile())
+                {
+                    OnPropertyChanged("Spoolers");
+                    IsDirty = false;
+                }
             };
 
             fileExit.Click += (o, e) => {
@@ -509,11 +561,8 @@ namespace Antilli
                     } break;
                 }
             };
-
-            Closing += (o, e) => {
-                if (LoadedChunk != null)
-                    LoadedChunk.Dispose();
-            };
         }
+
+        
     }
 }

@@ -54,7 +54,7 @@
                     <MenuItem x:Name="exportXML" Header="Export .XML"/>
                     <MenuItem x:Name="exportObj" Header="Export .OBJ"/>
                     <Separator/>
-                    <MenuItem x:Name="chunkTest" Header="Chunk Test"/>
+                    <MenuItem x:Name="chunkViewer" Header="Chunk Viewer"/>
                 </MenuItem>
             </Menu>
         </Grid>

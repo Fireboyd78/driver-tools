@@ -157,7 +157,10 @@ namespace DSCript.Spooling
         public virtual void Dispose()
         {
             if (_stream != null)
+            {
+                _stream.Close();
                 _stream.Dispose();
+            }
 
             Content.Dispose();
         }
@@ -262,6 +265,7 @@ namespace DSCript.Spooling
 
         /// <summary>
         /// Writes the specified block of chunked data to the current position in a given <see cref="Stream"/>.
+        /// The length of the stream should be set prior to calling this method.
         /// </summary>
         /// <param name="stream">The stream to write to.</param>
         /// <param name="chunk">The chunked data.</param>
@@ -273,7 +277,7 @@ namespace DSCript.Spooling
             stream.Write((int)ChunkType.Chunk);
             stream.Write(chunk.Size);
             stream.Write(chunk.Children.Count);
-            stream.Write(0x3); // TODO: handle this properly
+            stream.Write(0x3);
 
             var entryStart = (baseOffset + 0x10);
 
@@ -375,17 +379,62 @@ namespace DSCript.Spooling
         }
 
         /// <summary>
-        /// Saves the contents of the chunker into the specified file.
+        /// Saves the contents of the chunker into the original file, overwriting any existing data.
+        /// </summary>
+        /// <returns>True if the chunker saved the file; otherwise, false.</returns>
+        public bool Save()
+        {
+            if (CanSave)
+            {
+                // write chunk data to a temp file
+                var tmpFilename = FileName + ".tmp";
+
+                OnFileSaveBegin();
+                WriteChunk(tmpFilename, Content);
+                OnFileSaveEnd();
+
+                // dispose of the old stream
+                _stream.Close();
+                _stream.Dispose();
+
+                // delete old file & rename our temp file
+                File.Delete(FileName);
+                File.Move(tmpFilename, FileName);
+
+                // set up new stream
+                _stream = File.Open(FileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Saves the contents of the chunker into the specified file, overwriting any existing data.
         /// </summary>
         /// <param name="filename">The file to save.</param>
+        /// <param name="updateStream">Determines if the stream should be updated. The default is value 'true'.</param>
         /// <returns>True if the chunker saved the file; otherwise, false.</returns>
-        public bool Save(string filename)
+        public bool Save(string filename, bool updateStream = true)
         {
             if (CanSave)
             {
                 OnFileSaveBegin();
                 WriteChunk(filename, Content);
-                OnFileLoadEnd();
+                OnFileSaveEnd();
+
+                if (updateStream)
+                {
+                    // close old stream
+                    _stream.Close();
+                    _stream.Dispose();
+
+                    // set up our new one
+                    _stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+                }
 
                 return true;
             }

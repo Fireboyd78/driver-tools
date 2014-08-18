@@ -725,7 +725,7 @@ namespace Antilli
             exportXML.Click += (o, e) => ExportVehicleHierachyXML();
             exportObj.Click += (o, e) => ExportObjFile();
 
-            chunkTest.Click += (o, e) => {
+            chunkViewer.Click += (o, e) => {
                 var cViewer = new ChunkViewer();
             
                 cViewer.Show();
