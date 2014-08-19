@@ -66,8 +66,8 @@
             </at:AntilliViewport3D.Style>
 
             <at:AntilliViewport3D.Camera>
-                <!-- FOV and Near/Far distance set in code-behind -->
-                <PerspectiveCamera x:Name="VCam" LookDirection="4.5,-4.5,-2" Position="-4.5,4.5,2" UpDirection="0,0,1"/>
+                <PerspectiveCamera x:Name="VCam" LookDirection="4.5,-4.5,-2" Position="-4.5,4.5,2" UpDirection="0,0,1"
+                                   NearPlaneDistance="0.125" FarPlaneDistance="150000"/>
             </at:AntilliViewport3D.Camera>
 
             <ModelVisual3D>

@@ -120,8 +120,8 @@ namespace Antilli
                 if (ModelFile.HasModels)
                 {
                     SubTitle = filename;
-        
-                    Viewer.Viewport.InfiniteSpin = Settings.Configuration.GetSetting("InfiniteSpin", true);
+
+                    Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
         
                     viewTextures.IsEnabled = true;
                     viewMaterials.IsEnabled = true;
@@ -406,7 +406,7 @@ namespace Antilli
                 // TODO: Implement OBJ exporter
                 if (SelectedModelGroup != null)
                 {
-                    var path = Path.Combine(Settings.Configuration.GetDirectory("Models"), SelectedModelGroup.UID.ToString());
+                    var path = Path.Combine(Settings.ModelsDirectory, SelectedModelGroup.UID.ToString());
 
                     var prompt = new MKInputBox("OBJ Exporter", "Please enter a name for the model:", SelectedModelGroup.UID.ToString("D10")) {
                         Owner = this,
@@ -437,7 +437,7 @@ namespace Antilli
                 MessageBox.Show("Nothing to export!");
             else
             {
-                string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.FileName));
+                string path = Path.Combine(Settings.ExportDirectory, Path.GetFileName(ModelFile.FileName));
                 
                 DSC.Log("Compiling ModelPackage...");
                 SelectedModelPackage.GetInterface().Save();
@@ -523,7 +523,7 @@ namespace Antilli
 
             addPartInfo(partsNode, hierarchy.Parts[0]);
 
-            var dir = Settings.Configuration.GetDirectory("Export");
+            var dir = Settings.ExportDirectory;
             var path = String.Format("{0}\\{1}.awhf.xml",
                 dir, Path.GetFileName(ModelFile.FileName));
 
@@ -617,7 +617,7 @@ namespace Antilli
 
         public void ExportTexture(PCMPTexture texture, Window owner)
         {
-            string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), String.Format("{0}.dds", texture.CRC32));
+            string path = Path.Combine(Settings.ExportDirectory, String.Format("{0}.dds", texture.CRC32));
 
             texture.ExportFile(path);
 
@@ -669,7 +669,7 @@ namespace Antilli
 
         private void Initialize()
         {
-            Settings.Verify();
+            //Settings.Verify();
 
             InitializeComponent();
 

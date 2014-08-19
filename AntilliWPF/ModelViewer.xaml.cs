@@ -61,11 +61,6 @@ namespace Antilli
 
         public MainWindow MainWindow { get; set; }
 
-        public double GhostOpacity
-        {
-            get { return Settings.Configuration.GetSetting<double>("GhostOpacity", 0.15); }
-        }
-
         public bool UseBlendWeights
         {
             get { return _useBlendWeights; }
@@ -138,7 +133,7 @@ namespace Antilli
                     {
                         if (SelectedModel != null && SelectedModel != visual)
                         {
-                            visual.SetOpacity(GhostOpacity);
+                            visual.SetOpacity(Settings.GhostOpacity);
 
                             foreach (var model in visual.Children)
                                 VisualParentHelper.SetParent(model, TopmostLayer);
@@ -210,7 +205,7 @@ namespace Antilli
                     {
                         if (model != (ModelVisual3D)item)
                         {
-                            model.SetOpacity(GhostOpacity);
+                            model.SetOpacity(Settings.GhostOpacity);
                             VisualParentHelper.SetParent(model, TopmostLayer);
                         }
                         else
@@ -341,10 +336,7 @@ namespace Antilli
             };
 
             Viewport.Loaded += (o, e) => {
-                // Set up FOV and Near/Far distance
-                VCam.FieldOfView = Settings.Configuration.GetSetting<int>("DefaultFOV", 45);
-                VCam.NearPlaneDistance = Settings.Configuration.GetSetting<double>("NearDistance", 0.125);
-                VCam.FarPlaneDistance = Settings.Configuration.GetSetting<double>("FarDistance", 150000);
+                VCam.FieldOfView = Settings.DefaultFOV;
             };
         }
     }

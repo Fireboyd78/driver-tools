@@ -71,27 +71,38 @@ namespace DSCript
 
                 string ubiDir = Path.Combine(progDir, "Ubisoft");
 
-                string d3Dir = Path.Combine(progDir, "Atari", "Driv3r");
+                string d3Dir  = Path.Combine(progDir, "Atari", "Driv3r");
                 string dplDir = Path.Combine(ubiDir, "Driver Parallel Lines");
                 string dsfDir = Path.Combine(ubiDir, "Driver San Francisco");
 
                 if (!Directory.Exists(steamDir))
                     steamDir = "";
                 if (!Directory.Exists(d3Dir))
+                {
                     d3Dir = "";
+
+                    var d3Ubi = Path.Combine(ubiDir, "Driv3r");
+
+                    if (Directory.Exists(d3Ubi))
+                        d3Dir = d3Ubi;
+                }
                 if (!Directory.Exists(dplDir))
                 {
                     dplDir = "";
 
-                    if (!String.IsNullOrEmpty(steamDir) && Directory.Exists(Path.Combine(steamDir, "Driver Parallel Lines")))
-                        dplDir = Path.Combine(steamDir, "Driver Parallel Lines");
+                    var dplSteam = Path.Combine(steamDir, "Driver Parallel Lines");
+
+                    if (!String.IsNullOrEmpty(steamDir) && Directory.Exists(dplSteam))
+                        dplDir = dplSteam;
                 }
                 if (!Directory.Exists(dsfDir))
                 {
                     dsfDir = "";
 
-                    if (!String.IsNullOrEmpty(steamDir) && Directory.Exists(Path.Combine(steamDir, "Driver San Francisco")))
-                        dsfDir = Path.Combine(steamDir, "Driver San Francisco");
+                    var dsfSteam = Path.Combine(steamDir, "Driver San Francisco");
+
+                    if (!String.IsNullOrEmpty(steamDir) && Directory.Exists(dsfSteam))
+                        dsfDir = dsfSteam;
                 }
 
                 sb.AppendLine(

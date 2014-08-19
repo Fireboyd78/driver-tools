@@ -30,14 +30,25 @@ namespace Antilli
     public partial class ChunkViewer : ObservableWindow
     {
         private bool inTextureMode;
+        private bool _isDirty;
 
+        private FileChunker _chunkFile;
         private BitmapSource _currentImage;
         private Spooler _currentSpooler;
         private Spooler _spoolerClipboard;
         
         protected string Filename { get; set; }
-        
-        protected bool IsDirty { get; set; }
+
+        protected bool IsDirty
+        {
+            get { return _isDirty; }
+            set
+            {
+                _isDirty = value;
+
+                OnPropertyChanged("CanSaveChunkFile");
+            }
+        }
 
         protected Spooler SpoolerClipboard
         {
@@ -49,10 +60,21 @@ namespace Antilli
                     _spoolerClipboard.Dispose();
 
                 _spoolerClipboard = value;
+
+                OnPropertyChanged("CanPasteSpooler");
             }
         }
 
-        protected FileChunker ChunkFile { get; set; }
+        protected FileChunker ChunkFile
+        {
+            get { return _chunkFile; }
+            set
+            {
+                _chunkFile = value;
+
+                OnPropertyChanged("IsChunkFileOpen");
+            }
+        }
 
         public string WindowTitle
         {
@@ -102,6 +124,34 @@ namespace Antilli
             }
         }
 
+        public Visibility CanReplaceSpooler
+        {
+            get
+            {
+                return (CurrentSpooler != null && CurrentSpooler is SpoolableBuffer) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        public bool CanModifySpooler
+        {
+            get { return (CurrentSpooler != null); }
+        }
+
+        public bool CanPasteSpooler
+        {
+            get { return (CurrentSpooler != null && SpoolerClipboard != null); }
+        }
+
+        public bool CanSaveChunkFile
+        {
+            get { return IsDirty; }
+        }
+
+        public bool IsChunkFileOpen
+        {
+            get { return (ChunkFile != null); }
+        }
+
         public Spooler CurrentSpooler
         {
             get { return _currentSpooler; }
@@ -110,6 +160,8 @@ namespace Antilli
                 if (SetValue(ref _currentSpooler, value, "CurrentSpooler"))
                 {
                     OnPropertyChanged("SpoolerInfo");
+                    OnPropertyChanged("CanModifySpooler");
+                    OnPropertyChanged("CanReplaceSpooler");
                 }
             }
         }
@@ -306,27 +358,33 @@ namespace Antilli
 
         private void RemoveSpooler(object sender, RoutedEventArgs e)
         {
-            if (CurrentSpooler.Parent == null && LoadedChunk.Children.Count == 1)
-                MessageBox.Show("You cannot remove the root node!");
-            else
+            if (CanModifySpooler)
             {
-                // magic *snort snort*
-                CurrentSpooler.Dispose();
-                UpdateSpoolers();
+                if (CurrentSpooler.Parent == null && LoadedChunk.Children.Count == 1)
+                    MessageBox.Show("You cannot remove the root node!");
+                else
+                {
+                    // magic *snort snort*
+                    CurrentSpooler.Dispose();
+                    UpdateSpoolers();
+                }
             }
         }
 
         private void RenameSpooler(object sender, RoutedEventArgs e)
         {
-            var inputBox = new MKInputBox("Edit Description", "Please enter a new description:", CurrentSpooler.Description) {
-                Owner = this,
-                WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
-            };
-
-            if (inputBox.ShowDialog() ?? false)
+            if (CanModifySpooler)
             {
-                CurrentSpooler.Description = inputBox.InputValue;
-                UpdateSpoolers();
+                var inputBox = new MKInputBox("Edit Description", "Please enter a new description:", CurrentSpooler.Description) {
+                    Owner = this,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+                };
+
+                if (inputBox.ShowDialog() ?? false)
+                {
+                    CurrentSpooler.Description = inputBox.InputValue;
+                    UpdateSpoolers();
+                }
             }
         }
 
@@ -363,7 +421,7 @@ namespace Antilli
         public void ExportChunkFile()
         {
             var stopwatch = new Stopwatch();
-            var filename = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(Filename));
+            var filename = Path.Combine(Settings.ExportDirectory, Path.GetFileName(Filename));
 
             Mouse.OverrideCursor = Cursors.Wait;
             
@@ -391,7 +449,7 @@ namespace Antilli
             var saveDlg = new SaveFileDialog() {
                 AddExtension = true,
                 DefaultExt =  "." + ((chunk) ? "chunk" : Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Magic)).ToLower()),
-                InitialDirectory = Settings.Configuration.GetDirectory("Export"),
+                InitialDirectory = Settings.ExportDirectory,
                 Title = "Please enter a filename",
                 ValidateNames = true,
                 OverwritePrompt = true,
@@ -454,7 +512,7 @@ namespace Antilli
 
         private void CutSpooler(object sender, RoutedEventArgs e)
         {
-            if (CurrentSpooler != null)
+            if (CanPasteSpooler)
             {
                 var parent = CurrentSpooler.Parent;
 
@@ -472,7 +530,7 @@ namespace Antilli
 
         private void PasteSpooler(object sender, RoutedEventArgs e)
         {
-            if (CurrentSpooler != null && SpoolerClipboard != null)
+            if (CanPasteSpooler)
             {
                 if (CurrentSpooler is SpoolablePackage)
                 {

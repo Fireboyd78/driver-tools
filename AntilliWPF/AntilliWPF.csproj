@@ -46,6 +46,7 @@
     <Reference Include="PresentationFramework.Aero" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
@@ -91,7 +92,6 @@
     <Compile Include="ModelGroupListItem.cs" />
     <Compile Include="ModelListItem.cs" />
     <Compile Include="OBJExporter.cs" />
-    <Compile Include="Packages\UnifiedPackage.cs" />
     <Compile Include="VisualParentHelper.cs" />
     <Compile Include="WPF\Controls\AntilliViewport3D.cs" />
     <Compile Include="WPF\Controls\AntilliWindow.cs" />

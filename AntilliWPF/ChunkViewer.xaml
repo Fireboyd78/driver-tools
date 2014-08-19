@@ -5,7 +5,7 @@
         xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
         xmlns:sp="clr-namespace:DSCript.Spooling;assembly=libDSC"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        Title="{Binding WindowTitle, FallbackValue='Chunk Viewer'}" Height="620" Width="725">
+        Title="{Binding WindowTitle, FallbackValue='Chunk Viewer'}" Height="620" Width="760">
     <at:ObservableWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#FF282828" Offset="0.75" />
@@ -27,36 +27,42 @@
                 </LinearGradientBrush>
             </Menu.Background>
             <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="fileOpen" Header="Open"/>
+                <MenuItem x:Name="fileOpen" Header="_Open"/>
                 <Separator/>
-                <MenuItem x:Name="fileSave" Header="Save"/>
-                <MenuItem x:Name="fileSaveAs" Header="Save As..."/>
+                <MenuItem x:Name="fileSave" Header="_Save" IsEnabled="{Binding CanSaveChunkFile}"/>
+                
+                <!-- Too early. Come back later. -->
+                <!-- <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsChunkFileOpen}"/> -->
+                
                 <Separator/>
-                <MenuItem x:Name="fileClose" Header="Close File"/>
-                <Separator/>
-                <MenuItem x:Name="fileExit" Header="Exit"/>
+                <MenuItem x:Name="fileClose" Header="_Close" IsEnabled="{Binding IsChunkFileOpen}" ToolTip="Closes the current chunk file."/>
+                <MenuItem x:Name="fileExit" Header="_Exit"/>
             </MenuItem>
             <MenuItem Header="Edit" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="editCut" Header="Cut"/>
-                <MenuItem x:Name="editCopy" Header="Copy"/>
-                <MenuItem x:Name="editPaste" Header="Paste"/>
-                <MenuItem x:Name="editRemove" Header="Remove"/>
+                <MenuItem x:Name="editCut" Header="_Cut" Click="CutSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+                
+                <!-- Too early. Come back later. -->
+                <!-- <MenuItem x:Name="editCopy" Header="Copy" IsEnabled="{Binding CanModifySpooler}"/> -->
+                
+                <MenuItem x:Name="editPaste" Header="_Paste" Click="PasteSpooler" IsEnabled="{Binding CanPasteSpooler}"/>
+                <MenuItem x:Name="editRemove" Header="Remove" Click="RemoveSpooler" IsEnabled="{Binding CanModifySpooler}"/>
                 <Separator/>
-                <MenuItem x:Name="editRename" Header="Rename"/>
-                <MenuItem x:Name="editReplace" Header="Replace..."/>
+                <MenuItem x:Name="editRename" Header="_Rename" Click="RenameSpooler" IsEnabled="{Binding CanModifySpooler}" ToolTip="Change the spooler's description."/>
+                <MenuItem x:Name="editReplace" Header="Replace..." Click="ReplaceBuffer" Visibility="{Binding CanReplaceSpooler}" ToolTip="Replace the content of the buffer."/>
             </MenuItem>
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="toolsExport" Header="Export"/>
+                <MenuItem x:Name="toolsExport" Header="_Export" IsEnabled="{Binding IsChunkFileOpen}" ToolTip="Exports the chunk file to the 'Export' directory."/>
             </MenuItem>
         </Menu>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="375"/>
-                <ColumnDefinition/>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="2*" MinWidth="325"/>
             </Grid.ColumnDefinitions>
 
-            <GroupBox Header="Chunks" Margin="5">
+            <GroupBox Header="Chunks" Margin="5,5,2,5">
                 <GroupBox.Resources>
                     <dsc:SpoolerMagicConverter x:Key="MagicConverter"/>
                     <CompositeCollection x:Key="MenuBase" x:Shared="False">
@@ -101,7 +107,15 @@
 
                 <TreeView Name="ChunkList" ItemsSource="{Binding Spoolers}" SelectedItemChanged="SpoolerSelected"/>
             </GroupBox>
-            <GroupBox Header="Information" Margin="5" Grid.Column="1">
+
+            <GridSplitter Grid.Column="1"
+                          Background="Transparent"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Width="5"/>
+
+            <GroupBox Header="Information" Margin="2,5,5,5" Grid.Column="2">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                     <StackPanel Orientation="Vertical" Margin="5">
                         <TextBlock Text="{Binding SpoolerInfo}" FontFamily="Consolas"/>
