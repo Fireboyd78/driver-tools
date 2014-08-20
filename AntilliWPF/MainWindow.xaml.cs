@@ -669,7 +669,7 @@ namespace Antilli
 
         private void Initialize()
         {
-            //Settings.Verify();
+            Settings.Verify();
 
             InitializeComponent();
 

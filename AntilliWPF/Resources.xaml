@@ -155,7 +155,7 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-
+    
     <Style x:Key="SeeThru">
         <Setter Property="Control.Background" Value="Transparent"/>
         <Setter Property="Control.BorderBrush" Value="Transparent"/>

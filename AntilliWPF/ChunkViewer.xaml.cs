@@ -34,8 +34,9 @@ namespace Antilli
 
         private FileChunker _chunkFile;
         private BitmapSource _currentImage;
-        private Spooler _currentSpooler;
         private Spooler _spoolerClipboard;
+
+        private SpoolerListItem _currentSpoolerItem;
         
         protected string Filename { get; set; }
 
@@ -120,6 +121,8 @@ namespace Antilli
                 //    spoolers = LoadedChunk.Spoolers;
                 //}
 
+                
+
                 return new List<Spooler>(LoadedChunk.Children);
             }
         }
@@ -152,17 +155,27 @@ namespace Antilli
             get { return (ChunkFile != null); }
         }
 
-        public Spooler CurrentSpooler
+        public SpoolerListItem CurrentSpoolerItem
         {
-            get { return _currentSpooler; }
+            get { return _currentSpoolerItem; }
             set
             {
-                if (SetValue(ref _currentSpooler, value, "CurrentSpooler"))
+                if (SetValue(ref _currentSpoolerItem, value, "CurrentSpoolerItem"))
                 {
+                    OnPropertyChanged("CurrentSpooler");
+
                     OnPropertyChanged("SpoolerInfo");
                     OnPropertyChanged("CanModifySpooler");
                     OnPropertyChanged("CanReplaceSpooler");
                 }
+            }
+        }
+
+        public Spooler CurrentSpooler
+        {
+            get
+            {
+                return (CurrentSpoolerItem != null) ? CurrentSpoolerItem.Spooler : null;
             }
         }
 
@@ -234,7 +247,7 @@ namespace Antilli
                     if (ChunkFile != null)
                     {
                         DSC.Log("Collecting garbage...");
-                        ChunkFile.Dispose();
+                        CloseChunkFile();
                     }
 
                     ChunkFile = new DSCript.Spooling.FileChunker();
@@ -265,7 +278,30 @@ namespace Antilli
                     stopwatch.Start();
 
                     ChunkFile.Load(Filename);
-                    OnPropertyChanged("Spoolers");
+                    //OnPropertyChanged("Spoolers");
+
+                    Action<SpoolablePackage, ItemsControl> deadlyRecurse = null;
+
+                    deadlyRecurse = new Action<SpoolablePackage, ItemsControl>((s, t) => {
+                        foreach (var c in s.Children)
+                        {
+                            if (c is SpoolablePackage)
+                            {
+                                var package = (SpoolablePackage)c;
+                                var pNode   = new SpoolerListItem(package);
+
+                                t.Items.Add(pNode);
+
+                                deadlyRecurse(package, pNode);
+                            }
+                            else
+                            {
+                                t.Items.Add(new SpoolerListItem(c));
+                            }
+                        }
+                    });
+
+                    deadlyRecurse(LoadedChunk, ChunkList);
 
                     IsDirty = false;
                     OnPropertyChanged("WindowTitle");
@@ -308,6 +344,9 @@ namespace Antilli
                 }
             }
 
+            ChunkList.Items.Clear();
+            ChunkList.UpdateLayout();
+
             OnPropertyChanged("WindowTitle");
 
             return close;
@@ -315,7 +354,7 @@ namespace Antilli
 
         public void UpdateSpoolers()
         {
-            OnPropertyChanged("Spoolers");
+            //OnPropertyChanged("Spoolers");
             IsDirty = true;
 
             OnPropertyChanged("WindowTitle");
@@ -336,21 +375,69 @@ namespace Antilli
             }
         }
 
-        private void ReplaceBuffer(object sender, RoutedEventArgs e)
+        private void CutSpooler(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog openFile = new OpenFileDialog() {
-                CheckFileExists = true,
-                CheckPathExists = true,
-                ValidateNames = true
-            };
-
-            if (openFile.ShowDialog() ?? false)
+            if (CanModifySpooler)
             {
-                var spooler = (SpoolableBuffer)CurrentSpooler;
+                var parentItem  = CurrentSpoolerItem.Parent as SpoolerListItem;
+                var parent      = CurrentSpooler.Parent;
+                var items       = (parentItem != null) ? parentItem.Items : ChunkList.Items;
 
-                spooler.SetBuffer(File.ReadAllBytes(openFile.FileName));
-                
-                DSC.Log("Replaced buffer.");
+                if (items != null)
+                {
+                    SpoolerClipboard = CurrentSpooler;
+
+                    var index = items.IndexOf(CurrentSpoolerItem);
+
+                    parent.Children.Remove(CurrentSpooler);
+                    items.RemoveAt(index);
+
+                    if (SpoolerClipboard != null && SpoolerClipboard.Parent == null)
+                    {
+                        DSC.Log("Clipboard set.");
+                        UpdateSpoolers();
+                    }
+                }
+            }
+        }
+
+        private void PasteSpooler(object sender, RoutedEventArgs e)
+        {
+            if (CanPasteSpooler)
+            {
+                if (CurrentSpooler is SpoolablePackage)
+                {
+                    ((SpoolablePackage)CurrentSpooler).Children.Add(SpoolerClipboard);
+                    CurrentSpoolerItem.Items.Add(new SpoolerListItem(SpoolerClipboard));
+                }
+                else
+                {
+                    var parentItem = CurrentSpoolerItem.Parent as SpoolerListItem;
+
+                    var parent = CurrentSpooler.Parent;
+                    var index = parent.Children.IndexOf(CurrentSpooler) + 1;
+
+                    var item = new SpoolerListItem(SpoolerClipboard);
+
+                    if (index < parent.Children.Count)
+                    {
+                        parent.Children.Insert(index, SpoolerClipboard);
+
+                        if (parentItem != null)
+                            parentItem.Items.Insert(index, item);
+                        else
+                            ChunkList.Items.Insert(index, item);
+                    }
+                    else
+                    {
+                        parent.Children.Add(SpoolerClipboard);
+
+                        if (parentItem != null)
+                            parentItem.Items.Add(item);
+                        else
+                            ChunkList.Items.Add(item);
+                    }
+                }
 
                 UpdateSpoolers();
             }
@@ -364,9 +451,23 @@ namespace Antilli
                     MessageBox.Show("You cannot remove the root node!");
                 else
                 {
-                    // magic *snort snort*
-                    CurrentSpooler.Dispose();
-                    UpdateSpoolers();
+                    var parentItem = CurrentSpoolerItem.Parent as SpoolerListItem;
+                    var items = (parentItem != null) ? parentItem.Items : ChunkList.Items;
+
+                    if (items != null)
+                    {
+                        var index = items.IndexOf(CurrentSpoolerItem);
+
+                        // magic *snort snort*
+                        CurrentSpooler.Dispose();
+
+                        items.RemoveAt(index);
+
+                        if (items.Count > 0)
+                            ((SpoolerListItem)items[(index < items.Count) ? index : --index]).IsSelected = true;
+                        
+                        UpdateSpoolers();
+                    }
                 }
             }
         }
@@ -383,8 +484,35 @@ namespace Antilli
                 if (inputBox.ShowDialog() ?? false)
                 {
                     CurrentSpooler.Description = inputBox.InputValue;
+
+                    // this is very hackish, but it works!
+                    CurrentSpoolerItem.Header = null;
+                    CurrentSpoolerItem.Header = CurrentSpooler;
+
+                    ChunkList.Items.Refresh();
+                    ChunkList.UpdateLayout();
+
                     UpdateSpoolers();
                 }
+            }
+        }
+
+        private void ReplaceBuffer(object sender, RoutedEventArgs e)
+        {
+            var openFile = new OpenFileDialog() {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                ValidateNames = true
+            };
+
+            if (openFile.ShowDialog() ?? false)
+            {
+                var spooler = (SpoolableBuffer)CurrentSpooler;
+
+                spooler.SetBuffer(File.ReadAllBytes(openFile.FileName));
+
+                DSC.Log("Replaced buffer.");
+                UpdateSpoolers();
             }
         }
 
@@ -472,6 +600,26 @@ namespace Antilli
                 }
                 else
                 {
+                    // var unifiedPackage = ChunkTemplates.UnifiedPackage;
+                    // 
+                    // // copy the buffer
+                    // var spoolerCopy = new SpoolableBuffer() {
+                    //     Alignment = CurrentSpooler.Alignment,
+                    //     Magic = CurrentSpooler.Magic,
+                    //     Description = CurrentSpooler.Description,
+                    //     Reserved = CurrentSpooler.Reserved
+                    // };
+                    // 
+                    // spoolerCopy.SetBuffer(((SpoolableBuffer)CurrentSpooler).GetBuffer());
+                    // 
+                    // unifiedPackage.Children.Add(spoolerCopy);
+                    // 
+                    // FileChunker.WriteChunk(saveDlg.FileName, unifiedPackage);
+                    // 
+                    // // release resources
+                    // spoolerCopy.Dispose();
+                    // unifiedPackage.Dispose();
+
                     using (var fs = File.Create(saveDlg.FileName))
                     {
                         fs.SetLength(CurrentSpooler.Size);
@@ -495,7 +643,9 @@ namespace Antilli
 
         private void SpoolerSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            CurrentSpooler = e.NewValue as Spooler;
+            var item = e.NewValue as SpoolerListItem;
+
+            CurrentSpoolerItem = item;
 
             if (CurrentSpooler != null)
             {
@@ -510,50 +660,7 @@ namespace Antilli
                 CurrentImage = null;
         }
 
-        private void CutSpooler(object sender, RoutedEventArgs e)
-        {
-            if (CanPasteSpooler)
-            {
-                var parent = CurrentSpooler.Parent;
-
-                SpoolerClipboard = CurrentSpooler;
-
-                parent.Children.Remove(CurrentSpooler);
-
-                if (SpoolerClipboard != null && SpoolerClipboard.Parent == null)
-                {
-                    UpdateSpoolers();
-                    DSC.Log("Clipboard set.");
-                }
-            }
-        }
-
-        private void PasteSpooler(object sender, RoutedEventArgs e)
-        {
-            if (CanPasteSpooler)
-            {
-                if (CurrentSpooler is SpoolablePackage)
-                {
-                    ((SpoolablePackage)CurrentSpooler).Children.Add(SpoolerClipboard);
-                }
-                else
-                {
-                    var parent = CurrentSpooler.Parent;
-                    var index = parent.Children.IndexOf(CurrentSpooler) + 1;
-
-                    if (index < parent.Children.Count)
-                    {
-                        parent.Children.Insert(index, SpoolerClipboard);
-                    }
-                    else
-                    {
-                        parent.Children.Add(SpoolerClipboard);
-                    }
-                }
-
-                UpdateSpoolers();
-            }
-        }
+        
 
         private void TreeViewItem_MouseRightButtonDown(object sender, MouseEventArgs e)
         {
@@ -620,7 +727,16 @@ namespace Antilli
                 }
             };
         }
+    }
 
-        
+    public class SpoolerListItem : TreeViewItem
+    {
+        public Spooler Spooler { get; set; }
+
+        public SpoolerListItem(Spooler spooler)
+        {
+            Spooler = spooler;
+            Header = Spooler;
+        }
     }
 }

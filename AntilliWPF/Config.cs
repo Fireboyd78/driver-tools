@@ -44,21 +44,14 @@ namespace Antilli
 
         public static void Verify()
         {
-            if (!Configuration.GetKeyExists(Configuration.SettingsKey))
-            {
-                Configuration.AppendText(
-@"[Antilli.Configuration]
-#Viewport configuration
-DefaultFOV=65
-GhostOpacity=0.15
-InfiniteSpin=1
+            var dirCheck = new Action<string>((dir) => {
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+            });
 
-[Antilli.Directories]
-Export=.\Resources\Exported
-Models=.\Resources\Models
-Textures=.\Resources\Textures
-");
-            }
+            dirCheck(ExportDirectory);
+            dirCheck(ModelsDirectory);
+            dirCheck(TexturesDirectory);
         }
     }
 }
