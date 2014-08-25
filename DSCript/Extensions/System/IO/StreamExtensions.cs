@@ -199,6 +199,13 @@ namespace System.IO
             return (float)(((aShort & 0x8000) << 16) + ((aShort & 0x7FFF) << 13) + ((127 - 15) << 23));
         }
 
+        public static double ReadFloat(this Stream stream)
+        {
+            var val = (double)stream.ReadSingle();
+
+            return Math.Round(val, 3);
+        }
+
         public static float ReadSingle(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(float)];

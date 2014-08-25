@@ -470,16 +470,47 @@ namespace Antilli
 
                 var val = prop.GetValue(partEntry, null);
 
-                if (prop.Name == "Type" || prop.Name == "Slot" || prop.Name == "Position")
+                if (prop.Name == "Type" || prop.Name == "SlotType" || prop.Name == "Position")
                 {
                     if (val != null)
                         partNode.AddAttribute(prop.Name, val.ToString());
                 }
-                else
+                else if (val != null)
                 {
-                    partNode.AddElement("Property")
-                                .AddAttribute("Name", prop.Name)
-                                .AddAttribute("Value", val.ToString());
+                    var attr = prop.GetCustomAttributes(typeof(VehicleHierarchyData.PartThingAttribute), false);
+
+                    var addStuff = new Action<XmlElement, object>((x, o) => {
+                        var oType = o.GetType();
+                        var oNode = x.AddElement(oType.Name);
+
+                        foreach (var oProp in oType.GetProperties())
+                        {
+                            var oVal = oProp.GetValue(o, null);
+
+                            oNode.AddElement("Property")
+                                    .AddAttribute("Name", oProp.Name)
+                                    .AddAttribute("Value", val);
+                        }
+                    });
+
+                    if (attr.Length > 0)
+                    {
+                        var pNode = partNode.AddElement(prop.Name);
+                        var pType = val.GetType();
+
+                        foreach (var pProp in pType.GetProperties())
+                        {
+                            pNode.AddElement("Property")
+                                    .AddAttribute("Name", pProp.Name)
+                                    .AddAttribute("Value", pProp.GetValue(val, null));
+                        }
+                    }
+                    else
+                    {
+                        partNode.AddElement("Property")
+                                    .AddAttribute("Name", prop.Name)
+                                    .AddAttribute("Value", val.ToString());
+                    }
                 }
             }
 
@@ -518,6 +549,64 @@ namespace Antilli
 
             var awhfNode = xml.AddElement("VehicleHierarchy")
                                 .AddAttribute("UID", hierarchy.UID);
+
+            var t2Node = awhfNode.AddElement("T2Entries");
+            var t3Node = awhfNode.AddElement("T3Entries");
+            var t4Node = awhfNode.AddElement("T4Entries");
+
+            var pdlNode = awhfNode.AddElement("PDLEntries");
+
+            var addThingData = new Action<XmlElement, object>((x, o) => {
+                var t           = o.GetType();
+                var thingNode   = x.AddElement(t.Name);
+
+                foreach (var prop in t.GetProperties())
+                {
+                    thingNode.AddElement("Property")
+                                .AddAttribute(prop.Name, prop.GetValue(o, null).ToString());
+
+                    //thingNode.AddAttribute(prop.Name, prop.GetValue(o, null).ToString());
+                }
+            });
+
+            //foreach (var t2 in hierarchy.T2Entries)
+            //    addThingData(t2Node, t2);
+            //foreach (var t3 in hierarchy.T3Entries)
+            //    addThingData(t3Node, t3);
+            //foreach (var t4 in hierarchy.T4Entries)
+            //    addThingData(t4Node, t4);
+
+            var pdlType = typeof(VehicleHierarchyData.PDLEntry);
+            var eType   = typeof(VehicleHierarchyData.PDLData);
+
+            foreach (var pdl in hierarchy.PDLEntries)
+            {
+                var pdlDataNode = pdlNode.AddElement(pdlType.Name);
+
+                foreach (var prop in pdlType.GetProperties())
+                {
+                    if (prop.Name != "Children")
+                    {
+                        pdlDataNode.AddElement("Property")
+                                    .AddAttribute(prop.Name, prop.GetValue(pdl, null).ToString());
+                    }
+                    else
+                    {
+                        var eNode = pdlDataNode.AddElement("Children");
+
+                        foreach (var data in pdl.Children)
+                        {
+                            var ePNode = eNode.AddElement(eType.Name);
+
+                            foreach (var eProp in eType.GetProperties())
+                            {
+                                ePNode.AddElement("Property")
+                                    .AddAttribute(eProp.Name, eProp.GetValue(data, null).ToString());
+                            }
+                        }
+                    }
+                }
+            }
 
             var partsNode = awhfNode.AddElement("Parts");
 
