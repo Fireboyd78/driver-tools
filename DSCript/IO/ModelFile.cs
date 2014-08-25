@@ -236,11 +236,6 @@ namespace DSCript.Models
 
     public class VehicleHierarchyData : SpoolableResource<SpoolableBuffer>
     {
-        public sealed class PartThingAttribute : Attribute
-        {
-
-        }
-
         public enum SlotType : short
         {
             Generic                 = 0x00,

@@ -463,14 +463,16 @@ namespace Antilli
 
                 if (val != null)
                 {
-                    var node = propNode.AddElement("Property")
-                                        .AddAttribute("Name", prop.Name);
-
                     if (attr.Length > 0)
                     {
                         propNode.AddAttribute(prop.Name, val);
+                        continue;
                     }
-                    else if (prop.PropertyType.IsValueType || prop.PropertyType == typeof(String))
+
+                    var node = propNode.AddElement("Property")
+                                        .AddAttribute("Name", prop.Name);
+
+                    if (prop.PropertyType.IsValueType || prop.PropertyType == typeof(String))
                     {
                         node.AddAttribute("Value", val);
                     }
