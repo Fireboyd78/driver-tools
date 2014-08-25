@@ -451,84 +451,43 @@ namespace Antilli
             }
         }
 
-        private int addPartInfo(XmlElement partsNode, VehicleHierarchyData.PartEntry partEntry)
+        private void addPropInfo(XmlElement elem, object obj)
         {
-            var hType = typeof(VehicleHierarchyData.PartEntry);
+            var type = obj.GetType();
+            var propNode = elem.AddElement(type.Name);
 
-            var partNode = partsNode.AddElement("Part");
-            var addChildren = false;
-
-            int nChildren = 0;
-
-            foreach (var prop in hType.GetProperties())
+            foreach (var prop in type.GetProperties())
             {
-                if (prop.Name == "Children")
+                var attr = prop.GetCustomAttributes(typeof(System.Xml.Serialization.XmlAttributeAttribute), false);
+                var val = prop.GetValue(obj, null);
+
+                if (val != null)
                 {
-                    addChildren = (partEntry.Children != null);
-                    continue;
-                }
-
-                var val = prop.GetValue(partEntry, null);
-
-                if (prop.Name == "Type" || prop.Name == "SlotType" || prop.Name == "Position")
-                {
-                    if (val != null)
-                        partNode.AddAttribute(prop.Name, val.ToString());
-                }
-                else if (val != null)
-                {
-                    var attr = prop.GetCustomAttributes(typeof(VehicleHierarchyData.PartThingAttribute), false);
-
-                    var addStuff = new Action<XmlElement, object>((x, o) => {
-                        var oType = o.GetType();
-                        var oNode = x.AddElement(oType.Name);
-
-                        foreach (var oProp in oType.GetProperties())
-                        {
-                            var oVal = oProp.GetValue(o, null);
-
-                            oNode.AddElement("Property")
-                                    .AddAttribute("Name", oProp.Name)
-                                    .AddAttribute("Value", val);
-                        }
-                    });
+                    var node = propNode.AddElement("Property")
+                                        .AddAttribute("Name", prop.Name);
 
                     if (attr.Length > 0)
                     {
-                        var pNode = partNode.AddElement(prop.Name);
-                        var pType = val.GetType();
-
-                        foreach (var pProp in pType.GetProperties())
-                        {
-                            pNode.AddElement("Property")
-                                    .AddAttribute("Name", pProp.Name)
-                                    .AddAttribute("Value", pProp.GetValue(val, null));
-                        }
+                        propNode.AddAttribute(prop.Name, val);
+                    }
+                    else if (prop.PropertyType.IsValueType || prop.PropertyType == typeof(String))
+                    {
+                        node.AddAttribute("Value", val);
                     }
                     else
                     {
-                        partNode.AddElement("Property")
-                                    .AddAttribute("Name", prop.Name)
-                                    .AddAttribute("Value", val.ToString());
+                        if (typeof(System.Collections.IList).IsAssignableFrom(prop.PropertyType))
+                        {
+                            foreach (var subObj in (System.Collections.IList)val)
+                                addPropInfo(node, subObj);
+                        }
+                        else
+                        {
+                            addPropInfo(node, val);
+                        }
                     }
                 }
             }
-
-            if (addChildren)
-            {
-                var n = partNode.AddElement("Children");
-
-                for (int i = 0; i < partEntry.Children.Count; i++)
-                {
-                    var part = partEntry.Children[i];
-
-                    i += addPartInfo(n, part);
-                }
-
-                nChildren = partEntry.Children.Count;
-            }
-
-            return nChildren;
         }
 
         public void ExportVehicleHierachyXML()
@@ -550,75 +509,25 @@ namespace Antilli
             var awhfNode = xml.AddElement("VehicleHierarchy")
                                 .AddAttribute("UID", hierarchy.UID);
 
-            var t2Node = awhfNode.AddElement("T2Entries");
-            var t3Node = awhfNode.AddElement("T3Entries");
-            var t4Node = awhfNode.AddElement("T4Entries");
-
-            var pdlNode = awhfNode.AddElement("PDLEntries");
-
-            var addThingData = new Action<XmlElement, object>((x, o) => {
-                var t           = o.GetType();
-                var thingNode   = x.AddElement(t.Name);
-
-                foreach (var prop in t.GetProperties())
-                {
-                    thingNode.AddElement("Property")
-                                .AddAttribute(prop.Name, prop.GetValue(o, null).ToString());
-
-                    //thingNode.AddAttribute(prop.Name, prop.GetValue(o, null).ToString());
-                }
-            });
-
-            //foreach (var t2 in hierarchy.T2Entries)
-            //    addThingData(t2Node, t2);
-            //foreach (var t3 in hierarchy.T3Entries)
-            //    addThingData(t3Node, t3);
-            //foreach (var t4 in hierarchy.T4Entries)
-            //    addThingData(t4Node, t4);
-
-            var pdlType = typeof(VehicleHierarchyData.PDLEntry);
-            var eType   = typeof(VehicleHierarchyData.PDLData);
-
-            foreach (var pdl in hierarchy.PDLEntries)
-            {
-                var pdlDataNode = pdlNode.AddElement(pdlType.Name);
-
-                foreach (var prop in pdlType.GetProperties())
-                {
-                    if (prop.Name != "Children")
-                    {
-                        pdlDataNode.AddElement("Property")
-                                    .AddAttribute(prop.Name, prop.GetValue(pdl, null).ToString());
-                    }
-                    else
-                    {
-                        var eNode = pdlDataNode.AddElement("Children");
-
-                        foreach (var data in pdl.Children)
-                        {
-                            var ePNode = eNode.AddElement(eType.Name);
-
-                            foreach (var eProp in eType.GetProperties())
-                            {
-                                ePNode.AddElement("Property")
-                                    .AddAttribute(eProp.Name, eProp.GetValue(data, null).ToString());
-                            }
-                        }
-                    }
-                }
-            }
-
             var partsNode = awhfNode.AddElement("Parts");
 
-            addPartInfo(partsNode, hierarchy.Parts[0]);
+            addPropInfo(partsNode, hierarchy.Parts[0]);
 
             var dir = Settings.ExportDirectory;
             var path = String.Format("{0}\\{1}.awhf.xml",
                 dir, Path.GetFileName(ModelFile.FileName));
 
-            xml.Save(path);
+            var settings = new XmlWriterSettings() {
+                Indent = true,
+                IndentChars = "\t"
+            };
 
-            string msg = String.Format("Successfully exported XML file to '{0}'!", path);
+            using (var fXml = XmlWriter.Create(path, settings))
+            {
+                xml.WriteTo(fXml);
+            }
+
+            var msg = String.Format("Successfully exported XML file to '{0}'!", path);
 
             MessageBox.Show(msg, "VehicleHierarchy XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }

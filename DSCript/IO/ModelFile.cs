@@ -11,6 +11,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using System.Xml;
 using System.Windows.Media.Media3D;
 
 using DSCript.Spooling;
@@ -354,7 +355,10 @@ namespace DSCript.Models
 
         public class PartEntry
         {
+            [System.Xml.Serialization.XmlAttribute]
             public short Type { get; set; }
+
+            [System.Xml.Serialization.XmlAttribute]
             public SlotType SlotType { get; set; }
 
             public short Flags1 { get; set; }
@@ -363,29 +367,23 @@ namespace DSCript.Models
             public short Unknown1 { get; set; }
             public short Unknown2 { get; set; }
 
-            public List<PartEntry> Children { get; set; }
-
             public short Unknown3 { get; set; }
 
             public short Hinge { get; set; }
             public byte PartId { get; set; }
             public byte Unknown4 { get; set; }
             
-            [PartThing]
             public PDLEntry Physics { get; set; }
-
             public Point4D? Position { get; set; }
 
-            [PartThing]
             public Thing2 Offset { get; set; }
-
-            [PartThing]
             public Thing4 Unknown5 { get; set; }
 
-            [PartThing]
             public Thing3 Axis { get; set; }
 
             public short Unknown6 { get; set; }
+
+            public List<PartEntry> Children { get; set; }
         }
 
         public class Thing2
