@@ -451,8 +451,20 @@ namespace Antilli
             }
         }
 
+        // HACK: fix for duplicated parts being exported
+        static List<object> props = new List<object>();
+
         private void addPropInfo(XmlElement elem, object obj)
         {
+            if (!props.Contains(obj))
+            {
+                props.Add(obj);
+            }
+            else
+            {
+                return;
+            }
+
             var type = obj.GetType();
             var propNode = elem.AddElement(type.Name);
 
