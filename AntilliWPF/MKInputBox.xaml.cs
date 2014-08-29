@@ -21,22 +21,36 @@ namespace Antilli
     /// </summary>
     public partial class MKInputBox : ObservableWindow
     {
+        private string _optionName;
         private bool _showCancelButton;
+        private bool _showOptionCheckbox;
+
+        public string OptionName
+        {
+            get { return _optionName; }
+            set { SetValue(ref _optionName, value, "OptionName"); }
+        }
 
         public string InputValue
         {
             get { return ValueText.Text; }
         }
+        
+        public bool IsOptionChecked
+        {
+            get { return chkOption.IsChecked ?? false; }
+        }
 
         public bool ShowCancelButton
         {
             get { return _showCancelButton; }
-            set
-            {
-                _showCancelButton = value;
+            set { SetValue(ref _showCancelButton, value, "ShowCancelButton"); }
+        }
 
-                btnCancel.Visibility = (_showCancelButton) ? Visibility.Visible : Visibility.Collapsed;
-            }
+        public bool ShowOptionCheckbox
+        {
+            get { return _showOptionCheckbox; }
+            set { SetValue(ref _showOptionCheckbox, value, "ShowOptionCheckbox"); }
         }
 
         public MKInputBox(string title, string prompt, string defaultValue = "")

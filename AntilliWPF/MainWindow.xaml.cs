@@ -406,17 +406,19 @@ namespace Antilli
                 // TODO: Implement OBJ exporter
                 if (SelectedModelGroup != null)
                 {
-                    var path = Path.Combine(Settings.ModelsDirectory, SelectedModelGroup.UID.ToString());
-
                     var prompt = new MKInputBox("OBJ Exporter", "Please enter a name for the model:", SelectedModelGroup.UID.ToString("D10")) {
                         Owner = this,
                         ShowCancelButton = false,
+                        ShowOptionCheckbox = true,
+                        OptionName = "Split Meshes by Material",
                         WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
                     };
 
                     if (prompt.ShowDialog() ?? false)
                     {
-                        if (OBJFile.Export(path, prompt.InputValue, SelectedModelPackage, SelectedModelGroup.UID) == ExportResult.Success)
+                        var path = Path.Combine(Settings.ModelsDirectory, prompt.InputValue);
+
+                        if (OBJFile.Export(path, prompt.InputValue, SelectedModelPackage, SelectedModelGroup.UID, prompt.IsOptionChecked) == ExportResult.Success)
                         {
                             var msg = String.Format("Successfully exported to '{0}'!", path);
                             MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Information);

@@ -93,6 +93,7 @@
     <Compile Include="ModelListItem.cs" />
     <Compile Include="OBJExporter.cs" />
     <Compile Include="VisualParentHelper.cs" />
+    <Compile Include="WPF\BoolToVisibilityConverter.cs" />
     <Compile Include="WPF\Controls\AntilliViewport3D.cs" />
     <Compile Include="WPF\Controls\AntilliWindow.cs" />
     <Compile Include="WPF\Controls\ObservableWindow.cs" />

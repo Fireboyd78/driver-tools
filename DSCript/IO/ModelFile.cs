@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using System.Xml;
+using System.Xml.Serialization;
 using System.Windows.Media.Media3D;
 
 using DSCript.Spooling;
@@ -350,10 +351,10 @@ namespace DSCript.Models
 
         public class PartEntry
         {
-            [System.Xml.Serialization.XmlAttribute]
+            [XmlAttribute]
             public short Type { get; set; }
 
-            [System.Xml.Serialization.XmlAttribute]
+            [XmlAttribute]
             public SlotType SlotType { get; set; }
 
             public short Flags1 { get; set; }

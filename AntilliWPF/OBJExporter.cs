@@ -71,7 +71,7 @@ Kd 1.0000 0.2500 0.5000
 Ks 0.0000 0.0000 0.0000
 Ke 0.0000 0.0000 0.0000" + "\r\n";
 
-        public static ExportResult Export(string path, string filename, ModelPackagePC modelPackage, long uid)
+        public static ExportResult Export(string path, string filename, ModelPackagePC modelPackage, long uid, bool splitMeshByMaterial = false)
         {
             if (modelPackage.Meshes.Count < 1)
             {
@@ -129,8 +129,10 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                         var minIndex = 0;
                         var nVerts = 0;
 
-                        foreach (var mesh in group.Meshes)
+                        for (int m = 0; m < group.Meshes.Count; m++)
                         {
+                            var mesh = group.Meshes[m];
+
                             var model = new DriverModelVisual3D(modelPackage, mesh, false);
                             var material = model.Material;
 
@@ -148,7 +150,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                 // add material if needed
                                 if (!materials.Contains(material))
                                 {
-                                    var ddsName = String.Format("{0}_{1}", (isGlobalTexture) ? "global" : uid.ToString(), mtlIdx);
+                                    var ddsName = String.Format("{0}_{1}", (isGlobalTexture) ? "global" : filename, mtlIdx);
 
                                     mtlBuilder.AppendLine(MaterialTemplate, mtlName, ddsName);
 
@@ -192,6 +194,12 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                 nVerts++;
                             }
 
+                            if (splitMeshByMaterial)
+                            {
+                                faces.AppendLine("g Model{0:D2}_{1}_{2}", modelIndex, lodType, m + 1);
+                                faces.AppendLine("s 1");
+                            }
+
                             // add faces
                             for (int t = 0; t < tCount; t += 3)
                             {
@@ -208,8 +216,11 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                         objBuilder.AppendLine(vNor);
                         objBuilder.AppendLine(vTex);
 
-                        objBuilder.AppendLine("g Model{0:D2}_{1}", modelIndex, lodType);
-                        objBuilder.AppendLine("s 1");
+                        if (!splitMeshByMaterial)
+                        {
+                            objBuilder.AppendLine("g Model{0:D2}_{1}", modelIndex, lodType);
+                            objBuilder.AppendLine("s 1");
+                        }
 
                         objBuilder.AppendLine(faces.ToString());
 

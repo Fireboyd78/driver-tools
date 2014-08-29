@@ -4,27 +4,41 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Title" Height="135" Width="300"
         Background="#181818">
+    <at:ObservableWindow.Resources>
+        <at:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </at:ObservableWindow.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="2*"/>
             <RowDefinition Height="1*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Vertical" Grid.ColumnSpan="2">
+        <StackPanel Orientation="Vertical">
             <Label Name="PromptText" Content="Prompt text:" Padding="6,4"/>
             <TextBox Name="ValueText" Text="Hello world" Padding="2" Margin="5" MaxLength="127" MaxLines="1"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,2,0" Grid.Row="1" Grid.Column="1">
-            <StackPanel.Resources>
-                <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
-                    <Setter Property="Margin" Value="4"/>
-                    <Setter Property="Padding" Value="10,0"/>
-                </Style>
-            </StackPanel.Resources>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Name="chkOption" Content="{Binding OptionName, FallbackValue=Option}" HorizontalAlignment="Right" Margin="5" VerticalAlignment="Center" Foreground="{StaticResource atDark_fg}"
+                      Visibility="{Binding ShowOptionCheckbox, Converter={StaticResource BoolToVisibilityConverter}}"/>
             
-            <Button Name="btnOk" Content="OK" IsDefault="True"/>
-            <Button Name="btnCancel" Content="Cancel" IsCancel="True"/>
-        </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,2,0" Grid.Column="1">
+                <StackPanel.Resources>
+                    <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="Margin" Value="4"/>
+                        <Setter Property="Padding" Value="10,0"/>
+                    </Style>
+                </StackPanel.Resources>
+
+                <Button Name="btnOk" Content="OK" IsDefault="True"/>
+                <Button Name="btnCancel" Content="Cancel" IsCancel="True" Visibility="{Binding ShowCancelButton, Converter={StaticResource BoolToVisibilityConverter}}"/>
+            </StackPanel>
+        </Grid>
+        
     </Grid>
 </at:ObservableWindow>
