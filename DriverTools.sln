@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Express 2013 for Windows Desktop
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zartex", "Zartex\Zartex.csproj", "{614EF28C-7366-49F1-8996-F0FCA85E33E9}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zartex", "Zartex\Zartex.csp
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSCript", "DSCript\DSCript.csproj", "{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Antilli", "Antilli\Antilli.csproj", "{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AntilliWPF", "AntilliWPF\AntilliWPF.csproj", "{BEB558CA-5BAE-4718-9C09-921683F78AA3}"
 EndProject
@@ -28,8 +26,6 @@ Global
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9CB54F9B-BC3F-41DB-BFB5-70A5632F8857}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BEB558CA-5BAE-4718-9C09-921683F78AA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
