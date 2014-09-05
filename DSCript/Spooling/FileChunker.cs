@@ -428,9 +428,12 @@ namespace DSCript.Spooling
 
                 if (updateStream)
                 {
-                    // close old stream
-                    _stream.Close();
-                    _stream.Dispose();
+                    if (_stream != null)
+                    {
+                        // close old stream
+                        _stream.Close();
+                        _stream.Dispose();
+                    }
 
                     // set up our new one
                     _stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
