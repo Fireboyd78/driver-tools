@@ -95,7 +95,7 @@ namespace DSCript.Models
         /// </summary>
         public int SourceUID { get; set; }
 
-        public PCMPMaterial GetMaterial()
+        public MaterialData GetMaterial()
         {
             if (SourceUID == ModelPackage.UID || SourceUID == 0xFFFD)
                 return ModelPackage.Materials[MaterialId];
@@ -183,7 +183,7 @@ namespace DSCript.Models
             bool getBlendWeights = false)
         {
             var vBuffer = VertexBuffer.Buffer;
-            int nVerts = (int)NumVertices;
+            var nVerts = (int)NumVertices;
 
             for (uint v = 0; v <= NumVertices; v++)
             {
@@ -205,16 +205,16 @@ namespace DSCript.Models
 
         public Int32Collection GetTriangleIndices()
         {
-            ushort[] indices = ModelPackage.IndexBuffer.Buffer;
+            var indices = ModelPackage.IndexBuffer.Buffer;
 
-            Int32Collection tris = new Int32Collection();
+            var tris = new Int32Collection();
 
             for (int i = 0; i < PrimitiveCount; i++)
             {
-                uint idx = StartIndex;
-                int vIdx = BaseVertexIndex;
+                var idx = StartIndex;
+                var vIdx = BaseVertexIndex;
 
-                uint i0, i1, i2;
+                int i0, i1, i2;
 
                 if (PrimitiveType == D3DPRIMITIVETYPE.D3DPT_TRIANGLESTRIP)
                 {

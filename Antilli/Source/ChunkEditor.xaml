@@ -1,0 +1,146 @@
+﻿<at:ObservableWindow x:Class="Antilli.ChunkViewer" DataContext="{Binding RelativeSource={RelativeSource Self}}"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:at="clr-namespace:Antilli"
+        xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
+        xmlns:sp="clr-namespace:DSCript.Spooling;assembly=libDSC"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        Title="{Binding WindowTitle, FallbackValue='Chunk Editor'}" Height="620" Width="760">
+    <at:ObservableWindow.Resources>
+        <dsc:SpoolerMagicConverter x:Key="MagicConverter"/>
+        <CompositeCollection x:Key="CMenu" x:Shared="False">
+            <MenuItem Header="Export" Click="ExportSpooler" IsEnabled="{Binding IsChunkFileOpen}"/>
+            <Separator/>
+            <MenuItem Header="Cut" Click="CutSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+            <MenuItem Header="Paste" Click="PasteSpooler" IsEnabled="{Binding CanPasteSpooler}"/>
+            <MenuItem Header="Remove" Click="RemoveSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+            <Separator/>
+            <MenuItem Header="Rename..." Click="RenameSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+            <MenuItem Header="Replace..." Click="ReplaceBuffer" Visibility="{Binding CanReplaceSpooler}"/>
+        </CompositeCollection>
+        <CompositeCollection x:Key="MenuBase" x:Shared="False">
+            <MenuItem Header="Remove" Click="RemoveSpooler"/>
+            <MenuItem Header="Rename..." Click="RenameSpooler"/>
+            <Separator/>
+            <MenuItem Header="Cut" Click="CutSpooler"/>
+            <MenuItem Header="Paste" Click="PasteSpooler"/>
+        </CompositeCollection>
+        <CompositeCollection x:Key="MenuExt1" x:Shared="False">
+            <MenuItem Header="Export" Click="ExportSpooler"/>
+            <Separator/>
+            <CollectionContainer Collection="{StaticResource MenuBase}"/>
+        </CompositeCollection>
+        <CompositeCollection x:Key="MenuExt2" x:Shared="False">
+            <MenuItem Header="Replace..." Click="ReplaceBuffer"/>
+            <Separator/>
+            <CollectionContainer Collection="{StaticResource MenuExt1}"/>
+        </CompositeCollection>
+        <ContextMenu x:Key="CMSimpleBase" ItemsSource="{StaticResource MenuBase}"/>
+        <ContextMenu x:Key="CMBase" ItemsSource="{StaticResource MenuExt1}"/>
+        <ContextMenu x:Key="CMExt" ItemsSource="{StaticResource MenuExt2}"/>
+        <ContextMenu x:Key="SMenu" ItemsSource="{StaticResource CMenu}"/>
+        <DataTemplate x:Key="SpoolerTemplate">
+            <StackPanel Orientation="Horizontal" Margin="0">
+                <Label FontWeight="Bold" Content="{Binding Magic, Converter={StaticResource MagicConverter}}" Padding="2"/>
+                <TextBlock Text="{Binding Description}" Foreground="{StaticResource atDark_fg}" VerticalAlignment="Center" Padding="2"/>
+            </StackPanel>
+        </DataTemplate>
+        <!--
+        <DataTemplate DataType="{x:Type sp:Spooler}">
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}" ContextMenu="{StaticResource CMSimpleBase}"/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type sp:SpoolableBuffer}">
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}" ContextMenu="{StaticResource CMExt}"/>
+        </DataTemplate>
+        <HierarchicalDataTemplate DataType="{x:Type sp:SpoolablePackage}" ItemsSource="{Binding Children}">
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource SpoolerTemplate}" ContextMenu="{StaticResource CMBase}"/>
+        </HierarchicalDataTemplate>
+        -->
+    </at:ObservableWindow.Resources>
+    
+    <at:ObservableWindow.Background>
+        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="#FF282828" Offset="0.75" />
+            <GradientStop Color="#FF101010" Offset="1" />
+        </LinearGradientBrush>
+    </at:ObservableWindow.Background>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="25"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <Menu x:Name="MenuBar" BorderBrush="#FF353535" BorderThickness="0,0,0,1">
+            <Menu.Background>
+                <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
+                    <GradientStop Color="#FF404040" Offset="0.25"/>
+                    <GradientStop Color="#FF202020" Offset="0.8"/>
+                    <GradientStop Color="#FF101010" Offset="1"/>
+                </LinearGradientBrush>
+            </Menu.Background>
+            <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
+                <MenuItem x:Name="fileOpen" Header="_Open"/>
+                <Separator/>
+                <MenuItem x:Name="fileSave" Header="_Save" IsEnabled="{Binding CanSaveChunkFile}"/>
+                
+                <!-- Too early. Come back later. -->
+                <!-- <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsChunkFileOpen}"/> -->
+                
+                <Separator/>
+                <MenuItem x:Name="fileClose" Header="_Close" IsEnabled="{Binding IsChunkFileOpen}" ToolTip="Closes the current chunk file."/>
+                <MenuItem x:Name="fileExit" Header="_Exit"/>
+            </MenuItem>
+            <MenuItem Header="Edit" Style="{DynamicResource atDark_menuItem}">
+                <MenuItem x:Name="editCut" Header="_Cut" Click="CutSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+                
+                <!-- Too early. Come back later. -->
+                <!-- <MenuItem x:Name="editCopy" Header="Copy" IsEnabled="{Binding CanModifySpooler}"/> -->
+                
+                <MenuItem x:Name="editPaste" Header="_Paste" Click="PasteSpooler" IsEnabled="{Binding CanPasteSpooler}"/>
+                <MenuItem x:Name="editRemove" Header="Remove" Click="RemoveSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+                <Separator/>
+                <MenuItem x:Name="editRename" Header="_Rename" Click="RenameSpooler" IsEnabled="{Binding CanModifySpooler}" ToolTip="Change the spooler's description."/>
+                <MenuItem x:Name="editReplace" Header="Replace..." Click="ReplaceBuffer" Visibility="{Binding CanReplaceSpooler}" ToolTip="Replace the content of the buffer."/>
+            </MenuItem>
+            <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
+                <MenuItem x:Name="toolsExport" Header="_Export" IsEnabled="{Binding IsChunkFileOpen}" ToolTip="Exports the chunk file to the 'Export' directory."/>
+            </MenuItem>
+        </Menu>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="2*" MinWidth="325"/>
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Chunks" Margin="5,5,2,5">
+                <GroupBox.Resources>
+                    <Style TargetType="at:SpoolerListItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                        <Setter Property="ContextMenu" Value="{StaticResource SMenu}"/>
+                        <Setter Property="HeaderTemplate" Value="{StaticResource SpoolerTemplate}"/>
+                        <EventSetter Event="TreeViewItem.MouseRightButtonDown" Handler="TreeViewItem_MouseRightButtonDown"/>
+                    </Style>
+                </GroupBox.Resources>
+
+                <TreeView Name="ChunkList" SelectedItemChanged="SpoolerSelected"/>
+            </GroupBox>
+
+            <GridSplitter Grid.Column="1"
+                          Background="Transparent"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Width="5"/>
+
+            <GroupBox Header="Information" Margin="2,5,5,5" Grid.Column="2">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <StackPanel Orientation="Vertical" Margin="5">
+                        <TextBlock Text="{Binding SpoolerInfo}" FontFamily="Consolas"/>
+                        <Image Name="ViewImage" Source="{Binding CurrentImage}" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </GroupBox>
+        </Grid>
+    </Grid>
+</at:ObservableWindow>

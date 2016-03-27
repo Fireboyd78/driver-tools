@@ -6,12 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
-using DSCript.Legacy;
-using DSCript.Spoolers;
-
 using Zartex;
 using Zartex.MissionObjects;
-using Zartex.LogicExport;
 using Zartex.Settings;
 
 using ChunkType = DSCript.ChunkType;
@@ -200,8 +196,20 @@ The locale file {4}.",
         private bool _isLoaded = false;
         private bool _hasLocale = false;
 
+        public bool IsLoaded
+        {
+            get { return _isLoaded; }
+        }
+
+        
+
         public string Filename { get; set; }
 
+        
+
+        
+
+#if FALSE
         // LEGACY
         public ChunkReader ChunkFile { get; set; }
 
@@ -210,7 +218,7 @@ The locale file {4}.",
         public IList<MissionObject> ExportedMissionObjects { get; set; }
 
         public IDictionary<int, string> StringCollection { get; set; }
-        public IDictionary<int, string> LocaleStrings { get; set; }
+        
 
         public IList<LogicDefinition> ActorDefinitions { get; set; }
         public IList<LogicDefinition> LogicNodeDefinitions { get; set; }
@@ -225,15 +233,7 @@ The locale file {4}.",
             get { return new FileStream(ChunkFile.Filename, FileMode.Open, FileAccess.Read, FileShare.Read); }
         }
 
-        public bool IsLoaded
-        {
-            get { return _isLoaded; }
-        }
-
-        public bool HasLocale
-        {
-            get { return _hasLocale; }
-        }
+        
 
         private T ParseDefinition<T>(BinaryReader f, T definition)
             where T : LogicDefinition
@@ -927,55 +927,7 @@ The locale file {4}.",
         }
         #endregion
 
-        public void LoadLocaleFile(int missionId)
-        {
-            LoadLocaleFile(GetMissionLocaleFilepath(missionId));
-        }
-
-        public void LoadLocaleFile(string filename)
-        {
-            if (!_localeError)
-            {
-                string text = String.Empty;
-
-                using (var fs = File.Open(filename, FileMode.Open, FileAccess.Read))
-                {
-                    // DPL temporary workaround
-                    var encoding = (((fs.ReadInt32() >> 16) & 0xFFFF) == 0xFEFF) ? Encoding.Unicode : Encoding.UTF8;
-
-                    if (encoding != Encoding.Unicode)
-                        fs.Seek(0, SeekOrigin.Begin);
-
-                    using (StreamReader f = new StreamReader(fs, encoding, true))
-                    {
-                        text = f.ReadToEnd();
-                    }
-                }
-
-                LocaleStrings = new Dictionary<int, string>();
-
-                var e_ENTRIES = @"(<ID\b[^>]*>.*?<\/TEXT>)";
-                var e_ID = @"<ID\b[^>]*>(.*?)<\/ID>";
-                var e_TEXT = @"<TEXT\b[^>]*>(.*?)<\/TEXT>";
-
-                foreach (Match m in Regex.Matches(text, e_ENTRIES))
-                {
-                    DSCript.DSC.Log(m.Value);
-
-                    var val = m.Value;
-
-                    var idStr = Regex.Match(val, e_ID).Groups[1].Value;
-                    var str = Regex.Match(text, e_TEXT).Groups[1].Value;
-
-                    var id = int.Parse(idStr);
-
-                    if (!LocaleStrings.ContainsKey(id))
-                        LocaleStrings.Add(id, str);
-                }
-
-                _hasLocale = true;
-            }
-        }
+        
 
         public MPCFile(int missionId) : this(GetMissionScriptFilepath(missionId))
         {
@@ -999,7 +951,7 @@ The locale file {4}.",
 
         public MPCFile(string filename)
         {
-        #if FALSE
+#if FALSE
             // Legacy method
 
             ChunkFile = new ChunkReader(filename);
@@ -1017,7 +969,7 @@ The locale file {4}.",
             LoadWireCollection(wireCollection);
             LoadActors(actors);
             LoadLogicNodes(logicNodes);
-        #else
+#else
             // New method
 
             Filename = filename;
@@ -1041,9 +993,11 @@ The locale file {4}.",
 
             LoadActors(actors);
             LoadLogicNodes(logicNodes);
-        #endif
+#endif
 
             _isLoaded = true;
         }
+#endif
     }
+
 }

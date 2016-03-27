@@ -10,24 +10,6 @@ namespace DSCript
     /// </summary>
     public enum ChunkType : int
     {
-
-        /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-         * 
-         * WARNING:
-         * 
-         * THIS PORTION OF CODE IS EASY TO GET LOST IN, DUE TO THE SHEER AMOUNT OF 'TYPES' USED.
-         * IF YOU HAVE ANY BETTER SUGGESTIONS FOR STORING THIS TYPE OF DATA, PLEASE LET ME KNOW!
-         * 
-         * PROCEED WITH CAUTION AND TRY NOT TO READ TOO FAST!
-         * - CarLuver69
-         * 
-         * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-        /// <summary>
-        /// A type representing a root chunk block (Note: This is used by tools only!)
-        /// </summary>
-        Unknown = 0x7FFFFFFF,
-
         /// <summary>
         /// [CHNK] - The header for a CHUNK block
         /// </summary>
@@ -240,7 +222,7 @@ namespace DSCript
         /// <summary>
         /// [GESR] - No research has been done on this format
         /// </summary>
-        GlobalSuperRegion = 0x52534547,
+        SuperRegion = 0x52534547,
 
         /// <summary>
         /// [GEPM] - No research has been done on this format
@@ -330,7 +312,7 @@ namespace DSCript
         /// <summary>
         /// [IRCT] - No research has been done on this format
         /// </summary>
-        ExternalFileLinkInternal = 0x54435249,
+        InteriorRegion = 0x54435249,
 
         /// <summary>
         /// [ISHM] - No research has been done on this format
@@ -383,9 +365,9 @@ namespace DSCript
         InteriorLookupInfo = 0x554C5249,
 
         /// <summary>
-        /// [PCSL] - No research has been done on this format
+        /// [PCSL] - An unused block type.
         /// </summary>
-        RegionalArea = 0x4C534350,
+        ExternalModelLookup = 0x4C534350,
 
         // =======================================================================================
         // ------------------------------------- *.D4C FILES -------------------------------------
@@ -755,6 +737,29 @@ namespace DSCript
         /// [CUTS] - No research has been done on this format
         /// </summary>
         CutsceneData = 0x53545543,
+
+        // =======================================================================================
+        // ---------------------- DRIVER: SAN FRANCISCO :: SCRIPT DATA ---------------------------
+        // =======================================================================================
+        /// <summary>
+        /// [SCRH] - Contains script package information.
+        /// </summary>
+        ScriptPackageHeader = 0x48524353,
+
+        /// <summary>
+        /// [SCRC] - Contains script package lookup information.
+        /// </summary>
+        ScriptPackageLookup         = 0x43524353,
+
+        /// <summary>
+        /// [SCRR] - Compiled script package data.
+        /// </summary>
+        ScriptPackageRoot           = 0x52524353,
+
+        /// <summary>
+        /// [SCRS] - Contains compiled Lua script data.
+        /// </summary>
+        ScriptPackageCompiledScript = 0x53524353,
 
         // =======================================================================================
         // ---------------------- DRIVER: SAN FRANCISCO :: SHADER DATA ---------------------------

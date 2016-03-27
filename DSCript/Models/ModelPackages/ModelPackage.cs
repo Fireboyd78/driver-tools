@@ -35,18 +35,11 @@ namespace DSCript.Models
         public List<VertexData> VertexBuffers { get; set; }
         public IndexData IndexBuffer { get; set; }
 
-        public List<PCMPMaterial> Materials { get; set; }
-        public List<PCMPSubMaterial> SubMaterials { get; set; }
-        public List<PCMPTexture> Textures { get; set; }
+        public List<MaterialData> Materials { get; set; }
+        public List<SubstanceData> SubMaterials { get; set; }
+        public List<TextureData> Textures { get; set; }
 
-        public bool HasMaterials
-        {
-            get { return Materials != null && Materials.Count > 0; }
-        }
-
-        public bool HasModels
-        {
-            get { return (Parts != null && Parts.Count > 0); }
-        }
+        public bool HasMaterials    => Materials?.Count > 0;
+        public bool HasModels       => Parts?.Count > 0;
     }
 }

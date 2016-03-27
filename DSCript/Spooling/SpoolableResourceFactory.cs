@@ -11,6 +11,17 @@ namespace DSCript.Spooling
     public static class SpoolableResourceFactory
     {
         /// <summary>
+        /// Creates a new spoolable resource.
+        /// </summary>
+        /// <typeparam name="T">The type of spoolable resource to create.</typeparam>
+        /// <returns>A new spoolable resource of the specified type.</returns>
+        public static T Create<T>()
+            where T : ISpoolableResource, new()
+        {
+            return new T();
+        }
+
+        /// <summary>
         /// Creates a new spoolable resource from the specified spooler.
         /// </summary>
         /// <typeparam name="T">The type of spoolable resource to create.</typeparam>
@@ -21,7 +32,7 @@ namespace DSCript.Spooling
         {
             return new T() { Spooler = spooler };
         }
-
+        
         /// <summary>
         /// Creates a new spoolable resource from the specified spooler, and alternatively loads the content from it immediately.
         /// </summary>
@@ -38,6 +49,12 @@ namespace DSCript.Spooling
                 resource.Load();
 
             return resource;
+        }
+
+        public static void Save<T>(T resource)
+            where T : ISpoolableResource
+        {
+            resource.Save();
         }
 
         /// <summary>

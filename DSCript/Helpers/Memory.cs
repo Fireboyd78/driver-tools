@@ -5,6 +5,21 @@ using System.Text;
 
 namespace System
 {
+    public struct BitAlignment
+    {
+        public static readonly int Align04 = (4 << 00); // 0x0004
+        public static readonly int Align08 = (4 << 01); // 0x0008
+        public static readonly int Align16 = (4 << 02); // 0x0010
+        public static readonly int Align32 = (4 << 03); // 0x0020
+        public static readonly int Align64 = (4 << 04); // 0x0040
+        public static readonly int Align128 = (4 << 05); // 0x0080
+        public static readonly int Align256 = (4 << 06); // 0x0100
+        public static readonly int Align512 = (4 << 07); // 0x0200
+        public static readonly int Align1024 = (4 << 08); // 0x0400
+        public static readonly int Align2048 = (4 << 09); // 0x0800
+        public static readonly int Align4096 = (4 << 10); // 0x1000
+    }
+
     public sealed class Memory
     {
         private static readonly uint[] CRC32Table = new uint[] {
@@ -42,7 +57,7 @@ namespace System
             0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D
         };
 
-        public static uint CRC32(byte[] buffer)
+        public static uint GetCRC32(byte[] buffer)
         {
             var crc     = 0xFFFFFFFF;
             var size    = buffer.Length;
@@ -57,91 +72,81 @@ namespace System
 
             return crc;
         }
-
-        // /// <summary>
-        // /// Returns the result of aligning an offset to a certain alignment.
-        // /// </summary>
-        // /// <param name="offset">The offset to align</param>
-        // /// <param name="align">The byte-alignment</param>
-        // /// <returns>The byte-aligned offset.</returns>
-        // public static long Align(long offset, long align)
-        // {
-        //     return offset + (align - (offset % align)) % align;
-        // }
-        // 
-        // /// <summary>
-        // /// Returns the result of aligning an offset to a certain alignment.
-        // /// </summary>
-        // /// <param name="offset">The offset to align</param>
-        // /// <param name="align">The byte-alignment</param>
-        // /// <returns>The byte-aligned offset.</returns>
-        // public static int Align(int offset, int align)
-        // {
-        //     return offset + (align - (offset % align)) % align;
-        // }
-        // 
-        // /// <summary>
-        // /// Returns the result of aligning an offset to a certain alignment.
-        // /// </summary>
-        // /// <param name="offset">The offset to align</param>
-        // /// <param name="align">The byte-alignment</param>
-        // /// <returns>The byte-aligned offset.</returns>
-        // public static uint Align(uint offset, uint align)
-        // {
-        //     return offset + (align - (offset % align)) % align;
-        // }
+        
+        /// <summary>
+        /// Returns the result of aligning a value to a specified alignment.
+        /// </summary>
+        /// <param name="value">The value to align.</param>
+        /// <param name="alignment">The byte-alignment.</param>
+        /// <returns>The byte-aligned value; If the alignment is zero, the unmodified value.</returns>
+        public static int Align(int value, int alignment)
+        {
+            return (alignment != 0) ? (value + (alignment - (value % alignment)) % alignment) : value;
+        }
 
         /// <summary>
         /// Returns the result of aligning a value to a specified alignment.
         /// </summary>
-        /// <typeparam name="T">The type of value to align</typeparam>
-        /// <param name="value">The value to align</param>
-        /// <param name="align">The byte-alignment</param>
+        /// <param name="value">The value to align.</param>
+        /// <param name="alignment">The byte-alignment.</param>
         /// <returns>The byte-aligned value; If the alignment is zero, the unmodified value.</returns>
-        public static T Align<T>(T value, int align)
-            where T : struct, IComparable, IFormattable, IConvertible, IComparable<T>, IEquatable<T>
+        public static long Align(long value, long alignment)
         {
-            dynamic offset = value;
-
-            return (align != 0) ? (offset + (align - (offset % align)) % align) : value;
+            return (alignment != 0) ? (value + (alignment - (value % alignment)) % alignment) : value;
         }
 
-        /// <summary>
-        /// Returns the result of attempting to guess the alignment of an offset. If unknown, returns zero.
-        /// </summary>
-        /// <param name="offset">The offset to guess the alignment of.</param>
-        /// <returns>The approximate alignment of an offset. If unknown, returns zero.</returns>
-        public static int GuessAlignment(int offset)
+        public static byte[] Copy(int value, int count)
         {
-            if ((offset & 0xFFF) == 0)
-                return 0x1000; //4096
-            else if ((offset & 0x7FF) == 0)
-                return 0x800; //2048
-            else if ((offset & 0xFF) == 0)
-                return 0x100; //256
-            else if ((offset & 0x7F) == 0)
-                return 0x80; //128
-            else if ((offset & 0xF) == 0)
-                return 0x10; //16
-            else if ((offset & 0x7) == 0)
-                return 0x8;
-            else if ((offset & 0x3) == 0)
-                return 0x4;
-            else
-                return 0;
+            var srcArray = BitConverter.GetBytes(value);
+
+            return Memory.Copy(srcArray, 0, (sizeof(int) * count));
         }
 
-        /// <summary>
-        /// Returns the result of attempting to guess the alignment of an offset. If the result is unknown, returns a specified default value.
-        /// </summary>
-        /// <param name="offset">The offset to guess the alignment of.</param>
-        /// <param name="defaultValue">The default value to return (if result is unknown)</param>
-        /// <returns>The approximate alignment of an offset (if any), otherwise a default value.</returns>
-        public static int GuessAlignment(int offset, int defaultValue)
+        public static byte[] Copy(uint value, int count)
         {
-            int guess = GuessAlignment(offset);
+            var srcArray = BitConverter.GetBytes(value);
 
-            return (guess != 0) ? guess : defaultValue;
+            return Memory.Copy(srcArray, 0, (sizeof(uint) * count));
+        }
+
+        public static byte[] Copy(byte[] srcArray, int count)
+        {
+            return Memory.Copy(srcArray, 0, count);
+        }
+
+        public static byte[] Copy(byte[] srcArray, int srcOffset, int count)
+        {
+            var dstArray = new byte[count];
+
+            Memory.Fill(srcArray, srcOffset, dstArray);
+
+            return dstArray;
+        }
+
+        public static void Fill(int value, byte[] dstBuf)
+        {
+            var srcBuf = BitConverter.GetBytes(value);
+
+            Memory.Fill(srcBuf, 0, dstBuf);
+        }
+
+        public static void Fill(byte[] srcBuf, byte[] dstBuf)
+        {
+            Memory.Fill(srcBuf, 0, dstBuf);
+        }
+
+        public static void Fill(byte[] srcBuf, int srcOffset, byte[] dstBuf)
+        {
+            var srcLen = srcBuf.Length - srcOffset;
+            var dstLen = dstBuf.Length;
+
+            for (int i = 0; i < dstLen; i += srcLen)
+            {
+                if (i + srcLen > dstLen)
+                    srcLen = dstLen - i;
+
+                Buffer.BlockCopy(srcBuf, srcOffset, dstBuf, i, srcLen);
+            }
         }
     }
 }

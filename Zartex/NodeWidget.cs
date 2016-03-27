@@ -8,9 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-using Zartex.LogicData;
-using Zartex.LogicExport;
-
 namespace Zartex
 {
     public partial class NodeWidget : UserControl

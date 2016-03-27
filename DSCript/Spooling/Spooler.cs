@@ -5,29 +5,94 @@ using System.Text;
 
 namespace DSCript.Spooling
 {
+    public struct SpoolerContext
+    {
+        private int m_value;
+
+        public static implicit operator ChunkType(SpoolerContext context)
+        {
+            return (ChunkType)context.m_value;
+        }
+
+        public static implicit operator int (SpoolerContext context)
+        {
+            return context.m_value;
+        }
+
+        public static implicit operator SpoolerContext(int context)
+        {
+            return new SpoolerContext(context);
+        }
+
+        public static implicit operator SpoolerContext(ChunkType chunkType)
+        {
+            return new SpoolerContext((int)chunkType);
+        }
+
+        public static implicit operator SpoolerContext(string context)
+        {
+            if (context == null || context.Length != 4)
+                throw new ArgumentException("Context string must be 4 characters long and cannot be null.", nameof(context));
+
+            var c1 = context[0];
+            var c2 = context[1];
+            var c3 = context[2];
+            var c4 = context[3];
+
+            return new SpoolerContext((c4 << 24) | (c3 << 16) | (c2 << 8) | (c1 << 0));
+        }
+
+        public override string ToString()
+        {
+            var str = "";
+
+            if (m_value > 0)
+            {
+                for (int b = 3; b >= 0; b--)
+                {
+                    var c = (m_value >> (b * 8)) & 0xFF;
+                    if (c != 0)
+                        str += c;
+                }
+            }
+
+            return str;
+        }
+
+        private SpoolerContext(int context)
+        {
+            m_value = context;
+        }
+    }
+
     public enum SpoolerAlignment : byte
     {
         /// <summary>
-        /// 4-byte alignment (e.g. 0x7 -> 0x8)
+        /// 4-byte alignment (e.g. 0x3 -> 0x4)
         /// </summary>
         Align4      = 0x2,
-        
+
         /// <summary>
-        /// 16-byte alignment (e.g. 0x7 -> 0x10)
+        /// 16-byte alignment (e.g. 0x3 -> 0x10)
         /// </summary>
         Align16     = 0x4,
 
         /// <summary>
-        /// 2048-byte alignment (e.g. 0x7 -> 0x800)
+        /// 256-byte alignment (e.g. 0x3 -> 0x100)
+        /// </summary>
+        Align256    = 0x8,
+        
+        /// <summary>
+        /// 2048-byte alignment (e.g. 0x3 -> 0x800)
         /// </summary>
         Align2048   = 0xB,
 
         /// <summary>
-        /// 4096-byte alignment (e.g. 0x7 -> 0x1000)
+        /// 4096-byte alignment (e.g. 0x3 -> 0x1000)
         /// </summary>
         Align4096   = 0xC
     }
-
+    
     /// <summary>
     /// Represents an abstract class for data spoolers.
     /// </summary>
@@ -35,9 +100,10 @@ namespace DSCript.Spooling
     {
         private SpoolerAlignment _alignment = SpoolerAlignment.Align4096;
         
-        // when computing sizes, this cannot be null
+        private int _context;
+        private byte _version;
+
         private string _description;
-        private bool _isDescriptionDirty;
         
         /// <summary>
         /// Disposes of the resources used by this spooler.
@@ -49,6 +115,7 @@ namespace DSCript.Spooling
 
         /// <summary>
         /// Gets or sets the description for this spooler. The length should not exceed 255 characters.
+        /// <para>Setting this value to 'null' will force an empty string to be used instead.</para>
         /// </summary>
         public string Description
         {
@@ -57,29 +124,53 @@ namespace DSCript.Spooling
             {
                 var str = value;
 
-                // string too long? no worries, we'll just force it to be 255 characters long :)
-                if (str != null && str.Length > 255)
-                    str = str.Substring(0, 255);
-
-                _description = str;
-
-                // don't flag as dirty if this is the first time we're setting the description
-                if (_isDescriptionDirty)
-                {
+                if (_description != null && _description != str)
                     IsDirty = true;
+
+                if (str != null)
+                {
+                    // string too long? no worries, we'll just force it to be 255 characters long :)
+                    if (str.Length > 255)
+                        str = str.Substring(0, 255);
+
+                    _description = str;
                 }
                 else
                 {
-                    _isDescriptionDirty = true;
+                    _description = String.Empty;
                 }
+
+                if (IsDirty)
+                    IsModified = true;
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the context of this spooler.
+        /// </summary>
+        public int Context
+        {
+            get { return _context; }
+            set
+            {
+                if (_context != value)
+                    IsModified = true;
+
+                _context = value;
+            }
+
         }
 
         /// <summary>
         /// Gets or sets the magic number for this spooler.
         /// </summary>
-        public int Magic { get; set; }
-
+        [Obsolete("Use the 'Context' property instead -- this is the original, incorrect name.")]
+        public int Magic
+        {
+            get { return Context; }
+            set { Context = value; }
+        }
+        
         /// <summary>
         /// Gets the absolute position of this spooler, relative to its parent.
         /// If this spooler is not attached to a parent, this will return zero.
@@ -114,10 +205,30 @@ namespace DSCript.Spooling
         internal int Offset { get; set; }
 
         /// <summary>
+        /// Gets or sets the version of this spooler.
+        /// </summary>
+        public byte Version
+        {
+            get { return _version; }
+            set
+            {
+                if (_version != value)
+                    IsModified = true;
+
+                _version = value;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the reserved byte for this spooler.
         /// </summary>
-        public byte Reserved { get; set; }
-
+        [Obsolete("Use the 'Version' property instead -- this is the original, incorrect name.")]
+        public byte Reserved
+        {
+            get { return Version; }
+            set { Version = value; }
+        }
+        
         /// <summary>
         /// Gets the length of the description for this spooler.
         /// </summary>
@@ -132,7 +243,13 @@ namespace DSCript.Spooling
         public SpoolerAlignment Alignment
         {
             get { return _alignment; }
-            set { _alignment = value; }
+            set
+            {
+                if (_alignment != value)
+                    IsModified = true;
+
+                _alignment = value;
+            }
         }
 
         /// <summary>
@@ -143,15 +260,27 @@ namespace DSCript.Spooling
             get { return 0; }
         }
 
+        public virtual bool AreChangesPending
+        {
+            get { return IsModified; }
+        }
+
+        public virtual void CommitChanges()
+        {
+            IsModified = false;
+        }
+
         /// <summary>
         /// Gets the <see cref="SpoolablePackage"/> containing this spooler. If no parent is attached, the value is null.
         /// </summary>
         public SpoolablePackage Parent { get; internal set; }
 
         /// <summary>
-        /// Gets or sets the dirty status of this spooler. Intended for internal use only.
+        /// Gets or sets the dirty status of this spooler.
         /// </summary>
-        internal bool IsDirty { get; set; }
+        protected internal bool IsDirty { get; set; }
+
+        protected internal bool IsModified { get; set; }
 
         /// <summary>
         /// Ensures the spooler has been detached from its parent, if applicable.

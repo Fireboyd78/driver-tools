@@ -7,9 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-using Zartex.LogicExport;
-using Zartex.LogicData;
-
 namespace Zartex
 {
     public partial class InspectorWidget : UserControl
@@ -52,12 +49,14 @@ namespace Zartex
 
         private void LogicNodes_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            var wire = e.Node.Tag as WireCollectionEntry;
+            var tag = e.Node.Tag;
 
-            if (wire != null)
+            if (tag is WireNode)
             {
-                if (e.Node.Nodes.Count <= 0)
+                if (e.Node.Nodes.Count == 0)
                 {
+                    var wire = tag as WireNode;
+
                     var node = Nodes.Nodes[wire.NodeId];
                     var nProps = node.Nodes.Count;
 
@@ -90,7 +89,7 @@ namespace Zartex
                 else
                 {
                     e.Node.Nodes.Clear();
-                }       
+                }
             }
         }
     }

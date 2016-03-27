@@ -8,40 +8,25 @@ namespace DSCript.Spooling
 {
     public sealed class SpoolableBuffer : Spooler, IDisposable
     {
-        private static readonly int maxBufferSize = 1024 * 384; //~384Kb
+        public static readonly int MaxBufferSize = 1024 * 384; //~384Kb
 
-        private byte[] _buffer;
-        private int _size;
-        private string _tempFileName;
+        private byte[] m_buffer;
+        private int m_size;
+        
+        private DSCTempFile m_tempFile;
 
-        private string TempFileName
+        private void GetTempFileReady()
         {
-            get
-            {
-                if (String.IsNullOrEmpty(_tempFileName))
-                {
-                    var tmpFile = Path.GetTempFileName();
-
-                    // GetTempFileName() creates a temp file, delete it
-                    File.Delete(tmpFile);
-
-                    _tempFileName = Path.Combine(DSC.TempDirectory, Path.GetFileName(tmpFile));
-                }
-
-                return _tempFileName;
-            }
+            if (m_tempFile == null)
+                m_tempFile = new DSCTempFile();
         }
 
-        private FileStream TempFile;
-
-        private void CleanupTempFile()
+        private void ReleaseTempFile()
         {
-            if (TempFile != null)
+            if (m_tempFile != null)
             {
-                TempFile.Dispose();
-                TempFile = null;
-
-                File.Delete(TempFileName);
+                m_tempFile.Dispose();
+                m_tempFile = null;
             }
         }
 
@@ -70,32 +55,28 @@ namespace DSCript.Spooling
         /// <returns>A direct copy of the buffer.</returns>
         internal byte[] GetBufferInternal()
         {
-            if (_buffer == null)
+            if (m_buffer == null)
             {
                 if (FileChunker != null)
                 {
-                    _buffer = FileChunker.GetBuffer(this);
+                    m_buffer = FileChunker.GetBuffer(this);
 
                     // once you extract, you can't go back (lol)
                     DetachChunker();
                 }
-                else if (TempFile != null)
+                else if (m_tempFile != null)
                 {
-                    var buf = new byte[_size];
-
-                    TempFile.Position = 0;
-                    TempFile.Read(buf, 0, _size);
-
-                    return buf;
+                    // retrieve buffer from temp file
+                    return m_tempFile.GetBuffer();
                 }
                 else
                 {
                     // return an empty buffer of '_size' length - what could POSSIBLY go wrong?
-                    return new byte[_size];
+                    return new byte[m_size];
                 }
             }
 
-            return _buffer;
+            return m_buffer;
         }
 
         /// <summary>
@@ -114,21 +95,18 @@ namespace DSCript.Spooling
         /// <returns>A local copy of the buffer.</returns>
         public byte[] GetBuffer()
         {
-            // intBuf = 'internal buffer'
-            // locBuf = 'local buffer'
-
-            var intBuf = GetBufferInternal();
+            var buffer = GetBufferInternal();
 
             // check if we're receiving an unattached buffer (temp file buffer, empty buffer, etc.)
-            if (_buffer == null)
-                return intBuf;
+            if (m_buffer == null)
+                return buffer;
 
-            var locBuf = new byte[_size];
+            var localBuf = new byte[m_size];
 
             // copy from existing buffer
-            Array.Copy(_buffer, locBuf, _size);
+            Array.Copy(m_buffer, localBuf, m_size);
 
-            return locBuf;
+            return localBuf;
         }
 
         /// <summary>
@@ -137,24 +115,23 @@ namespace DSCript.Spooling
         /// <param name="buffer">The buffer containing the new data.</param>
         public void SetBuffer(byte[] buffer)
         {
-            _size = (buffer != null) ? buffer.Length : 0;
+            m_size = (buffer != null) ? buffer.Length : 0;
 
-            if (_size > maxBufferSize)
+            // for large chunks of data, use a temp file
+            if (m_size > MaxBufferSize)
             {
-                if (TempFile == null)
-                    TempFile = File.Create(TempFileName);
+                GetTempFileReady();
 
-                TempFile.SetLength(_size);
+                m_tempFile.SetBuffer(buffer);
 
-                TempFile.Position = 0;
-                TempFile.Write(buffer, 0, _size);
-
-                _buffer = null;
+                // free up the buffer
+                // this will also let GetBufferInternal() know we're using a temp file
+                m_buffer = null;
             }
             else
             {
-                CleanupTempFile();
-                _buffer = buffer;
+                // use the buffer in memory
+                m_buffer = buffer;
             }
 
             // Don't forget to detach from the chunker
@@ -162,6 +139,7 @@ namespace DSCript.Spooling
 
             // set our dirty flag
             IsDirty = true;
+            IsModified = true;
         }
 
         /// <summary>
@@ -177,6 +155,9 @@ namespace DSCript.Spooling
         {
             ClearBuffer();
             EnsureDetach();
+
+            // lastly, release the temp file (if applicable)
+            ReleaseTempFile();
         }
 
         /// <summary>
@@ -184,22 +165,17 @@ namespace DSCript.Spooling
         /// </summary>
         public override int Size
         {
-            get { return _size; }
+            get { return m_size; }
         }
 
         public SpoolableBuffer()
         {
-            _size = 0;
+            m_size = 0;
         }
 
         public SpoolableBuffer(int size)
         {
-            _size = size;
-        }
-
-        ~SpoolableBuffer()
-        {
-            Dispose();
+            m_size = size;
         }
     }
 }

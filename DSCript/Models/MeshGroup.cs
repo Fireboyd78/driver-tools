@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Media.Media3D;
 
 namespace DSCript.Models
 {
@@ -17,9 +18,15 @@ namespace DSCript.Models
 
         public List<MeshDefinition> Meshes { get; set; }
 
-        public MeshGroup(int nMeshes)
+        public Point4D[] Transform { get; set; }
+        public Point4D Unknown { get; set; }
+
+        public MeshGroup()
         {
-            Meshes = new List<MeshDefinition>(nMeshes);
+            Meshes = new List<MeshDefinition>();
+
+            Transform = new Point4D[3];
+            Unknown = new Point4D();
         }
     }
 }

@@ -104,7 +104,7 @@
             this.mnNice,
             this.mnIstanbul});
             this.mnFile_Open.Name = "mnFile_Open";
-            this.mnFile_Open.Size = new System.Drawing.Size(103, 22);
+            this.mnFile_Open.Size = new System.Drawing.Size(152, 22);
             this.mnFile_Open.Text = "Open";
             // 
             // mnLoadFile
@@ -141,18 +141,19 @@
             // 
             this.mnFile_Save.Enabled = false;
             this.mnFile_Save.Name = "mnFile_Save";
-            this.mnFile_Save.Size = new System.Drawing.Size(103, 22);
+            this.mnFile_Save.Size = new System.Drawing.Size(152, 22);
             this.mnFile_Save.Text = "Save";
+            this.mnFile_Save.Click += new System.EventHandler(this.MenuSaveFile);
             // 
             // mnSep1
             // 
             this.mnSep1.Name = "mnSep1";
-            this.mnSep1.Size = new System.Drawing.Size(100, 6);
+            this.mnSep1.Size = new System.Drawing.Size(149, 6);
             // 
             // mnFile_Exit
             // 
             this.mnFile_Exit.Name = "mnFile_Exit";
-            this.mnFile_Exit.Size = new System.Drawing.Size(103, 22);
+            this.mnFile_Exit.Size = new System.Drawing.Size(152, 22);
             this.mnFile_Exit.Text = "Exit";
             // 
             // mnTools
@@ -161,13 +162,13 @@
             this.mnTools_LoadLocale});
             this.mnTools.Enabled = false;
             this.mnTools.Name = "mnTools";
-            this.mnTools.Size = new System.Drawing.Size(48, 19);
+            this.mnTools.Size = new System.Drawing.Size(47, 19);
             this.mnTools.Text = "Tools";
             // 
             // mnTools_LoadLocale
             // 
             this.mnTools_LoadLocale.Name = "mnTools_LoadLocale";
-            this.mnTools_LoadLocale.Size = new System.Drawing.Size(152, 22);
+            this.mnTools_LoadLocale.Size = new System.Drawing.Size(143, 22);
             this.mnTools_LoadLocale.Text = "Load locale...";
             this.mnTools_LoadLocale.Click += new System.EventHandler(this.LoadLocaleTool);
             // 

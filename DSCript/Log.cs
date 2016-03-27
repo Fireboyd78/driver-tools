@@ -6,7 +6,7 @@ using System.Text;
 
 namespace DSCript
 {
-    public sealed partial class DSC
+    public static partial class DSC
     {
         public static void Log(object str)
         {
@@ -29,7 +29,7 @@ namespace DSCript
         public static void Log(int level, string str)
         {
         #if DEBUG
-            Debugger.Log(level, "DSCript", String.Format("{0}\r\n", str));
+            Debugger.Log(level, "DSCript", $"{str}\r\n");
         #else
             return;
         #endif

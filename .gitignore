@@ -30,7 +30,7 @@ __DEV__/
 [Pp]rivate/
 [Dd]oc/
 */[Dd]oc/*.xml
-[Aa]rchive/
+[~][Aa]rchive/
 *.ps1
 *.psd
 

@@ -19,25 +19,25 @@ namespace System
         [Flags]
         public enum FileMapProtection : uint
         {
-            PageReadonly = 0x02,
-            PageReadWrite = 0x04,
-            PageWriteCopy = 0x08,
-            PageExecuteRead = 0x20,
-            PageExecuteReadWrite = 0x40,
-            SectionCommit = 0x8000000,
-            SectionImage = 0x1000000,
-            SectionNoCache = 0x10000000,
-            SectionReserve = 0x4000000,
+            PageReadonly            = 0x02,
+            PageReadWrite           = 0x04,
+            PageWriteCopy           = 0x08,
+            PageExecuteRead         = 0x20,
+            PageExecuteReadWrite    = 0x40,
+            SectionCommit           = 0x8000000,
+            SectionImage            = 0x1000000,
+            SectionNoCache          = 0x10000000,
+            SectionReserve          = 0x4000000,
         }
 
         [Flags]
         public enum FileMapAccess : uint
         {
-            FileMapCopy = 0x0001,
-            FileMapWrite = 0x0002,
-            FileMapRead = 0x0004,
-            FileMapAllAccess = 0x001f,
-            FileMapExecute = 0x0020,
+            FileMapCopy             = 0x0001,
+            FileMapWrite            = 0x0002,
+            FileMapRead             = 0x0004,
+            FileMapAllAccess        = 0x001f,
+            FileMapExecute          = 0x0020,
         }
 
         [DllImport("gdi32.dll")]

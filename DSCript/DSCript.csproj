@@ -1,60 +1,56 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProjectGuid>{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DSCript</RootNamespace>
     <AssemblyName>libDSC</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <!--
+    <!-- C# 6.0 -->
+    <LangVersion>6</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+  </PropertyGroup>
+  <Import Project="$(ProjectDir)..\DriverTools.Common.props" Condition=" Exists('$(ProjectDir)..\DriverTools.Common.Props') " />
+  <PropertyGroup>
+    <FileAlignment>4096</FileAlignment>
     <PlatformTarget>x86</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    
     <NoWarn>0164,1573,1591</NoWarn>
-    <DocumentationFile>doc\$(AssemblyName).xml</DocumentationFile>
     <ErrorReport>prompt</ErrorReport>
-    <FileAlignment>512</FileAlignment>
-    
     <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
-    -->
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\DSCript.Common.props" />
+  <!--<Import Project="$(SolutionDir)\DSCript.Common.props" />-->
   <ItemGroup>
-    <Reference Include="FreeImageNET, Version=3.15.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(LibPath)\FreeImage.NET\FreeImageNET.dll</HintPath>
+    <Reference Include="FreeImageNET">
+      <HintPath>$(FreeImageNETDir)FreeImageNET.dll</HintPath>
     </Reference>
-    <Reference Include="HelixToolkit.Wpf">
-      <HintPath>$(HelixToolkit)\HelixToolkit.Wpf.dll</HintPath>
-    </Reference>
-    <Reference Include="HelixToolkit.Wpf.Input">
-      <HintPath>$(HelixToolkit)\HelixToolkit.Wpf.Input.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="TDx.TDxInput">
-      <HintPath>$(HelixToolkit)\TDx.TDxInput.dll</HintPath>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configuration\DSCConfiguration.cs" />
     <Compile Include="Extensions\FileDialogExtensions.cs" />
     <Compile Include="Extensions\FreeImageAPI\FIBITMAPExtensions.cs" />
     <Compile Include="Extensions\SpoolableResourceExtensions.cs" />
@@ -64,11 +60,10 @@
     <Compile Include="Extensions\System\Windows\PointExtensions.cs" />
     <Compile Include="Helpers\BitmapHelper.cs" />
     <Compile Include="Helpers\BitmapSourceHelper.cs" />
-    <Compile Include="Helpers\ArrayHelper.cs" />
     <Compile Include="Helpers\DriverPL.cs" />
-    <Compile Include="Config.cs" />
-    <Compile Include="IniConfiguration.cs" />
-    <Compile Include="IniFile.cs" />
+    <Compile Include="DSC.cs" />
+    <Compile Include="Configuration\IniConfiguration.cs" />
+    <Compile Include="Configuration\IniFile.cs" />
     <Compile Include="IO\LocaleReader.cs" />
     <Compile Include="IO\MECFile.cs" />
     <Compile Include="Log.cs" />
@@ -89,13 +84,14 @@
     <Compile Include="IO\ModelFile.cs" />
     <Compile Include="IO\ObjFile.cs" />
     <Compile Include="Models\FVFType.cs" />
-    <Compile Include="Models\Hierarchy\AWHF.cs" />
-    <Compile Include="Models\Materials\PCMPMaterial.cs" />
-    <Compile Include="Models\Materials\PCMPSubMaterial.cs" />
-    <Compile Include="Models\Materials\PCMPTextureInfo.cs" />
+    <Compile Include="Models\Hierarchy\VehicleHierarchyData.cs" />
+    <Compile Include="Models\Materials\MaterialData.cs" />
+    <Compile Include="Models\Materials\SubstanceData.cs" />
+    <Compile Include="Models\Materials\TextureData.cs" />
     <Compile Include="Models\Materials\TextureFlags.cs" />
     <Compile Include="Models\ModelPackages\ModelPackageDSF.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
+    <Compile Include="Configuration\RegistryConfiguration.cs" />
     <Compile Include="Spooling\ChunkSchema.cs" />
     <Compile Include="Spooling\Templates.cs" />
     <Compile Include="Spooling\FileChunker.cs" />
@@ -106,15 +102,13 @@
     <Compile Include="Spooling\SpoolableResourceFactory.cs" />
     <Compile Include="Spooling\Spooler.cs" />
     <Compile Include="Spooling\SpoolerCollection.cs" />
-    <Compile Include="Stuntman\GUNVFile.cs" />
-    <Compile Include="Stuntman\PS2IMGFile.cs" />
+    <Compile Include="TempFile.cs" />
     <None Include="Models\ModelPackages\ModelPackagePC_X.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
     <Compile Include="Models\TextureCache.cs" />
     <Compile Include="Models\D3DPRIMITIVETYPE.cs" />
     <Compile Include="Models\IndexData.cs" />
     <Compile Include="Models\MeshDefinition.cs" />
-    <Compile Include="Models\Materials\PCMPData.cs" />
     <Compile Include="Models\PackageTypes.cs" />
     <Compile Include="Models\MeshGroup.cs" />
     <Compile Include="Models\ModelPackages\ModelPackage.cs" />
@@ -123,7 +117,7 @@
     <Compile Include="Models\Vertex.cs" />
     <Compile Include="Models\VertexData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Content Include="$(LibPath)\FreeImage\FreeImage.dll">
+    <Content Include="$(FreeImageDir)\FreeImage.dll" Condition="Exists('$(FreeImageDir)FreeImage.dll')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

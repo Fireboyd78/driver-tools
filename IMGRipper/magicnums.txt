@@ -55,6 +55,7 @@
 
 # FMV's
 [RXAV]="xmv" ;PS2 only
+0x2111966="sbn"
 
 # --------------- Driver: Parallel Lines --------------- #
 # Sound database

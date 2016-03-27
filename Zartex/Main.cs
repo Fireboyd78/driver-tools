@@ -12,10 +12,8 @@ using System.Text;
 using System.Windows.Forms;
 
 using DSCript;
-using DSCript.Legacy;
 
 using Zartex.MissionObjects;
-using Zartex.LogicExport;
 
 using Zartex.Settings;
 
@@ -28,7 +26,19 @@ namespace Zartex
     {
         string title;
 
-        MPCFile MissionPackage;
+        MissionScriptFile MissionPackage;
+
+        OpenFileDialog ScriptFile = new OpenFileDialog() {
+            Title = "Select a mission script",
+            Filter = "Mission Script|*.mpc;*.mps;*.mxb",
+            InitialDirectory = MPCFile.GetMissionScriptDirectory(),
+        };
+
+        OpenFileDialog LocaleFile = new OpenFileDialog() {
+            Title = "Select a mission locale file (optional)",
+            Filter = "Mission Locale (*.txt)|*.txt",
+            InitialDirectory = MPCFile.GetMissionLocaleDirectory()
+        };
 
         string Filename;
 
@@ -43,7 +53,7 @@ namespace Zartex
                 Configuration.Settings.InstallDirectory,
                 Configuration.Settings.Locale);
 
-            Console.WriteLine(MPCFile.MissionScriptDebug(77));
+            //Console.WriteLine(MPCFile.MissionScriptDebug(77));
 
             foreach (Control control in Controls.Find("LeftMenu", true)[0].Controls)
             {
@@ -63,6 +73,31 @@ namespace Zartex
             int missionID = (int)((ToolStripMenuItem)sender).Tag;
             //LoadScriptFile(MPCFile.GetMissionScriptFilepath(missionID));
             LoadScriptFile(missionID);
+        }
+
+        private void MenuSaveFile(object sender, EventArgs e)
+        {
+            var bakFile = MissionPackage.FileName + ".bak";
+            var idx = 0;
+
+            while (File.Exists(bakFile))
+                bakFile += ++idx;
+
+            File.Copy(MissionPackage.FileName, bakFile);
+
+            if (MissionPackage.Save())
+            {
+                var result = MessageBox.Show(String.Format("Successfully saved to \"{0}\"!", MissionPackage.FileName),
+                    "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                if (result == DialogResult.OK)
+                    LoadScriptFile(MissionPackage.FileName);
+            }
+            else
+            {
+                MessageBox.Show("File save failed! Not sure why this happened...",
+                    "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         public void PopulateMainMenu()
@@ -227,6 +262,7 @@ namespace Zartex
 
         private void GenerateExportedMissionObjects()
         {
+            /*
             InspectorWidget Widget = new InspectorWidget();
             TreeView Nodes = Widget.Nodes;
 
@@ -249,8 +285,10 @@ namespace Zartex
             SafeAddControl(Widget);
 
             Cursor = Cursors.Default;
+            */
         }
 
+        /*
         private void GenerateWireCollection()
         {
             // Get widget ready
@@ -307,130 +345,258 @@ namespace Zartex
             
             Cursor = Cursors.Default;
         }
+        */
 
-        private void CreateNodes(IList<LogicDefinition> definition)
+        private void AddNodeProperty(TreeNode node, NodeProperty prop)
+        {
+            var propName = MissionPackage.MissionData.LogicExportData.StringCollection[prop.StringId];
+
+            if (prop is IntegerProperty)
+            {
+                var value = (int)prop.Value;
+
+                if (value > -1)
+                {
+                    switch (prop.OpCode)
+                    {
+                    case 7:
+                        var actor = MissionPackage.MissionData.LogicExportData.Actors[value];
+                        var actorName = NodeTypes.GetActorType(actor.OpCode);
+                        var actorText = MissionPackage.MissionData.LogicExportData.StringCollection[actor.StringId];
+
+                        if (actorText != "Unknown" && actorText != "Unnamed")
+                            actorName = String.Format("{0} \"{1}\"", actorName, MissionPackage.MissionData.LogicExportData.StringCollection[actor.StringId]);
+
+                        propName = String.Format("{0}: <[{1}]: {2}>", propName, value, actorName);
+                        break;
+                    case 19:
+                        var wires = MissionPackage.MissionData.LogicExportData.WireCollection[value].Wires;
+
+                        // skip empty wire collection properties
+                        if (wires.Count == 0)
+                            return;
+
+                        break;
+                    case 20:
+                        if (MissionPackage.HasLocaleString(value))
+                            propName = String.Format("{0} -> \"{1}\"", propName, MissionPackage.GetLocaleString(value));
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                switch (prop.OpCode)
+                {
+                case 3:
+                case 8:
+                    {
+                        var strId = (short)prop.Value;
+                        propName = String.Format("{0} -> \"{1}\"", propName, MissionPackage.MissionData.LogicExportData.StringCollection[(short)prop.Value]);
+
+                        if (prop.OpCode == 8)
+                            propName = String.Format("{0}, {1}", propName, ((AIPersonalityProperty)prop).PersonalityIndex);
+                    } break;
+                }
+            }
+
+            var propNode = new TreeNode() {
+                Text = propName,
+                Tag = prop
+            };
+
+            // Add property node to main node
+            node.Nodes.Add(propNode);
+        }
+
+        private void StyleNode(TreeNode node, NodeDefinition def)
+        {
+            var text = (def is ActorDefinition) ? NodeTypes.GetActorType(def.OpCode) : NodeTypes.GetNodeType(def.OpCode);
+            var name = MissionPackage.MissionData.LogicExportData.StringCollection[def.StringId];
+
+            if (name != "Unknown" && name != "Unnamed")
+                text = String.Format("{0} \"{1}\"", text, name);
+
+            node.Text = text;
+        }
+        
+        private void StyleWireNode(TreeNode node, TreeNode defNode, WireNode wire)
+        {
+            node.Text = String.Format("{0}: <{1}>", wire.GetWireNodeType(), defNode.Text);
+        }
+
+        private TreeNode CreateNode(NodeDefinition def)
+        {
+            var node = new TreeNode() {
+                BackColor = def.Color,
+                Tag = def
+            };
+
+            StyleNode(node, def);
+
+            foreach (var prop in def.Properties)
+                AddNodeProperty(node, prop);
+
+            return node;
+        }
+
+        private void CreateNodes<T>(List<T> definitions)
+            where T : NodeDefinition
         {
             // Get widget ready
-            InspectorWidget LogicWidget = new InspectorWidget();
-            TreeView Nodes = LogicWidget.Nodes;
+            var inspector = new InspectorWidget();
+            var nodes = inspector.Nodes;
+
+            inspector.Nodes.NodeMouseDoubleClick += (o, e) => {
+                var tag = e.Node.Tag;
+
+                if (tag is ActorProperty)
+                {
+                    var prop = tag as ActorProperty;
+
+                    if (prop.Value == -1)
+                        return;
+
+                    if (e.Node.Nodes.Count == 0)
+                    {
+                        var actor = MissionPackage.MissionData.LogicExportData.Actors[prop.Value] as ActorDefinition;
+                        
+                        foreach (var actorProp in actor.Properties)
+                            AddNodeProperty(e.Node, actorProp);
+
+                        e.Node.Expand();
+                    }
+                    else
+                    {
+                        e.Node.Nodes.Clear();
+                    }
+                }
+            };
+
+            inspector.Nodes.NodeMouseClick += (o, e) => {
+                if (e.Button == MouseButtons.Right)
+                {
+                    var node = e.Node;
+                    var tag = e.Node.Tag;
+                    
+                    if (tag is NodeDefinition)
+                    {
+                        var def = tag as NodeDefinition;
+
+                        Form prompt = new Form() {
+                            Width   = 500,
+                            Height  = 150,
+
+                            FormBorderStyle = FormBorderStyle.FixedDialog,
+                            StartPosition = FormStartPosition.CenterScreen,
+
+                            Text = "Name"
+                        };
+
+                        Label textLabel = new Label() {
+                            Left    = 50,
+                            Top     = 20,
+
+                            Text = "Enter a new name:"
+                        };
+                        
+                        TextBox textBox = new TextBox() {
+                            Left    = 50,
+                            Top     = 50,
+
+                            Width   = 400,
+
+                            SelectedText = MissionPackage.MissionData.LogicExportData.StringCollection[def.StringId]
+                        };
+
+                        Button confirmation = new Button() {
+                            Left    = 350,
+                            Top     = 70,
+
+                            Width   = 100,
+                            DialogResult = DialogResult.OK,
+
+                            Text = "Ok"
+                        };
+
+                        confirmation.Click += (sender, ee) => { prompt.Close(); };
+
+                        prompt.Controls.Add(textBox);
+                        prompt.Controls.Add(confirmation);
+                        prompt.Controls.Add(textLabel);
+                        prompt.AcceptButton = confirmation;
+
+                        if (prompt.ShowDialog() == DialogResult.OK)
+                        {
+                            def.StringId = (short)MissionPackage.MissionData.LogicExportData.StringCollection.AppendString(textBox.Text);
+
+                            StyleNode(node, def);
+                            node.Text = String.Format("[{0}]: {1}", nodes.Nodes.IndexOf(node), node.Text);
+                        }
+                    }
+                }
+            };
 
             Cursor = Cursors.WaitCursor;
-
-            int nodeCount = definition.Count;
-
-            IDictionary<int, string> opcodes =
-                (definition[0].Properties[0].Opcode == 19)
-                ? LogicData.Types.NodeDefinitionTypes
-                : LogicData.Types.ActorDefinitionTypes;
-
+            
+            var count = definitions.Count;
+            
             // Build main nodes
-            for (int i = 0; i < nodeCount; i++)
+            for (int i = 0; i < count; i++)
             {
-                LogicDefinition def = definition[i];
+                var def = definitions[i];
+                var node = CreateNode(def);
 
-                string strName = MissionPackage.StringCollection[def.StringId];
-                string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
-                string opcodeName = opcodes.ContainsKey(def.Opcode) ? opcodes[def.Opcode] : def.Opcode.ToString();
-
-                TreeNode node = new TreeNode() {
-                    BackColor = Color.FromArgb(def.A, def.R, def.G, def.B),
-                    Text = String.Format("{0}: {1} {2}", i, opcodeName, nodeName),
-                    Tag = def
-                };
-
-                // Build property (sub) nodes
-                for (int p = 0; p < def.Properties.Count; p++)
-                {
-                    LogicProperty prop = def.Properties[p];
-
-                    if (prop.Opcode == 19 && MissionPackage.WireCollections[(int)prop.Value].Count == 0)
-                        continue;
-
-                    string propName = MissionPackage.StringCollection[prop.StringId];
-
-                    if (prop.Opcode == 20 && MissionPackage.HasLocale)
-                    {
-                        int val = (int)prop.Value;
-                        string localeStr = (!MissionPackage.LocaleStrings.ContainsKey(val)) ? "<NULL>" : String.Format("\"{0}\"", MissionPackage.LocaleStrings[val]);
-
-                        propName = String.Format("{0} -> {1}", propName, localeStr);
-                    }
-                    if (prop.Opcode == 7 && ((int)prop.Value) > -1)
-                    {
-                        int val = MissionPackage.ActorDefinitions[(int)prop.Value].Opcode;
-
-                        propName = String.Format("{0} -> {1}", propName, ((LogicData.Types.ActorDefinitionTypes.ContainsKey(val)) ? LogicData.Types.ActorDefinitionTypes[val] : prop.Value.ToString()));
-                    }
-
-                    TreeNode property = new TreeNode() {
-                        Text = propName,
-                        Tag = prop
-                    };
-
-                    // Add property node to main node
-                    node.Nodes.Add(property);
-                }
-
+                node.Text = String.Format("[{0}]: {1}", i, node.Text);
+                
                 // Add main node to master node list
-                Nodes.Nodes.Add(node);
+                nodes.Nodes.Add(node);
             }
 
             // Load wires (logic nodes only)
-            for (int i = 0; i < nodeCount; i++)
+            for (int i = 0; i < count; i++)
             {
-                LogicDefinition def = definition[i];
+                var def = definitions[i];
 
                 // Skip actor definitions
                 if (def is ActorDefinition)
                     break;
 
-                LogicProperty prop = def.Properties[0];
+                var prop = def.Properties[0];
+                var node = nodes.Nodes[i];
 
-                var nodeWireCollection = Nodes.Nodes[i];
-
-                if (nodeWireCollection.Nodes.Count > 0)
-                    nodeWireCollection = nodeWireCollection.Nodes[0];
-                else
+                if (node.Nodes.Count == 0)
                     continue;
 
-                int wireId = (int)prop.Value;
+                node = node.Nodes[0]; // pWireCollection
+                
+                var wireId = (int)prop.Value;
 
-                var wires = MissionPackage.WireCollections[wireId];
-                int nWires = wires.Count;
-
-                for (int w = 0; w < nWires; w++)
+                foreach (var wire in MissionPackage.MissionData.LogicExportData.WireCollection.WireCollections[wireId].Wires)
                 {
-                    var wire = wires.Entries[w];
-                    var defNode = Nodes.Nodes[wire.NodeId];
+                    var defNode = nodes.Nodes[wire.NodeId];
 
-                    // int wireTypeId = definition[wire.NodeId].StringId;
-
-                    // string strName = MissionPackage.StringCollection[wireTypeId];
-                    // string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
-                    // string opcodeName = opcodes.ContainsKey(wire.Opcode) ? opcodes[wire.Opcode] : wire.Opcode.ToString();
-
-                    TreeNode wireNode = new TreeNode() {
+                    var wireNode = new TreeNode() {
                         BackColor = defNode.BackColor,
-                        Text = defNode.Text,
                         Tag = wire
                     };
 
-                    nodeWireCollection.Nodes.Add(wireNode);
-                    //LogicNodes.Nodes[i].Nodes[0].Collapse(false);
+                    StyleWireNode(wireNode, defNode, wire);
+
+                    node.Nodes.Add(wireNode);
                 }
             }
 
-            Nodes.ExpandAll();
+            nodes.ExpandAll();
 
-            SafeAddControl(LogicWidget);
+            SafeAddControl(inspector);
             
             Cursor = Cursors.Default;
         }
 
-
         private void GenerateLogicNodes()
         {
-            CreateNodes(MissionPackage.LogicNodeDefinitions);
+            CreateNodes(MissionPackage.MissionData.LogicExportData.Nodes.Definitions);
             //CreateLogicNodesFlowgraph(MissionPackage.LogicNodeDefinitions);
 
             // // Nest wires
@@ -452,24 +618,24 @@ namespace Zartex
 
         private void GenerateActors()
         {
-            CreateNodes(MissionPackage.ActorDefinitions);
+            CreateNodes(MissionPackage.MissionData.LogicExportData.Actors.Definitions);
         }
 
-        public void GenerateDefinition(FlowgraphWidget flowgraph, LogicDefinition def, int x, int y)
+        public void GenerateDefinition(FlowgraphWidget flowgraph, NodeDefinition def, int x, int y)
         {
             IDictionary<int, string> opcodes =
-                (def.Properties[0].Opcode == 19)
-                ? LogicData.Types.NodeDefinitionTypes
-                : LogicData.Types.ActorDefinitionTypes;
+                (def.Properties[0].OpCode == 19)
+                ? NodeTypes.LogicNodeTypes
+                : NodeTypes.ActorNodeTypes;
 
-            string strName = MissionPackage.StringCollection[def.StringId];
+            string strName = MissionPackage.MissionData.LogicExportData.StringCollection[def.StringId];
             string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
-            string opcodeName = opcodes.ContainsKey(def.Opcode) ? opcodes[def.Opcode] : def.Opcode.ToString();
+            string opcodeName = opcodes.ContainsKey(def.OpCode) ? opcodes[def.OpCode] : def.OpCode.ToString();
 
             NodeWidget node = new NodeWidget() {
                 Flowgraph = flowgraph,
                 //BackColor = Color.FromArgb(def.Byte4, def.Byte1, def.Byte2, def.Byte3),
-                HeaderText = String.Format("{0}: {1} {2}", MissionPackage.LogicNodeDefinitions.IndexOf(def), opcodeName, nodeName),
+                HeaderText = String.Format("{0}: {1} {2}", MissionPackage.MissionData.LogicExportData.Nodes.Definitions.IndexOf(def), opcodeName, nodeName),
                 Left = x,
                 Top = y,
                 Tag = def
@@ -484,9 +650,9 @@ namespace Zartex
 
             for (int p = 0; p < def.Properties.Count; p++)
             {
-                LogicProperty prop = def.Properties[p];
+                NodeProperty prop = def.Properties[p];
 
-                string propName = MissionPackage.StringCollection[prop.StringId];
+                string propName = MissionPackage.MissionData.LogicExportData.StringCollection[prop.StringId];
 
                 // if (prop.Opcode == 20 && MissionPackage.HasLocale)
                 // {
@@ -528,7 +694,7 @@ namespace Zartex
             x = oldX;
         }
 
-        public void CreateLogicNodesFlowgraph(IList<LogicDefinition> definition)
+        public void CreateLogicNodesFlowgraph(IList<NodeDefinition> definition)
         {
             InspectorWidget Widget = new InspectorWidget();
 
@@ -549,9 +715,9 @@ namespace Zartex
             int nodeCount = definition.Count;
 
             IDictionary<int, string> opcodes =
-                (definition[0].Properties[0].Opcode == 19)
-                ? LogicData.Types.NodeDefinitionTypes
-                : LogicData.Types.ActorDefinitionTypes;
+                (definition[0].Properties[0].OpCode == 19)
+                ? NodeTypes.LogicNodeTypes
+                : NodeTypes.ActorNodeTypes;
 
             int x = 3, y = 6;
 
@@ -569,15 +735,15 @@ namespace Zartex
 
                 int oldY = y;
 
-                for (int w = 0; w < MissionPackage.WireCollections[wireId].Count; w++)
+                for (int w = 0; w < MissionPackage.MissionData.LogicExportData.WireCollection[wireId].Wires.Count; w++)
                 {
                     Flowgraph.Nodes[i].Left = x;
                     Flowgraph.Nodes[i].Top = y;
 
-                    Flowgraph.Nodes[MissionPackage.WireCollections[wireId].Entries[w].NodeId].Left = x + Flowgraph.Nodes[i].Left + 235;
-                    Flowgraph.Nodes[MissionPackage.WireCollections[wireId].Entries[w].NodeId].Top = y + Flowgraph.Nodes[i].Top;
+                    Flowgraph.Nodes[MissionPackage.MissionData.LogicExportData.WireCollection[wireId][w].NodeId].Left = x + Flowgraph.Nodes[i].Left + 235;
+                    Flowgraph.Nodes[MissionPackage.MissionData.LogicExportData.WireCollection[wireId][w].NodeId].Top = y + Flowgraph.Nodes[i].Top;
 
-                    Flowgraph.LinkNodes(Flowgraph.Nodes[i], Flowgraph.Nodes[MissionPackage.WireCollections[wireId].Entries[w].NodeId]);
+                    Flowgraph.LinkNodes(Flowgraph.Nodes[i], Flowgraph.Nodes[MissionPackage.MissionData.LogicExportData.WireCollection[wireId][w].NodeId]);
 
                     y += 75;
                 }
@@ -687,8 +853,8 @@ namespace Zartex
 
             Cursor = Cursors.WaitCursor;
 
-            for (int i = 0; i < MissionPackage.StringCollection.Count; i++)
-                DataGrid.Rows.Add(i, MissionPackage.StringCollection[i]);
+            for (int i = 0; i < MissionPackage.MissionData.LogicExportData.StringCollection.Count; i++)
+                DataGrid.Rows.Add(i, MissionPackage.MissionData.LogicExportData.StringCollection[i]);
 
             SafeAddControl(DataGridWidget);
 
@@ -697,49 +863,49 @@ namespace Zartex
 
         private void GenerateActorSetTable()
         {
-            DataGridWidget DataGridWidget = new DataGridWidget();
-            DataGridView DataGrid = DataGridWidget.DataGridView;
-
-            Cursor = Cursors.WaitCursor;
-
-            for (int i = 0; i < MissionPackage.ActorSetTable.Count; i++)
-                DataGrid.Rows.Add(i, MissionPackage.ActorSetTable[i]);
-
-            SafeAddControl(DataGridWidget);
-
-            Cursor = Cursors.Default;
+            //DataGridWidget DataGridWidget = new DataGridWidget();
+            //DataGridView DataGrid = DataGridWidget.DataGridView;
+            //
+            //Cursor = Cursors.WaitCursor;
+            //
+            //for (int i = 0; i < MissionPackage.ActorSetTable.Count; i++)
+            //    DataGrid.Rows.Add(i, MissionPackage.ActorSetTable[i]);
+            //
+            //SafeAddControl(DataGridWidget);
+            //
+            //Cursor = Cursors.Default;
         }
 
         private void LoadScriptFile(int missionId)
         {
-            MissionPackage = new MPCFile(missionId);
-            Filename = MissionPackage.Filename;
-
-            InitTools();
+            //MissionPackage = new Mission(missionId);
+            //Filename = MissionPackage.Filename;
+            //
+            //InitTools();
         }
 
         private void LoadScriptFile(string filename)
         {
             Filename = filename;
-            MissionPackage = new MPCFile(Filename);
+            MissionPackage = new MissionScriptFile(Filename);
 
             InitTools();
         }
 
         private void LoadScriptFile(int missionId, string localeFile)
         {
-            MissionPackage = new MPCFile(missionId, localeFile);
-            Filename = MissionPackage.Filename;
-
-            InitTools();
+            //MissionPackage = new MPCFile(missionId, localeFile);
+            //Filename = MissionPackage.Filename;
+            //
+            //InitTools();
         }
 
         private void LoadScriptFile(string filename, string localeFile)
         {
-            Filename = filename;
-            MissionPackage = new MPCFile(Filename, localeFile);
-
-            InitTools();
+            //Filename = filename;
+            //MissionPackage = new MPCFile(Filename, localeFile);
+            //
+            //InitTools();
         }
 
         private void InitTools()
@@ -767,12 +933,7 @@ namespace Zartex
             Content.Controls.Add(control);
             Content.ResumeLayout(true);
         }
-
-        private void GetChunkData(SubChunkBlock subChunk)
-        {
-            
-        }
-
+        
         private void ChunkButtonClick(Button button, int magic)
         {
             if (MissionPackage != null && MissionPackage.IsLoaded)
@@ -797,7 +958,7 @@ namespace Zartex
                     GenerateLogicNodes();
                     break;
                 case ChunkType.LogicExportWireCollections:
-                    GenerateWireCollection();
+                    //GenerateWireCollection();
                     break;
                 default:
                     MessageBox.Show("Not implemented!");
@@ -809,52 +970,32 @@ namespace Zartex
             else
                 MessageBox.Show("No mission loaded!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
         }
-
-        private OpenFileDialog GetMissionScriptFile()
-        {
-            return new OpenFileDialog() {
-                Title = "Select a mission script",
-                Filter = "Mission Script (*.mpc)|*.mpc",
-                InitialDirectory = MPCFile.GetMissionScriptDirectory()
-            };
-        }
-
-        private OpenFileDialog GetMissionLocaleFile()
-        {
-            return new OpenFileDialog() {
-                Title = "Select a mission locale file (optional)",
-                Filter = "Mission Locale (*.txt)|*.txt",
-                InitialDirectory = MPCFile.GetMissionLocaleDirectory()
-            };
-        }
-
+        
         private void MenuLoadFile(object sender, EventArgs e)
         {
-            OpenFileDialog ScriptFile = GetMissionScriptFile();
-
-            if (ScriptFile.ShowDialog() == DialogResult.OK)
+            var result = ScriptFile.ShowDialog();
+            
+            if (result == DialogResult.OK)
             {
-                OpenFileDialog LocaleFile = GetMissionLocaleFile();
+                ScriptFile.InitialDirectory = Path.GetDirectoryName(ScriptFile.FileName);
 
-                if (LocaleFile.ShowDialog() == DialogResult.OK)
-                    LoadScriptFile(ScriptFile.FileName, LocaleFile.FileName);
-                else
-                    LoadScriptFile(ScriptFile.FileName);
+                LoadScriptFile(ScriptFile.FileName);
+                mnFile_Save.Enabled = true;
             }
         }
 
         private void LoadLocaleTool(object sender, EventArgs e)
         {
-            OpenFileDialog LocaleOpen = new OpenFileDialog() {
-                InitialDirectory = MPCFile.GetMissionLocaleDirectory(),
-                Filter = "Mission Locale (*.txt)|*.txt"
-            };
-
-            if (LocaleOpen.ShowDialog() == DialogResult.OK)
-            {
-                MissionPackage.LoadLocaleFile(LocaleOpen.FileName);
-                GenerateLogicNodes();
-            }
+            //OpenFileDialog LocaleOpen = new OpenFileDialog() {
+            //    InitialDirectory = MPCFile.GetMissionLocaleDirectory(),
+            //    Filter = "Mission Locale (*.txt)|*.txt"
+            //};
+            //
+            //if (LocaleOpen.ShowDialog() == DialogResult.OK)
+            //{
+            //    MissionPackage.LoadLocaleFile(LocaleOpen.FileName);
+            //    GenerateLogicNodes();
+            //}
         }
 
         private void onPaintFlowgraph(object sender, PaintEventArgs e)

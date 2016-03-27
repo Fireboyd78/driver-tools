@@ -1,34 +1,39 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{614EF28C-7366-49F1-8996-F0FCA85E33E9}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Zartex</RootNamespace>
     <AssemblyName>Zartex</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <Install>true</Install>
-    <InstallFrom>Disk</InstallFrom>
-    <UpdateEnabled>false</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\DSCript.Common.props" />
+  <Import Project="$(ProjectDir)..\DriverTools.Common.props" Condition=" Exists('$(ProjectDir)..\DriverTools.Common.Props') " />
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <ErrorReport>prompt</ErrorReport>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineConstants>TRACE;DEBUG;log</DefineConstants>
+    <Optimize>false</Optimize>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -43,6 +48,11 @@
     <Reference Include="System.Windows.Forms.DataVisualization.Design" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="Microsoft.CSharp" />
+    <ProjectReference Include="..\DSCript\DSCript.csproj">
+      <Name>DSCript</Name>
+      <Project>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions\BinaryReaderExtensions.cs" />
@@ -65,30 +75,41 @@
     <Compile Include="InspectorWidget.Designer.cs">
       <DependentUpon>InspectorWidget.cs</DependentUpon>
     </Compile>
-    <Compile Include="LogicExport\LogicData\Types.cs" />
+    <Compile Include="MissionScript\LogicExport\NodeTypes.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Main.Designer.cs">
       <DependentUpon>Main.cs</DependentUpon>
     </Compile>
+    <Compile Include="MissionScript\ExportedMission.cs" />
+    <Compile Include="MissionScript\LogicExportData.cs" />
+    <Compile Include="MissionScript\LogicExport\ActorDefinition.cs" />
+    <Compile Include="MissionScript\LogicExport\LogicDataCollection.cs" />
+    <Compile Include="MissionScript\LogicExport\NodeDefinition.cs" />
+    <Compile Include="MissionScript\LogicExport\StringCollectionData.cs" />
+    <Compile Include="MissionScript\LogicExport\WireCollection.cs" />
+    <Compile Include="MissionScript\LogicExport\WireCollectionData.cs" />
+    <Compile Include="MissionScript\LogicExport\WireNode.cs" />
+    <Compile Include="MissionScript\LogicExport\WireNodeType.cs" />
+    <Compile Include="MissionScript\MissionScriptFile.cs" />
+    <Compile Include="MissionScript\MissionSummaryData.cs" />
     <Compile Include="MPC.cs" />
-    <Compile Include="LogicExport\LogicData\Definition.cs" />
-    <Compile Include="LogicExport\LogicData\Property.cs" />
-    <Compile Include="LogicExport\WireCollection.cs" />
-    <Compile Include="MissionObjects\IMissionObject.cs" />
-    <Compile Include="MissionObjects\Types\0x1.cs" />
-    <Compile Include="MissionObjects\Types\0x2.cs" />
-    <Compile Include="MissionObjects\Types\0x3.cs" />
-    <Compile Include="MissionObjects\Types\0x4.cs" />
-    <Compile Include="MissionObjects\Types\0x5.cs" />
-    <Compile Include="MissionObjects\Types\0x6.cs" />
-    <Compile Include="MissionObjects\Types\0x7.cs" />
-    <Compile Include="MissionObjects\Types\0x8.cs" />
-    <Compile Include="MissionObjects\Types\0x9.cs" />
-    <Compile Include="MissionObjects\Types\0xA.cs" />
-    <Compile Include="MissionObjects\Types\0xB.cs" />
-    <Compile Include="MissionObjects\Types\0xC.cs" />
+    <Compile Include="MissionScript\LogicExport\NodeProperty.cs" />
+    <Compile Include="MissionScript\MissionObjects\IMissionObject.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x1.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x2.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x3.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x4.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x5.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x6.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x7.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x8.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0x9.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0xA.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0xB.cs" />
+    <Compile Include="MissionScript\MissionObjects\Types\0xC.cs" />
+    <Compile Include="MissionScript\LogicExport\NodeColor.cs" />
     <Compile Include="NodeWidget.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -97,7 +118,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MissionObjects\ContainerBlock.cs" />
+    <Compile Include="MissionScript\MissionObjects\ContainerBlock.cs" />
     <Compile Include="Vector.cs" />
     <Compile Include="PropertySorter.cs" />
     <Compile Include="TypeConverters.cs" />
@@ -142,34 +163,6 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <BootstrapperPackage Include=".NETFramework,Version=v4.0">
-      <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4 %28x86 and x64%29</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
-      <Visible>False</Visible>
-      <ProductName>.NET Framework 3.5 SP1</ProductName>
-      <Install>false</Install>
-    </BootstrapperPackage>
-    <BootstrapperPackage Include="Microsoft.Windows.Installer.4.5">
-      <Visible>False</Visible>
-      <ProductName>Windows Installer 4.5</ProductName>
-      <Install>true</Install>
-    </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="$(SolutionDir)\DSCript\DSCript.csproj">
-      <Project>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</Project>
-      <Name>DSCript</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

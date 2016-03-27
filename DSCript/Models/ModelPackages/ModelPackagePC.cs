@@ -12,277 +12,938 @@ using System.Windows.Media.Media3D;
 
 namespace DSCript.Models
 {
+    public enum MeshType
+    {
+        // Driv3r (PC), DPL (Xbox/PC)
+        Default,
+        // Driv3r (Xbox)
+        Small
+    }
+    
+    public struct ModelPackageData
+    {
+        public struct ModelDefinition
+        {
+            public int UID;
+            public int Handle;
+            
+            public short VertexBufferId;
+
+            public short Unknown1;
+            public short Unknown2;
+
+            public int Unknown3;
+        }
+
+        public readonly int Version;
+
+        public int UID;
+
+        public int PartsCount;
+        public int PartsOffset;
+
+        public int MeshGroupsCount;
+        public int MeshGroupsOffset;
+
+        public int MeshesCount;
+        public int MeshesOffset;
+
+        public int TextureDataOffset;
+        public int MaterialDataOffset;
+
+        public int IndicesCount;
+        public int IndicesLength;
+        public int IndicesOffset;
+
+        public int VertexDeclsCount;
+        public int VertexDeclsOffset;
+        
+        public MeshType MeshType;
+
+        public void SetMeshType(MeshType type)
+        {
+            MeshType = type;
+        }
+
+        public int PartSize
+        {
+            get
+            {
+                switch (Version)
+                {
+                case 1:
+                case 9:
+                    return 0x14C;
+                case 6:
+                    return 0x188;
+                }
+                return 0;
+            }
+        }
+
+        public int LODSize
+        {
+            get
+            {
+                switch (Version)
+                {
+                case 1:
+                case 9:
+                    return 0x18;
+                case 6:
+                    return 0x20;
+                }
+                return 0;
+            }
+        }
+
+        public int MeshGroupSize
+        {
+            get
+            {
+                switch (Version)
+                {
+                case 1:
+                case 9:
+                    return 0x4E;
+
+                case 6:
+                    return 0x58;
+                }
+                return 0;
+            }
+        }
+
+        public int MeshSize
+        {
+            get
+            {
+                switch (MeshType)
+                {
+                case MeshType.Default:
+                    return 0x38;
+
+                case MeshType.Small:
+                    return 0x18;
+                }
+                return 0;
+            }
+        }
+
+        public int VertexDeclSize
+        {
+            get
+            {
+                switch (Version)
+                {
+                case 1:
+                case 9:
+                    return 0x20;
+
+                case 6:
+                    return 0x1C;
+                }
+                return 0;
+            }
+        }
+
+        public int GetSizeOfParts()
+        {
+            return PartsCount * PartSize;
+        }
+
+        public int GetSizeOfMeshGroups()
+        {
+            return MeshGroupsCount * MeshGroupSize;
+        }
+
+        public int GetSizeOfMeshes()
+        {
+            return MeshesCount * MeshSize;
+        }
+
+        public int GetSizeOfVertexDecls()
+        {
+            return VertexDeclsCount * VertexDeclSize;
+        }
+
+        public int GetVertexBuffersOffset()
+        {
+            return Memory.Align(IndicesOffset + IndicesLength, 4096);
+        }
+
+        public void ReadHeader(Stream stream)
+        {
+            if (stream.ReadInt32() != Version)
+                throw new Exception("Bad version, cannot load ModelPackage!");
+
+            UID = stream.ReadInt32();
+
+            PartsCount = stream.ReadInt32();
+            PartsOffset = stream.ReadInt32();
+
+            MeshGroupsCount = stream.ReadInt32();
+            MeshGroupsOffset = stream.ReadInt32();
+
+            MeshesCount = stream.ReadInt32();
+            MeshesOffset = stream.ReadInt32();
+
+            stream.Position += 0x8;
+
+            TextureDataOffset = stream.ReadInt32();
+            MaterialDataOffset = stream.ReadInt32();
+
+            IndicesCount = stream.ReadInt32();
+            IndicesLength = stream.ReadInt32();
+            IndicesOffset = stream.ReadInt32();
+
+            VertexDeclsCount = stream.ReadInt32();
+            VertexDeclsOffset = stream.ReadInt32();
+        }
+
+        public void WriteHeader(Stream stream)
+        {
+            stream.Write(Version);
+
+            stream.Write(UID);
+
+            stream.Write(PartsCount);
+            stream.Write(PartsOffset);
+
+            stream.Write(MeshGroupsCount);
+            stream.Write(MeshGroupsOffset);
+
+            stream.Write(MeshesCount);
+            stream.Write(MeshesOffset);
+
+            if (Version == 6)
+            {
+                // legacy support (not actually used in-game)
+                stream.Write((UID & 0xFFFF) | (0x4B4D << 16));
+                stream.Write(0);
+            }
+            else
+            {
+                // quick way to write 8-bytes
+                stream.Write((long)0);
+            }
+
+            stream.Write(TextureDataOffset);
+            stream.Write(MaterialDataOffset);
+
+            stream.Write(IndicesCount);
+            stream.Write(IndicesLength);
+            stream.Write(IndicesOffset);
+
+            stream.Write(VertexDeclsCount);
+            stream.Write(VertexDeclsOffset);
+        }
+
+        public ModelPackageData(int version)
+        {
+            Version = version;
+
+            UID = 0;
+
+            PartsCount = 0;
+            PartsOffset = 0;
+
+            MeshGroupsCount = 0;
+            MeshGroupsOffset = 0;
+
+            MeshesCount = 0;
+            MeshesOffset = 0;
+
+            TextureDataOffset = 0;
+            MaterialDataOffset = 0;
+
+            IndicesCount = 0;
+            IndicesLength = 0;
+            IndicesOffset = 0;
+
+            VertexDeclsCount = 0;
+            VertexDeclsOffset = 0;
+
+            MeshType = MeshType.Default;
+        }
+
+        public ModelPackageData(int version, int uid, int nParts, int nGroups, int nMeshes, int nIndices, int nVertexDecls, MeshType meshType)
+            : this(version)
+        {
+            // we need this to calculate the size of meshes
+            MeshType = meshType;
+
+            Version = version;
+            UID = uid;
+
+            PartsCount = nParts;
+            PartsOffset = Memory.Align(0x44, 128);
+
+            // only calculate offsets if there's model data
+            if (PartsCount > 0)
+            {
+                MeshGroupsCount = nGroups;
+                MeshGroupsOffset = Memory.Align(PartsOffset + (PartsCount * PartSize), 128);
+
+                MeshesCount = nMeshes;
+                MeshesOffset = MeshGroupsOffset + (MeshGroupsCount * MeshGroupSize);
+
+                IndicesCount = nIndices;
+                IndicesLength = IndicesCount * sizeof(short);
+
+                VertexDeclsCount = nVertexDecls;
+                VertexDeclsOffset = Memory.Align(MeshesOffset + (MeshesCount * MeshSize), 128);
+
+                IndicesOffset = VertexDeclsOffset + (VertexDeclsCount * VertexDeclSize);
+            }
+        }
+
+        public ModelPackageData(int version, int uid, int nParts, int nGroups, int nMeshes, int nIndices, int nVertexDecls)
+            : this(version, uid, nParts, nGroups, nMeshes, nIndices, nVertexDecls, MeshType.Default)
+        {
+
+        }
+
+        public ModelPackageData(int version, int uid)
+            : this(version, uid, 0, 0, 0, 0, 0)
+        {
+
+        }
+
+        public ModelPackageData(int version, Stream stream) : this(version)
+        {
+            ReadHeader(stream);
+        }
+    }
+
+    public enum MaterialPackageType : int
+    {
+        PC      = 0x504D4350,   // 'PCMP'
+        PS2     = 0x32435354,   // 'TSC2'
+        Xbox    = 0x504D4258,   // 'XBMP'
+
+        Unknown = -1,
+    }
+
+    public struct MaterialPackageHeader
+    {
+        public MaterialPackageType PackageType;
+
+        public bool UseLargeFormat;
+
+        public int MaterialsCount;
+        public int MaterialsOffset;
+
+        public int SubstanceLookupCount;
+        public int SubstanceLookupOffset;
+
+        public int SubstancesCount;
+        public int SubstancesOffset;
+
+        public int TextureLookupCount;
+        public int TextureLookupOffset;
+        
+        public int TexturesCount;
+        public int TexturesOffset;
+        
+        public int TextureDataOffset;
+        public int DataSize;
+
+        public int HeaderSize
+        {
+            get
+            {
+                switch (PackageType)
+                {
+                case MaterialPackageType.PC:
+                    return (UseLargeFormat) ? 0x48 : 0x38;
+                case MaterialPackageType.Xbox:
+                    return 0x48;
+                case MaterialPackageType.PS2:
+                    return 0x14;
+                }
+                return 0;
+            }
+        }
+
+        public int MaterialSize
+        {
+            get
+            {
+                switch (PackageType)
+                {
+                case MaterialPackageType.PC:
+                    return (UseLargeFormat) ? 0x10 : 0x18;
+                case MaterialPackageType.PS2:
+                case MaterialPackageType.Xbox:
+                    return 0x10;
+                }
+                return 0;
+            }
+        }
+
+        public int SubMaterialSize
+        {
+            get
+            {
+                switch (PackageType)
+                {
+                case MaterialPackageType.PC:
+                    return (UseLargeFormat) ? 0x1C : 0x20;
+                case MaterialPackageType.Xbox:
+                    return 0x1C;
+                case MaterialPackageType.PS2:
+                    return 0xC;
+                }
+                return 0;
+            }
+        }
+
+        public int TextureSize
+        {
+            get
+            {
+                switch (PackageType)
+                {
+                case MaterialPackageType.PC:
+                case MaterialPackageType.Xbox:
+                    return 0x20;
+                case MaterialPackageType.PS2:
+                    return 0x28;
+                }
+                return 0;
+            }
+        }
+
+        public int LookupSize
+        {
+            get
+            {
+                switch (PackageType)
+                {
+                case MaterialPackageType.PC:
+                    return (UseLargeFormat) ? 0x4 : 0x8;
+                case MaterialPackageType.Xbox:
+                case MaterialPackageType.PS2:
+                    return 0x4;
+                }
+                return 0;
+            }
+        }
+
+        private void GenerateOffsets()
+        {
+            var alignment = (PackageType == MaterialPackageType.PS2) ? 128 : 4096;
+
+            MaterialsOffset = HeaderSize;
+
+            SubstanceLookupOffset = MaterialsOffset + (MaterialsCount * MaterialSize);
+            SubstancesOffset      = SubstanceLookupOffset + (SubstanceLookupCount * LookupSize);
+
+            TextureLookupOffset     = SubstancesOffset + (SubstancesCount * SubMaterialSize);
+            TexturesOffset          = TextureLookupOffset + (TextureLookupCount * LookupSize);
+
+            TextureDataOffset = Memory.Align(TexturesOffset + (TexturesCount * TextureSize), alignment);
+        }
+        
+        public void Read(Stream stream)
+        {
+            if (stream.ReadInt32() != (int)PackageType)
+                throw new InvalidOperationException("Bad magic - Cannot load material package!");
+
+            if (PackageType == MaterialPackageType.PS2)
+            {
+                MaterialsCount = stream.ReadInt16();
+                SubstanceLookupCount = stream.ReadInt16();
+                SubstancesCount = stream.ReadInt16();
+                TextureLookupCount = stream.ReadInt16();
+                TexturesCount = stream.ReadInt16();
+
+                // skip version
+                stream.Position += 2;
+
+                DataSize = stream.ReadInt32();
+                
+                // offsets need to be generated manually
+                GenerateOffsets();
+            }
+            else
+            {
+                // skip version
+                stream.Position += 4;
+
+                MaterialsCount = stream.ReadInt32();
+                MaterialsOffset = stream.ReadInt32();
+
+                SubstanceLookupCount = stream.ReadInt32();
+                SubstanceLookupOffset = stream.ReadInt32();
+
+                SubstancesCount = stream.ReadInt32();
+                SubstancesOffset = stream.ReadInt32();
+
+                if (PackageType == MaterialPackageType.Xbox)
+                {
+                    // int PaletteInfoLookupCount;
+                    // int PaletteInfoLookupOffset;
+
+                    // int PaletteInfoCount;
+                    // int PaletteInfoOffset;
+
+                    throw new NotImplementedException();
+                }
+                else if (UseLargeFormat)
+                {
+                    stream.Position += 0x10;
+                }
+
+                TextureLookupCount = stream.ReadInt32();
+                TextureLookupOffset = stream.ReadInt32();
+
+                TexturesCount = stream.ReadInt32();
+                TexturesOffset = stream.ReadInt32();
+
+                TextureDataOffset = stream.ReadInt32();
+            }
+        }
+
+        public void Write(Stream stream)
+        {
+            stream.Write((int)PackageType);
+
+            switch (PackageType)
+            {
+            case MaterialPackageType.PC:
+                stream.Write(3);
+                break;
+            case MaterialPackageType.Xbox:
+                stream.Write(2);
+                break;
+            }
+
+            if (PackageType == MaterialPackageType.PS2)
+            {
+                stream.Write((short)MaterialsCount);
+                stream.Write((short)SubstanceLookupCount);
+                stream.Write((short)SubstancesCount);
+                stream.Write((short)TextureLookupCount);
+                stream.Write((short)TexturesCount);
+                stream.Write((short)2);
+            }
+            else
+            {
+                stream.Write(MaterialsCount);
+                stream.Write(MaterialsOffset);
+                stream.Write(SubstanceLookupCount);
+                stream.Write(SubstanceLookupOffset);
+                stream.Write(SubstancesCount);
+                stream.Write(SubstancesOffset);
+                
+                if (UseLargeFormat)
+                {
+                    switch (PackageType)
+                    {
+                    case MaterialPackageType.PC:
+                        {
+                            for (int i = 0; i < 4; i++)
+                                stream.Write(0);
+                        } break;
+                    case MaterialPackageType.Xbox:
+                        throw new NotImplementedException();
+                    }
+                }
+
+                stream.Write(TextureLookupCount);
+                stream.Write(TextureLookupOffset);
+                stream.Write(TexturesCount);
+                stream.Write(TexturesOffset);
+                stream.Write(DataSize);
+            }
+        }
+
+        public MaterialPackageHeader(MaterialPackageType packageType) : this(packageType, false) { }
+        public MaterialPackageHeader(MaterialPackageType packageType, bool useLargeFormat)
+        {
+            PackageType = packageType;
+            UseLargeFormat = useLargeFormat;
+
+            MaterialsCount = 0;
+            MaterialsOffset = 0;
+
+            SubstancesCount = 0;
+            SubstancesOffset = 0;
+
+            SubstanceLookupCount = 0;
+            SubstanceLookupOffset = 0;
+
+            TexturesCount = 0;
+            TexturesOffset = 0;
+
+            TextureLookupCount = 0;
+            TextureLookupOffset = 0;
+
+            TextureDataOffset = 0;
+            DataSize = 0;
+        }
+
+        public MaterialPackageHeader(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures)
+            : this(packageType, nMaterials, nSubMaterials, nTextures, false)
+        { }
+
+        public MaterialPackageHeader(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures, bool useLargeFormat)
+            : this(packageType, useLargeFormat)
+        {
+            if (PackageType == MaterialPackageType.Xbox)
+                throw new NotImplementedException();
+
+            MaterialsCount = nMaterials;
+
+            SubstanceLookupCount = nSubMaterials;
+            SubstancesCount = nSubMaterials;
+
+            TextureLookupCount = nTextures;
+            TexturesCount = nTextures;
+
+            GenerateOffsets();
+        }
+
+        public MaterialPackageHeader(MaterialPackageType packageType, Stream stream) : this(packageType, stream, false) { }
+        public MaterialPackageHeader(MaterialPackageType packageType, Stream stream, bool useLargeFormat) : this(packageType, useLargeFormat)
+        {
+            Read(stream);
+        }
+    }
+
     public class ModelPackagePC : ModelPackage
     {
-        protected override void Load()
+        protected ModelPackageData Header { get; set; }
+        protected MaterialPackageHeader MaterialsHeader { get; set; }
+
+        protected void ReadHeader(Stream stream)
         {
-            if (Spooler.Reserved != 6)
-                throw new Exception("Bad MDPC version, cannot load ModelPackage!");
+            Header = new ModelPackageData(Spooler.Version, stream);
+            UID = Header.UID;
+        }
 
-            using (var f = Spooler.GetMemoryStream())
+        protected void ReadVertexBuffers(Stream stream)
+        {
+            var vBuffersCount = Header.VertexDeclsCount;
+            var vBuffersOffset = Header.VertexDeclsOffset;
+
+            var declSize = Header.VertexDeclSize;
+
+            VertexBuffers = new List<VertexData>(vBuffersCount);
+
+            /* ------------------------------
+             * Read vertex buffer header(s)
+             * ------------------------------ */
+            for (int vB = 0; vB < vBuffersCount; vB++)
             {
-                if (f.ReadUInt32() != 6)
-                    throw new Exception("Bad magic, cannot load ModelPackage!");
+                stream.Position = vBuffersOffset + (vB * declSize);
 
-                UID                     = f.ReadInt32();
+                var nVerts = stream.ReadInt32();
+                var vertsSize = stream.ReadUInt32();
+                var vertsOffset = stream.ReadUInt32();
+                var vertLength = stream.ReadInt32();
 
-                var nParts              = f.ReadInt32();
-                var partsOffset         = f.ReadUInt32();
+                var vertexBuffer = new VertexData(nVerts, vertLength);
 
-                var nMeshGroups         = f.ReadInt32();
-                var meshGroupsOffset    = f.ReadUInt32();
-
-                var nMeshes             = f.ReadInt32();
-                var meshesOffset        = f.ReadUInt32();
-
-                var uid2                = f.ReadUInt16();
-
-                if (uid2 != UID)
-                    DSC.Log("Unknown magic check failed - wanted {0}, got {1}", UID, uid2);
-
-                // Skip junk
-                f.Position += 0x6;
-
-                var ddsOffset           = f.ReadInt32();
-                var pcmpOffset          = f.ReadInt32();
-
-                var nIndices            = f.ReadInt32();
-                var indicesSize         = f.ReadUInt32();
-                var indicesOffset       = f.ReadUInt32();
-
-                var numVertexBuffers    = f.ReadInt32();
-
-                var fvfOffset           = f.ReadUInt32();
-
-                // skip packages with no models
-                if (nParts > 0)
+                if (Header.Version == 1 || Header.Version == 9)
                 {
-                    Parts           = new List<PartsGroup>(nParts);
-                    MeshGroups      = new List<MeshGroup>(nMeshGroups);
-                    Meshes          = new List<MeshDefinition>(nMeshes);
+                    var unk1 = stream.ReadInt32();
+                    var unk2 = stream.ReadInt32();
+                    var unk3 = stream.ReadInt32();
+                    var unk4 = stream.ReadInt32();
 
-                    VertexBuffers   = new List<VertexData>(numVertexBuffers);
+                    Console.WriteLine($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
+                }
+
+                VertexBuffers.Add(vertexBuffer);
+
+                /* ------------------------------
+                 * Read vertices in buffer
+                 * ------------------------------ */
+                stream.Position = vertsOffset;
+
+                for (int i = 0; i < nVerts; i++)
+                    vertexBuffer.Buffer[i] = new Vertex(stream.ReadBytes(vertLength), vertexBuffer.VertexType);
+            }
+        }
+
+        protected void ReadIndexBuffer(Stream stream)
+        {
+            var nIndices = Header.IndicesCount;
+
+            /* ------------------------------
+             * Read index buffer
+             * ------------------------------ */
+            stream.Position = Header.IndicesOffset;
+
+            IndexBuffer = new IndexData(nIndices);
+
+            for (int i = 0; i < nIndices; i++)
+                IndexBuffer.Buffer[i] = stream.ReadInt16();
+        }
+        
+        protected void ReadModels(Stream stream)
+        {
+            var partSize = Header.PartSize;
+            var partLodSize = Header.LODSize;
+            var groupSize = Header.MeshGroupSize;
+
+            var meshSize = 0; // we don't know yet
+
+            // Driv3r on Xbox has a special mesh type, so we'll figure it out now
+            var verifyMeshSize = true;
+
+            /* ------------------------------
+             * Read parts groups
+             * ------------------------------ */
+            for (int p = 0; p < Header.PartsCount; p++)
+            {
+                stream.Position = Header.PartsOffset + (p * partSize);
+
+                var pGroup = new PartsGroup() {
+                    UID = stream.ReadInt32(),
+                    Handle = stream.ReadInt32(),
+
+                    Unknown = new Point4D() {
+                        X = stream.ReadFloat(),
+                        Y = stream.ReadFloat(),
+                        Z = stream.ReadFloat(),
+                        W = stream.ReadFloat()
+                    },
+
+                    // INCOMING TRANSMISSION...
+                    // RE: OPERATION S.T.E.R.N....
+                    // ...
+                    // YOUR ASSISTANCE HAS BEEN NOTED...
+                    // ...
+                    // <END OF TRANSMISSION>...
+                    VertexBuffer = VertexBuffers[stream.ReadInt16()],
+
+                    Unknown1 = stream.ReadInt16(),
+                    Unknown2 = stream.ReadInt32(),
+                    Unknown3 = stream.ReadInt32()
+                };
+
+                Parts.Add(pGroup);
+
+                if (Header.Version == 6)
+                    stream.Position += 4;
+                
+                // read unknown list of 8 Point4Ds
+                for (int t = 0; t < 8; t++)
+                {
+                    pGroup.Transform[t] = new Point4D() {
+                        X = stream.ReadFloat(),
+                        Y = stream.ReadFloat(),
+                        Z = stream.ReadFloat(),
+                        W = stream.ReadFloat()
+                    };
+                }
+
+                var lodStart = stream.Position;
+                
+                // 7 LODs per part
+                for (int k = 0; k < 7; k++)
+                {
+                    stream.Position = lodStart + (k * partLodSize);
+
+                    var partEntry = new PartDefinition(k) {
+                        Parent = pGroup
+                    };
+
+                    pGroup.Parts[k] = partEntry;
+
+                    var gOffset = stream.ReadInt32();
+
+                    if (Header.Version == 6)
+                        stream.Position += 0x4;
+
+                    var gCount = stream.ReadInt32();
+
+                    stream.Position += 0x8;
+
+                    partEntry.Type = stream.ReadInt32();
+                    
+                    // the rest is padding, but we calculate the position
+                    // at the beginning of each iteration...
+
+                    // nothing to see here, move along
+                    if (gCount == 0)
+                        continue;
 
                     /* ------------------------------
-                     * Read vertex buffer header(s) (Size: 0x1C)
+                     * Read mesh groups
                      * ------------------------------ */
-                    for (int vB = 0; vB < numVertexBuffers; vB++)
+                    for (int g = 0; g < gCount; g++)
                     {
-                        f.Position = fvfOffset + (vB * 0x1C);
+                        stream.Position = gOffset + (g * groupSize);
 
-                        var nVerts       = f.ReadInt32();
-                        var vertsSize    = f.ReadUInt32();
-                        var vertsOffset  = f.ReadUInt32();
-                        var vertLength   = f.ReadInt32();
-
-                        var vertexBuffer = new VertexData(nVerts, vertLength);
-
-                        VertexBuffers.Add(vertexBuffer);
-
-                        /* ------------------------------
-                         * Read vertices in buffer
-                         * ------------------------------ */
-                        f.Position = vertsOffset;
-
-                        for (int i = 0; i < nVerts; i++)
-                            vertexBuffer.Buffer[i] = new Vertex(f.ReadBytes(vertLength), vertexBuffer.VertexType);
-                    }
-
-                    /* ------------------------------
-                     * Read index buffer
-                     * ------------------------------ */
-                    f.Position = indicesOffset;
-
-                    IndexBuffer = new IndexData(nIndices);
-
-                    for (int i = 0; i < nIndices; i++)
-                        IndexBuffer.Buffer[i] = f.ReadUInt16();
-
-                    /* ------------------------------
-                     * Read parts groups (Size: 0x188)
-                     * ------------------------------ */
-                    for (int p = 0; p < nParts; p++)
-                    {
-                        f.Position = partsOffset + (p * 0x188);
-
-                        var pGroup = new PartsGroup() {
-                            UID = f.ReadUInt32(),
-                            Handle = f.ReadUInt32()
+                        MeshGroup mGroup = new MeshGroup() {
+                            Parent = partEntry
                         };
 
-                        Parts.Add(pGroup);
+                        var mOffset = stream.ReadInt32();
 
-                        // skip padding
-                        f.Position += 0x10;
+                        if (Header.Version == 6)
+                            stream.Position += 4;
 
-                        // INCOMING TRANSMISSION...
-                        // RE: OPERATION S.T.E.R.N....
-                        // ...
-                        // YOUR ASSISTANCE HAS BEEN NOTED...
-                        // ...
-                        // <END OF TRANSMISSION>...
-                        var vBufferId = f.ReadInt16();
-
-                        pGroup.VertexBuffer = VertexBuffers[vBufferId];
-
-                        pGroup.Unknown1 = f.ReadInt16();
-                        pGroup.Unknown2 = f.ReadInt32();
-                        pGroup.Unknown3 = f.ReadInt32();
-
-                        // skip padding
-                        f.Position += 0x4;
-
-                        // read unknown list of 8 Point4Ds
-                        for (int t = 0; t < 8; t++)
+                        for (int i = 0; i < 3; i++)
                         {
-                            pGroup.Transform.Add(new Point4D() {
-                                X = (double)f.ReadSingle(),
-                                Y = (double)f.ReadSingle(),
-                                Z = (double)f.ReadSingle(),
-                                W = (double)f.ReadSingle()
-                            });
+                            mGroup.Transform[i] = new Point4D() {
+                                X = stream.ReadFloat(),
+                                Y = stream.ReadFloat(),
+                                Z = stream.ReadFloat(),
+                                W = stream.ReadFloat()
+                            };
                         }
 
-                        var defStart = f.Position;
+                        mGroup.Unknown = new Point4D() {
+                            X = stream.ReadFloat(),
+                            Y = stream.ReadFloat(),
+                            Z = stream.ReadFloat(),
+                            W = stream.ReadFloat()
+                        };
 
-                        // 7 part definitions per group
-                        for (int k = 0; k < 7; k++)
+                        var mCount = stream.ReadInt16();
+
+                        var unk1 = stream.ReadInt16();
+
+                        if (Header.Version == 6)
+                            stream.Position += 4;
+
+                        var unk2 = stream.ReadInt32();
+
+                        //Console.WriteLine($"mGroup[{g}] unknown data: {unk1}, {unk2}");
+                        
+                        partEntry.Groups.Add(mGroup);
+                        MeshGroups.Add(mGroup);
+
+                        /* ------------------------------
+                         * Read mesh definitions
+                         * ------------------------------ */
+                        for (int m = 0; m < mCount; m++)
                         {
-                            f.Position = defStart + (k * 0x20);
+                            stream.Position = mOffset + (m * meshSize);
 
-                            var partEntry = new PartDefinition(k) {
-                                Parent = pGroup
+                            var primType = stream.ReadInt32();
+
+                            // we'll only have to do this once
+                            if (verifyMeshSize)
+                            {
+                                // driv3r mesh size hack
+                                if (Header.Version == 9 && (primType & 0xFFFFFFF0) != 0)
+                                    Header.SetMeshType(MeshType.Small);
+
+                                meshSize = Header.MeshSize;
+                                verifyMeshSize = false;
+                            }
+
+                            if (Header.MeshType == MeshType.Small)
+                                throw new NotImplementedException("Small mesh types not supported!");
+
+                            var mesh = new MeshDefinition(this) {
+                                PrimitiveType = (D3DPRIMITIVETYPE)primType,
+                                BaseVertexIndex = stream.ReadInt32(),
+                                MinIndex = stream.ReadUInt32(),
+                                NumVertices = stream.ReadUInt32(),
+                                StartIndex = stream.ReadUInt32(),
+                                PrimitiveCount = stream.ReadUInt32(),
+
+                                MeshGroup = mGroup,
+                                PartsGroup = pGroup
                             };
 
-                            pGroup.Parts.Add(partEntry);
+                            if (Header.MeshType == MeshType.Default)
+                                stream.Position += 0x18;
 
-                            var gOffset = f.ReadInt32();
+                            mesh.MaterialId = stream.ReadInt16();
+                            mesh.SourceUID = stream.ReadUInt16();
 
-                            // skip padding
-                            f.Position += 0x4;
-
-                            var gCount = f.ReadInt32();
-
-                            // skip padding
-                            f.Position += 0x14;
-
-                            if (gCount == 0)
-                                continue;
-
-                            /* ------------------------------
-                             * Read mesh groups (Size: 0x58)
-                             * ------------------------------ */
-                            for (int g = 0; g < gCount; g++)
-                            {
-                                f.Position = gOffset + (g * 0x58);
-
-                                var mOffset = f.ReadInt32();
-
-                                // skip padding
-                                f.Position += 0x44;
-
-                                var mCount = f.ReadInt16();
-
-                                MeshGroup mGroup = new MeshGroup(mCount) {
-                                    Parent = partEntry
-                                };
-
-                                partEntry.Groups.Add(mGroup);
-                                MeshGroups.Add(mGroup);
-
-                                /* ------------------------------
-                                 * Read mesh definitions (Size: 0x38)
-                                 * ------------------------------ */
-                                for (int m = 0; m < mCount; m++)
-                                {
-                                    f.Position = mOffset + (m * 0x38);
-
-                                    var mesh = new MeshDefinition(this) {
-                                        PrimitiveType = (D3DPRIMITIVETYPE)f.ReadInt32(),
-                                        BaseVertexIndex = f.ReadInt32(),
-                                        MinIndex = f.ReadUInt32(),
-                                        NumVertices = f.ReadUInt32(),
-                                        StartIndex = f.ReadUInt32(),
-                                        PrimitiveCount = f.ReadUInt32(),
-
-                                        MeshGroup = mGroup,
-                                        PartsGroup = pGroup
-                                    };
-
-                                    // skip padding
-                                    f.Position += 0x18;
-
-                                    mesh.MaterialId = f.ReadInt16();
-                                    mesh.SourceUID = f.ReadUInt16();
-
-                                    mGroup.Meshes.Add(mesh);
-                                    Meshes.Add(mesh);
-                                }
-                            }
+                            mGroup.Meshes.Add(mesh);
+                            Meshes.Add(mesh);
                         }
                     }
                 }
+            }
+        }
+        
+        protected override void Load()
+        {
+            if (Spooler.Version != 6)
+                throw new Exception("Bad version, cannot load ModelPackage!");
+
+            using (var f = Spooler.GetMemoryStream())
+            {
+                // header will handle offsets for us
+                ReadHeader(f);
+                
+                // skip packages with no models
+                if (Header.PartsCount > 0)
+                {
+                    Parts           = new List<PartsGroup>(Header.PartsCount);
+                    MeshGroups      = new List<MeshGroup>(Header.MeshGroupsCount);
+                    Meshes          = new List<MeshDefinition>(Header.MeshesCount);
+
+                    ReadVertexBuffers(f);
+                    ReadIndexBuffer(f);
+
+                    ReadModels(f);
+                }
+
+                var pcmpOffset = Header.MaterialDataOffset;
+                var ddsOffset = Header.TextureDataOffset;
 
                 // Read PCMP
                 if (pcmpOffset == 0)
                     return;
 
-                // Skip the header
-                f.Position = pcmpOffset + 0x8;
+                f.Position = pcmpOffset;
 
-                var matCount        = f.ReadInt32();
-                var matOffset       = f.ReadUInt32() + pcmpOffset;
-
-                // don't need this
-                f.Position += 0x8;
-
-                var subMatCount     = f.ReadInt32();
-                var subMatOffset    = f.ReadUInt32() + pcmpOffset;
-
-                // or this
-                f.Position += 0x8;
-
-                var texInfoCount    = f.ReadInt32();
-                var texInfoOffset   = f.ReadUInt32() + pcmpOffset;
-
-                // don't need this either
-                f.Position += 0x8;
-
-                Materials       = new List<PCMPMaterial>(matCount);
-                SubMaterials    = new List<PCMPSubMaterial>(subMatCount);
-                Textures        = new List<PCMPTexture>(texInfoCount);
+                MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, f);
+                
+                Materials       = new List<MaterialData>(MaterialsHeader.MaterialsCount);
+                SubMaterials    = new List<SubstanceData>(MaterialsHeader.SubstancesCount);
+                Textures        = new List<TextureData>(MaterialsHeader.TexturesCount);
 
                 var texLookup   = new Dictionary<int, byte[]>();
 
                 // Materials (Size: 0x18)
-                for (int m = 0; m < matCount; m++)
+                for (int m = 0; m < MaterialsHeader.MaterialsCount; m++)
                 {
-                    f.Position = matOffset + (m * 0x18);
+                    f.Position = pcmpOffset + (MaterialsHeader.MaterialsOffset + (m * MaterialsHeader.MaterialSize));
 
                     // table info
                     var mOffset = f.ReadInt32() + pcmpOffset;
                     var mCount  = f.ReadInt32();
 
-                    var material = new PCMPMaterial();
+                    var mAnimToggle = (f.ReadInt32() == 1);
+                    var mAnimSpeed = f.ReadFloat();
+                    
+                    var material = new MaterialData() {
+                        Animated        = mAnimToggle,
+                        AnimationSpeed  = mAnimSpeed
+                    };
 
                     Materials.Add(material);
 
-                    // get submaterial(s)
+                    // get substance(s)
                     for (int s = 0; s < mCount; s++)
                     {
-                        f.Position  = mOffset + (s * 0x8);
+                        f.Position  = mOffset + (s * MaterialsHeader.LookupSize);
 
                         var sOffset = f.ReadInt32() + pcmpOffset;
 
                         f.Position  = sOffset;
 
-                        var subMat = new PCMPSubMaterial() {
-                            Flags   = f.ReadUInt32(),
+                        var subMat = new SubstanceData() {
+                            Flags   = f.ReadInt32(),
                             Mode    = f.ReadUInt16(),
                             Type    = f.ReadUInt16()
                         };
 
-                        material.SubMaterials.Add(subMat);
+                        material.Substances.Add(subMat);
                         SubMaterials.Add(subMat);
 
                         f.Position += 0x8;
@@ -292,20 +953,19 @@ namespace DSCript.Models
 
                         for (int t = 0; t < tCount; t++)
                         {
-                            f.Position = tOffset + (t * 0x8);
+                            f.Position = tOffset + (t * MaterialsHeader.LookupSize);
 
                             var texOffset = f.ReadInt32() + pcmpOffset;
 
                             f.Position = texOffset;
 
-                            var textureInfo = new PCMPTexture();
+                            var textureInfo = new TextureData();
                             
                             subMat.Textures.Add(textureInfo);
                             Textures.Add(textureInfo);
-
-                            f.Position += 0x4;
-
-                            textureInfo.CRC32   = f.ReadUInt32();
+                            
+                            textureInfo.Reserved    = f.ReadInt32();
+                            textureInfo.CRC32       = f.ReadInt32();
 
                             var offset          = f.ReadInt32() + ddsOffset;
                             var size            = f.ReadInt32();
@@ -315,8 +975,9 @@ namespace DSCript.Models
                             textureInfo.Width   = f.ReadInt16();
                             textureInfo.Height  = f.ReadInt16();
 
+                            // I think this is AlphaTest or something
                             textureInfo.Unknown = f.ReadInt32();
-
+                            
                             if (!texLookup.ContainsKey(offset))
                             {
                                 f.Position = offset;
@@ -335,128 +996,49 @@ namespace DSCript.Models
 
         protected override void Save()
         {
-            // init variables
-            int bufferSize      = 0;
-
-            int nParts          = 0;
-            int nGroups         = 0;
-            int nMeshes         = 0;
-            int nIndices        = 0;
-            int nVertexBuffers  = 0;
-
-            int partsOffset     = 0x80;
-            int groupsOffset    = 0;
-            int meshesOffset    = 0;
-        
-            int ddsOffset       = 0;
-            int pcmpOffset      = 0;
-
-            int indicesOffset   = 0;
-            int indicesSize     = 0;
-        
-            int fvfOffset       = 0;
-            int vBufferOffset   = 0;
-
-            bool writeModels    = (VertexBuffers != null) && (Parts != null);
-
             var deadMagic   = 0xCDCDCDCD;
             var deadCode    = BitConverter.GetBytes(deadMagic);
 
-            // Size of header
-            bufferSize = Memory.Align(0x44, 128);
+            var bufferSize  = 0;
 
-            if (writeModels)
+            if (Parts?.Count > 0)
             {
-                nParts          = Parts.Count;
-                nGroups         = MeshGroups.Count;
-                nMeshes         = Meshes.Count;
+                Header = new ModelPackageData(6, UID, Parts.Count, MeshGroups.Count, Meshes.Count, IndexBuffer.Buffer.Length, VertexBuffers.Count);
 
-                nIndices        = IndexBuffer.Buffer.Length;
-                indicesSize     = nIndices * 2;
-
-                nVertexBuffers  = VertexBuffers.Count;
-
-                // Add up size of parts groups
-                bufferSize  = Memory.Align(bufferSize + (nParts * 0x188), 128);
-                groupsOffset = bufferSize;
-
-                // Add up size of mesh groups (non-aligned)
-                bufferSize += (nGroups * 0x58);
-                meshesOffset = bufferSize;
-
-                // Add up size of mesh definitions
-                bufferSize = Memory.Align(bufferSize + (nMeshes * 0x38), 128);
-                fvfOffset = bufferSize;
-
-                // Add up size of vertex buffer(s) FVF data
-                bufferSize += (nVertexBuffers * 0x1C);
-
-                indicesOffset = bufferSize;
-                bufferSize += indicesSize;
-
-                bufferSize = Memory.Align(bufferSize, 4096);
-                vBufferOffset = bufferSize;
-
+                bufferSize = Memory.Align(Header.IndicesOffset + Header.IndicesLength, 4096);
+                
+                // add up vertex buffer sizes
                 foreach (var vBuffer in VertexBuffers)
                     bufferSize += vBuffer.Size;
+            }
+            else
+            {
+                // model package has no models
+                Header = new ModelPackageData(6, UID);
+
+                bufferSize += Header.PartsOffset;
             }
 
             bufferSize = Memory.Align(bufferSize, 4096);
 
-            // -- PCMP -- \\
-
-            int nMaterials              = Materials.Count;
-            int nSubMaterials           = SubMaterials.Count;
-            int nTextures               = Textures.Count;
-
-            int pcmpSize                = 0;
-
-            int materialsOffset         = 0;
-            int subMatTableOffset       = 0;
-            int subMaterialsOffset      = 0;
-            int texInfoTableOffset      = 0;
-            int texInfoOffset           = 0;
-
-            pcmpOffset = bufferSize;
+            var pcmpOffset = bufferSize;
+            var pcmpSize = 0;
             
-            // Size of header
-            pcmpSize += 0x38;
+            MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, Materials.Count, SubMaterials.Count, Textures.Count);
 
-            materialsOffset = pcmpSize;
-            pcmpSize += (nMaterials * 0x18);
+            pcmpSize = MaterialsHeader.TextureDataOffset;
 
-            subMatTableOffset = pcmpSize;
-            pcmpSize += (nSubMaterials * 0x8);
+            var texOffsets = new int[MaterialsHeader.TexturesCount];
 
-            subMaterialsOffset = pcmpSize;
-            pcmpSize += (nSubMaterials * 0x20);
-
-            texInfoTableOffset = pcmpSize;
-            pcmpSize += (nTextures * 0x8);
-
-            texInfoOffset = pcmpSize;
-            pcmpSize += (nTextures * 0x20);
-
-            pcmpSize = Memory.Align(pcmpSize, 4096);
-
-            ddsOffset = pcmpSize;
-
-            Dictionary<uint, int> texOffsets = new Dictionary<uint, int>(nTextures);
-
-            for (int t = 0; t < nTextures; t++)
+            for (int i = 0; i < MaterialsHeader.TexturesCount; i++)
             {
-                PCMPTexture tex = Textures[t];
+                var tex = Textures[i];
 
-                var crc32 = tex.CRC32;
+                pcmpSize = Memory.Align(pcmpSize, 128);
 
-                if (!texOffsets.ContainsKey(crc32))
-                {
-                    pcmpSize = Memory.Align(pcmpSize, 128);
+                texOffsets[i] = (pcmpSize - MaterialsHeader.TextureDataOffset);
 
-                    texOffsets.Add(crc32, (pcmpSize - ddsOffset));
-
-                    pcmpSize += tex.Buffer.Length;
-                }
+                pcmpSize += tex.Buffer.Length;
             }
 
             // add the PCMP size to the buffer size
@@ -467,79 +1049,119 @@ namespace DSCript.Models
 
             using (var f = new MemoryStream(buffer))
             {
-                f.Write(6);
-                f.Write(UID);
+                Header.WriteHeader(f);
 
-                f.Write(nParts);
-                f.Write(partsOffset);
-
-                f.Write(nGroups);
-                f.Write(groupsOffset);
-
-                f.Write(nMeshes);
-                f.Write(meshesOffset);
-
-                f.Write((short)UID);
-                f.Write(0xFB, 0x95);
-
-                f.Position += 0x4;
-
-                f.Write(ddsOffset + pcmpOffset);
-                f.Write(pcmpOffset);
-
-                if (writeModels)
+                if (Parts?.Count > 0)
                 {
-                    f.Write(nIndices);
-                    f.Write(indicesSize);
-                    f.Write(indicesOffset);
+                    // Write vertex buffers & declarations
+                    var vBufferOffset = Header.GetVertexBuffersOffset();
 
-                    f.Write(nVertexBuffers);
-                    f.Write(fvfOffset);
-
-                    // write vertex buffer(s) & FVF data
                     for (int vB = 0; vB < VertexBuffers.Count; vB++)
                     {
-                        f.Position = fvfOffset + (vB * 0x1C);
+                        f.Position = Header.VertexDeclsOffset + (Header.VertexDeclsCount * Header.VertexDeclSize);
 
                         var vBuffer = VertexBuffers[vB];
+                        var vBSize = vBuffer.Size;
 
-                        var nVerts      = vBuffer.Buffer.Length;
-                        var vertsSize   = nVerts * vBuffer.Length;
-
-                        f.Write(nVerts);
-                        f.Write(vertsSize);
+                        f.Write(vBuffer.Buffer.Length);
+                        f.Write(vBSize);
                         f.Write(vBufferOffset);
                         f.Write(vBuffer.Length);
-
-                        // write vertices
+                        
                         f.Position = vBufferOffset;
 
-                        for (int v = 0; v < nVerts; v++)
-                            f.Write(vBuffer.Buffer[v].GetBytes());
+                        foreach (var vert in vBuffer.Buffer)
+                            f.Write(vert.GetBytes());
 
-                        vBufferOffset += vertsSize;
+                        vBufferOffset += vBSize;
                     }
 
                     // Write indices
-                    f.Position = indicesOffset;
+                    f.Position = Header.IndicesOffset;
 
-                    for (int i = 0; i < nIndices; i++)
-                        f.Write((ushort)IndexBuffer[i]);
+                    foreach (var indice in IndexBuffer.Buffer)
+                        f.Write(indice);
 
-                    int gIdx = 0;
+                    var meshLookup = new int[Header.MeshesCount];
+                    var groupLookup = new int[Header.MeshGroupsCount];
 
-                    for (int p = 0; p < nParts; p++)
+                    // Write meshes
+                    for (int m = 0; m < Header.MeshesCount; m++)
                     {
-                        f.Position = partsOffset + (p * 0x188);
+                        var mesh = Meshes[m];
+                        var mOffset = Header.MeshesOffset + (m * Header.MeshSize);
 
+                        meshLookup[m] = mOffset;
+
+                        f.Position = mOffset;
+
+                        f.Write((int)mesh.PrimitiveType);
+                        f.Write(mesh.BaseVertexIndex);
+                        f.Write(mesh.MinIndex);
+                        f.Write(mesh.NumVertices);
+
+                        f.Write(mesh.StartIndex);
+                        f.Write(mesh.PrimitiveCount);
+                        
+                        f.Position += 0x18;
+
+                        f.Write((short)mesh.MaterialId);
+                        f.Write((short)mesh.SourceUID);
+                    }
+
+                    var mIdx = 0;
+
+                    // Write groups
+                    for (int g = 0; g < Header.MeshGroupsCount; g++)
+                    {
+                        var group = MeshGroups[g];
+                        var gOffset = Header.MeshGroupsOffset + (g * Header.MeshGroupSize);
+
+                        groupLookup[g] = gOffset;
+
+                        f.Position = gOffset;
+
+                        f.Write(meshLookup[mIdx]);
+
+                        f.Position += 0x4;
+
+                        for (int i = 0; i < group.Transform.Length; i++)
+                        {
+                            f.WriteFloat(group.Transform[i].X);
+                            f.WriteFloat(group.Transform[i].Y);
+                            f.WriteFloat(group.Transform[i].Z);
+                            f.WriteFloat(group.Transform[i].W);
+                        }
+
+                        f.WriteFloat(group.Unknown.X);
+                        f.WriteFloat(group.Unknown.Y);
+                        f.WriteFloat(group.Unknown.Z);
+                        f.WriteFloat(group.Unknown.W);
+
+                        var mCount = group.Meshes.Count;
+
+                        f.Write(mCount);
+
+                        mIdx += mCount;
+                    }
+
+                    var gIdx = 0;
+
+                    // Write parts
+                    for (int p = 0; p < Header.PartsCount; p++)
+                    {
                         var part = Parts[p];
-
+                        
+                        f.Position = Header.PartsOffset + (p * Header.PartSize);
+                        
                         f.Write(part.UID);
                         f.Write(part.Handle);
 
-                        // skip float padding
-                        f.Position += 0x10;
-
+                        f.WriteFloat(part.Unknown.X);
+                        f.WriteFloat(part.Unknown.Y);
+                        f.WriteFloat(part.Unknown.Z);
+                        f.WriteFloat(part.Unknown.W);
+                        
                         var vBufferId = VertexBuffers.IndexOf(part.VertexBuffer);
 
                         if (vBufferId == -1)
@@ -553,8 +1175,7 @@ namespace DSCript.Models
 
                         f.Position += 0x4;
 
-                        // write list of 8 Point4D's
-                        for (int t = 0; t < 8; t++)
+                        for (int t = 0; t < part.Transform.Length; t++)
                         {
                             f.WriteFloat(part.Transform[t].X);
                             f.WriteFloat(part.Transform[t].Y);
@@ -562,187 +1183,144 @@ namespace DSCript.Models
                             f.WriteFloat(part.Transform[t].W);
                         }
 
-                        var defStart = f.Position;
-
-                        for (int d = 0; d < 7; d++)
+                        var lodsOffset = f.Position;
+                        
+                        for (int d = 0; d < part.Parts.Length; d++)
                         {
-                            f.Position = defStart + (d * 0x20);
+                            f.Position = lodsOffset + (d * Header.LODSize);
 
-                            var partDef = part.Parts[d];
+                            var lod = part.Parts[d];
 
-                            if (partDef == null || partDef.Groups == null)
-                                continue;
+                            if (lod?.Groups?.Count > 0)
+                            {
+                                var count = lod.Groups.Count;
 
-                            var count = partDef.Groups.Count;
+                                f.Write(groupLookup[gIdx]);
 
-                            f.Write(groupsOffset + (gIdx * 0x58));
+                                f.Position += 0x4;
+                                f.Write(count);
 
-                            f.Position += 0x4;
+                                f.Position += 0x8;
+                                f.Write(lod.Type);
 
-                            f.Write(count);
-
-                            gIdx += count;
+                                gIdx += count;
+                            }
                         }
                     }
-
-                    int mIdx = 0;
-
-                    for (int g = 0; g < nGroups; g++)
-                    {
-                        f.Position = groupsOffset + (g * 0x58);
-
-                        var group = MeshGroups[g];
-
-                        f.Write(meshesOffset + (mIdx * 0x38));
-
-                        f.Fill(deadCode, 0x44);
-
-                        f.Write((short)group.Meshes.Count);
-
-                        f.Fill(deadCode, 0xE);
-
-                        mIdx += group.Meshes.Count;
-                    }
-
-                    // Write meshes
-                    for (int m = 0; m < nMeshes; m++)
-                    {
-                        f.Position = meshesOffset + (m * 0x38);
-
-                        var mesh = Meshes[m];
-
-                        f.Write((int)mesh.PrimitiveType);
-
-                        f.Write(mesh.BaseVertexIndex);
-                        f.Write(mesh.MinIndex);
-                        f.Write(mesh.NumVertices);
-
-                        f.Write(mesh.StartIndex);
-                        f.Write(mesh.PrimitiveCount);
-
-                        f.Fill(deadCode, 0x18);
-
-                        f.Write((short)mesh.MaterialId);
-                        f.Write((short)mesh.SourceUID);
-
-                        f.Write(deadMagic);
-                    }
                 }
-
-                f.Position = 0x44;
-
-                f.Fill(deadCode, partsOffset - (int)f.Position);
-
+                
                 // -- Write PCMP -- \\
                 f.Position = pcmpOffset;
+                
+                MaterialsHeader.Write(f);
+                
+                f.Write(pcmpSize);
 
-                // 'PCMP'
-                f.Write(0x504D4350);
-                f.Write(0x3);
+                var texLookup = new int[MaterialsHeader.TexturesCount];
+                var texDataOffset = pcmpOffset + MaterialsHeader.TextureDataOffset;
 
-                f.Write(nMaterials);
-                f.Write(materialsOffset);
+                // put offset to texture/material data in header (this sucks)
+                f.Position = 0x28;
 
-                f.Write(nSubMaterials);
-                f.Write(subMatTableOffset);
-
-                f.Write(nSubMaterials);
-                f.Write(subMaterialsOffset);
-
-                f.Write(nTextures);
-                f.Write(texInfoTableOffset);
-
-                f.Write(nTextures);
-                f.Write(texInfoOffset);
-
-                f.Write(ddsOffset);
-                f.Write(pcmpSize); // unused, but this is how the developers did it!
-
-                f.Seek(materialsOffset, pcmpOffset);
-
-                int stIdx = 0;
-
-                // write materials
-                for (int m = 0; m < nMaterials; m++)
+                f.Write(texDataOffset);
+                f.Write(pcmpOffset);
+                
+                // write textures
+                for (int t = 0; t < MaterialsHeader.TexturesCount; t++)
                 {
-                    var material = Materials[m];
+                    var tex = Textures[t];
+                    var tOffset = MaterialsHeader.TexturesOffset + (t * MaterialsHeader.TextureSize);
+                    
+                    texLookup[t] = tOffset;
 
-                    f.Write(subMatTableOffset + (stIdx * 0x8));
-                    f.Write(material.SubMaterials.Count);
+                    f.Position = pcmpOffset + tOffset;
 
-                    f.Fill(deadCode, 0x10);
+                    f.Write(tex.Reserved);
+                    f.Write(tex.CRC32);
 
-                    stIdx += material.SubMaterials.Count;
+                    f.Write(texOffsets[t]);
+                    f.Write(tex.Buffer.Length);
+                    f.Write(tex.Type);
+
+                    f.Write((short)tex.Width);
+                    f.Write((short)tex.Height);
+
+                    f.Write(tex.Unknown);
+
+                    f.Position = texDataOffset + texOffsets[t];
+
+                    // skip dupes
+                    if (f.PeekInt32() == 0)
+                        f.Write(tex.Buffer);
                 }
 
-                f.Seek(subMatTableOffset, pcmpOffset);
-
-                int sIdx = 0;
-
-                for (int st = 0; st < nSubMaterials; st++)
+                // write texture lookup
+                for (int t = 0; t < MaterialsHeader.TextureLookupCount; t++)
                 {
-                    f.Write(subMaterialsOffset + (sIdx++ * 0x20));
-                    f.Write(deadMagic);
+                    var tlOffset = MaterialsHeader.TextureLookupOffset + (t * MaterialsHeader.LookupSize);
+
+                    f.Position = pcmpOffset + tlOffset;
+                    f.Write(texLookup[t]);
+
+                    // replace offset with the lookup table one
+                    texLookup[t] = tlOffset;
                 }
 
-                f.Seek(subMaterialsOffset, pcmpOffset);
+                var sLookup = new int[MaterialsHeader.SubstancesCount];
 
-                int ttIdx = 0;
+                var tIdx = 0;
 
-                for (int s = 0; s < nSubMaterials; s++)
+                // write substances
+                for (int s = 0; s < MaterialsHeader.SubstancesCount; s++)
                 {
                     var subMat = SubMaterials[s];
+                    var sOffset = MaterialsHeader.SubstancesOffset + (s * MaterialsHeader.SubMaterialSize);
+
+                    sLookup[s] = sOffset;
+
+                    f.Position = pcmpOffset + sOffset;
 
                     f.Write(subMat.Flags);
 
                     f.Write(subMat.Mode);
                     f.Write(subMat.Type);
 
-                    f.Fill(deadCode, 0x8);
-
-                    f.Write(texInfoTableOffset + (ttIdx * 0x8));
+                    f.Position += 0x8;
+                    
+                    f.Write(texLookup[tIdx]);
                     f.Write(subMat.Textures.Count);
 
-                    ttIdx += subMat.Textures.Count;
-
-                    f.Fill(deadCode, 0x8);
+                    tIdx += subMat.Textures.Count;
                 }
 
-                f.Seek(texInfoTableOffset, pcmpOffset);
-
-                int tIdx = 0;
-
-                for (int tt = 0; tt < nTextures; tt++)
+                // write substance lookup
+                for (int s = 0; s < MaterialsHeader.SubstanceLookupCount; s++)
                 {
-                    f.Write(texInfoOffset + (tIdx++ * 0x20));
-                    f.Write(deadMagic);
+                    var smlOffset = MaterialsHeader.SubstanceLookupOffset + (s * MaterialsHeader.LookupSize);
+
+                    f.Position = pcmpOffset + smlOffset;
+                    f.Write(sLookup[s]);
+
+                    // replace offset with the lookup table one
+                    sLookup[s] = smlOffset;
                 }
 
-                for (int t = 0; t < nTextures; t++)
+                var sIdx = 0;
+
+                // write materials
+                for (int m = 0; m < MaterialsHeader.MaterialsCount; m++)
                 {
-                    f.Seek(texInfoOffset + (t * 0x20), pcmpOffset);
+                    var material = Materials[m];
 
-                    var texture = Textures[t];
-
-                    var tOffset = texOffsets[texture.CRC32];
-
-                    f.Write(deadMagic);
-                    f.Write(texture.CRC32);
-
-                    f.Write(tOffset);
-                    f.Write(texture.Buffer.Length);
-                    f.Write(texture.Type);
-
-                    f.Write((short)texture.Width);
-                    f.Write((short)texture.Height);
-
-                    f.Write(texture.Unknown);
-                    f.Write(deadMagic);
-
-                    f.Seek(ddsOffset + tOffset, pcmpOffset);
+                    f.Position = pcmpOffset + (MaterialsHeader.MaterialsOffset + (m * MaterialsHeader.MaterialSize));
                     
-                    if (f.PeekInt32() == 0x0)
-                        f.Write(texture.Buffer);
+                    f.Write(sLookup[sIdx]);
+                    f.Write(material.Substances.Count);
+
+                    f.Write(material.Animated ? 1 : 0);
+                    f.Write(material.AnimationSpeed);
+
+                    sIdx += material.Substances.Count;
                 }
             }
 

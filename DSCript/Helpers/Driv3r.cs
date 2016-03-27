@@ -71,11 +71,11 @@ namespace DSCript
             FileFilter = "Driv3r|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk";
             
             OpenFileDialog = new OpenFileDialog() {
-                CheckFileExists = true,
-                CheckPathExists = true,
-                Filter = FileFilter,
-                InitialDirectory = Driv3r.RootDirectory,
-                ValidateNames = true,
+                CheckFileExists     = true,
+                CheckPathExists     = true,
+                Filter              = FileFilter,
+                InitialDirectory    = Driv3r.RootDirectory,
+                ValidateNames       = true,
             };
         }
 
@@ -238,10 +238,10 @@ namespace DSCript
                 return City.Istanbul;
             if (filename.Contains("mission"))
             {
-                var path = Path.GetFileNameWithoutExtension(filename);
+                var misName = Path.GetFileNameWithoutExtension(filename);
                 int missionId = -1;
 
-                if (int.TryParse(path.Substring(path.Length - 2, 2), out missionId))
+                if (int.TryParse(misName.Substring(misName.Length - 2, 2), out missionId))
                     return GetCityFromMissionId(missionId);
             }
 

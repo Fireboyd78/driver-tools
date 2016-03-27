@@ -1,0 +1,219 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!-- Project settings -->
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{BEB558CA-5BAE-4718-9C09-921683F78AA3}</ProjectGuid>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Antilli</AssemblyName>
+    <RootNamespace>Antilli</RootNamespace>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <ApplicationIcon>Resources\Icons\Antilli.ico</ApplicationIcon>
+    <!-- C# 6.0 -->
+    <LangVersion>6</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <OutputPath>bin\x86\Release\</OutputPath>
+  </PropertyGroup>
+  <Import Project="$(ProjectDir)..\DriverTools.Common.props" Condition=" Exists('$(ProjectDir)..\DriverTools.Common.Props') " />
+  <!-- Global configuration settings -->
+  <PropertyGroup>
+    <PlatformTarget>x86</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <ErrorReport>prompt</ErrorReport>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <!-- Debug configuration settings -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineConstants>TRACE;DEBUG;LOG</DefineConstants>
+    <Optimize>false</Optimize>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+  </PropertyGroup>
+  <!-- Release configuration settings -->
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <!-- Path stuff -->
+  <PropertyGroup>
+    <AntilliDir>$(MSBuildThisFileDirectory)</AntilliDir>
+    <AntilliSrcRoot>$(AntilliDir)Source\</AntilliSrcRoot>
+  </PropertyGroup>
+  <!-- References -->
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xaml">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationFramework.Aero" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="FreeImageNET">
+      <HintPath>$(FreeImageNETDir)FreeImageNET.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf, Version=2013.1.31.1, Culture=neutral, PublicKeyToken=52aa3500039caf0d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(HelixToolkitDir)HelixToolkit.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="HelixToolkit.Wpf.Input, Version=2013.1.31.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(HelixToolkitDir)HelixToolkit.Wpf.Input.dll</HintPath>
+    </Reference>
+    <Reference Include="TDx.TDxInput">
+      <HintPath>$(HelixToolkitDir)TDx.TDxInput.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </Reference>
+    <ProjectReference Include="..\DSCript\DSCript.csproj">
+      <Name>DSCript</Name>
+      <Project>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <!-- Source files -->
+  <ItemGroup>
+    <ApplicationDefinition Include="$(AntilliSrcRoot)App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Compile Include="$(AntilliSrcRoot)App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <None Include="$(AntilliSrcRoot)App.config" />
+    <Compile Include="$(AntilliSrcRoot)ModelGroupListItem.cs" />
+    <Compile Include="$(AntilliSrcRoot)ModelListItem.cs" />
+    <Compile Include="$(AntilliSrcRoot)OBJExporter.cs" />
+    <Compile Include="$(AntilliSrcRoot)OBJFile.cs" />
+    <Compile Include="$(AntilliSrcRoot)ObservableObject.cs" />
+    <Compile Include="$(AntilliSrcRoot)Settings.cs" />
+    <Compile Include="$(AntilliSrcRoot)VisualParentHelper.cs" />
+    <Compile Include="$(AntilliSrcRoot)Extensions\Media3DExtensions.cs" />
+    <Compile Include="$(AntilliSrcRoot)Extensions\TreeViewExtensions.cs" />
+    <Compile Include="$(AntilliSrcRoot)Extensions\TypeExtensions.cs" />
+    <Compile Include="$(AntilliSrcRoot)Importers\ModelImporter.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\BoolToVisibilityConverter.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\Controls\AntilliViewport3D.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\Controls\AntilliWindow.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\Controls\ObservableWindow.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\Visuals\BlendModelVisual3D.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\Visuals\DriverModelVisual3D.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\Visuals\GeometryModelVisual3D.cs" />
+    <Compile Include="$(AntilliSrcRoot)WPF\ModelVisual3DGroup.cs" />
+    <Page Include="$(AntilliSrcRoot)ChunkEditor.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)ChunkEditor.xaml.cs">
+      <DependentUpon>ChunkEditor.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)Importer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)Importer.xaml.cs">
+      <DependentUpon>Importer.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)MaterialEditor.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)MaterialEditor.xaml.cs">
+      <DependentUpon>MaterialEditor.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)MKInputBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)MKInputBox.xaml.cs">
+      <DependentUpon>MKInputBox.xaml</DependentUpon>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)ModelViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)ModelViewer.xaml.cs">
+      <DependentUpon>ModelViewer.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)Resources.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)Resources.xaml.cs">
+      <DependentUpon>Resources.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="$(AntilliSrcRoot)TextureViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="$(AntilliSrcRoot)TextureViewer.xaml.cs">
+      <DependentUpon>TextureViewer.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(AntilliDir)Properties\AssemblyInfo.cs " />
+    <Compile Include="$(AntilliDir)Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="$(AntilliDir)Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <EmbeddedResource Include="$(AntilliDir)Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <None Include="$(AntilliDir)Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <!-- Resources -->
+  <ItemGroup>
+    <Resource Include="$(ApplicationIcon)" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

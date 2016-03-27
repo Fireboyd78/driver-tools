@@ -12,8 +12,8 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolableBuffer() {
-                    Magic       = (int)ChunkType.ModelPackagePC,
-                    Reserved    = 6,
+                    Context     = (int)ChunkType.ModelPackagePC,
+                    Version     = 6,
                     Description = "Renderer model package"
                 };
             }
@@ -25,7 +25,7 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolableBuffer() {
-                    Magic       = (int)ChunkType.StandaloneTextures,
+                    Context     = (int)ChunkType.StandaloneTextures,
                     Description = "Standalone textures"
                 };
             }
@@ -37,7 +37,7 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolableBuffer() {
-                    Magic       = (int)ChunkType.VehicleHierarchy,
+                    Context     = (int)ChunkType.VehicleHierarchy,
                     Description = "Vehicle Hierarchy"
                 };
             }
@@ -49,7 +49,7 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolableBuffer() {
-                    Magic       = (int)ChunkType.ExtraCharacterData,
+                    Context     = (int)ChunkType.ExtraCharacterData,
                     Description = "Extra Character Data package"
                 };
             }
@@ -62,7 +62,7 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolableBuffer() {
-                    Magic       = (int)ChunkType.CharacterSkeletons,
+                    Context     = (int)ChunkType.CharacterSkeletons,
                     Description = "Skeleton package"
                 };
             }
@@ -76,7 +76,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align2048,
-                    Magic       = (int)ChunkType.MissionSummary,
+                    Context     = (int)ChunkType.MissionSummary,
                     Description = "Mission summary"
                 };
             }
@@ -89,7 +89,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align16,
-                    Magic       = (int)ChunkType.ExportedMissionObjects,
+                    Context     = (int)ChunkType.ExportedMissionObjects,
                     Description = "Exported Mission Objects"
                 };
             }
@@ -102,7 +102,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align16,
-                    Magic       = (int)ChunkType.ExportedMissionPropHandles,
+                    Context     = (int)ChunkType.ExportedMissionPropHandles,
                     Description = "Exported Mission Prop Handles"
                 };
             }
@@ -115,7 +115,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportStringCollection,
+                    Context     = (int)ChunkType.LogicExportStringCollection,
                     Description = "String Collection"
                 };
             }
@@ -128,7 +128,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportSoundBank,
+                    Context     = (int)ChunkType.LogicExportSoundBank,
                     Description = "Sound Bank Table"
                 };
             }
@@ -141,7 +141,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportActorDefinitions,
+                    Context     = (int)ChunkType.LogicExportActorDefinitions,
                     Description = "Actor definitions table"
                 };
             }
@@ -154,7 +154,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportPropertiesTable,
+                    Context     = (int)ChunkType.LogicExportPropertiesTable,
                     Description = "Actor properties table"
                 };
             }
@@ -167,7 +167,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportActorSetTable,
+                    Context     = (int)ChunkType.LogicExportActorSetTable,
                     Description = "Actor Set Table"
                 };
             }
@@ -180,7 +180,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportNodeDefinitionsTable,
+                    Context     = (int)ChunkType.LogicExportNodeDefinitionsTable,
                     Description = "Logic node definitions table"
                 };
             }
@@ -193,7 +193,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportPropertiesTable,
+                    Context       = (int)ChunkType.LogicExportPropertiesTable,
                     Description = "Logic node properties table"
                 };
             }
@@ -206,7 +206,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportScriptCounters,
+                    Context     = (int)ChunkType.LogicExportScriptCounters,
                     Description = "Script Counters"
                 };
             }
@@ -219,7 +219,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Magic       = (int)ChunkType.LogicExportWireCollections,
+                    Context     = (int)ChunkType.LogicExportWireCollections,
                     Description = "Wire Collection"
                 };
             }
@@ -235,7 +235,7 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolablePackage() {
-                    Magic       = (int)ChunkType.UnifiedPackage,
+                    Context     = (int)ChunkType.UnifiedPackage,
                     Description = "Unified Packager"
                 };
             }
@@ -247,7 +247,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolablePackage() {
                     Alignment   = SpoolerAlignment.Align2048,
-                    Magic       = (int)ChunkType.UnifiedPackage,
+                    Context     = (int)ChunkType.UnifiedPackage,
                     Description = "Exported Mission"
                 };
             }

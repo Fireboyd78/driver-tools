@@ -1,0 +1,8 @@
+__DO NOT INCLUDE__/
+bin/
+doc/
+obj/
+.csproj_*
+.ini*
+*.csproj_backup
+*.ini

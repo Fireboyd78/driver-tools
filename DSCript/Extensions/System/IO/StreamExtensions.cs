@@ -22,7 +22,8 @@ namespace System.IO
 
         public static long Align(this Stream stream, int alignment)
         {
-            return (stream.Position = Memory.Align(stream.Position, alignment));
+            var value = stream.Position;
+            return (stream.Position = ((alignment != 0) ? (value + (alignment - (value % alignment)) % alignment) : value));
         }
 
         /// <summary>
@@ -64,6 +65,20 @@ namespace System.IO
             }
         }
 
+        /// <summary>
+        /// Fills the length of a stream based on its current position using the value specified.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="value"></param>
+        public static void Fill(this Stream stream, int value)
+        {
+            var length = (int)((stream is MemoryStream) ? ((MemoryStream)stream).Capacity : stream.Length);
+            var bytes = BitConverter.GetBytes(value);
+
+            // use other fill method since it works better
+            stream.Fill(bytes, length);
+        }
+
         #region Peek methods
         public static int PeekByte(this Stream stream)
         {
@@ -73,34 +88,34 @@ namespace System.IO
             return b;
         }
 
-        public static int PeekInt16(this Stream stream)
+        public static int PeekInt16(this Stream stream, bool bigEndian = false)
         {
-            int i = stream.ReadInt16();
-            stream.Position -= 2;
+            int i = stream.ReadInt16(bigEndian);
+            stream.Position -= sizeof(short);
 
             return i;
         }
 
-        public static uint PeekUInt16(this Stream stream)
+        public static uint PeekUInt16(this Stream stream, bool bigEndian = false)
         {
-            var i = stream.ReadUInt16();
-            stream.Position -= 2;
+            var i = stream.ReadUInt16(bigEndian);
+            stream.Position -= sizeof(ushort);
 
             return i;
         }
 
-        public static int PeekInt32(this Stream stream)
+        public static int PeekInt32(this Stream stream, bool bigEndian = false)
         {
-            var i = stream.ReadInt32();
-            stream.Position -= 4;
+            var i = stream.ReadInt32(bigEndian);
+            stream.Position -= sizeof(int);
 
             return i;
         }
 
-        public static uint PeekUInt32(this Stream stream)
+        public static uint PeekUInt32(this Stream stream, bool bigEndian = false)
         {
-            var i = stream.ReadUInt32();
-            stream.Position -= 4;
+            var i = stream.ReadUInt32(bigEndian);
+            stream.Position -= sizeof(uint);
 
             return i;
         } 
@@ -145,50 +160,68 @@ namespace System.IO
             return chars;
         }
 
-        public static short ReadInt16(this Stream stream)
+        public static short ReadInt16(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(short)];
             stream.Read(buffer);
 
+            if (bigEndian)
+                Array.Reverse(buffer);
+
             return BitConverter.ToInt16(buffer, 0);
         }
 
-        public static ushort ReadUInt16(this Stream stream)
+        public static ushort ReadUInt16(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(ushort)];
             stream.Read(buffer);
 
+            if (bigEndian)
+                Array.Reverse(buffer);
+
             return BitConverter.ToUInt16(buffer, 0);
         }
 
-        public static int ReadInt32(this Stream stream)
+        public static int ReadInt32(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(int)];
             stream.Read(buffer);
 
+            if (bigEndian)
+                Array.Reverse(buffer);
+
             return BitConverter.ToInt32(buffer, 0);
         }
 
-        public static uint ReadUInt32(this Stream stream)
+        public static uint ReadUInt32(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(uint)];
             stream.Read(buffer);
 
+            if (bigEndian)
+                Array.Reverse(buffer);
+
             return BitConverter.ToUInt32(buffer, 0);
         }
 
-        public static long ReadInt64(this Stream stream)
+        public static long ReadInt64(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(long)];
             stream.Read(buffer);
 
+            if (bigEndian)
+                Array.Reverse(buffer);
+
             return BitConverter.ToInt64(buffer, 0);
         }
 
-        public static ulong ReadUInt64(this Stream stream)
+        public static ulong ReadUInt64(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(ulong)];
             stream.Read(buffer);
+
+            if (bigEndian)
+                Array.Reverse(buffer);
 
             return BitConverter.ToUInt64(buffer, 0);
         }
@@ -196,28 +229,38 @@ namespace System.IO
         public static float ReadHalf(this Stream stream)
         {
             var aShort = stream.ReadInt16();
-            return (float)(((aShort & 0x8000) << 16) + ((aShort & 0x7FFF) << 13) + ((127 - 15) << 23));
+            var a = (aShort & 0x8000) << 16;
+            var b = (aShort & 0x7FFF) << 13;
+            var c = (127 - 15) << 23;
+
+            return (float)(a + b + c);
         }
 
-        public static double ReadFloat(this Stream stream)
+        public static double ReadFloat(this Stream stream, bool bigEndian = false)
         {
-            var val = (double)stream.ReadSingle();
+            var val = (double)stream.ReadSingle(bigEndian);
 
             return Math.Round(val, 3);
         }
 
-        public static float ReadSingle(this Stream stream)
+        public static float ReadSingle(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(float)];
             stream.Read(buffer);
 
+            if (bigEndian)
+                Array.Reverse(buffer);
+
             return BitConverter.ToSingle(buffer, 0);
         }
 
-        public static double ReadDouble(this Stream stream)
+        public static double ReadDouble(this Stream stream, bool bigEndian = false)
         {
             byte[] buffer = new byte[sizeof(double)];
             stream.Read(buffer);
+
+            if (bigEndian)
+                Array.Reverse(buffer);
 
             return BitConverter.ToDouble(buffer, 0);
         }
@@ -225,9 +268,12 @@ namespace System.IO
         public static string ReadString(this Stream stream)
         {
             string str = "";
+            char curChar;
 
-            while (stream.PeekByte() != 0)
-                str += stream.ReadChar();
+            while ((curChar = stream.ReadChar()) != '\0')
+            {
+                str += curChar;
+            }
 
             return str;
         }
@@ -247,20 +293,18 @@ namespace System.IO
         public static void WriteByte(this Stream stream, int value)
         {
             if (value > 255)
+            {
                 stream.WriteByte(0xFF);
-
-            stream.Write(BitConverter.GetBytes(value), 0, sizeof(byte));
+            }
+            else
+            {
+                stream.Write(BitConverter.GetBytes(value), 0, sizeof(byte));
+            }
         }
 
         public static void WriteFloat(this Stream stream, double value)
         {
             stream.Write((float)value);
-        }
-
-        public static void Write(this Stream stream, byte byte1, byte byte2)
-        {
-            stream.Write(byte1);
-            stream.Write(byte2);
         }
 
         public static void Write(this Stream stream, params byte[] bytes)

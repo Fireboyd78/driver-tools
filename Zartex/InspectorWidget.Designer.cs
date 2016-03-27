@@ -48,12 +48,13 @@
             this.Inspector.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.Inspector.BackColor = System.Drawing.SystemColors.Control;
+            this.Inspector.BackColor = System.Drawing.SystemColors.ControlDark;
+            this.Inspector.CategoryForeColor = System.Drawing.SystemColors.InactiveCaptionText;
             this.Inspector.Location = new System.Drawing.Point(0, 18);
             this.Inspector.Margin = new System.Windows.Forms.Padding(0);
             this.Inspector.Name = "Inspector";
             this.Inspector.PropertySort = System.Windows.Forms.PropertySort.Categorized;
-            this.Inspector.Size = new System.Drawing.Size(201, 339);
+            this.Inspector.Size = new System.Drawing.Size(188, 339);
             this.Inspector.TabIndex = 0;
             // 
             // Nodes
@@ -70,7 +71,7 @@
             this.Nodes.Location = new System.Drawing.Point(0, 0);
             this.Nodes.Margin = new System.Windows.Forms.Padding(0, 0, 1, 0);
             this.Nodes.Name = "Nodes";
-            this.Nodes.Size = new System.Drawing.Size(214, 357);
+            this.Nodes.Size = new System.Drawing.Size(217, 357);
             this.Nodes.TabIndex = 1;
             this.Nodes.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.LogicNodes_AfterSelect);
             this.Nodes.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.LogicNodes_NodeMouseDoubleClick);
@@ -116,7 +117,7 @@
             this.SplitPanel.Panel2.Controls.Add(this.label1);
             this.SplitPanel.Panel2.Controls.Add(this.Inspector);
             this.SplitPanel.Size = new System.Drawing.Size(411, 357);
-            this.SplitPanel.SplitterDistance = 215;
+            this.SplitPanel.SplitterDistance = 218;
             this.SplitPanel.SplitterWidth = 1;
             this.SplitPanel.TabIndex = 2;
             // 
@@ -129,7 +130,7 @@
             this.label1.Location = new System.Drawing.Point(0, 0);
             this.label1.Margin = new System.Windows.Forms.Padding(0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(195, 18);
+            this.label1.Size = new System.Drawing.Size(192, 18);
             this.label1.TabIndex = 1;
             this.label1.Text = "Property Inspector";
             this.label1.TextAlign = System.Drawing.ContentAlignment.TopCenter;

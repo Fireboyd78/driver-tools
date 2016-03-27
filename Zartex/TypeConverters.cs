@@ -12,9 +12,20 @@ namespace Zartex.Converters
 {
     public class HexStringConverter : TypeConverter
     {
+        private static readonly Type[] _supportedTypes = {
+            typeof(int),
+            typeof(uint),
+            typeof(string)
+        };
+
+        private bool IsSupportedType(Type type)
+        {
+            return _supportedTypes.Contains(type);
+        }
+
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
-            if (sourceType.Equals(typeof(uint)) || sourceType.Equals(typeof(string)))
+            if (IsSupportedType(sourceType))
                 return true;
             
             return base.CanConvertFrom(context, sourceType);
@@ -22,7 +33,7 @@ namespace Zartex.Converters
 
         public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
         {
-            if (destinationType.Equals(typeof(string)) || destinationType.Equals(typeof(uint)))
+            if (IsSupportedType(destinationType))
                 return true;
 
             return base.CanConvertTo(context, destinationType);
@@ -35,7 +46,12 @@ namespace Zartex.Converters
 
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            return String.Format("{0:X}", value);
+            if (destinationType == typeof(string))
+            {
+                return String.Format("{0:X}", value);
+            }
+
+            return null;
         }
     }
 }

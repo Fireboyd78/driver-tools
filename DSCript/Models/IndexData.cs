@@ -18,9 +18,9 @@ namespace DSCript.Models
             get { return 2; }
         }
 
-        public ushort[] Buffer { get; set; }
+        public short[] Buffer { get; set; }
 
-        public ushort this[int id]
+        public short this[int id]
         {
             get { return Buffer[id]; }
             set { Buffer[id] = value; }
@@ -28,7 +28,7 @@ namespace DSCript.Models
 
         public IndexData(int count)
         {
-            Buffer = new ushort[count];
+            Buffer = new short[count];
         }
     }
 }

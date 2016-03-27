@@ -1,4 +1,7 @@
-﻿namespace DSCript.Spooling
+﻿using System;
+using System.IO;
+
+namespace DSCript.Spooling
 {
     public interface ISpoolableResource
     {

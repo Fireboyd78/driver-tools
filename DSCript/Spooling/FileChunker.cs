@@ -38,7 +38,7 @@ namespace DSCript.Spooling
         /// The state of the chunker, whether any files have been loaded or not.
         /// </summary>
         public bool IsLoaded { get; protected set; }
-
+        
         /// <summary>
         /// Determines whether or not the chunker can load a file.
         /// </summary>
@@ -78,7 +78,7 @@ namespace DSCript.Spooling
         /// An event that is called when a spooler is loaded from a file. The event args are unused.
         /// </summary>
         public event SpoolerEventHandler SpoolerLoaded;
-
+        
         /// <summary>
         /// An event that is called prior to the chunker loading a file. The event args are unused.
         /// </summary>
@@ -154,6 +154,16 @@ namespace DSCript.Spooling
                 FileSaveEnd(this, EventArgs.Empty);
         }
 
+        public bool AreChangesPending
+        {
+            get { return Content.AreChangesPending; }
+        }
+
+        public void CommitChanges()
+        {
+            Content.CommitChanges();
+        }
+
         public virtual void Dispose()
         {
             if (_stream != null)
@@ -209,13 +219,13 @@ namespace DSCript.Spooling
                 _stream.Seek((i * 0x10), entriesOffset);
 
                 var entry = new {
-                    Magic     = _stream.ReadInt32(),
-                    Offset    = _stream.ReadInt32(),
-                    Reserved  = (byte)_stream.ReadByte(),
-                    StrLen    = (byte)_stream.ReadByte(),
-                    Align     = (SpoolerAlignment)((byte)_stream.ReadByte()),
-                    PadByte   = (byte)_stream.ReadByte(),
-                    Size      = _stream.ReadInt32()
+                    Context     = _stream.ReadInt32(),
+                    Offset      = _stream.ReadInt32(),
+                    Version     = (byte)_stream.ReadByte(),
+                    StrLen      = (byte)_stream.ReadByte(),
+                    Align       = (SpoolerAlignment)((byte)_stream.ReadByte()),
+                    PadByte     = (byte)_stream.ReadByte(),
+                    Size        = _stream.ReadInt32()
                 };
 
                 string description  = null;
@@ -235,9 +245,9 @@ namespace DSCript.Spooling
                     spooler = new SpoolablePackage(entry.Size) {
                         Alignment   = entry.Align,
                         Description = description,
-                        Magic       = entry.Magic,
+                        Context     = entry.Context,
                         Offset      = entry.Offset,
-                        Reserved    = entry.Reserved,
+                        Version     = entry.Version,
                     };
 
                     ReadChunk((SpoolablePackage)spooler);
@@ -247,17 +257,22 @@ namespace DSCript.Spooling
                     spooler = new SpoolableBuffer(entry.Size) {
                         Alignment   = entry.Align,
                         Description = description,
-                        Magic       = entry.Magic,
+                        Context     = entry.Context,
                         Offset      = entry.Offset,
-                        Reserved    = entry.Reserved,
+                        Version     = entry.Version,
 
                         FileOffset  = ((int)baseOffset + entry.Offset),
                         FileChunker = this
                     };
                 }
 
+                spooler.IsDirty = false;
+                spooler.IsModified = false;
+
                 parent.Children.Add(spooler);
+
                 parent.IsDirty = false;
+                parent.IsModified = false;
 
                 OnSpoolerLoaded(spooler, EventArgs.Empty);
             }
@@ -277,7 +292,7 @@ namespace DSCript.Spooling
             stream.Write((int)ChunkType.Chunk);
             stream.Write(chunk.Size);
             stream.Write(chunk.Children.Count);
-            stream.Write(0x3);
+            stream.Write(Chunk.Version);
 
             var entryStart = (baseOffset + 0x10);
 
@@ -288,9 +303,9 @@ namespace DSCript.Spooling
 
                 var entry = chunk.Children[i];
 
-                stream.Write(entry.Magic);
+                stream.Write(entry.Context);
                 stream.Write(entry.Offset);
-                stream.Write(entry.Reserved);
+                stream.Write(entry.Version);
                 stream.Write(entry.StrLen);
                 stream.Write((byte)entry.Alignment);
                 stream.Write((byte)0xFB); // ;)

@@ -24,6 +24,31 @@ namespace DSCript.Spooling
             }
         }
 
+        public override bool AreChangesPending
+        {
+            get
+            {
+                if (IsModified)
+                    return true;
+
+                foreach (var child in Children)
+                {
+                    if (child.AreChangesPending)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
+        public override void CommitChanges()
+        {
+            foreach (var child in Children)
+                child.CommitChanges();
+
+            base.CommitChanges();
+        }
+
         public override void Dispose()
         {
             // hopefully the detached children get cleaned up

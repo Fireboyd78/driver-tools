@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace DSCript.Spooling
 {
     /// <summary>
-    /// Represents an abstract spoolable resource class. Inherited classes should be created using the <see cref="Create&lt;T&gt;"/> method.
+    /// Represents an abstract spoolable resource class. Inherited classes should be created using the <see cref="SpoolableResourceFactory.Create{T}(Spooler)"/> method.
     /// </summary>
     /// <typeparam name="T">The type of <see cref="Spooler"/> this spoolable resource is based on.</typeparam>
     public abstract class SpoolableResource<T> : ISpoolableResource
@@ -17,10 +18,10 @@ namespace DSCript.Spooling
             get { return this.Spooler; }
             set
             {
-                if (value is T)
-                    this.Spooler = (T)value;
-                else
+                if (!(value is T))
                     throw new Exception("FATAL ERROR: Spooler type mismatch!");
+
+                this.Spooler = (T)value;
             }
         }
 

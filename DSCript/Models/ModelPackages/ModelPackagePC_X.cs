@@ -15,70 +15,61 @@ namespace DSCript.Models
      * THIS CLASS NEEDS A TOTAL REWRITE, DO NOT USE
      * ############################################################ */
     [Obsolete("This class is in need of a complete rewrite, do not use!", true)]
-    public class ModelPackagePC_X : ModelPackage
+    public class ModelPackagePC_X : ModelPackagePC
     {
-        public override uint Magic
+        protected override void Load()
         {
-            get { return 1; }
-        }
-
-        public override void Load()
-        {
-            using (BlockEditor blockEditor = new BlockEditor(BlockData))
+            using (var f = Spooler.GetMemoryStream())
             {
-                BinaryReader f = blockEditor.Reader;
-
-                if (blockEditor.BlockData.Block.Reserved != 1)
-                    throw new Exception("Bad MDXN version, cannot load ModelPackage!");
-                if (f.ReadUInt32() != Magic)
+                if (f.ReadInt32() != 1)
                     throw new Exception("Bad magic, cannot load ModelPackage!");
 
-                UID                     = f.ReadUInt32();
+                UID = f.ReadInt32();
 
-                int nParts              = f.ReadInt32();
-                uint partsOffset        = f.ReadUInt32();
+                var nParts = f.ReadInt32();
+                var partsOffset = f.ReadUInt32();
 
-                int nMeshGroups         = f.ReadInt32();
-                uint meshGroupsOffset   = f.ReadUInt32();
+                var nMeshGroups = f.ReadInt32();
+                var meshGroupsOffset = f.ReadUInt32();
 
-                int nMeshes             = f.ReadInt32();
-                uint meshesOffset       = f.ReadUInt32();
+                var nMeshes = f.ReadInt32();
+                var meshesOffset = f.ReadUInt32();
 
                 // Skip padding
                 f.Seek(0x8, SeekOrigin.Current);
 
-                uint ddsOffset          = f.ReadUInt32();
-                uint pcmpOffset         = f.ReadUInt32();
+                var ddsOffset = f.ReadUInt32();
+                var pcmpOffset = f.ReadUInt32();
 
-                int nIndices            = f.ReadInt32();
-                uint indicesSize        = f.ReadUInt32();
-                uint indicesOffset      = f.ReadUInt32();
-
-                uint unkFaceType        = f.ReadUInt32();
+                var nIndices = f.ReadInt32();
+                var indicesSize = f.ReadUInt32();
+                var indicesOffset = f.ReadUInt32();
+                
+                var unkFaceType = f.ReadUInt32();
 
                 /*if (unkFaceType != 0x1)
                     DSC.Log("Unknown face type check failed, errors may occur.");*/
 
-                uint fvfOffset          = f.ReadUInt32();
+                uint fvfOffset = f.ReadUInt32();
 
                 /* ------------------------------
-                    * Read vertex header
-                    * ------------------------------ */
+                 * Read vertex header
+                 * ------------------------------ */
                 f.Seek(fvfOffset, SeekOrigin.Begin);
 
-                int nVerts              = f.ReadInt32();
-                uint vertsSize          = f.ReadUInt32();
-                uint vertsOffset        = f.ReadUInt32();
-                int vertLength          = f.ReadInt32();
+                int nVerts = f.ReadInt32();
+                uint vertsSize = f.ReadUInt32();
+                uint vertsOffset = f.ReadUInt32();
+                int vertLength = f.ReadInt32();
 
-                uint unkFVF1            = f.ReadUInt32();
-                uint unkFVF2            = f.ReadUInt32();
-                uint unkFVF3            = f.ReadUInt32();
-                uint unkFVF4            = f.ReadUInt32();
+                uint unkFVF1 = f.ReadUInt32();
+                uint unkFVF2 = f.ReadUInt32();
+                uint unkFVF3 = f.ReadUInt32();
+                uint unkFVF4 = f.ReadUInt32();
 
                 /* ------------------------------
-                    * Read indices
-                    * ------------------------------ */
+                 * Read indices
+                 * ------------------------------ */
                 f.Seek(indicesOffset, SeekOrigin.Begin);
 
                 Indices = new IndexData(nIndices);
