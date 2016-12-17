@@ -42,7 +42,7 @@ namespace IMGRipper
         {
             public string FileName { get; set; }
 
-            public long FileOffset
+            public virtual long FileOffset
             {
                 get { return ((long)Offset * 2048L); }
             }
@@ -54,6 +54,18 @@ namespace IMGRipper
         public class XBoxEntry : Entry
         {
             public int LumpIndex { get; set; }
+        }
+
+        public class PSPEntry : Entry
+        {
+            public override long FileOffset
+            {
+                // no calculation needed
+                get { return Offset; }
+            }
+
+            // ???
+            public int UncompressedLength { get; set; }
         }
         
         public int Reserved { get; set; }
@@ -861,7 +873,7 @@ namespace IMGRipper
             return buffer;
         }
         
-        private unsafe void ReadEntries(Stream stream, int version)
+        private unsafe void ReadIMGEntries(Stream stream, int version)
         {
             var buffer = GetDecryptedData(stream, version);
             var count = Entries.Capacity;
@@ -963,20 +975,63 @@ namespace IMGRipper
             {
                 var type = fs.ReadInt32();
 
-                if ((type & 0xFFFFFF) != 0x474D49)
-                    throw new Exception("Failed to load IMG file - bad magic!");
-
-                var version = ((type >> 24) & 0xF);
-                Version = (version >= 2 && version <= 4) ? (IMGVersion)version : IMGVersion.Unknown;
-
-                if (Version == IMGVersion.Unknown)
-                    throw new Exception("Failed to load IMG file - unsupported version!");
+                var version = -1;
+                var count = 0;
                 
-                var count = fs.ReadInt32();
-                Reserved = fs.ReadInt32();
+                if ((type & 0xFFFFFF) == 0x474D49)
+                {
+                    version = ((type >> 24) & 0xF);
+                    Version = (version >= 2 && version <= 4) ? (IMGVersion)version : IMGVersion.Unknown;
+
+                    if (Version == IMGVersion.Unknown)
+                        throw new Exception("Failed to load IMG file - unsupported version!");
+
+                    count = fs.ReadInt32();
+                    Reserved = fs.ReadInt32();
+                }
+                else
+                {
+                    // PSP archive?
+                    count = type;
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (fs.ReadInt32() != count)
+                        {
+                            // nope
+                            count = 0;
+                            break;
+                        }
+                    }
+                    
+                    Version = IMGVersion.PSP;
+                    version = (int)Version;
+                }
+
+                if (version == -1)
+                    throw new Exception("File is not an IMG archive!");
+                
                 Entries = new List<Entry>(count);
 
-                ReadEntries(fs, version);
+                if (Version == IMGVersion.PSP)
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var entry = new PSPEntry() {
+                            FileName = GetFileNameFromHash(fs.ReadUInt32()),
+                            Offset = fs.ReadInt32(),
+                            Length = fs.ReadInt32(),
+                            UncompressedLength = fs.ReadInt32(),
+                        };
+
+                        Entries.Add(entry);
+                    }
+                }
+                else
+                {
+                    ReadIMGEntries(fs, (int)Version);
+                }
+
                 IsLoaded = true;
             }
         }
@@ -1092,6 +1147,11 @@ namespace IMGRipper
                     sb.AppendFormat("0x{0:X8}, 0x{1:X8}, {2} -> {3}\r\n",
                         entry.FileOffset, entry.Length,
                         GetLumpFilename(filename, entry as XBoxEntry), entry.FileName);
+                }
+                else if (entry is PSPEntry)
+                {
+                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, 0x{2:X8}, {2}\r\n",
+                        entry.FileOffset, entry.Length, ((PSPEntry)entry).UncompressedLength, entry.FileName);
                 }
                 else
                 {

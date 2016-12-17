@@ -24,6 +24,8 @@ namespace IMGRipper
 
         IMG2 = 2,
         IMG3 = 3,
-        IMG4 = 4
+        IMG4 = 4,
+
+        PSP = 100,
     }
 }
