@@ -39,6 +39,12 @@
 [SKYD]="txt" ;Partial match "SKYDOME_NAME:"
 [LIGH]="txt" ;Partial match "LIGHT_AMBIENT_COLOUR:" (DPL)
 
+# Hackish way of finding some files with header comments
+[####]="txt"
+
+# Misc.
+[8BPS]="psd"
+
 # --------------- Driv3r --------------- #
 # Animations
 [HPC1]="ab3"
@@ -72,3 +78,17 @@
 
 # Vehicle sound banks
 [VB10]="vsb"
+
+# --------------- Driver '76 --------------- #
+# PSP files
+[~SCE]="prx" ; modules
+[FEM2]="dmdl"; models
+[PSMF]="psf" ; movies
+[TEX1]="tex" ; textures
+[VAGp]="vag" ; briefing
+[RIFF]="at3" ; sounds
+
+0x20000="tga" ; might throw some false positives?
+0x1464347="gcf"
+0x500EDAC="java_object" ; serialized java objects
+0xB308CF10="sbn"

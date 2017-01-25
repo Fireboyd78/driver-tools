@@ -10,6 +10,7 @@ namespace IMGRipper
 {
     class Program
     {
+        public static bool BuildArchive = false;
         public static bool VerboseLog = false;
         public static bool NoFMV = false;
         public static bool ListOnly = false;
@@ -39,7 +40,7 @@ namespace IMGRipper
 
         static void Main(string[] args)
         {
-            Console.WriteLine("IMGRipper V1.0 by CarLuver69\r\n");
+            Console.WriteLine("IMGRipper V1.2b by CarLuver69\r\n");
 
             if (args.Length > 0)
             {
@@ -51,6 +52,11 @@ namespace IMGRipper
                     {
                         switch (arg.ToLower().TrimStart('/', '-'))
                         {
+                        case "b":
+                        case "build":
+                            WriteVerbose("BuildArchive flag enabled.");
+                            BuildArchive = true;
+                            continue;
                         case "encrypt":
                             WriteVerbose("Encrypt flag enabled.");
                             EncryptHeader = true;
@@ -192,18 +198,25 @@ namespace IMGRipper
                             return;
                         }
 
-                        if (IMGArchive.LoadLookupTable(LookupTable))
+                        if (BuildArchive)
                         {
-                            Console.WriteLine("Successfully loaded lookup table.");
-                            IMGArchive.Unpack(InputFile, OutputDir);
+                            IMGArchive.BuildArchive(InputFile, OutputDir);
                         }
-                        
-                        // Load the lookup table
-                        //if (IMGFile.LoadLookupTable(LookupTable))
-                        //{
-                        //    Console.WriteLine("Successfully loaded lookup table.");
-                        //    IMGFile.Unpack(InputFile, OutputDir);
-                        //}
+                        else
+                        {
+                            if (IMGArchive.LoadLookupTable(LookupTable))
+                            {
+                                Console.WriteLine("Successfully loaded lookup table.");
+                                IMGArchive.Unpack(InputFile, OutputDir);
+                            }
+
+                            // Load the lookup table
+                            //if (IMGFile.LoadLookupTable(LookupTable))
+                            //{
+                            //    Console.WriteLine("Successfully loaded lookup table.");
+                            //    IMGFile.Unpack(InputFile, OutputDir);
+                            //}
+                        }
                     }
                     else
                     {
@@ -223,11 +236,17 @@ namespace IMGRipper
 If no output folder is specified, a default folder is used.
 This folder is usually located where IMGRipper resides.
 
+Extracted files will be extracted to [Output]\Files\.
+An archive configuration file will be created in [Output].
+
 Options:
-    --[o]verwrite   Overwrites any extracted files if they exist
-    --[l]istonly    Prints out a list of all files inside the archive
+    --[b]uild       Builds an archive using an archive configuration file.
+                    The input file should be the path to the config file.
+                    The archive will be placed in [Output]\Build\ folder.
+    --[o]verwrite   Overwrites files if they exist.
+    --[l]istonly    Prints out a list of all files inside the archive.
     --nofmv         Do not extract movie files (These tend to be very large!)
-    --[v]erbose     Display verbose debugging information");
+    --[v]erbose     Display verbose debugging information.");
 
                 Console.WriteLine("Press any key to exit.");
                 Console.ReadKey();

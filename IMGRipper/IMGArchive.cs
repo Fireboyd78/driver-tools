@@ -40,15 +40,62 @@ namespace IMGRipper
     {
         public class Entry
         {
-            public string FileName { get; set; }
+            // was FileName set directly?
+            private bool _hasFilename;
+
+            private string _fileName;
+            private uint _fileNameHash;
+
+            protected virtual uint CalculateHash(string fileName)
+            {
+                return CustomHasher.GetFilenameCRC(fileName);
+            }
+            
+            public string FileName
+            {
+                get { return _fileName; }
+                set
+                {
+                    _hasFilename = true;
+
+                    _fileName = value;
+                    _fileNameHash = CalculateHash(value);
+                }
+            }
+
+            public uint FileNameHash
+            {
+                get { return _fileNameHash; }
+                set
+                {
+                    _hasFilename = false;
+
+                    _fileNameHash = value;
+                    _fileName = $"{_fileNameHash}";
+                }
+            }
 
             public virtual long FileOffset
             {
-                get { return ((long)Offset * 2048L); }
+                get { return (Offset * 2048L); }
+            }
+
+            public bool HasFileName
+            {
+                get { return _hasFilename; }
             }
             
             public int Offset { get; set; }
             public int Length { get; set; }
+
+            public override sealed int GetHashCode()
+            {
+                // hopefully this will prevent any unwanted behavior
+                if (_fileNameHash == 0)
+                    return base.GetHashCode();
+
+                return (int)_fileNameHash;
+            }
         }
 
         public class XBoxEntry : Entry
@@ -58,6 +105,11 @@ namespace IMGRipper
 
         public class PSPEntry : Entry
         {
+            protected override uint CalculateHash(string fileName)
+            {
+                throw new InvalidOperationException("Cannot calculate the hash for a PSPEntry (hashing method unknown)");
+            }
+
             public override long FileOffset
             {
                 // no calculation needed
@@ -66,6 +118,21 @@ namespace IMGRipper
 
             // ???
             public int UncompressedLength { get; set; }
+
+            public bool IsCompressed
+            {
+                get { return (Length != UncompressedLength); }
+            }
+        }
+
+        public class FileDescriptor
+        {
+            public string FileName { get; set; }
+            
+            public int Index { get; set; }
+            public int DataIndex { get; set; }
+
+            public Entry EntryData { get; set; }
         }
         
         public int Reserved { get; set; }
@@ -74,7 +141,7 @@ namespace IMGRipper
         public bool IsLoaded { get; protected set; }
 
         public IMGVersion Version { get; set; }
-
+        
         private static readonly Dictionary<uint, string> LookupTable =
             new Dictionary<uint, string>();
 
@@ -760,9 +827,22 @@ namespace IMGRipper
 
             return knownFiles;
         }
+        
+        private bool _hashLookupCompiled = false;
 
-        private void HACK_CompileHashLookup()
+        private bool HACK_CompileHashLookup()
         {
+            // run once
+            if (_hashLookupCompiled)
+                return true;
+            
+            // will print only once
+            if (Version == IMGVersion.PSP)
+            {
+                Program.WriteVerbose("WARNING: PSP archive uses unknown hashing method, cannot determine filenames!");
+                return false;
+            }
+
             // temporary hack
             var knownFiles = new List<String>() {
                 "GAMECONFIG.TXT",
@@ -789,7 +869,6 @@ namespace IMGRipper
 
             knownFiles.AddRange(HACK_CompileDriv3rFiles());
             knownFiles.AddRange(HACK_CompileDriverPLFiles());
-
             
             var sb = new StringBuilder();
 
@@ -815,20 +894,30 @@ namespace IMGRipper
             }
 
             File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "out_files.txt"), sb.ToString());
+
+            _hashLookupCompiled = true;
+            return true;
         }
 
         private string GetFileNameFromHash(uint filenameHash)
         {
-            if (HashLookup.Count == 0)
-                HACK_CompileHashLookup();
-
-            if (HashLookup.ContainsKey(filenameHash))
+            if (HACK_CompileHashLookup() && HashLookup.ContainsKey(filenameHash))
             {
                 var name = HashLookup[filenameHash];
                 return name;
             }
 
-            return filenameHash.ToString();
+            return null;
+        }
+
+        private void SetEntryFileName(Entry entry, uint hash)
+        {
+            var filename = GetFileNameFromHash(hash);
+
+            if (filename != null)
+                entry.FileName = filename;
+            else
+                entry.FileNameHash = hash;
         }
 
         private byte[] GetDecryptedData(Stream stream, int version)
@@ -931,8 +1020,9 @@ namespace IMGRipper
                         fixed (byte* p = buffer)
                         {
                             var ptr = (byte*)(p + (i * 0xC));
+                            var hash = *(uint*)ptr;
 
-                            entry.FileName = GetFileNameFromHash((*(uint*)ptr));
+                            SetEntryFileName(entry, hash);
 
                             entry.Offset = *(int*)(ptr + 0x4);
                             entry.Length = *(int*)(ptr + 0x8);
@@ -951,8 +1041,9 @@ namespace IMGRipper
                         fixed (byte* p = buffer)
                         {
                             var ptr = (byte*)(p + (i * 0xC));
+                            var hash = *(uint*)ptr;
 
-                            entry.FileName = GetFileNameFromHash((*(uint*)ptr));
+                            SetEntryFileName(entry, hash);
 
                             var data = *(int*)(ptr + 0x4);
 
@@ -1012,17 +1103,20 @@ namespace IMGRipper
                     throw new Exception("File is not an IMG archive!");
                 
                 Entries = new List<Entry>(count);
-
+                
                 if (Version == IMGVersion.PSP)
                 {
                     for (int i = 0; i < count; i++)
                     {
-                        var entry = new PSPEntry() {
-                            FileName = GetFileNameFromHash(fs.ReadUInt32()),
-                            Offset = fs.ReadInt32(),
-                            Length = fs.ReadInt32(),
-                            UncompressedLength = fs.ReadInt32(),
-                        };
+                        var entry = new PSPEntry();
+
+                        var hash = fs.ReadUInt32();
+
+                        SetEntryFileName(entry, hash);
+
+                        entry.Offset = fs.ReadInt32();
+                        entry.Length = fs.ReadInt32();
+                        entry.UncompressedLength = fs.ReadInt32();
 
                         Entries.Add(entry);
                     }
@@ -1139,38 +1233,10 @@ namespace IMGRipper
             img.LoadFile(filename);
 
             var sb = new StringBuilder();
+            var filesDir = Path.Combine(outputDir, "Files");
 
-            foreach (var entry in img.Entries)
-            {
-                if (entry is XBoxEntry)
-                {
-                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, {2} -> {3}\r\n",
-                        entry.FileOffset, entry.Length,
-                        GetLumpFilename(filename, entry as XBoxEntry), entry.FileName);
-                }
-                else if (entry is PSPEntry)
-                {
-                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, 0x{2:X8}, {2}\r\n",
-                        entry.FileOffset, entry.Length, ((PSPEntry)entry).UncompressedLength, entry.FileName);
-                }
-                else
-                {
-                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, {2}\r\n",
-                        entry.FileOffset, entry.Length, entry.FileName);
-                }
-            }
-
-            if (sb.Length > 0)
-                File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "out.txt"), sb.ToString());
-
-            if (Program.ListOnly)
-            {
-                Console.WriteLine(sb.ToString());
-                return;
-            }
-            
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
+            if (!Program.ListOnly && !Directory.Exists(filesDir))
+                Directory.CreateDirectory(filesDir);
 
             int maxSize = 0x2C000000;
 
@@ -1181,9 +1247,7 @@ namespace IMGRipper
                 if (!Program.VerboseLog)
                     Console.Write("Progress: ");
             }
-
-            Console.SetBufferSize(Console.BufferWidth, 2500);
-
+            
             var cL = Console.CursorLeft;
             var cT = Console.CursorTop;
 
@@ -1195,8 +1259,12 @@ namespace IMGRipper
 
             Stream stream = null;
 
-            foreach (var entry in img.Entries)
+            var fileDescriptors = new List<FileDescriptor>();
+
+            for (int i = 0; i < img.Entries.Count; i++)
             {
+                var entry = img.Entries[i];
+
                 if (!Program.VerboseLog)
                 {
                     Console.SetCursorPosition(cL, cT);
@@ -1222,18 +1290,15 @@ namespace IMGRipper
                 else if (stream == null && lump == -1)
                     stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
                 
-                stream.Seek(entry.FileOffset, SeekOrigin.Begin);
+                stream.Position = entry.FileOffset;
 
                 string name = "";
+                string ext = "bin";
+
                 long length = entry.Length;
-
-                // first check for extension, then if it has a directory structure
-                var hasFilename = entry.FileName.IndexOf('.') != -1 || entry.FileName.IndexOf('\\') != -1;
                 
-                if (!hasFilename)
+                if (!entry.HasFileName)
                 {
-                    string ext = "bin";
-
                     var magic32 = stream.PeekUInt32();
                     var magic16 = (magic32 & 0xFFFF);
 
@@ -1248,89 +1313,160 @@ namespace IMGRipper
                         ext = "txt";
                     }
 
-                    if (ext == "bin")
-                    {
-                        var holdPos = stream.Position;
+                    var holdPos = stream.Position;
 
-                        stream.Position += 0xC;
+                    // TODO: move this to its own function
+                    // (the while loop is so we don't have deeply nested if's)
+                    while (ext == "bin")
+                    {
+                        // check for embedded .PSP archives
+                        // (assuming the higher 16-bits aren't used!)
+                        if (((magic32 >> 16) & 0xFFFF) == 0)
+                        {
+                            var isPSPFile = true;
+
+                            for (int l = 0; l < 3; l++)
+                            {
+                                if (stream.ReadInt32() != magic32)
+                                {
+                                    isPSPFile = false;
+                                    break;
+                                }
+                            }
+
+                            if (isPSPFile)
+                            {
+                                ext = "psp";
+                                break;
+                            }
+                        }
+
+                        // check for xbox video
+                        stream.Position = holdPos + 0xC;
 
                         if (stream.ReadInt32() == 0x58626F78)
                         {
                             // xbox video
                             ext = "xmv";
+                            break;
                         }
-                        else
+
+                        // check for stuff we can identify by the EOF
+                        stream.Position = holdPos + (length - 4);
+
+                        var eof = stream.ReadInt32();
+
+                        // recording file? (won't always work)
+                        if (eof == 0x21524E4A)
                         {
-                            stream.Position = holdPos + (length - 4);
-
-                            var eof = stream.ReadInt32();
-
-                            if (eof == 0x21524E4A)
-                            {
-                                // recording file
-                                ext = "pad";
-                            }
-                            else if (((eof >> 16) & 0xFFFF) == 0x0A0D)
-                            {
-                                // text file w/ newline @ end
-                                ext = "txt";
-                            }
+                            ext = "pad";
+                            break;
                         }
                         
+                        // text file with a newline @ the end?
+                        if ((((eof >> 16) & 0xFFFF) == 0x0A0D) || (((eof >> 8) & 0xFFFF) == 0x0A0D) || ((eof & 0xFFFF) == 0x0D0A))
+                        {
+                            ext = "txt";
+                            break;
+                        }
+
+                        // possibly a TGA file w/ footer?
+                        if (eof == 0x2E454C)
+                        {
+                            // verify the footer
+                            stream.Position = holdPos + (length - 0x12);
+
+                            if (stream.ReadString(16) == "TRUEVISION-XFILE")
+                            {
+                                ext = "tga";
+                                break;
+                            }
+                        }
+
+                        // unknown format :(
                         stream.Position = holdPos;
+                        break; // BREAK THE LOOP!!!
                     }
 
-                    // still nothing? try one last thing
-                    if (ext == "bin" && (((magic32 >> 16) & 0xFFFF) == 0) && magic16 != 0)
-                        ext = "pad";
-
-                    //name = String.Format("{0:D4}_{1}.{2}", i, entry.Name, ext);
                     if (entry is XBoxEntry)
                     {
                         name = String.Format("_UNKNOWN\\L{0:D2}\\{1}.{2}", (entry as XBoxEntry).LumpIndex, entry.FileName, ext);
                     }
+                    else if (entry is PSPEntry)
+                    {
+                        name = String.Format("_UNKNOWN\\{0:D4}_{1:D4}_{2}.{3}",
+                            ((entry.FileNameHash >> 24) & 0xFF), ((entry.FileNameHash >> 16) & 0xFF), (entry.FileNameHash & 0xFFFF), ext);
+                    }
                     else
                     {
                         name = String.Format("_UNKNOWN\\{0}.{1}", entry.FileName, ext);
-                    }
-
-                    if (Program.NoFMV && ((ext == "xmv") || (ext == "xav")))
-                    {
-                        Program.WriteVerbose("{0}: SKIPPING -> {1}", idx++, name);
-                        nSkip++;
-
-                        continue;
-                    }
+                    }                    
                 }
                 else
                 {
                     name = entry.FileName;
-                    
-                    if (Program.NoFMV && Path.GetExtension(name).ToLower() == ".xav")
-                    {
-                        Program.WriteVerbose("{0}: SKIPPING -> {1}", idx++, name);
-                        nSkip++;
+                    ext = Path.GetExtension(name);
 
-                        continue;
-                    }
+                    // '.ext' -> 'ext' (if applicable)
+                    if (!String.IsNullOrEmpty(ext))
+                        ext = ext.Substring(1).ToLower();
                 }
 
+                if (entry is XBoxEntry)
+                {
+                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, {2} -> {3}\r\n",
+                        entry.FileOffset, entry.Length,
+                        GetLumpFilename(filename, entry as XBoxEntry), name);
+                }
+                else if (entry is PSPEntry)
+                {
+                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, 0x{2:X8}, 0x{3:X8} -> {4}\r\n",
+                        entry.FileOffset, entry.Length, ((PSPEntry)entry).UncompressedLength, entry.FileNameHash, name);
+                }
+                else
+                {
+                    sb.AppendFormat("0x{0:X8}, 0x{1:X8}, {2}\r\n",
+                        entry.FileOffset, entry.Length, name);
+                }
+                
+                // do not write any data if it's only a listing
+                if (Program.ListOnly)
+                    continue;
+
+                // add file descriptor
+                fileDescriptors.Add(new FileDescriptor() {
+                    EntryData = entry,
+                    FileName = name,
+
+                    Index = i,
+                });
+
+                if (Program.NoFMV && ((ext == "xmv") || (ext == "xav")))
+                {
+                    Program.WriteVerbose("{0}: SKIPPING -> {1}", idx++, name);
+                    nSkip++;
+
+                    continue;
+                }
+                
                 var nDir = Path.GetDirectoryName(name);
 
                 if (!String.IsNullOrEmpty(nDir))
                 {
-                    var eDir = Path.Combine(outputDir, Path.GetDirectoryName(name));
+                    var eDir = Path.Combine(filesDir, Path.GetDirectoryName(name));
 
                     if (!Directory.Exists(eDir))
                         Directory.CreateDirectory(eDir);
                 }
 
-                var outName = Path.Combine(outputDir, name);
+                var outName = Path.Combine(filesDir, name);
 
                 Program.WriteVerbose("{0}: {1}", idx++, name);
 
                 if (!Program.Overwrite && File.Exists(outName))
                     continue;
+
+                stream.Position = entry.FileOffset;
 
                 if (length < maxSize)
                 {
@@ -1353,15 +1489,369 @@ namespace IMGRipper
                 }
             }
 
+            if (sb.Length > 0)
+                File.WriteAllText(Path.Combine(Path.GetDirectoryName(filename), "files.txt"), sb.ToString());
+
+            stream.Dispose();
+
             if (!Program.ListOnly)
             {
-                stream.Dispose();
+                // clear old data
+                sb.Clear();
+
+                // build archive config
+                sb.AppendLine($"archive {Path.GetFileName(filename)}");
+                sb.AppendLine($"type {(int)img.Version}");
+                sb.AppendLine($"version 1");
+
+                sb.AppendLine();
+
+                var dataIndex = 0;
+                var useSorting = false; // if Index != DataIndex for any entries
+
+                // add data index to descriptors
+                foreach (var descriptor in fileDescriptors.OrderBy((e) => e.EntryData.FileOffset))
+                {
+                    // fixup the data index
+                    descriptor.DataIndex = dataIndex++;
+
+                    if (!useSorting && (descriptor.Index != descriptor.DataIndex))
+                        useSorting = true;
+                }
+
+                // write data descriptors by their index (implicitly)
+                foreach (var descriptor in fileDescriptors)
+                {
+                    if (useSorting)
+                        sb.Append($"{descriptor.DataIndex:D4},");
+
+                    sb.AppendLine($"0x{descriptor.EntryData.FileNameHash:X8},{descriptor.FileName}");
+                }
+
+                // no empty line at the end :)
+                sb.Append("#EOF");
+                
+                // write the archive config
+                File.WriteAllText(Path.Combine(outputDir, Path.GetDirectoryName(filename), "archive.cfg"), sb.ToString());
 
                 Console.WriteLine((!Program.VerboseLog) ? "\r\n" : "");
                 Console.WriteLine("Unpacked {0} files.", (img.Entries.Count - nSkip));
 
                 if (nSkip > 0)
                     Console.WriteLine("{0} files skipped.", nSkip);
+            }
+        }
+
+        public static void BuildArchive(string configFile, string outputDir)
+        {
+            var inputDir = Path.GetDirectoryName(configFile);
+            var filesDir = Path.Combine(inputDir, "Files");
+
+            Console.SetBufferSize(Console.BufferWidth, 4000);
+
+            var blacklistFile = Path.Combine(inputDir, "blacklist.txt");
+            var blacklist = new List<string>();
+            
+            if (File.Exists(blacklistFile))
+            {
+                Program.WriteVerbose($"Loading blacklist: '{blacklistFile}'");
+
+                using (var sr = new StreamReader(blacklistFile, true))
+                {
+                    var line = 0;
+
+                    while (!sr.EndOfStream)
+                    {
+                        var curLine = sr.ReadLine();
+                        ++line;
+
+                        if (String.IsNullOrEmpty(curLine))
+                            continue;
+
+                        var blEntry = Path.Combine(filesDir, curLine);
+                        
+                        if (!File.Exists(blEntry))
+                        {
+                            Program.WriteVerbose($"Skipping invalid blacklist entry on line {line}: '{curLine}'");
+                            continue;
+                        }
+
+                        blacklist.Add(curLine);
+                    }
+                }
+
+                if (blacklist.Count > 0)
+                    Program.WriteVerbose($"Loaded {blacklist.Count} blacklist entries.");
+                else
+                    Program.WriteVerbose("Blacklist is empty, no entries added.");
+            }
+            
+            using (var sr = new StreamReader(configFile, true))
+            {
+                var archive = "";
+
+                var type = -1;
+                var version = -1;
+
+                var files = new List<FileDescriptor>();
+                var numFiles = 0;
+                
+                var step = 0;
+                var inHeader = true;
+
+                var line = 0;
+
+                Console.WriteLine("Parsing archive configuration...");
+
+                while (!sr.EndOfStream)
+                {
+                    var curLine = sr.ReadLine();
+                    
+                    ++line;
+
+                    // EOF?
+                    if (String.Equals(curLine, "#EOF", StringComparison.InvariantCultureIgnoreCase))
+                        break;
+                    
+                    // skip empty lines/comments
+                    if (String.IsNullOrEmpty(curLine) || curLine.StartsWith("#"))
+                        continue;
+
+                    string[] input = { };
+
+                    // read header
+                    if (step < 3)
+                    {
+                        input = curLine.Split(' ');
+
+                        var keyword = input[0].ToLower();
+
+                        if (input.Length < 2)
+                        {
+                            Program.WriteVerbose($"Unknown input '{keyword}', skipping...");
+                            continue;
+                        }
+
+                        // move past keyword + space
+                        var value = curLine.Substring(keyword.Length + 1);
+
+                        switch (keyword)
+                        {
+                        case "archive":
+                            archive = value;
+                            break;
+                        case "type":
+                            if (!int.TryParse(value, out type))
+                                throw new InvalidOperationException($"Invalid archive type '{value}', must be an integer.");
+                            break;
+                        case "version":
+                            if (!int.TryParse(value, out version))
+                                throw new InvalidOperationException($"Invalid config. version '{version}', must be an integer.");
+                            break;
+                        default:
+                            // rip
+                            throw new InvalidOperationException($"Invalid archive configuration: unknown data '{curLine}'.");
+                        }
+
+                        // read next header entry
+                        ++step;
+                        continue;
+                    }
+
+                    if (inHeader)
+                    {
+                        // verify we got the info. needed
+                        if (String.IsNullOrEmpty(archive))
+                            throw new InvalidOperationException("Invalid archive configuration: missing/empty 'archive' data!");
+                        if (type == -1)
+                            throw new InvalidOperationException("Invalid archive configuration: missing 'type' data!");
+                        if (version == -1)
+                            throw new InvalidOperationException("Invalid archive configuration: missing 'version' data!");
+
+                        if ((version < 1) || (version > 1))
+                            throw new InvalidOperationException($"Invalid archive configuration: unknown version '{version}'.");
+
+                        // end of header
+                        inHeader = false;
+                    }
+
+                    // read file entries
+                    input = curLine.Split(',');
+
+                    switch ((IMGVersion)type)
+                    {
+                    case IMGVersion.IMG2:
+                    case IMGVersion.IMG3:
+                    case IMGVersion.IMG4:
+                        throw new NotSupportedException($"Archive configuration 'IMG{type}' currently unsupported.");
+                    case IMGVersion.PSP:
+                        {
+                            if (input.Length != 3)
+                                throw new InvalidOperationException($"Invalid archive configuration: malformed entry @ line {line}.");
+
+                            int dataIndex = -1;
+                            uint hash = 0;
+
+                            if (!int.TryParse(input[0], NumberStyles.Integer, CultureInfo.CurrentCulture, out dataIndex))
+                                throw new InvalidOperationException($"Invalid archive configuration: entry @ line {line} has invalid data index ({input[0]}).");
+
+                            if (!uint.TryParse(input[1].Substring(2), NumberStyles.HexNumber, CultureInfo.CurrentCulture, out hash))
+                                throw new InvalidOperationException($"Invalid archive configuration: entry @ line {line} has invalid hash ({input[1]}).");
+
+                            var filename = input[2];
+
+                            if (String.IsNullOrEmpty(filename))
+                                throw new InvalidOperationException($"Invalid archive configuration: entry @ line {line} has empty filename.");
+
+                            if (blacklist.Contains(filename))
+                            {
+                                Program.WriteVerbose($"Skipping blacklisted entry on line {line}: '{filename}'");
+                                continue;
+                            }
+                            else
+                            {
+                                files.Add(new FileDescriptor() {
+                                    Index = numFiles,
+                                    DataIndex = dataIndex,
+
+                                    FileName = filename,
+
+                                    EntryData = new PSPEntry() {
+                                        FileNameHash = hash,
+                                    },
+                                });
+                            }
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Invalid archive configuration: invalid type '{type}'!");
+                    }
+
+                    // file added successfully
+                    ++numFiles;
+                }
+
+                Console.WriteLine($"{files.Count} files processed.");
+                Console.WriteLine("Calculating buffer size...");
+                
+                var bufferSize = 0L;
+                
+                // calculate the size of the file and fill in the entry data
+                switch ((IMGVersion)type)
+                {
+                case IMGVersion.IMG2:
+                case IMGVersion.IMG3:
+                case IMGVersion.IMG4:
+                    throw new NotSupportedException($"Archive configuration 'IMG{type}' currently unsupported.");
+                case IMGVersion.PSP:
+                    {
+                        // header size + entries
+                        bufferSize += (0x10 + (numFiles * 0x10));
+                        
+                        foreach (var entry in files.OrderBy((f) => f.DataIndex))
+                        {
+                            var entryData = (entry.EntryData as PSPEntry);
+
+                            var filename = Path.Combine(filesDir, entry.FileName);
+
+                            if (!File.Exists(filename))
+                            {
+                                Program.WriteVerbose($"WARNING: File '{filename}' is missing, skipping...");
+                                continue;
+                            }
+
+                            var fileInfo = new FileInfo(filename);
+
+                            bufferSize = MemoryHelper.Align(bufferSize, 2048);
+
+                            if (bufferSize > int.MaxValue)
+                                throw new InvalidOperationException("Archive filesize limit exceeded! Trim some files and try again.");
+
+                            entryData.Offset = (int)bufferSize;
+                            entryData.Length = (int)fileInfo.Length;
+                            entryData.UncompressedLength = (int)fileInfo.Length;
+                            
+                            bufferSize += fileInfo.Length;
+                        }
+
+                        bufferSize = MemoryHelper.Align(bufferSize, 2048);
+                    } break;
+                }
+
+                Console.WriteLine("Building archive...please wait");
+
+                if (!Program.VerboseLog)
+                    Console.Write("Progress: ");
+                
+                var cL = Console.CursorLeft;
+                var cT = Console.CursorTop;
+
+                // let's get to work!
+                var archiveDir = Path.Combine(outputDir, "Build");
+                var archiveFileName = Path.Combine(archiveDir, archive);
+
+                if (!Directory.Exists(archiveDir))
+                    Directory.CreateDirectory(archiveDir);
+
+                using (var fs = new FileStream(archiveFileName, FileMode.Create, FileAccess.Write, FileShare.Read, (1024 * 1024), FileOptions.RandomAccess))
+                {
+                    fs.SetLength(bufferSize);
+
+                    switch ((IMGVersion)type)
+                    {
+                    case IMGVersion.IMG2:
+                    case IMGVersion.IMG3:
+                    case IMGVersion.IMG4:
+                        throw new NotSupportedException($"Archive configuration 'IMG{type}' currently unsupported.");
+                    case IMGVersion.PSP:
+                        {
+                            // write number of files 4 times
+                            for (int n = 0; n < 4; n++)
+                                fs.Write(numFiles);
+
+                            // write each entry in the header and also its data
+                            for (int i = 0, idx = 1; i < numFiles; i++, idx++)
+                            {
+                                var entry = files[i];
+                                var entryData = (entry.EntryData as PSPEntry);
+
+                                var filename = Path.Combine(filesDir, entry.FileName);
+
+                                fs.Position = (0x10 + (i * 0x10));
+
+                                fs.Write(entryData.FileNameHash);
+                                fs.Write(entryData.Offset);
+                                fs.Write(entryData.Length);
+                                fs.Write(entryData.UncompressedLength);
+
+                                if (!Program.VerboseLog)
+                                {
+                                    Console.SetCursorPosition(cL, cT);
+                                    Console.Write("{0} / {1}", idx, numFiles);
+                                }
+
+                                Program.WriteVerbose($"[{idx:D4}] {entry.FileName} @ {entryData.Offset:X8} (size: {entryData.Length:X8})");
+                                
+                                using (var ffs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, entryData.Length, FileOptions.SequentialScan))
+                                {
+                                    if (ffs.Length != entryData.Length)
+                                        throw new InvalidOperationException($"FATAL ERROR: File size for '{entry.FileName}' was changed before the archive could be built!");
+
+                                    // seek to the file offset and write all data
+                                    fs.Position = entryData.FileOffset;
+
+                                    ffs.CopyTo(fs, entryData.Length);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (!Program.VerboseLog)
+                    Console.WriteLine("\r\n");
+
+                Console.WriteLine($"Successfully saved archive '{archive}' to '{archiveDir}'!");
             }
         }
 

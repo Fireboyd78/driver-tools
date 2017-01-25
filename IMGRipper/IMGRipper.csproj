@@ -38,6 +38,7 @@
   <ItemGroup>
     <Compile Include="IMGArchive.cs" />
     <Compile Include="IMGType.cs" />
+    <Compile Include="MemoryHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="IMGFile.cs" />
