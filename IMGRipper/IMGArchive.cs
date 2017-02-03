@@ -967,6 +967,8 @@ namespace IMGRipper
             var buffer = GetDecryptedData(stream, version);
             var count = Entries.Capacity;
 
+            File.WriteAllBytes(Path.Combine(Environment.CurrentDirectory, "temp.dat"), buffer);
+
             switch (version)
             {
             case 2:
@@ -979,7 +981,7 @@ namespace IMGRipper
                         {
                             var ptr = (byte*)(p + (i * 0x38));
 
-                            entry.FileName = new String((sbyte*)p);
+                            entry.FileName = new String((sbyte*)ptr);
                             entry.Offset = *(int*)(ptr + 0x30);
                             entry.Length = *(int*)(ptr + 0x34);
                         }
