@@ -212,7 +212,7 @@ namespace LocSF
                     }
                     else
                     {
-
+                        var package = new SpooledLocalisationFile(input);
                     }
                 }
                 catch (Exception e)
