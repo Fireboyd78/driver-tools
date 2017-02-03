@@ -69,13 +69,21 @@ namespace GMC2Snooper
                     }
 
                     // vif tag info :)
-                    foreach (var model in gmc2.Models)
+                    for (int i = 0; i < gmc2.Models.Count; i++)
                     {
-                        foreach (var subModel in model.SubModels)
+                        var model = gmc2.Models[i];
+
+                        Console.WriteLine($"**** Model {i + 1} / {gmc2.Models.Count} *****");
+                        Console.WriteLine($"Sub models: {model.SubModels.Count}");
+
+                        for (int ii = 0; ii < model.SubModels.Count; ii++)
                         {
+                            var subModel = model.SubModels[ii];
+
+                            Console.WriteLine($"******** Sub model {ii + 1} / {model.SubModels.Count} *********");
+
                             using (var ms = new MemoryStream(subModel.ModelDataBuffer))
                             {
-                                Console.WriteLine("<<< BEGIN >>>");
                                 while (ms.Position < ms.Length)
                                 {
                                     // check alignment
@@ -263,7 +271,6 @@ namespace GMC2Snooper
                                         break;
                                     }
                                 }
-                                Console.WriteLine("<<< END >>>");
                             }
                         }
                     }
@@ -291,8 +298,6 @@ namespace GMC2Snooper
                         Console.WriteLine("}");
                     }
                 }
-
-                Console.ReadKey();
             }
             else
             {
