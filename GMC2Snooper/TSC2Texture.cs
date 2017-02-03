@@ -5,9 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GEO2Loader
+namespace GMC2Snooper
 {
-    public abstract class TSC2Texture : IDisposable
+    /*
+    public abstract class TSCTexture : IDisposable
     {
         public Bitmap Bitmap { get; set; }
 
@@ -44,11 +45,12 @@ namespace GEO2Loader
             }
         }
 
-        public TSC2Block.TextureInfo TextureInfo { get; set; }
+        public TSCData.Texture TextureInfo { get; set; }
 
         public void Dispose()
         {
             Bitmap.Dispose();
         }
     }
+    */
 }

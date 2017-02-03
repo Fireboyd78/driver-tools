@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace GEO2Loader
+namespace GMC2Snooper
 {
     public static class BitmapHelperExtensions
     {

@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>GMC2Snooper</name>
+    </assembly>
+    <members>
+        <member name="F:GMC2Snooper.BMPViewer.components">
+            <summary>
+            Required designer variable.
+            </summary>
+        </member>
+        <member name="M:GMC2Snooper.BMPViewer.Dispose(System.Boolean)">
+            <summary>
+            Clean up any resources being used.
+            </summary>
+            <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        </member>
+        <member name="M:GMC2Snooper.BMPViewer.InitializeComponent">
+            <summary>
+            Required method for Designer support - do not modify
+            the contents of this method with the code editor.
+            </summary>
+        </member>
+        <member name="P:GMC2Snooper.PS2.GifTag.NLoop">
+            <summary>
+            Holds the data size of the primitive.
+            </summary>
+        </member>
+        <member name="P:GMC2Snooper.PS2.GifTag.Eop">
+            <summary>
+            Specifies whether the following data is the last primitive in a GS packet.
+            </summary>
+            <remarks>
+            <para>A value of 0 means that more GIFtags with more primitives will be sent after the current primitive.</para>
+            <para>A value of 1 indicates that the following primitive data is the last in the packet.</para>
+            </remarks>
+        </member>
+        <member name="P:GMC2Snooper.PS2.GifTag.Pre">
+            <summary>
+            Specifies whether the PRIM field in the GIFtag is enabled.
+            </summary>
+            <remarks>
+            A value of 0 ignores the prim field, while a value of 1 outputs the PRIM field to the PRIM register.
+            </remarks>
+        </member>
+        <member name="P:GMC2Snooper.PS2.GifTag.Prim">
+            <summary>
+            Contains data to be set in the PRIM register.
+            </summary>
+            <remarks>
+            See <see cref="T:GMC2Snooper.PS2.GifPrimitive"/> for more information.
+            </remarks>
+        </member>
+        <member name="P:GMC2Snooper.PS2.GifTag.Flg">
+            <summary>
+            Contains the data format for the primitive.
+            </summary>
+            <remarks>
+            See <see cref="T:GMC2Snooper.PS2.GifFormat"/> for more information.
+            </remarks>
+        </member>
+        <member name="P:GMC2Snooper.PS2.GifTag.NReg">
+            <summary>
+            Holds the number of register descriptors (REGS), up to a maximum of 16 values.
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -8,10 +8,31 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 
-using GEO2Loader;
-
-namespace GEO2Loader
+namespace GMC2Snooper
 {
+    public static class StreamExtensions
+    {
+        public static T ReadStruct<T>(this Stream stream)
+        {
+            var length = Marshal.SizeOf(typeof(T));
+
+            return stream.ReadStruct<T>(length);
+        }
+
+        public static T ReadStruct<T>(this Stream stream, int length)
+        {
+            var data = new byte[length];
+            var ptr = Marshal.AllocHGlobal(length);
+
+            stream.Read(data, 0, length);
+            Marshal.Copy(data, 0, ptr, length);
+
+            var t = (T)Marshal.PtrToStructure(ptr, typeof(T));
+
+            Marshal.FreeHGlobal(ptr);
+            return t;
+        }
+    }
     class Program
     {
         [STAThread]
@@ -21,28 +42,254 @@ namespace GEO2Loader
 
             Console.Title = "GMC2 Snooper";
             
-            Console.SetBufferSize(Console.BufferWidth, 8192);
             // Console.CursorVisible = false;
             // Console.OutputEncoding = Encoding.UTF8;
 
-            string fpath = @"C:\Program Files (x86)\Atari\DRIV3R\__Research\PS2\";
+            string fpath = @"C:\Dev\Research\Driv3r\__Research\PS2";
             string fname = @"miami.vvs_003A9000_00048480.GMC2";
 
-            string filename = fpath + fname;
+            string filename = Path.Combine(fpath, fname);
 
             bool loadGMC2 = true;
 
             if (loadGMC2)
             {
-                GMC2Model GMC2File = new GMC2Model();
-
                 if (!filename.EndsWith("GMC2", StringComparison.CurrentCultureIgnoreCase))
                 {
                     Console.WriteLine("The file:\r\n\r\n'{0}'\r\n\r\nIs not a GMC2 file.", filename);
                 }
                 else if (File.Exists(filename))
                 {
-                    OpenGMC2File(filename, ref GMC2File);
+                    var gmc2 = new ModelPackagePS2();
+
+                    using (var fs = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        gmc2.LoadBinary(fs);
+                        Console.WriteLine($"Processed {gmc2.Models.Count} models / {gmc2.Materials.Count} materials.");
+                    }
+
+                    // vif tag info :)
+                    foreach (var model in gmc2.Models)
+                    {
+                        foreach (var subModel in model.SubModels)
+                        {
+                            using (var ms = new MemoryStream(subModel.ModelDataBuffer))
+                            {
+                                Console.WriteLine("<<< BEGIN >>>");
+                                while (ms.Position < ms.Length)
+                                {
+                                    // check alignment
+                                    if ((ms.Position & 0x3) != 0)
+                                        ms.Align(4);
+
+                                    var vif = ms.ReadStruct<PS2.VifTag>();
+
+                                    var imdt = new VifImmediate(vif.Imdt);
+                                    var cmd = new VifCommand(vif.Cmd);
+
+                                    Console.Write($"[{ms.Position:X8}:{vif.ToBinary():X8}] ");
+
+                                    switch ((VifCommandType)vif.Cmd)
+                                    {
+                                    case VifCommandType.Nop:
+                                        Console.WriteLine("NOP");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.StCycl:
+                                        Console.WriteLine("STCYCL");
+                                        break;
+                                    case VifCommandType.Offset:
+                                        Console.WriteLine($"OFFSET");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.ITop:
+                                        Console.WriteLine("ITOP");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.StMod:
+                                        Console.WriteLine("STMOD");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.MsCal:
+                                        Console.WriteLine("MSCAL");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.MsCnt:
+                                        Console.WriteLine("MSCNT");
+                                        break;
+                                    case VifCommandType.StMask:
+                                        Console.WriteLine("STMASK");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.Flush:
+                                        Console.WriteLine("FLUSH");
+                                        ms.Position += 4;
+                                        break;
+                                    case VifCommandType.Direct:
+                                        Console.WriteLine("DIRECT");
+                                        ms.Position += ((imdt.ADDR * 16) + 4);
+                                        break;
+                                    default:
+                                        string[] vntbl  = { "S", "V2", "V3", "V4" };
+                                        uint[] vltbl    = { 32, 16, 8, 5 };
+
+                                        Console.WriteLine($"({vntbl[cmd.VN]}_{vltbl[cmd.VL]}, M:{cmd.M}, P:{cmd.P}, ADDR:{imdt.ADDR:X4}, NUM:{vif.Num})");
+
+                                        if (cmd.P == 3)
+                                        {
+                                            //if (imdt.FLG)
+                                            //    Console.WriteLine(" +Flag");
+                                            //if (imdt.USN)
+                                            //    Console.WriteLine(" +Unsigned");
+                                            //if (cmd.M == 1)
+                                            //    Console.WriteLine(" +Mask");
+
+                                            switch (cmd.VN)
+                                            {
+                                            case 0:
+                                                {
+                                                    if (cmd.VL == 1)
+                                                    {
+                                                        for (int vt = 0; vt < vif.Num; vt++)
+                                                        {
+                                                            int x, y;
+
+                                                            if (imdt.USN)
+                                                            {
+                                                                x = ms.ReadByte();
+                                                                y = ms.ReadByte();
+                                                            }
+                                                            else
+                                                            {
+                                                                x = (sbyte)ms.ReadByte();
+                                                                y = (sbyte)ms.ReadByte();
+                                                            }
+
+                                                            //Console.WriteLine($"vn0_1 {x,-4} {y,-8}");
+                                                        }
+                                                        break;
+                                                    }
+                                                } goto UNKNOWN_VNVL;
+                                            case 1:
+                                                {
+                                                    if (cmd.VL == 1)
+                                                    {
+                                                        for (int vt = 0; vt < vif.Num; vt++)
+                                                        {
+                                                            float u = (ms.ReadInt16() / 255.0f);
+                                                            float v = (ms.ReadInt16() / 255.0f);
+
+                                                            //Console.WriteLine($"vt {v:F4} {u:F4}");
+                                                        }
+
+                                                        break;
+                                                    }
+                                                } goto UNKNOWN_VNVL;
+                                            case 2:
+                                                {
+                                                    if (cmd.VL == 1)
+                                                    {
+                                                        for (int v = 0; v < vif.Num; v++)
+                                                        {
+                                                            float x, y, z;
+
+                                                            if (imdt.USN)
+                                                            {
+                                                                x = (ms.ReadUInt16() / 255.0f);
+                                                                y = (ms.ReadUInt16() / 255.0f);
+                                                                z = (ms.ReadUInt16() / 255.0f);
+                                                            }
+                                                            else
+                                                            {
+                                                                x = (ms.ReadInt16() / 255.0f);
+                                                                y = (ms.ReadInt16() / 255.0f);
+                                                                z = (ms.ReadInt16() / 255.0f);
+                                                            }
+
+                                                            //Console.WriteLine($"v {x:F4} {y:F4} {z:F4}");
+                                                        }
+
+                                                        break;
+                                                    }
+
+                                                    if (cmd.VL == 2)
+                                                    {
+                                                        for (int v = 0; v < vif.Num; v++)
+                                                        {
+                                                            var r = (byte)ms.ReadByte();
+                                                            var g = (byte)ms.ReadByte();
+                                                            var b = (byte)ms.ReadByte();
+
+                                                            //Console.WriteLine($"rgb {r} {g} {b}");
+                                                        }
+
+                                                        break;
+                                                    }
+                                                } goto UNKNOWN_VNVL;
+                                            case 3:
+                                                {
+                                                    if (cmd.VL == 1)
+                                                    {
+                                                        // v4-16
+                                                        ms.Position += (vif.Num * 8);
+                                                        break;
+                                                    }
+                                                    if (cmd.VL == 2)
+                                                    {
+                                                        // v4-8
+                                                        ms.Position += (vif.Num * 4);
+                                                        break;
+                                                    }
+                                                } goto UNKNOWN_VNVL;
+
+                                            default:
+                                            UNKNOWN_VNVL:
+                                                Console.WriteLine($"Unknown VNVL combination ({cmd.VN},{cmd.VL})");
+                                                break;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (Enum.IsDefined(typeof(VifCommandType), (int)vif.Cmd))
+                                            {
+                                                Console.WriteLine($"Unhandled VIF command '{(VifCommandType)vif.Cmd}', program might crash!");
+                                                ms.Position += 4;
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine($"Unknown VIF command 0x{vif.Cmd:X2}");
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                                Console.WriteLine("<<< END >>>");
+                            }
+                        }
+                    }
+
+                    // dump textures
+                    foreach (var tex in gmc2.Textures)
+                    {
+                        Console.WriteLine($"texture {tex.Reserved:X16} {{");
+                        
+                        Console.WriteLine($"  type = {tex.Type};");
+                        Console.WriteLine($"  flags = 0x{tex.Flags:X};");
+                        Console.WriteLine($"  width = {tex.Width};");
+                        Console.WriteLine($"  height = {tex.Height};");
+                        Console.WriteLine($"  unknown1 = 0x{tex.Unknown1:X};");
+                        Console.WriteLine($"  dataOffset = 0x{tex.DataOffset:X};");
+                        Console.WriteLine($"  unknown2 = 0x{tex.Unknown2:X};");
+
+                        Console.WriteLine($"  cluts[{tex.Modes}] = [");
+
+                        foreach (var mode in tex.CLUTs)
+                            Console.WriteLine($"    0x{mode:X},");
+
+                        Console.WriteLine("  ];");
+
+                        Console.WriteLine("}");
+                    }
                 }
 
                 Console.ReadKey();
@@ -110,345 +357,6 @@ namespace GEO2Loader
                 
 
                 Console.ReadKey();
-            }
-        }
-
-        static void OpenGMC2File(string filename, ref GMC2Model GMC2)
-        {
-            using (Stream fs = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                using (BinaryReader f = new BinaryReader(fs))
-                {
-                    if (f.ReadUInt32() != (uint)BlockType.MPAK)
-                    {
-                        Console.WriteLine("Invalid GMC2 file!");
-                        return;
-                    }
-
-                    Console.WriteLine("Opening file: '{0}'\r\n", filename);
-
-                    GMC2.Type = (ModelType)f.ReadUInt32();
-
-                    fs.Seek(0xC, SeekOrigin.Current);
-
-                    GMC2.nGeometry = f.ReadUInt32();
-                    GMC2.TSC2.Offset = f.ReadUInt32();
-
-                    fs.Seek(0x4, SeekOrigin.Current);
-
-                    GMC2.Geometry = new List<GEO2Block>((int)GMC2.nGeometry);
-
-                    long holdPos;
-
-                    for (int g = 0; g <= GMC2.nGeometry - 1; g++)
-                    {
-                        string b = String.Format("Block[{0}]", g);
-
-                        GMC2.Geometry.Insert(g, new GEO2Block(f.ReadUInt32()));
-
-                        holdPos = fs.Position;
-
-                        fs.Seek(GMC2.Geometry[g].Offset, SeekOrigin.Begin);
-
-                        // Console.WriteLine("============================================\r\n" + "{0} @ 0x{1:X}\r\n", b, fs.Position);
-
-                        if (f.ReadUInt32() != (uint)GEO2Block.Magic)
-                        {
-                            Console.WriteLine("Invalid GMC2 file -- tried to read invalid GEO2 block @ 0x{0:X}", fs.Position);
-                            return;
-                        }
-
-                        GMC2.Geometry[g].Thing1Count = f.ReadByte();
-                        GMC2.Geometry[g].Thing2Count = f.ReadByte();
-                        GMC2.Geometry[g].Thing3Count = f.ReadByte();
-                        GMC2.Geometry[g].UnkCount = f.ReadByte();
-
-                        // Console.WriteLine("{0}.Thing1Count = {1}", b, GMC2.Geometry[g].Thing1Count);
-                        // Console.WriteLine("{0}.Thing2Count = {1}", b, GMC2.Geometry[g].Thing2Count);
-                        // Console.WriteLine("{0}.Thing3Count = {1}", b, GMC2.Geometry[g].Thing3Count);
-                        // Console.WriteLine("{0}.UnkCount = {1}\r\n", b, GMC2.Geometry[g].UnkCount);
-
-                        GMC2.Geometry[g].UnkShort1 = f.ReadUInt16();
-                        GMC2.Geometry[g].UnkShort2 = f.ReadUInt16();
-                        GMC2.Geometry[g].UnkShort3 = f.ReadUInt16();
-                        GMC2.Geometry[g].UnkShort4 = f.ReadUInt16();
-
-                        //Console.WriteLine("{0}.UnkShort1 = 0x{1:X4}", b, GMC2.Geometry[g].UnkShort1);
-                        //Console.WriteLine("{0}.UnkShort2 = 0x{1:X4}", b, GMC2.Geometry[g].UnkShort2);
-                        //Console.WriteLine("{0}.UnkShort3 = 0x{1:X4}", b, GMC2.Geometry[g].UnkShort3);
-                        //Console.WriteLine("{0}.UnkShort4 = 0x{1:X4}\r\n", b, GMC2.Geometry[g].UnkShort4);
-
-                        fs.Seek(0x1C, SeekOrigin.Current);
-
-                        GMC2.Geometry[g].UnkOffset = f.ReadUInt32();
-
-                        //Console.WriteLine("{0}.UnkOffset = 0x{1:X}\r\n", b, GMC2.Geometry[g].UnkOffset);
-
-                        GMC2.Geometry[g].Thing1Entries = new List<GEO2Block.Thing1>(GMC2.Geometry[g].Thing1Count);
-                        GMC2.Geometry[g].Thing2Entries = new List<GEO2Block.Thing2>(GMC2.Geometry[g].Thing2Count);
-                        GMC2.Geometry[g].Thing3Entries = new List<GEO2Block.Thing3>(GMC2.Geometry[g].Thing3Count);
-
-                        fs.Seek(GMC2.Geometry[g].Offset + 0x40, SeekOrigin.Begin);
-
-                        for (int t1 = 0; t1 <= GMC2.Geometry[g].Thing1Count - 1; t1++)
-                        {
-                            var t = String.Format("Thing1[{0}]", t1);
-
-                            GMC2.Geometry[g].Thing1Entries.Insert(t1, new GEO2Block.Thing1());
-
-                            GEO2Block.Thing1 Thing1 = GMC2.Geometry[g].Thing1Entries[t1];
-
-                            // Console.WriteLine("---------------------------\r\n" +
-                            //     "{0} @ 0x{1:X}\r\n", t, fs.Position);
-
-                            Thing1.UPad1 = f.ReadSingle();
-                            Thing1.UPad2 = f.ReadSingle();
-                            Thing1.UPad3 = f.ReadSingle();
-                            Thing1.UPad4 = f.ReadSingle();
-
-                            Thing1.T2Count = f.ReadUInt32();
-                            Thing1.T2Offset = f.ReadUInt32();
-                            Thing1.Unknown = f.ReadUInt32();
-
-                            fs.Seek(0x4, SeekOrigin.Current);
-
-                            // Console.WriteLine("{0}.UPad1 = {1:F}", t, Thing1.UPad1);
-                            // Console.WriteLine("{0}.UPad2 = {1:F}", t, Thing1.UPad2);
-                            // Console.WriteLine("{0}.UPad3 = {1:F}", t, Thing1.UPad3);
-                            // Console.WriteLine("{0}.UPad4 = {1:F}\r\n", t, Thing1.UPad4);
-
-                            // Console.WriteLine("{0}.T2Count = {1}", t, Thing1.T2Count);
-                            // Console.WriteLine("{0}.T2Offset = 0x{1:X}", t, Thing1.T2Offset);
-                            // Console.WriteLine("{0}.Unknown = 0x{1:X}\r\n", t, Thing1.Unknown);
-                        }
-
-                        for (int t2 = 0; t2 <= GMC2.Geometry[g].Thing2Count - 1; t2++)
-                        {
-                            var t = String.Format("Thing2[{0}]", t2);
-
-                            GMC2.Geometry[g].Thing2Entries.Insert(t2, new GEO2Block.Thing2());
-
-                            GEO2Block.Thing2 Thing2 = GMC2.Geometry[g].Thing2Entries[t2];
-
-                            // Console.WriteLine("---------------------------\r\n" +
-                            //     "{0} @ 0x{1:X}\r\n", t, fs.Position);
-
-                            Thing2.UnkGUID = f.ReadUInt32();
-                            Thing2.T3Offset = f.ReadUInt32();
-                            Thing2.Unk2 = f.ReadUInt32();
-
-                            // Console.WriteLine("{0}.UnkGUID = 0x{1:X}", t, Thing2.UnkGUID);
-                            // Console.WriteLine("{0}.T3Offset = 0x{1:X}", t, Thing2.T3Offset);
-                            // Console.WriteLine("{0}.Unk2 = 0x{1:X}\r\n", t, Thing2.Unk2);
-                        }
-
-                        for (int t3 = 0; t3 <= GMC2.Geometry[g].Thing3Count - 1; t3++)
-                        {
-                            var t = String.Format("Thing2[{0}]", t3);
-
-                            GMC2.Geometry[g].Thing3Entries.Insert(t3, new GEO2Block.Thing3());
-
-                            GEO2Block.Thing3 Thing3 = GMC2.Geometry[g].Thing3Entries[t3];
-
-                            // Console.WriteLine("---------------------------\r\n" +
-                            //     "{0} @ 0x{1:X}\r\n", t, fs.Position);
-
-                            Thing3.UFloat1 = f.ReadSingle();
-                            Thing3.UFloat2 = f.ReadSingle();
-                            Thing3.UFloat3 = f.ReadSingle();
-
-                            Thing3.TexID = f.ReadUInt16();
-                            Thing3.TexSrc = f.ReadUInt16();
-
-                            Thing3.UFloat4 = f.ReadSingle();
-                            Thing3.UFloat5 = f.ReadSingle();
-                            Thing3.UFloat6 = f.ReadSingle();
-                            
-                            Thing3.UnkPad = f.ReadUInt32();
-
-                            Thing3.Unk1 = f.ReadUInt16();
-
-                            Thing3.UnkFlag1 = f.ReadByte();
-                            Thing3.UnkFlag2 = f.ReadByte();
-
-                            Thing3.T4Offset = f.ReadUInt32();
-
-                            fs.Seek(0x8, SeekOrigin.Current);
-
-                            // Console.WriteLine("{0}.UFloat1 = {1:F}", t, Thing3.UFloat1);
-                            // Console.WriteLine("{0}.UFloat2 = {1:F}", t, Thing3.UFloat2);
-                            // Console.WriteLine("{0}.UFloat3 = {1:F}\r\n", t, Thing3.UFloat3);
-
-                            // Console.WriteLine("{0}.TexID = {1}", t, Thing3.TexID);
-                            // Console.WriteLine("{0}.TexSrc = {1}\r\n", t,
-                            //     ((Enum.IsDefined(typeof(TextureSource), (TextureSource)Thing3.TexSrc))
-                            //     ? ((TextureSource)Thing3.TexSrc).ToString()
-                            //     : Thing3.TexSrc.ToString("X")));
-
-                            // Console.WriteLine("{0}.UFloat4 = {1:F}", t, Thing3.UFloat4);
-                            // Console.WriteLine("{0}.UFloat5 = {1:F}", t, Thing3.UFloat5);
-                            // Console.WriteLine("{0}.UFloat6 = {1:F}\r\n", t, Thing3.UFloat6);
-
-                            // Console.WriteLine("{0}.UnkPad = {1:X}\r\n", t, Thing3.UnkPad);
-
-                            // Console.WriteLine("{0}.Unk1 = {1:X}\r\n", t, Thing3.Unk1);
-
-                            // Console.WriteLine("{0}.UnkFlag1 = {1:X}", t, Thing3.UnkFlag1);
-                            // Console.WriteLine("{0}.UnkFlag2 = {1:X}\r\n", t, Thing3.UnkFlag2);
-
-                            // Console.WriteLine("{0}.T4Offset = {1:X}", t, Thing3.T4Offset);
-                        }
-
-                        // Console.WriteLine();
-                        // Console.WriteLine("\r\nBlock[{0}]: Finished reading up until 0x{1:X}\r\n", g, fs.Position);
-
-                        fs.Seek(holdPos, SeekOrigin.Begin);
-                    }
-
-                    Console.WriteLine("\r\nDone reading GEO2 entries.");
-                    
-                    fs.Seek(GMC2.TSC2.Offset, SeekOrigin.Begin);
-
-                    if (f.ReadUInt32() != (uint)BlockType.TSC2)
-                    {
-                        Console.WriteLine("Bad TSC2 header!");
-                        return;
-                    }
-
-                    Console.WriteLine("Reading TSC2 data @ 0x{0:X}", fs.Position);
-
-                    GMC2.TSC2.MatCount = f.ReadUInt16();
-                    GMC2.TSC2.SubMatOffsetCount = f.ReadUInt16();
-                    GMC2.TSC2.SubMatCount = f.ReadUInt16();
-                    GMC2.TSC2.TexInfoOffsetCount = f.ReadUInt16();
-                    GMC2.TSC2.TexInfoCount = f.ReadUInt16();
-
-                    // skip version, padding
-                    fs.Seek(sizeof(ushort) + sizeof(uint), SeekOrigin.Current);
-
-                    for (int m = 0; m < GMC2.TSC2.MatCount; m++)
-                    {
-                        GMC2.TSC2.Materials.Insert(m, new TSC2Block.Material());
-
-                        var mat = GMC2.TSC2.Materials[m];
-
-                        mat.SubMaterialsCount = f.ReadUInt32();
-
-                        // skip junk
-                        fs.Seek(sizeof(uint) * 2, SeekOrigin.Current);
-
-                        mat.SubMaterialsOffset = f.ReadUInt32();
-                    }
-
-                    for (int s = 0; s < GMC2.TSC2.SubMatOffsetCount; s++)
-                    {
-                        GMC2.TSC2.SubMaterials.Insert(s, new TSC2Block.SubMaterial());
-
-                        var subMat = GMC2.TSC2.SubMaterials[s];
-
-                        subMat.Offset = f.ReadUInt32();
-                    }
-
-                    for (int s = 0; s < GMC2.TSC2.SubMatCount; s++)
-                    {
-                        var subMat = GMC2.TSC2.SubMaterials[s];
-
-                        subMat.Unk1 = f.ReadUInt16();
-                        subMat.Unk2 = f.ReadUInt16();
-
-                        fs.Seek(sizeof(uint), SeekOrigin.Current);
-
-                        subMat.TexInfoOffset = f.ReadUInt32();
-                    }
-
-                    for (int t = 0; t < GMC2.TSC2.TexInfoOffsetCount; t++)
-                    {
-                        GMC2.TSC2.TexturesInfo.Insert(t, new TSC2Block.TextureInfo());
-
-                        var texInfo = GMC2.TSC2.TexturesInfo[t];
-
-                        texInfo.Offset = f.ReadUInt32();
-                    }
-
-                    long hold = fs.Position;
-
-                    byte[] TSC2Data = new byte[fs.Length - GMC2.TSC2.Offset];
-
-                    Console.WriteLine("0x{0:X}", GMC2.TSC2.Offset);
-                    Console.WriteLine("0x{0:X}", TSC2Data.Length);
-
-                    fs.Seek(GMC2.TSC2.Offset, SeekOrigin.Begin);
-                    fs.Read(TSC2Data, 0, TSC2Data.Length);
-
-                    BMPViewer viewer = new BMPViewer();
-
-                    fs.Seek(hold, SeekOrigin.Begin);
-                    Console.WriteLine("Seeking to 0x{0:X}", fs.Position);
-
-                    for (int t = 0; t < GMC2.TSC2.TexInfoCount; t++)
-                    {
-                        var texInfo = GMC2.TSC2.TexturesInfo[t];
-
-                        Console.WriteLine("TextureInfo @ 0x{0:X}", fs.Position);
-
-                        texInfo.UnkFloat1 = f.ReadSingle();
-
-                        texInfo.Unk1 = f.ReadUInt16();
-                        texInfo.Unk2 = f.ReadUInt16();
-
-                        texInfo.Flags = f.ReadUInt16();
-                        texInfo.UnkFlags = f.ReadUInt16();
-
-                        texInfo.Width = f.ReadUInt16();
-                        texInfo.Height = f.ReadUInt16();
-
-                        texInfo.UnkSize = f.ReadUInt32();
-                        texInfo.TexDataOffset = f.ReadUInt32();
-
-                        // skip padding
-                        fs.Seek(sizeof(uint), SeekOrigin.Current);
-
-                        texInfo.PaletteOffset = f.ReadUInt32();
-                        texInfo.TextureOffset = f.ReadUInt32();
-                        texInfo.TexUnknown = f.ReadUInt32();
-
-                        if (texInfo.UnkFlags == 0x3 || texInfo.Flags == 1541)
-                            fs.Seek(sizeof(uint) * 2, SeekOrigin.Current);
-                        
-                        Console.WriteLine(
-                            "===================\n" +
-                            "Flags: {0}\n" +
-                            "Unk: {1}\n" +
-                            "Width: {2}\n" +
-                            "Height: {3}\n" +
-                            "PaletteOffset: 0x{4:X}\n" +
-                            "TextureOffset: 0x{5:X}\r\n",
-                            texInfo.Flags, texInfo.UnkFlags, texInfo.Width, texInfo.Height, texInfo.PaletteOffset, texInfo.TextureOffset
-                        );
-
-                        if (texInfo.Width >= 128 && texInfo.Height >= 128 && texInfo.Flags != 771)
-                        {
-
-                            Texture8bpp Texture = new Texture8bpp(texInfo, TSC2Data);
-
-                            GMC2.TSC2.Textures.Add(Texture);
-
-                            viewer.AddImage(Texture.Bitmap);
-                        }
-                    }
-
-                    // for (int i = 0; i < GMC2.TSC2.TexInfoCount; i++)
-                    // {
-                    //     TSC2Block.TextureInfo texInfo = GMC2.TSC2.TexturesInfo[i];
-                    // 
-                    //     
-                    // }
-
-                    viewer.Init();
-                    Application.Run(viewer);
-
-                    Console.WriteLine("Done collecting TSC2 data, stopped @ 0x{0:X}", fs.Position);
-                }
             }
         }
     }

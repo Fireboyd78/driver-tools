@@ -5,11 +5,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GEO2Loader
+using DSCript;
+using DSCript.Models;
+
+namespace GMC2Snooper
 {
+    /*
     public static class TSC2TextureExtensions
     {
-        public static void UnSwizzle(this TSC2Texture texture, byte[] TSC2Buffer)
+        public static void UnSwizzle(this TSCTexture texture, byte[] TSC2Buffer)
         {
             byte[] texBuffer = new byte[texture.TextureInfo.Width * texture.TextureInfo.Height];
 
@@ -24,7 +28,7 @@ namespace GEO2Loader
             }
         }
 
-        public static void ReadCLUT(this TSC2Texture texture, byte[] TSC2Buffer)
+        public static void ReadCLUT(this TSCTexture texture, byte[] TSC2Buffer)
         {
             ColorPalette palette = texture.Palette;
 
@@ -67,8 +71,8 @@ namespace GEO2Loader
             texture.Palette = palette;
         }
     }
-
-    public sealed class Texture8bpp : TSC2Texture
+    
+    public sealed class TSCTexture8bpp : TSCTexture
     {
         public override PixelFormat PixelFormat
         {
@@ -78,17 +82,17 @@ namespace GEO2Loader
             }
         }
 
-        public Texture8bpp()
+        public TSCTexture8bpp()
         {
         }
 
-        public Texture8bpp(TSC2Block.TextureInfo textureDefinition)
+        public TSCTexture8bpp(TSCData.Texture textureDefinition)
         {
             TextureInfo = textureDefinition;
             Bitmap = new Bitmap(TextureInfo.Width, TextureInfo.Height);
         }
 
-        public Texture8bpp(TSC2Block.TextureInfo textureDefinition, byte[] TSC2Buffer)
+        public TSCTexture8bpp(TSCData.Texture textureDefinition, byte[] TSC2Buffer)
         {
             TextureInfo = textureDefinition;
 
@@ -100,72 +104,68 @@ namespace GEO2Loader
             this.ReadCLUT(TSC2Buffer);
         }
     }
+    */
 
-    public class TSC2Block
+    public class MaterialDataPS2
     {
-        public struct Material
+        public List<SubstanceDataPS2> Substances { get; set; }
+
+        public bool Animated { get; set; } = false;
+        public double AnimationSpeed { get; set; } = 25.0;
+
+        public MaterialDataPS2()
         {
-            public uint SubMaterialsCount;
-            
-            public const uint Unk = 0x41C80000;
-            public const uint Pad = 0x0;
-
-            public uint SubMaterialsOffset;
+            Substances = new List<SubstanceDataPS2>();
         }
+    }
 
-        public struct SubMaterial
+    public class SubstanceDataPS2
+    {
+        public int Mode { get; set; }
+        public int Flags { get; set; }
+
+        public int Type { get; set; }
+        
+        public List<TextureDataPS2> Textures { get; set; }
+
+        public SubstanceDataPS2()
         {
-            public uint Offset;
-
-            public ushort Unk1;
-            public ushort Unk2;
-
-            public const uint Pad = 0x0;
-
-            public uint TexInfoOffset;
+            Textures = new List<TextureDataPS2>();
         }
+    }
 
-        public struct TextureInfo
+    public class TextureDataPS2
+    {
+        public long Reserved { get; set; }
+
+        public int Modes { get; set; }
+
+        /*
+            PAL8 = 1
+            PAL4 = 2
+            VQ2
+            VQ4
+            HY2
+            VQ4f
+        */
+        public int Type { get; set; }
+
+        public int Flags { get; set; }
+
+        public int Width { get; set; }
+        public int Height { get; set; }
+
+        public int Unknown1 { get; set; }
+
+        public int DataOffset { get; set; }
+
+        public int Unknown2 { get; set; }
+
+        public List<int> CLUTs { get; set; }
+        
+        public TextureDataPS2()
         {
-            public uint Offset;
-
-            public float UnkFloat1;
-
-            public ushort Unk1;
-            public ushort Unk2;
-
-            public ushort Flags;
-            public ushort UnkFlags;
-
-            public ushort Width;
-            public ushort Height;
-
-            public uint UnkSize;
-            public uint TexDataOffset;
-
-            public const uint Pad = 0x0;
-
-            public uint PaletteOffset;
-            public uint TextureOffset;
-
-            public uint TexUnknown;
+            CLUTs = new List<int>();
         }
-
-        public uint Offset { get; set; }
-
-        public const BlockType Magic = BlockType.TSC2;
-
-        public ushort MatCount { get; set; }
-        public ushort SubMatOffsetCount { get; set; }
-        public ushort SubMatCount { get; set; }
-        public ushort TexInfoOffsetCount { get; set; }
-        public ushort TexInfoCount { get; set; }
-
-        public const ushort Version = 0x2;
-
-        public List<Material> Materials = new List<Material>();
-        public List<SubMaterial> SubMaterials = new List<SubMaterial>();
-        public List<TextureInfo> TexturesInfo = new List<TextureInfo>();
-        public List<TSC2Texture> Textures = new List<TSC2Texture>();
     }
 }

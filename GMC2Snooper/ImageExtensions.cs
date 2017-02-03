@@ -7,7 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace GEO2Loader
+namespace GMC2Snooper
 {
     public static class ImageExtensions
     {

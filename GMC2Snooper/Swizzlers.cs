@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace GEO2Loader
+namespace GMC2Snooper
 {
     public enum SwizzleType
     {

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-namespace GEO2Loader
+namespace GMC2Snooper
 {
     public partial class BMPViewer : Form
     {

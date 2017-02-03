@@ -1,4 +1,4 @@
-﻿namespace GEO2Loader
+﻿namespace GMC2Snooper
 {
     partial class BMPViewer
     {
