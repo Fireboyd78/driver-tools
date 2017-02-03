@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>IMGRipper</name>
+    </assembly>
+    <members>
+        <member name="M:IMGRipper.MemoryHelper.Align(System.Int32,System.Int32)">
+            <summary>
+            Returns the result of aligning a value to a specified alignment.
+            </summary>
+            <param name="value">The value to align.</param>
+            <param name="alignment">The byte-alignment.</param>
+            <returns>The byte-aligned value; If the alignment is zero, the unmodified value.</returns>
+        </member>
+        <member name="M:IMGRipper.MemoryHelper.Align(System.Int64,System.Int64)">
+            <summary>
+            Returns the result of aligning a value to a specified alignment.
+            </summary>
+            <param name="value">The value to align.</param>
+            <param name="alignment">The byte-alignment.</param>
+            <returns>The byte-aligned value; If the alignment is zero, the unmodified value.</returns>
+        </member>
+    </members>
+</doc>
