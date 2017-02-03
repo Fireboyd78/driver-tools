@@ -50,6 +50,9 @@ namespace DSCript
         {
             using (MemoryStream stream = new MemoryStream(buffer))
             {
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 try
                 {
                     FREE_IMAGE_FORMAT format = FreeImage.GetFileTypeFromStream(stream);
@@ -105,6 +108,11 @@ namespace DSCript
                 catch (BadImageFormatException)
                 {
                     return null;
+                }
+                finally
+                {
+                    stopwatch.Stop();
+                    DSC.Update($"GetBitmapSource took {stopwatch.Elapsed.TotalMilliseconds}ms");
                 }
             }
         }

@@ -423,6 +423,32 @@
             Loads a BitmapSource image with only the Alpha channel visible.
             </summary>
         </member>
+        <member name="E:DSCript.DSC.ProgressUpdated">
+            <summary>
+            An event that is called when a progress update is reported. The sender object can be a null value.
+            </summary>
+        </member>
+        <member name="M:DSCript.DSC.Update(System.Object,System.String,System.Double)">
+            <summary>
+            Sends a progress update to the <see cref="E:DSCript.DSC.ProgressUpdated"/> event handler.
+            </summary>
+            <param name="sender">The object sending a progress update.</param>
+            <param name="message">The message of the update being reported.</param>
+            <param name="progress">The current progress of the update being reported. Optional.</param>
+        </member>
+        <member name="M:DSCript.DSC.GetLastUpdate">
+            <summary>
+            Returns the most recently reported progress update.
+            </summary>
+            <returns>A <see cref="T:DSCript.ProgressUpdateEventArgs"/> object containing the progress data.</returns>
+        </member>
+        <member name="M:DSCript.DSC.Update(System.String,System.Double)">
+            <summary>
+            Sends a progress update to the <see cref="E:DSCript.DSC.ProgressUpdated"/> event handler with a null sender object.
+            </summary>
+            <param name="message">The message of the update being reported.</param>
+            <param name="progress">The current progress of the update being reported. Optional.</param>
+        </member>
         <member name="M:DSCript.IniConfiguration.AppendText(System.String)">
             <summary>
             Appends the string to the end of the Ini file.

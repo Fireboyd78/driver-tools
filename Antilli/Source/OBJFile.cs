@@ -321,7 +321,7 @@ namespace Antilli
             {
                 currentMaterial = value;
 
-                if (currentMaterial != null)
+                if (currentMaterial != null && !Materials.ContainsKey(currentMaterial.Name))
                     Materials.Add(currentMaterial.Name, currentMaterial);
             }
         }
@@ -519,7 +519,7 @@ namespace Antilli
                     case "g":
                         {
                             CurrentGroup.Name = val;
-                            CurrentMesh = new ObjMesh(CurrentGroup);
+                            CurrentMesh = new ObjMesh(CurrentGroup, CurrentMaterial);
                         } break;
                     case "s":
                         {
@@ -527,7 +527,7 @@ namespace Antilli
 
                             if (CurrentMesh == null)
                             {
-                                CurrentMesh = new ObjMesh(CurrentGroup) { SmoothingGroup = sg };
+                                CurrentMesh = new ObjMesh(CurrentGroup, CurrentMaterial) { SmoothingGroup = sg };
                             }
                             else if (lastKey == "f")
                             {
@@ -536,13 +536,18 @@ namespace Antilli
                         } break;
                     case "usemtl":
                         {
-                            if (lastKey == "f")
+                            if (Materials.ContainsKey(val))
                             {
-                                CurrentMesh = CurrentMesh.Split(Materials[val]);
-                            }
-                            else if (lastKey == "g" || lastKey == "s")
-                            {
-                                CurrentMesh.Material = Materials[val];
+                                CurrentMaterial = Materials[val];
+
+                                if (lastKey == "f")
+                                {
+                                    CurrentMesh = CurrentMesh.Split(CurrentMaterial);
+                                }
+                                else if (lastKey == "g" || lastKey == "s")
+                                {
+                                    CurrentMesh.Material = CurrentMaterial;
+                                }
                             }
                             else
                             {
@@ -587,7 +592,10 @@ namespace Antilli
 
             FilePath = path;
 
-            Import(File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read));
+            using (var fs = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                Import(fs);
+            }
         }
     }
 }

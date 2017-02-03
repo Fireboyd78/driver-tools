@@ -111,59 +111,80 @@ namespace Antilli
         {
             if (Model.Geometry == null)
                 return;
-
+            
             MaterialGroup matGroup = new MaterialGroup();
 
             if (Material != null)
             {
                 var subMaterial = Material.Substances[0];
 
-                var damage         = subMaterial.Damage;
-                var mask           = subMaterial.AlphaMask;
-                var transparency   = subMaterial.Transparency;
-                var emissive       = subMaterial.Emissive;
-                var specular       = subMaterial.Specular;
+                var damage = subMaterial.Damage;
+                var mask = subMaterial.AlphaMask;
+                var transparency = subMaterial.Transparency;
+                var emissive = subMaterial.Emissive;
+                var specular = subMaterial.Specular;
 
                 var texInfo = (UseBlendWeights && damage) ? (mask) ? subMaterial.Textures[2] : subMaterial.Textures[1] : subMaterial.Textures[0];
-                
-                var cTex = TextureCache.GetCachedTexture(texInfo);
 
-                var loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, new ThreadStart(() => {
+                    double tex_ms, bmap_ms, mat_ms;
 
-                var bmap = cTex.GetBitmapSource(loadFlags);
+                    var stopwatch = new System.Diagnostics.Stopwatch();
+                    stopwatch.Start();
 
-                matGroup.Children.Add(new DiffuseMaterial() {
-                    Brush = new ImageBrush() {
-                        ImageSource     = bmap,
-                        TileMode        = TileMode.Tile,
-                        Stretch         = Stretch.Fill,
-                        ViewportUnits   = BrushMappingMode.Absolute
-                    }
-                });
+                    var cTex = TextureCache.GetCachedTexture(texInfo);
+                    var loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
 
-                if (emissive)
-                {
-                    matGroup.Children.Add(new EmissiveMaterial() {
+                    stopwatch.Stop();
+                    tex_ms = stopwatch.Elapsed.TotalMilliseconds;
+
+                    stopwatch.Restart();
+
+                    var bmap = cTex.GetBitmapSource(loadFlags);
+
+                    stopwatch.Stop();
+                    bmap_ms = stopwatch.Elapsed.TotalMilliseconds;
+                    
+                    stopwatch.Restart();
+                    
+                    matGroup.Children.Add(new DiffuseMaterial() {
                         Brush = new ImageBrush() {
-                            ImageSource     = bmap,
-                            TileMode        = TileMode.Tile,
-                            Stretch         = Stretch.Fill,
-                            ViewportUnits   = BrushMappingMode.Absolute
+                            ImageSource = bmap,
+                            TileMode = TileMode.Tile,
+                            Stretch = Stretch.Fill,
+                            ViewportUnits = BrushMappingMode.Absolute
                         }
                     });
-                }
-                else if (specular)
-                {
-                    matGroup.Children.Add(new SpecularMaterial() {
-                        Brush = new ImageBrush() {
-                            ImageSource     = cTex.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
-                            TileMode        = TileMode.Tile,
-                            Stretch         = Stretch.Fill,
-                            ViewportUnits   = BrushMappingMode.Absolute
-                        },
-                        SpecularPower = 75.0
-                    });
-                }
+
+                    if (emissive)
+                    {
+                        matGroup.Children.Add(new EmissiveMaterial() {
+                            Brush = new ImageBrush() {
+                                ImageSource = bmap,
+                                TileMode = TileMode.Tile,
+                                Stretch = Stretch.Fill,
+                                ViewportUnits = BrushMappingMode.Absolute
+                            }
+                        });
+                    }
+                    else if (specular)
+                    {
+                        matGroup.Children.Add(new SpecularMaterial() {
+                            Brush = new ImageBrush() {
+                                ImageSource = cTex.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
+                                TileMode = TileMode.Tile,
+                                Stretch = Stretch.Fill,
+                                ViewportUnits = BrushMappingMode.Absolute
+                            },
+                            SpecularPower = 75.0
+                        });
+                    }
+
+                    stopwatch.Stop();
+                    mat_ms = stopwatch.Elapsed.TotalMilliseconds;
+
+                    DSC.Update($"OnMaterialChanged took {(tex_ms + bmap_ms + mat_ms)}ms (tex: {tex_ms}ms, bmap: {bmap_ms}ms, mat: {mat_ms}ms)");
+                }));
 
                 IsEmissive = emissive;
                 HasTransparency = transparency;

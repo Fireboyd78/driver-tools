@@ -72,66 +72,69 @@ namespace Antilli
         {
             if (OpenDialog.ShowDialog() ?? false)
             {
-                var timer = new Stopwatch();
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new ThreadStart(() => {
+                    var timer = new Stopwatch();
 
-                timer.Start();
+                    timer.Start();
 
-                var filename = OpenDialog.FileName;
-                
-                switch (Path.GetExtension(filename).ToLower())
-                {
-                case ".vvs":
-                case ".vvv":
+                    var filename = OpenDialog.FileName;
+
+                    switch (Path.GetExtension(filename).ToLower())
                     {
-                        var vehicleFile = new Driv3rVehiclesFile(filename);
-                        
-                        var city = Driv3r.GetCityFromFileName(filename);
-                        var vgtFile = "";
-
-                        if (city != Driv3r.City.Unknown)
-                            vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
-
-                        if (File.Exists(vgtFile))
-                            vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
-                        
-                        if (vehicleFile.HasVehicleGlobals)
+                    case ".vvs":
+                    case ".vvv":
                         {
-                            viewGlobalMaterials.Visibility = Visibility.Visible;
-        
-                            if (IsGlobalMaterialEditorOpen)
-                                GlobalMaterialEditor.UpdateMaterials();
-                        }
-                        else
-                        {
-                            if (IsGlobalMaterialEditorOpen)
+                            var vehicleFile = new Driv3rVehiclesFile(filename);
+
+                            var city = Driv3r.GetCityFromFileName(filename);
+                            var vgtFile = "";
+
+                            if (city != Driv3r.City.Unknown)
+                                vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
+
+                            if (File.Exists(vgtFile))
+                                vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
+
+                            if (vehicleFile.HasVehicleGlobals)
                             {
-                                GlobalMaterialEditor.Close();
+                                viewGlobalMaterials.Visibility = Visibility.Visible;
+
+                                if (IsGlobalMaterialEditorOpen)
+                                    GlobalMaterialEditor.UpdateMaterials();
+                            }
+                            else
+                            {
+                                if (IsGlobalMaterialEditorOpen)
+                                {
+                                    GlobalMaterialEditor.Close();
+                                    viewGlobalMaterials.Visibility = Visibility.Collapsed;
+                                }
+
                                 viewGlobalMaterials.Visibility = Visibility.Collapsed;
                             }
 
-                            viewGlobalMaterials.Visibility = Visibility.Collapsed;
+                            ModelFile = vehicleFile;
                         }
+                        break;
+                    default:
+                        ModelFile = new Driv3rModelFile(filename);
+                        break;
+                    }
 
-                        ModelFile = vehicleFile;
-                    } break;
-                default:
-                    ModelFile = new Driv3rModelFile(filename);
-                    break;
-                }
+                    if (ModelFile.HasModels)
+                    {
+                        SubTitle = filename;
 
-                if (ModelFile.HasModels)
-                {
-                    SubTitle = filename;
+                        Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
 
-                    Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
-        
-                    viewTextures.IsEnabled = true;
-                    viewMaterials.IsEnabled = true;
-                }
+                        viewTextures.IsEnabled = true;
+                        viewMaterials.IsEnabled = true;
+                    }
 
-                timer.Stop();
-                
-                Viewer.Viewport.SetDebugInfo($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
+                    timer.Stop();
+
+                    DSC.Update($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
+                }));
             }
         }
 
@@ -259,6 +262,8 @@ namespace Antilli
 
         public void OnModelPackageSelected(object sender, SelectionChangedEventArgs e)
         {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new ThreadStart(() => {
+
             if (Viewer.SelectedModel != null)
                 Viewer.SelectedModel = null;
 
@@ -299,6 +304,7 @@ namespace Antilli
                 TextureViewer.UpdateTextures();
             if (IsMaterialEditorOpen)
                 MaterialEditor.UpdateMaterials();
+            }));
         }
 
         public void ResetLODButtons()
@@ -326,6 +332,10 @@ namespace Antilli
 
         public void LoadSelectedModel()
         {
+            var stopwatch = new Stopwatch();
+
+            stopwatch.Start();
+
             ResetLODButtons();
 
             var lodButton = lodButtons[CurrentLod];
@@ -343,6 +353,8 @@ namespace Antilli
 
             var models = new List<ModelVisual3DGroup>();
 
+            DSC.Update($"Adding {SelectedModelGroup.Parts.Count} part(s)");
+
             foreach (var part in SelectedModelGroup.Parts)
             {
                 var partDef = part.Parts[CurrentLod];
@@ -357,13 +369,24 @@ namespace Antilli
 
                 var parts = new ModelVisual3DGroup();
 
+                DSC.Update($"Adding {group.Meshes.Count} mesh(es)");
                 foreach (var prim in group.Meshes)
-                    parts.Children.Add(new DriverModelVisual3D(prim, Viewer.UseBlendWeights));
+                {
+                    //Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, new ThreadStart(() => {
+                        parts.Children.Add(new DriverModelVisual3D(prim, Viewer.UseBlendWeights));
+                    //}));
+                }
 
                 models.Add(parts);
             }
 
-            Viewer.SetDriv3rModel(models);
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new ThreadStart(() => {
+                Viewer.SetDriv3rModel(models);
+            }));
+
+            stopwatch.Stop();
+
+            DSC.Update($"LoadSelectedModel took {stopwatch.Elapsed.TotalMilliseconds}ms.");
         }
         
         private void ViewModelTexture(object sender, RoutedEventArgs e)
@@ -702,7 +725,7 @@ namespace Antilli
                     LoadSelectedModel();
 
                     if (IsTextureViewerOpen)
-                            TextureViewer.ReloadTexture();
+                        TextureViewer.ReloadTexture();
                 }
             }
         }
@@ -712,6 +735,21 @@ namespace Antilli
             Settings.Verify();
 
             InitializeComponent();
+
+            DSC.ProgressUpdated += (o, e) => {
+                Viewer.Viewport.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new ThreadStart(() => {
+                    var progress_str = e.Message;
+
+                    if (e.Progress > -1)
+                        progress_str += $" [{Math.Round(e.Progress):F1}%]";
+                    
+                    Viewer.Viewport.SetDebugInfo(progress_str);
+
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new ThreadStart(() => {
+                        Console.WriteLine(progress_str);
+                    }));
+                }));
+            };
 
             KeyDown += (o,e) => {
                 switch (e.Key)
@@ -750,6 +788,7 @@ namespace Antilli
             BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
 
             fileOpen.Click += (o, e) => OpenFile();
+
             //fileOpen.Click += (o, e) => OpenFileNew();
             fileExit.Click += (o, e) => Environment.Exit(0);
 

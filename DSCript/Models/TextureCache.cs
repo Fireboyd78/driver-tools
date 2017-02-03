@@ -37,6 +37,8 @@ namespace DSCript.Models
 
         public static void Flush()
         {
+            DSC.Update("Flushing the texture cache.");
+
             foreach (CachedTexture texture in Cache)
                 texture.Clean();
 
@@ -158,10 +160,12 @@ namespace DSCript.Models
         {
             int i = (int)flags;
 
-            if (bitmaps[i] == null)
-                bitmaps[i] = Texture.GetBitmapSource(flags);
+            var bmap = bitmaps[i];
 
-            return bitmaps[i];
+            if (bmap == null)
+                bmap = Texture.GetBitmapSource(flags);
+
+            return bmap;
         }
 
         public void Reload()

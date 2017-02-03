@@ -20,7 +20,7 @@
         </Grid.ColumnDefinitions>
         
         <GroupBox Header="Models" Margin="4">
-            <TreeView SelectedItemChanged="ModelSelected" ItemsSource="{Binding Models}">
+            <TreeView x:Name="TModels" SelectedItemChanged="ModelSelected" ItemsSource="{Binding Models}">
                 <TreeView.Resources>
                     <DataTemplate DataType="{x:Type at:ObjFile+ObjMesh}">
                         <ContentPresenter Content="Mesh"/>
@@ -45,8 +45,8 @@
                     </Style>
                 </StackPanel.Resources>
             
-                <Button Content="Open..." Click="OpenFileClick"/>
-                <Button Content="Save..." Click="SaveFileClick" IsEnabled="{Binding CanSave}"/>
+                <Button x:Name="BTOpen" Content="Open..." Click="OpenFileClick"/>
+                <Button x:Name="BTSave" Content="Save..." Click="SaveFileClick" IsEnabled="{Binding CanSave}"/>
             </StackPanel>
 
             <ItemsControl Grid.Row="1" Margin="4" ItemsSource="{Binding ModelProperties}">

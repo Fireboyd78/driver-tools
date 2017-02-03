@@ -26,27 +26,27 @@ namespace DSCript.Models
 
         public List<TextureData> Textures { get; set; }
 
-        public bool AlphaMask
+        public virtual bool AlphaMask
         {
             get { return (Type == 0x400 || Type == 0x1000); }
         }
 
-        public bool Damage
+        public virtual bool Damage
         {
             get { return (Type == 0x800 || Type == 0x1000); }
         }
 
-        public bool Specular
+        public virtual bool Specular
         {
             get { return (Mode == 0x201 || Mode == 0x102); }
         }
 
-        public bool Emissive
+        public virtual bool Emissive
         {
             get { return ((Flags & 0x18000) == 0x18000 || (Flags & 0x1E) == 0x1E); }
         }
 
-        public bool Transparency
+        public virtual bool Transparency
         {
             get { return (((Flags & 0x1) == 0x1 || Flags == 0x4) && !Specular); }
         }

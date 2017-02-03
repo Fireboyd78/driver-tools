@@ -214,8 +214,12 @@ namespace DSCript.Spooling
             if (flags != 3)
                 throw new Exception("Unknown flags - cannot load chunk file!");
 
-            for (int i = 0; i < count; i++)
+            DSC.Update($"Processing {count} chunks...");
+            
+            for (int i = 0, idx = 1; i < count; i++, idx++)
             {
+                DSC.Update($"Loading chunk {idx} / {count}", (idx / (double)count) * 100.0);
+
                 _stream.Seek((i * 0x10), entriesOffset);
 
                 var entry = new {
@@ -288,17 +292,22 @@ namespace DSCript.Spooling
         public static void WriteChunk(Stream stream, SpoolablePackage chunk)
         {
             var baseOffset = stream.Position;
+            var count = chunk.Children.Count;
 
             stream.Write((int)ChunkType.Chunk);
             stream.Write(chunk.Size);
-            stream.Write(chunk.Children.Count);
+            stream.Write(count);
             stream.Write(Chunk.Version);
 
             var entryStart = (baseOffset + 0x10);
 
+            DSC.Update($"Writing {count} chunks...");
+
             // write chunk entries
-            for (int i = 0; i < chunk.Children.Count; i++)
+            for (int i = 0, idx = 1; i < count; i++, idx++)
             {
+                DSC.Update($"Writing chunk {idx} / {count}", (idx / (double)count) * 100.0);
+
                 stream.Seek(i * 0x10, entryStart);
 
                 var entry = chunk.Children[i];
@@ -344,12 +353,16 @@ namespace DSCript.Spooling
         {
             using (var fs = File.Create(filename))
             {
+                DSC.Update($"Writing chunk file: '{filename}'");
+
                 fs.SetLength(chunk.Size);
 
                 fs.Fill(Chunk.PaddingBytes, chunk.Size);
                 fs.Position = 0;
 
                 WriteChunk(fs, chunk);
+
+                DSC.Update($"Finished writing chunk file.");
             }
         }
 
@@ -380,11 +393,14 @@ namespace DSCript.Spooling
 
                 OnFileLoadBegin();
 
+                DSC.Update($"Loading chunk file: '{filename}'");
+
                 ReadChunk(Content);
                 IsLoaded = true;
 
-                OnFileLoadEnd();
+                DSC.Update($"Finished loading chunk file.");
 
+                OnFileLoadEnd();
                 return true;
             }
             else

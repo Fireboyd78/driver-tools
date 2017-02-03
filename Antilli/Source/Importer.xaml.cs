@@ -11,6 +11,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
+using Microsoft.Win32;
+
 namespace Antilli
 {
     /// <summary>
@@ -18,17 +20,26 @@ namespace Antilli
     /// </summary>
     public partial class Importer : ObservableWindow
     {
-        private ObjFile m_objFile;
-        private ObjFile.ObjGroup m_model;
+        static readonly OpenFileDialog OpenObj = new OpenFileDialog() {
+            CheckFileExists = true,
+            CheckPathExists = true,
+            Filter          = "Wavefront OBJ|*.obj",
+            ValidateNames   = true,
+        };
+
+        protected ObjFile ObjFile { get; set; }
+
+        protected ObjFile.ObjGroup SelectedModel
+        {
+            get { return TModels.SelectedItem as ObjFile.ObjGroup; }
+        }
 
         public List<ObjFile.ObjGroup> Models
         {
             get
             {
-                if (m_objFile != null)
-                {
-                    return m_objFile.Groups;
-                }
+                if (ObjFile != null)
+                    return ObjFile.Groups;
 
                 return null;
             }
@@ -38,10 +49,8 @@ namespace Antilli
         {
             get
             {
-                if (m_model != null)
-                {
-                    return m_model.Name;
-                }
+                if (SelectedModel != null)
+                    return SelectedModel.Name;
 
                 return null;
             }
@@ -54,13 +63,16 @@ namespace Antilli
 
         private void ModelSelected(object sender, RoutedEventArgs e)
         {
-            m_model = e.Source as ObjFile.ObjGroup;
+            OnPropertyChanged("ModelProperties");
         }
 
         private void OpenFileClick(object sender, RoutedEventArgs e)
         {
-            //m_objFile = new ObjFile(@"C:\Users\Mark\Desktop\chally.obj");
-            //OnPropertyChanged("Models");
+            if (OpenObj.ShowDialog(Owner) ?? false)
+            {
+                ObjFile = new ObjFile(OpenObj.FileName);
+                OnPropertyChanged("Models");
+            }
         }
 
         private void SaveFileClick(object sender, RoutedEventArgs e)

@@ -16,8 +16,70 @@ using Microsoft.Win32;
 
 namespace DSCript
 {
+    public delegate void ProgressUpdateEventHandler(object sender, ProgressUpdateEventArgs args);
+
+    public sealed class ProgressUpdateEventArgs : EventArgs
+    {
+        public static readonly new ProgressUpdateEventArgs Empty = new ProgressUpdateEventArgs("", -1.0);
+
+        public string Message { get; set; }
+        public double Progress { get; set; }
+
+        public ProgressUpdateEventArgs(string message) 
+            : this(message, -1.0f)
+        {
+
+        }
+
+        public ProgressUpdateEventArgs(string message, double progress)
+        {
+            Message = message;
+            Progress = progress;
+        }
+    }
+
     public static partial class DSC
     {
+        private static ProgressUpdateEventArgs _lastUpdate = ProgressUpdateEventArgs.Empty;
+
+        /// <summary>
+        /// An event that is called when a progress update is reported. The sender object can be a null value.
+        /// </summary>
+        public static event ProgressUpdateEventHandler ProgressUpdated;
+
+        /// <summary>
+        /// Sends a progress update to the <see cref="ProgressUpdated"/> event handler.
+        /// </summary>
+        /// <param name="sender">The object sending a progress update.</param>
+        /// <param name="message">The message of the update being reported.</param>
+        /// <param name="progress">The current progress of the update being reported. Optional.</param>
+        public static void Update(object sender, string message, double progress = -1.0)
+        {
+            _lastUpdate = new ProgressUpdateEventArgs(message, progress);
+
+            if (ProgressUpdated != null)
+                ProgressUpdated(sender, _lastUpdate);
+        }
+
+        /// <summary>
+        /// Returns the most recently reported progress update.
+        /// </summary>
+        /// <returns>A <see cref="ProgressUpdateEventArgs"/> object containing the progress data.</returns>
+        public static ProgressUpdateEventArgs GetLastUpdate()
+        {
+            return _lastUpdate;
+        }
+
+        /// <summary>
+        /// Sends a progress update to the <see cref="ProgressUpdated"/> event handler with a null sender object.
+        /// </summary>
+        /// <param name="message">The message of the update being reported.</param>
+        /// <param name="progress">The current progress of the update being reported. Optional.</param>
+        public static void Update(string message, double progress = -1.0)
+        {
+            Update(null, message, progress);
+        }
+
         public static readonly CultureInfo CurrentCulture = new CultureInfo("en-US");
         
         private static DSCConfiguration m_config;
