@@ -38,6 +38,9 @@ namespace GMC2Snooper
         public static readonly int[] M_VAL      = { 4, 0x0001 };
         public static readonly int[] P_VAL      = { 5, 0x0003 }; // padding?? (couldn't find info on this)
 
+        private static readonly string[] VN_LOOKUP       = { "S", "V2", "V3", "V4" };
+        private static readonly int[] VL_LOOKUP          = { 32, 16, 8, 5 };
+
         private byte GetVal(int[] info)
         {
             return (byte)((m_cmd >> info[0]) & info[1]);
@@ -71,6 +74,18 @@ namespace GMC2Snooper
         {
             get { return GetVal(P_VAL); }
             set { SetVal(P_VAL, value); }
+        }
+
+        public override string ToString()
+        {
+            // we're limited to 3-bits,
+            // so errors aren't possible! :D
+            var name = $"{VN_LOOKUP[VN]}_{VL_LOOKUP[VL]}";
+
+            if (M == 1)
+                name += "_MASKED";
+
+            return name;
         }
 
         public VifCommand(byte data)
@@ -125,6 +140,20 @@ namespace GMC2Snooper
             get { return GetBoolVal(FLG_VAL); }
             set { SetBoolVal(FLG_VAL, value); }
         }
+
+        public byte IMDT_STCYCL_CL      => (byte)(m_imdt & 0xFF);
+        public byte IMDT_STCYCL_WL      => (byte)((m_imdt >> 8) & 0xFF);
+        public ushort IMDT_OFFSET       => (ushort)(m_imdt & 0x3FF);
+        public ushort IMDT_BASE         => (ushort)(m_imdt & 0x3FF);
+        public ushort IMDT_ITOP         => (ushort)(m_imdt & 0x3FF);
+        public byte IMDT_STMOD          => (byte)(m_imdt & 0x3);
+        public bool IMDT_MSKPATH3       => (bool)(((m_imdt >> 15) & 0x1) == 1);
+        public ushort IMDT_MARK         => (ushort)(m_imdt & 0xFFFF);
+        public ushort IMDT_MSCAL        => (ushort)(m_imdt & 0xFFFF);
+        public ushort IMDT_MSCALF       => (ushort)(m_imdt & 0xFFFF);
+        public ushort IMDT_MPG          => (ushort)(m_imdt & 0xFFFF);
+        public ushort IMDT_DIRECT       => (ushort)(m_imdt & 0xFFFF);
+        public ushort IMDT_DIRECTHL     => (ushort)(m_imdt & 0xFFFF);
 
         public VifImmediate(ushort data)
         {

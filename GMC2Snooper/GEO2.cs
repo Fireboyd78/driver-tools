@@ -49,7 +49,7 @@ namespace GMC2Snooper
             SubModelOffset = stream.ReadInt32();
         }
     }
-
+    
     public struct GEO2SubModelData
     {
         public Vector3 Transform1;
@@ -64,7 +64,7 @@ namespace GMC2Snooper
         public short DataSizeDiv; // size / 10
 
         public byte Type; // same as GEO2.Type?
-        public byte Unknown_22; // flags?
+        public byte Flags;
 
         public int DataOffset;
 
@@ -93,7 +93,7 @@ namespace GMC2Snooper
             DataSizeDiv = stream.ReadInt16();
 
             Type = (byte)stream.ReadByte();
-            Unknown_22 = (byte)stream.ReadByte();
+            Flags = (byte)stream.ReadByte();
 
             DataOffset = stream.ReadInt32();
 
@@ -101,7 +101,41 @@ namespace GMC2Snooper
             Unknown_2C = stream.ReadInt32();
         }
     }
-    
+
+    public struct GEO2SubModelDataV2
+    {
+        public short TextureId;
+        public short TextureSource;
+
+        public int Unknown_04; // always zero?
+
+        public short DataSizeDiv; // size / 10
+
+        public byte Type; // same as GEO2.Type?
+        public byte Flags;
+
+        public int DataOffset;
+
+        public int Unknown_10; // always zero?
+
+        public GEO2SubModelDataV2(Stream stream)
+        {
+            TextureId = stream.ReadInt16();
+            TextureSource = stream.ReadInt16();
+
+            Unknown_04 = stream.ReadInt32();
+
+            DataSizeDiv = stream.ReadInt16();
+
+            Type = (byte)stream.ReadByte();
+            Flags = (byte)stream.ReadByte();
+
+            DataOffset = stream.ReadInt32();
+
+            Unknown_10 = stream.ReadInt32();
+        }
+    }
+
     public struct GEO2ModelData
     {
         public static readonly int Magic = 0x324F4547; // 'GEO2'
@@ -200,12 +234,16 @@ namespace GMC2Snooper
 
     public class LodEntry
     {
+        // holds no actual data
+        public bool IsDummy { get; set; }
+
         public int Flags { get; set; }
         public int Reserved { get; set; }
 
         public Vector4 Transform { get; set; }
 
         public List<SubModel> SubModels { get; set; }
+
     }
 
     public class SubModel
@@ -222,7 +260,10 @@ namespace GMC2Snooper
 
         public int Type { get; set; }
         public int Flags { get; set; }
-        
+
+        public int Unknown1 { get; set; }
+        public int Unknown2 { get; set; }
+
         // TODO: Read actual model data!
         public byte[] ModelDataBuffer { get; set; }
     }
@@ -273,6 +314,8 @@ namespace GMC2Snooper
                 var _lod = new GEO2LodData(stream);
                 
                 var lod = new LodEntry() {
+                    IsDummy = (_lod.LodInstanceCount == 0),
+
                     Flags = _lod.Unknown_12,
                     Reserved = _lod.Unknown_18,
 
@@ -286,7 +329,7 @@ namespace GMC2Snooper
                     continue;
 
                 lod.SubModels = new List<SubModel>(_lod.LodInstanceCount);
-
+                
                 for (int l = 0; l < _lod.LodInstanceCount; l++)
                 {
                     stream.Position = baseOffset + (_lod.LodInstanceDataOffset + (l * 0xC));
@@ -298,41 +341,74 @@ namespace GMC2Snooper
 
                     stream.Position = baseOffset + _lodInstance.SubModelOffset;
 
-                    var _subModel = new GEO2SubModelData(stream);
+                    SubModel subModel = null;
 
-                    if (_subModel.DataOffset == 0)
-                        throw new InvalidOperationException("Invalid sub-model!");
+                    var dataOffset = 0;
+                    var dataLength = 0;
 
-                    stream.Position = (baseOffset + _subModel.DataOffset);
+                    if ((Type & 0xF0) != 0)
+                    {
+                        var _subModel = new GEO2SubModelDataV2(stream);
 
-                    var length = (_subModel.DataSizeDiv * 10);
-                    var buffer = new byte[length];
+                        if (_subModel.DataOffset == 0)
+                            throw new InvalidOperationException("Invalid sub-model (V2)!");
 
-                    stream.Read(buffer, 0, length);
+                        subModel = new SubModel() {
+                            TextureId = _subModel.TextureId,
+                            TextureSource = _subModel.TextureSource,
 
-                    var subModel = new SubModel() {
-                        V1 = _subModel.Transform1,
-                        V2 = _subModel.Transform2,
+                            Type = _subModel.Type,
+                            Flags = _subModel.Flags,
 
-                        TextureId = _subModel.TextureId,
-                        TextureSource = _subModel.TextureSource,
+                            Unknown1 = _subModel.Unknown_04,
+                            Unknown2 = _subModel.Unknown_10,
+                        };
 
-                        Type = _subModel.Type,
-                        Flags = _subModel.Unknown_22,
+                        dataOffset = _subModel.DataOffset;
+                        dataLength = (_subModel.DataSizeDiv * 10);
+                    }
+                    else
+                    {
+                        var _subModel = new GEO2SubModelData(stream);
 
-                        ModelDataBuffer = buffer,
-                    };
+                        if (_subModel.DataOffset == 0)
+                            throw new InvalidOperationException("Invalid sub-model!");
 
-                    lod.SubModels.Add(subModel);
-                    SubModels.Add(subModel);
+                        subModel = new SubModel() {
+                            V1 = _subModel.Transform1,
+                            V2 = _subModel.Transform2,
+
+                            TextureId = _subModel.TextureId,
+                            TextureSource = _subModel.TextureSource,
+
+                            Type = _subModel.Type,
+                            Flags = _subModel.Flags,
+
+                            Unknown1 = _subModel.Unknown_1C,
+                            Unknown2 = _subModel.Unknown_28,
+                        };
+
+                        dataOffset = _subModel.DataOffset;
+                        dataLength = (_subModel.DataSizeDiv * 10);
+                    }
 
                     // transform?
                     if (_lodInstance.TransformAxisOffset != 0)
                     {
                         stream.Position = (baseOffset + _lodInstance.TransformAxisOffset);
-
                         subModel.Transform = new TransformAxis(stream);
                     }
+
+                    stream.Position = (baseOffset + dataOffset);
+                    
+                    var buffer = new byte[dataLength];
+
+                    stream.Read(buffer, 0, dataLength);
+
+                    subModel.ModelDataBuffer = buffer;
+                    
+                    lod.SubModels.Add(subModel);
+                    SubModels.Add(subModel);
                 }
             }
         }
