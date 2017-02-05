@@ -29,6 +29,29 @@ namespace GMC2Snooper
         DirectHL    = 0x51,	// Transfer data to GIF but stall for Path 3 IMAGE mode (VIF1)
     }
 
+    public enum VifUnpackType : int
+    {
+        S_8,        // single-component, 8-bit
+        S_16,       // single-component, 16-bit
+        S_32,       // single-component, 32-bit
+        
+        V2_8,       // 2-components, 8-bit
+        V2_16,      // 2-components, 16-bit
+        V2_32,      // 2-components, 32-bit
+
+        V3_8,       // 3-components, 8-bit
+        V3_16,      // 3-components, 16-bit
+        V3_32,      // 3-components, 32-bit
+
+        V4_8,       // 4-components, 8-bit
+        V4_16,      // 4-components, 16-bit
+        V4_32,      // 4-components, 32-bit
+
+        V4_5551,    // 4-components, 16-bit (RGB555A1)
+
+        Invalid,
+    }
+
     public struct VifCommand
     {
         private byte m_cmd;
@@ -40,6 +63,30 @@ namespace GMC2Snooper
 
         private static readonly string[] VN_LOOKUP       = { "S", "V2", "V3", "V4" };
         private static readonly int[] VL_LOOKUP          = { 32, 16, 8, 5 };
+
+        private static readonly VifUnpackType[,] UNPACK_TYPE_LOOKUP = {
+            { VifUnpackType.S_32,   VifUnpackType.S_16,     VifUnpackType.S_8,      VifUnpackType.Invalid },
+            { VifUnpackType.V2_32,  VifUnpackType.V2_16,    VifUnpackType.V2_8,     VifUnpackType.Invalid },
+            { VifUnpackType.V3_32,  VifUnpackType.V3_16,    VifUnpackType.V3_8,     VifUnpackType.Invalid },
+            { VifUnpackType.V4_32,  VifUnpackType.V4_16,    VifUnpackType.V4_8,     VifUnpackType.V4_5551 },
+        };
+
+        private static readonly int[,] UNPACK_SIZE_LOOKUP = {
+            // size of a _single_ component, in bytes
+            // e.g. V3_8 would be 1, NOT 3!
+            { 4,  2,  1, -1 },
+            { 4,  2,  1, -1 },
+            { 4,  2,  1, -1 },
+            { 4,  2,  1,  2 },
+        };
+
+        private static readonly int[,] UNPACK_NUM_LOOKUP = {
+            // how many actual components there are
+            { 1,  1,  1, -1 },
+            { 2,  2,  2, -1 },
+            { 3,  3,  3, -1 },
+            { 4,  4,  4,  1 },
+        };
 
         private byte GetVal(int[] info)
         {
@@ -88,6 +135,21 @@ namespace GMC2Snooper
             return name;
         }
 
+        public VifUnpackType GetUnpackDataType()
+        {
+            return UNPACK_TYPE_LOOKUP[VN, VL];
+        }
+
+        public int GetUnpackDataCount()
+        {
+            return UNPACK_NUM_LOOKUP[VN, VL];
+        }
+        
+        public int GetUnpackDataSize()
+        {
+            return UNPACK_SIZE_LOOKUP[VN, VL];
+        }
+        
         public VifCommand(byte data)
         {
             m_cmd = data;
