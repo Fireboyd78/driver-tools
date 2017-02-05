@@ -278,14 +278,14 @@ namespace GMC2Snooper
                     {
                         cmdName = cmd.ToString();
                         cmdInfo = String.Format("{0,-10}{1,-10}",
-                            $"ADDR:{imdt.ADDR:X},",
+                            $"ADDR:{imdt.ADDR * 16:X},",
                             $"NUM:{vif.Num}");
                     }
                     else
                     {
                         cmdName = $"$$CMD_{vif.Cmd:X2}$$";
                         cmdInfo = String.Format("{0,-10}{1,-10}{2,-10}", 
-                            $"ADDR:{imdt.ADDR},",
+                            $"ADDR:{imdt.ADDR * 16},",
                             $"NUM:{vif.Num},",
                             $"IRQ:{vif.Irq}");
                     }
@@ -304,8 +304,84 @@ namespace GMC2Snooper
             
             if (cmd.P == 3)
             {
-                var handled = false;
-                
+                var packType = cmd.GetUnpackDataType();
+
+                if (packType == VifUnpackType.Invalid)
+                {
+                    Console.WriteLine($"Invalid VIF unpack type '{vif.ToString()}'!");
+                }
+                else
+                {
+                    var sb = new StringBuilder();
+
+                    // packSize and packNum can be -1,
+                    // but not since we're checking against invalid types
+                    var packSize = cmd.GetUnpackDataSize();
+                    var packNum = cmd.GetUnpackDataCount();
+                    
+                    for (int i = 0; i < vif.Num; i++)
+                    {
+                        // indent line
+                        sb.Append($"  [{i + 1:D4}]: ");
+                        switch (packSize)
+                        {
+                        // byte
+                        case 1:
+                            {
+                                for (int n = 0; n < packNum; n++)
+                                {
+                                    long val = (imdt.USN) ? stream.ReadByte() : (sbyte)stream.ReadByte();
+                                    
+                                    sb.Append($"{val,-8}");
+                                }
+                            }
+                            break;
+                        // short
+                        case 2:
+                            {
+                                for (int n = 0; n < packNum; n++)
+                                {
+                                    long val = (imdt.USN) ? stream.ReadUInt16() : (long)stream.ReadInt16();
+                                    
+                                    if (packType == VifUnpackType.V4_5551)
+                                    {
+                                        var r = (val >> 0) & 0x1F;
+                                        var g = (val >> 5) & 0x1F;
+                                        var b = (val >> 10) & 0x1F;
+                                        var a = (val >> 15) & 0x1;
+
+                                        sb.AppendFormat("r:{0,-6}", r);
+                                        sb.AppendFormat("g:{0,-6}", g);
+                                        sb.AppendFormat("b:{0,-6}", b);
+                                        sb.AppendFormat("a:{0,-6}", a);
+                                    }
+                                    else
+                                    {
+                                        sb.Append($"{val,-8}");
+                                    }
+                                }
+                            }
+                            break;
+                        // int
+                        case 4:
+                            {
+                                for (int n = 0; n < packNum; n++)
+                                {
+                                    long val = (imdt.USN) ? stream.ReadUInt32() : (long)stream.ReadInt32();
+                                    
+                                    sb.Append($"{val,-8}");
+                                }
+                            }
+                            break;
+                        }
+
+                        sb.AppendLine("");
+                    }
+                    
+                    Console.WriteLine(sb.ToString());
+                }
+
+                /*
                 switch (cmd.VN)
                 {
                 case 0:
@@ -317,7 +393,6 @@ namespace GMC2Snooper
                         {
                             var s_32 = stream.ReadUInt32();
                         }
-                        handled = true;
                         break;
                     // S_16
                     case 1:
@@ -325,7 +400,6 @@ namespace GMC2Snooper
                         {
                             var s_16 = stream.ReadUInt16();
                         }
-                        handled = true;
                         break;
                     // S_8
                     case 2:
@@ -333,7 +407,6 @@ namespace GMC2Snooper
                         {
                             var s_8 = stream.ReadByte();
                         }
-                        handled = true;
                         break;
                     } break;
                 case 1:
@@ -346,7 +419,6 @@ namespace GMC2Snooper
                             float v1 = (imdt.USN) ? (stream.ReadUInt32() / 255.0f) : (stream.ReadInt32() / 255.0f);
                             float v2 = (imdt.USN) ? (stream.ReadUInt32() / 255.0f) : (stream.ReadInt32() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V2_16
                     case 1:
@@ -355,7 +427,6 @@ namespace GMC2Snooper
                             float v1 = (imdt.USN) ? (stream.ReadUInt16() / 255.0f) : (stream.ReadInt16() / 255.0f);
                             float v2 = (imdt.USN) ? (stream.ReadUInt16() / 255.0f) : (stream.ReadInt16() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V2_8
                     case 2:
@@ -364,7 +435,6 @@ namespace GMC2Snooper
                             float v1 = (imdt.USN) ? (stream.ReadByte() / 255.0f) : ((sbyte)stream.ReadByte() / 255.0f);
                             float v2 = (imdt.USN) ? (stream.ReadByte() / 255.0f) : ((sbyte)stream.ReadByte() / 255.0f);
                         }
-                        handled = true;
                         break;
                     } break;
                 case 2:
@@ -379,7 +449,6 @@ namespace GMC2Snooper
                             float v3 = (imdt.USN) ? (stream.ReadUInt32() / 255.0f) : (stream.ReadInt32() / 255.0f);
                             float v4 = (imdt.USN) ? (stream.ReadUInt32() / 255.0f) : (stream.ReadInt32() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V3_16
                     case 1:
@@ -389,7 +458,6 @@ namespace GMC2Snooper
                             float v2 = (imdt.USN) ? (stream.ReadUInt16() / 255.0f) : (stream.ReadInt16() / 255.0f);
                             float v3 = (imdt.USN) ? (stream.ReadUInt16() / 255.0f) : (stream.ReadInt16() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V3_8
                     case 2:
@@ -399,7 +467,6 @@ namespace GMC2Snooper
                             float v2 = (imdt.USN) ? (stream.ReadByte() / 255.0f) : ((sbyte)stream.ReadByte() / 255.0f);
                             float v3 = (imdt.USN) ? (stream.ReadByte() / 255.0f) : ((sbyte)stream.ReadByte() / 255.0f);
                         }
-                        handled = true;
                         break;
                     } break;
                 case 3:
@@ -414,7 +481,6 @@ namespace GMC2Snooper
                             float v3 = (imdt.USN) ? (stream.ReadUInt32() / 255.0f) : (stream.ReadInt32() / 255.0f);
                             float v4 = (imdt.USN) ? (stream.ReadUInt32() / 255.0f) : (stream.ReadInt32() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V4_16
                     case 1:
@@ -425,7 +491,6 @@ namespace GMC2Snooper
                             float v3 = (imdt.USN) ? (stream.ReadUInt16() / 255.0f) : (stream.ReadInt16() / 255.0f);
                             float v4 = (imdt.USN) ? (stream.ReadUInt16() / 255.0f) : (stream.ReadInt16() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V4_8
                     case 2:
@@ -436,19 +501,20 @@ namespace GMC2Snooper
                             float v3 = (imdt.USN) ? (stream.ReadByte() / 255.0f) : ((sbyte)stream.ReadByte() / 255.0f);
                             float v4 = (imdt.USN) ? (stream.ReadByte() / 255.0f) : ((sbyte)stream.ReadByte() / 255.0f);
                         }
-                        handled = true;
                         break;
                     // V4_5
                     case 3:
-                        stream.Position += (vif.Num * 2);
-                        handled = true;
+                        for (int v = 0; v < vif.Num; v++)
+                        {
+                            var value = stream.ReadUInt16();
+
+
+                        }
                         break;
                     }
                     break;
                 }
-
-                if (!handled)
-                    Console.WriteLine($"Unknown VIF unpack type ({cmd.VN},{cmd.VL})");
+                */
             }
         }
 
