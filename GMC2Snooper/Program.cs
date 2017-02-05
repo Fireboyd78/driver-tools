@@ -112,13 +112,13 @@ namespace GMC2Snooper
                 return;
             }
 
-            if (startIdx >= modPacks.Count)
+            var idx = (startIdx - 1);
+
+            if (idx >= modPacks.Count)
             {
                 Console.WriteLine($"ERROR: Index was larger than the actual number of models available.");
                 return;
             }
-
-            var idx = (startIdx - 1);
             
             while (idx < modPacks.Count)
             {
