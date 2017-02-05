@@ -125,7 +125,7 @@ namespace GMC2Snooper
                 Console.WriteLine($">> ModelPackage index: {startIdx}");
 
                 var gmc2 = new ModelPackagePS2();
-                var spooler = modPacks[startIdx];
+                var spooler = modPacks[idx];
 
                 using (var ms = spooler.GetMemoryStream())
                 {
