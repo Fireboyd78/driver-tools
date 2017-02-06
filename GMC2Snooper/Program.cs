@@ -206,7 +206,31 @@ namespace GMC2Snooper
                 Console.WriteLine();
             }
         }
+
+        public static long[] VIFCurrent         = new long[4];
+
+        public static int VIFITop               = 0;
         
+        public static int VIFCycle              = 0; // 'CL'
+        public static int VIFCycleWriteLen      = 0; // 'WL'
+
+        public static int VIFMode               = 0;
+
+        public static string[] VIFModeTypes     = new[] {
+            "NORMAL",
+            "OFFSET",
+            "DIFFERENCE",
+        };
+        
+        public static uint[][] VIFMasks         = new uint[4][];
+
+        public static string[] VIFMaskTypes     = new[] {
+            "DATA",
+            "MASK_ROW",
+            "MASK_COL",
+            "WRITE_PROTECT",
+        };
+
         public static void DumpVIFTag(Stream stream)
         {
             var vif = stream.ReadStruct<PS2.VifTag>();
@@ -217,6 +241,8 @@ namespace GMC2Snooper
             var cmdName = "";
             var cmdInfo = "";
 
+            var sb = new StringBuilder();
+
             switch ((VifCommandType)vif.Cmd)
             {
             case VifCommandType.Nop:
@@ -224,10 +250,13 @@ namespace GMC2Snooper
                 stream.Position += 4;
                 break;
             case VifCommandType.StCycl:
+                VIFCycle = imdt.IMDT_STCYCL_CL;
+                VIFCycleWriteLen = imdt.IMDT_STCYCL_WL;
+
                 cmdName = "STCYCL";
                 cmdInfo = String.Format("{0,-10}{1,-10}", 
-                    $"CL:{imdt.IMDT_STCYCL_CL},",
-                    $"WL:{imdt.IMDT_STCYCL_WL}");
+                    $"CL:{VIFCycle},",
+                    $"WL:{VIFCycleWriteLen}");
                 break;
             case VifCommandType.Offset:
                 cmdName = "OFFSET";
@@ -235,14 +264,18 @@ namespace GMC2Snooper
                 stream.Position += 4;
                 break;
             case VifCommandType.ITop:
+                VIFITop = imdt.IMDT_ITOP;
+
                 cmdName = "ITOP";
-                cmdInfo = String.Format("{0,-10}", $"ADDR:{imdt.IMDT_ITOP:X}");
+                cmdInfo = String.Format("{0,-10}", $"ADDR:{VIFITop:X}");
+
                 stream.Position += 4;
                 break;
             case VifCommandType.StMod:
+                VIFMode = imdt.IMDT_STMOD;
+
                 cmdName = "STMOD";
-                cmdInfo = String.Format("{0,-10}", $"MODE:{imdt.IMDT_STMOD}");
-                stream.Position += 4;
+                cmdInfo = String.Format("{0,-10}", $"MODE:{VIFMode} ({VIFModeTypes[VIFMode]})");
                 break;
             case VifCommandType.MsCal:
                 cmdName = "MSCAL";
@@ -254,8 +287,35 @@ namespace GMC2Snooper
                 break;
             case VifCommandType.StMask:
                 var stmask = stream.ReadUInt32();
+
                 cmdName = "STMASK";
-                cmdInfo = String.Format("{0,-10}", $"MASK:{stmask:X8}");
+                cmdInfo = String.Format("{0,-10}", $"MASK:{stmask :X8}");
+                
+                sb.AppendFormat("-> {0,-16}{1,-16}{2,-16}{3,-16}", 
+                    "MASK_X", 
+                    "MASK_Y", 
+                    "MASK_Z", 
+                    "MASK_W");
+
+                sb.AppendLine();
+
+                for (int m = 0; m < 4; m++)
+                {
+                    sb.Append("-> ");
+
+                    VIFMasks[m] = new uint[4];
+
+                    for (int mI = 0; mI < 4; mI++)
+                    {
+                        var msk = (stmask >> ((m * 8) + (mI * 2))) & 0x3;
+
+                        VIFMasks[m][mI] = msk;
+
+                        sb.AppendFormat("{0,-16}", VIFMaskTypes[msk]);
+                    }
+
+                    sb.AppendLine($"; V{m + 1}");
+                }
                 break;
             case VifCommandType.Flush:
                 cmdName = "FLUSH";
@@ -278,14 +338,14 @@ namespace GMC2Snooper
                     {
                         cmdName = cmd.ToString();
                         cmdInfo = String.Format("{0,-10}{1,-10}",
-                            $"ADDR:{imdt.ADDR * 16:X},",
+                            $"ADDR:{imdt.ADDR:X} ({imdt.ADDR * 16:X}),",
                             $"NUM:{vif.Num}");
                     }
                     else
                     {
                         cmdName = $"$$CMD_{vif.Cmd:X2}$$";
-                        cmdInfo = String.Format("{0,-10}{1,-10}{2,-10}", 
-                            $"ADDR:{imdt.ADDR * 16},",
+                        cmdInfo = String.Format("{0,-10}{1,-10}{2,-10}",
+                            $"ADDR:{imdt.ADDR:X} ({imdt.ADDR * 16:X}),",
                             $"NUM:{vif.Num},",
                             $"IRQ:{vif.Irq}");
                     }
@@ -301,28 +361,32 @@ namespace GMC2Snooper
                 props += "+UNSIGNED ";
             
             Console.WriteLine($"  {cmdName,-16}{" : ",4}{props,-16}{": ",4}{cmdInfo,-8}");
-            
+
             if (cmd.P == 3)
             {
                 var packType = cmd.GetUnpackDataType();
-
+                
                 if (packType == VifUnpackType.Invalid)
                 {
                     Console.WriteLine($"Invalid VIF unpack type '{vif.ToString()}'!");
                 }
                 else
                 {
-                    var sb = new StringBuilder();
+                    var logReads = true;
 
                     // packSize and packNum can be -1,
                     // but not since we're checking against invalid types
                     var packSize = cmd.GetUnpackDataSize();
                     var packNum = cmd.GetUnpackDataCount();
-                    
+
+                    var wl = VIFCycleWriteLen;
+
                     for (int i = 0; i < vif.Num; i++)
                     {
                         // indent line
-                        sb.Append($"  [{i + 1:D4}]: ");
+                        if (wl == VIFCycleWriteLen)
+                            sb.Append($"-> [{i + 1:D4}]: ");
+
                         switch (packSize)
                         {
                         // byte
@@ -331,8 +395,31 @@ namespace GMC2Snooper
                                 for (int n = 0; n < packNum; n++)
                                 {
                                     long val = (imdt.USN) ? stream.ReadByte() : (sbyte)stream.ReadByte();
-                                    
-                                    sb.Append($"{val,-8}");
+
+                                    if ((packType & (VifUnpackType.V3_8 | VifUnpackType.V4_8)) != 0)
+                                    {
+                                        var fVal = (packType == VifUnpackType.V4_8) ? (val / 128.0f) : (val / 127.0f);
+
+                                        if (fVal < 0f)
+                                        {
+                                            sb.Append($"{fVal,-8:F4}");
+                                        }
+                                        else
+                                        {
+                                            sb.Append($" {fVal,-7:F4}");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (val < 0)
+                                        {
+                                            sb.Append($"{val,-8}");
+                                        }
+                                        else
+                                        {
+                                            sb.Append($" {val,-7}");
+                                        }
+                                    }
                                 }
                             }
                             break;
@@ -357,7 +444,30 @@ namespace GMC2Snooper
                                     }
                                     else
                                     {
-                                        sb.Append($"{val,-8}");
+                                        if ((packType & (VifUnpackType.S_16 | VifUnpackType.V4_16)) != 0)
+                                        {
+                                            var fVal = (packType == VifUnpackType.S_16) ? (val / 2048.0f) : (val / 32768.0f);
+
+                                            if (fVal < 0f)
+                                            {
+                                                sb.Append($"{fVal,-8:F4}");
+                                            }
+                                            else
+                                            {
+                                                sb.Append($" {fVal,-7:F4}");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (val < 0)
+                                            {
+                                                sb.Append($"{val,-8}");
+                                            }
+                                            else
+                                            {
+                                                sb.Append($" {val,-7}");
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -368,18 +478,36 @@ namespace GMC2Snooper
                                 for (int n = 0; n < packNum; n++)
                                 {
                                     long val = (imdt.USN) ? stream.ReadUInt32() : (long)stream.ReadInt32();
-                                    
-                                    sb.Append($"{val,-8}");
+
+                                    if (val < 0)
+                                    {
+                                        sb.Append($"{val,-8}");
+                                    }
+                                    else
+                                    {
+                                        sb.Append($" {val,-7}");
+                                    }
                                 }
                             }
                             break;
                         }
 
-                        sb.AppendLine("");
+                        if (--wl == 0)
+                        {
+                            sb.AppendLine("");
+                            wl = VIFCycleWriteLen;
+                        }
                     }
-                    
-                    Console.WriteLine(sb.ToString());
+
+                    if (logReads)
+                        Console.Write(sb.ToString());
                 }
+            }
+            else
+            {
+                // generic info
+                if (sb.Length > 0)
+                    Console.Write(sb.ToString());
             }
         }
 
