@@ -122,10 +122,15 @@ namespace GMC2Snooper
             
             while (idx < modPacks.Count)
             {
-                Console.WriteLine($">> ModelPackage index: {startIdx}");
-
                 var gmc2 = new ModelPackagePS2();
                 var spooler = modPacks[idx];
+
+                var parent = spooler.Parent;
+
+                Console.WriteLine($">> ModelPackage index: {startIdx}");
+
+                if (parent != null)
+                    Console.WriteLine($">> ModelPackage parent: 0x{parent.Context:X8}");
 
                 using (var ms = spooler.GetMemoryStream())
                 {
@@ -172,23 +177,39 @@ namespace GMC2Snooper
                 var model = gmc2.Models[i];
 
                 Console.WriteLine($"**** Model {i + 1} / {gmc2.Models.Count} *****");
-                //Console.WriteLine($"Type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
-                //Console.WriteLine($"UID: {model.UID:X8}");
-                //Console.WriteLine($"Handle: {model.Handle:X8}");
-                //Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
-                //Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
-                //Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
+                Console.WriteLine($"Type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
+                Console.WriteLine($"UID: {model.UID:X8}");
+                Console.WriteLine($"Handle: {model.Handle:X8}");
+                Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
+                Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
+                Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
 
                 for (int ii = 0; ii < model.SubModels.Count; ii++)
                 {
                     var subModel = model.SubModels[ii];
 
                     Console.WriteLine($"******** Sub model {ii + 1} / {model.SubModels.Count} *********");
-                    //Console.WriteLine($"Type: {subModel.Type}");
-                    //Console.WriteLine($"Flags: {subModel.Flags}");
-                    //Console.WriteLine($"Unknown: ({subModel.Unknown1},{subModel.Unknown2})");
-                    //Console.WriteLine($"TexId: {subModel.TextureId}");
-                    //Console.WriteLine($"TexSource: {subModel.TextureSource:X4}");
+                    Console.WriteLine($"Type: {subModel.Type}");
+                    Console.WriteLine($"Flags: {subModel.Flags}");
+                    Console.WriteLine($"Unknown: ({subModel.Unknown1},{subModel.Unknown2})");
+                    Console.WriteLine($"TexId: {subModel.TextureId}");
+                    Console.WriteLine($"TexSource: {subModel.TextureSource:X4}");
+
+                    if (subModel.HasVectorData)
+                    {
+                        var v1 = subModel.V1;
+                        var v2 = subModel.V2;
+                        Console.WriteLine($"V1: ({v1.X:F4},{v1.Y:F4},{v1.Z:F4})");
+                        Console.WriteLine($"V2: ({v2.X:F4},{v2.Y:F4},{v2.Z:F4})");
+                    }
+
+                    if (subModel.HasTransform)
+                    {
+                        var transform = subModel.Transform;
+                        Console.WriteLine($"Transform X: ({transform.X.X:F4},{transform.X.Y:F4},{transform.X.Z:F4},{transform.X.W:F4})");
+                        Console.WriteLine($"Transform Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
+                        Console.WriteLine($"Transform Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
+                    }
                     
                     using (var ms = new MemoryStream(subModel.ModelDataBuffer))
                     {
@@ -396,9 +417,12 @@ namespace GMC2Snooper
                                 {
                                     long val = (imdt.USN) ? stream.ReadByte() : (sbyte)stream.ReadByte();
 
+                                    if (imdt.FLG && (val > 127))
+                                        val -= 128;
+
                                     if ((packType & (VifUnpackType.V3_8 | VifUnpackType.V4_8)) != 0)
                                     {
-                                        var fVal = (packType == VifUnpackType.V4_8) ? (val / 128.0f) : (val / 127.0f);
+                                        var fVal = (packType == VifUnpackType.V4_8) ? (val / 128.0f) : (val / 128.0f);
 
                                         if (fVal < 0f)
                                         {
@@ -429,7 +453,10 @@ namespace GMC2Snooper
                                 for (int n = 0; n < packNum; n++)
                                 {
                                     long val = (imdt.USN) ? stream.ReadUInt16() : (long)stream.ReadInt16();
-                                    
+
+                                    if (imdt.FLG && (val > 127))
+                                        val -= 128;
+
                                     if (packType == VifUnpackType.V4_5551)
                                     {
                                         var r = (val >> 0) & 0x1F;
@@ -446,7 +473,7 @@ namespace GMC2Snooper
                                     {
                                         if ((packType & (VifUnpackType.S_16 | VifUnpackType.V4_16)) != 0)
                                         {
-                                            var fVal = (packType == VifUnpackType.S_16) ? (val / 2048.0f) : (val / 32768.0f);
+                                            var fVal = (packType == VifUnpackType.S_16) ? (val / 2048.0f) : (val / 256.0f);
 
                                             if (fVal < 0f)
                                             {

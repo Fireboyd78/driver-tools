@@ -248,6 +248,9 @@ namespace GMC2Snooper
 
     public class SubModel
     {
+        public bool HasTransform { get; set; }
+        public bool HasVectorData { get; set; }
+
         public TransformAxis Transform { get; set; }
 
         // need to figure out the names
@@ -354,6 +357,8 @@ namespace GMC2Snooper
                             throw new InvalidOperationException("Invalid sub-model (V2)!");
 
                         subModel = new SubModel() {
+                            HasVectorData = false,
+
                             TextureId = _subModel.TextureId,
                             TextureSource = _subModel.TextureSource,
 
@@ -375,6 +380,8 @@ namespace GMC2Snooper
                             throw new InvalidOperationException("Invalid sub-model!");
 
                         subModel = new SubModel() {
+                            HasVectorData = true,
+
                             V1 = _subModel.Transform1,
                             V2 = _subModel.Transform2,
 
@@ -396,7 +403,9 @@ namespace GMC2Snooper
                     if (_lodInstance.TransformAxisOffset != 0)
                     {
                         stream.Position = (baseOffset + _lodInstance.TransformAxisOffset);
+
                         subModel.Transform = new TransformAxis(stream);
+                        subModel.HasTransform = true;
                     }
 
                     stream.Position = (baseOffset + dataOffset);
