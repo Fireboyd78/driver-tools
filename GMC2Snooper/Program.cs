@@ -171,6 +171,15 @@ namespace GMC2Snooper
         
         public static void DumpModelInfo(ModelPackagePS2 gmc2)
         {
+            var sb = new StringBuilder();
+            
+            Vertices = new List<Vertex>();
+            Normals = new List<Vertex>();
+            UV1s = new List<Vertex>();
+            UV2s = new List<Vertex>();
+
+            var minIndex = 0;
+            
             // vif tag info :)
             for (int i = 0; i < gmc2.Models.Count; i++)
             {
@@ -183,6 +192,8 @@ namespace GMC2Snooper
                 Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
                 Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
                 Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
+
+                sb.AppendLine($"# ----- Model {i + 1} ----- #");
 
                 for (int ii = 0; ii < model.SubModels.Count; ii++)
                 {
@@ -210,7 +221,9 @@ namespace GMC2Snooper
                         Console.WriteLine($"Transform Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
                         Console.WriteLine($"Transform Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
                     }
-                    
+
+                    sb.AppendLine($"# ----- SubModel {ii + 1} ----- #");
+
                     using (var ms = new MemoryStream(subModel.ModelDataBuffer))
                     {
                         while (ms.Position < ms.Length)
@@ -222,14 +235,44 @@ namespace GMC2Snooper
                             DumpVIFTag(ms);
                         }
                     }
+
+                    var numVertices = 0;
+
+                    for (int v = minIndex; v < VIFITop; v++)
+                    {
+                        var vx = Vertices[v];
+
+                        sb.AppendLine($"v {vx.X:F4} {vx.Y:F4} {vx.Z:F4}");
+                        ++numVertices;
+                    }
+
+                    sb.AppendLine($"g model{i}_{ii}");
+                    sb.AppendLine($"s off");
+                    
+                    // no idea how to process these properly :/
+                    // the last field ('visibility'?) is probably the missing link...
+                    for (int t = 0; t < numVertices; t += 3)
+                    {
+                        int i0, i1, i2;
+
+                        i0 = (minIndex + t) + 1;
+                        i1 = (minIndex + t + 1) + 1;
+                        i2 = (minIndex + t + 2) + 1;
+                        
+                        sb.AppendLine($"f {i0} {i1} {i2}");
+                    }
+
+                    minIndex += numVertices;
+
                     Console.WriteLine();
                 }
+                
                 Console.WriteLine();
             }
+            
+            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "dump.obj"), sb.ToString());
         }
-
-        public static long[] VIFCurrent         = new long[4];
-
+        
         public static int VIFITop               = 0;
         
         public static int VIFCycle              = 0; // 'CL'
@@ -252,6 +295,101 @@ namespace GMC2Snooper
             "WRITE_PROTECT",
         };
 
+        public class Vertex
+        {
+            public float X { get; set; }
+            public float Y { get; set; }
+            public float Z { get; set; }
+        }
+        
+        public static List<Vertex> Vertices = new List<Vertex>();
+        public static List<Vertex> Normals = new List<Vertex>();
+
+        public static List<Vertex> UV1s = new List<Vertex>();
+        public static List<Vertex> UV2s = new List<Vertex>();
+        
+        public static void UnpackValues(VifUnpackType packType, int numVals, bool masked, long[][] values)
+        {
+            var nextPack = (values.Length / numVals);
+            var doublePacked = (nextPack != values.Length);
+
+            var sb = new StringBuilder();
+
+            // shit
+            switch (packType)
+            {
+            case VifUnpackType.S_16:
+                if (!doublePacked)
+                    throw new InvalidOperationException("can't do S_16 with only 1 value :(");
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var val = values[i][0];
+
+                    var u = (val >> 0) & 0xFF;
+                    var v = (val >> 8) & 0xFF;
+
+                    if (u > 127)
+                        u -= 128;
+                    if (v > 127)
+                        v -= 128;
+
+                    var vt = new Vertex() {
+                        X = (u / 128.0f),
+                        Y = (v / 128.0f),
+                        Z = 1.0f,
+                    };
+
+                    var uvs = (i < nextPack) ? UV1s : UV2s;
+
+                    uvs.Add(vt);
+
+                    sb.AppendLine($"-> {vt.X:F4}, {vt.Y:F4}");
+                }
+
+                break;
+            case VifUnpackType.V3_8:
+                if (!masked)
+                    throw new InvalidOperationException("can't do V3_8 non-masked :(");
+                
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var vn = new Vertex() {
+                        X = (values[i][0] / 256.0f),
+                        Y = (values[i][1] / 256.0f),
+                        Z = (values[i][2] / 256.0f),
+                    };
+
+                    Normals.Add(vn);
+                    
+                    sb.AppendLine($"-> {vn.X:F4}, {vn.Y:F4}, {vn.Z:F4}");
+                }
+
+                break;
+            case VifUnpackType.V4_8:
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var vx = new Vertex() {
+                        X = (values[i][0] / 128.0f),
+                        Y = (values[i][1] / 128.0f),
+                        Z = ((values[i][2] / 128.0f) * 2.0f),
+                    };
+
+                    Vertices.Add(vx);
+                    
+                    // visible if < 128, otherwise invisible
+                    var visibility = (values[i][3] & 0xFF);
+
+                    sb.AppendLine($"-> {vx.X:F4}, {vx.Y:F4}, {vx.Z:F4}, {visibility}");
+                }
+
+                break;
+            }
+
+            if (sb.Length > 0)
+                Console.WriteLine(sb.ToString());
+        }
+        
         public static void DumpVIFTag(Stream stream)
         {
             var vif = stream.ReadStruct<PS2.VifTag>();
@@ -285,10 +423,10 @@ namespace GMC2Snooper
                 stream.Position += 4;
                 break;
             case VifCommandType.ITop:
-                VIFITop = imdt.IMDT_ITOP;
+                VIFITop += imdt.IMDT_ITOP;
 
                 cmdName = "ITOP";
-                cmdInfo = String.Format("{0,-10}", $"ADDR:{VIFITop:X}");
+                cmdInfo = String.Format("{0,-10}", $"ADDR:{VIFITop:X} ({VIFITop} vertices)");
 
                 stream.Position += 4;
                 break;
@@ -393,21 +531,29 @@ namespace GMC2Snooper
                 }
                 else
                 {
-                    var logReads = true;
-
                     // packSize and packNum can be -1,
                     // but not since we're checking against invalid types
                     var packSize = cmd.GetUnpackDataSize();
                     var packNum = cmd.GetUnpackDataCount();
 
                     var wl = VIFCycleWriteLen;
+                    
+                    if (packNum > 4)
+                        throw new InvalidOperationException("too many packed values!!!");
+
+                    var vals = new long[vif.Num][];
+
+                    // initialize arrays
+                    for (int v = 0; v < vals.Length; v++)
+                    {
+                        vals[v] = new long[packNum];
+
+                        for (int n = 0; n < packNum; n++)
+                            vals[v][n] = 0;
+                    }
 
                     for (int i = 0; i < vif.Num; i++)
                     {
-                        // indent line
-                        if (wl == VIFCycleWriteLen)
-                            sb.Append($"-> [{i + 1:D4}]: ");
-
                         switch (packSize)
                         {
                         // byte
@@ -417,33 +563,10 @@ namespace GMC2Snooper
                                 {
                                     long val = (imdt.USN) ? stream.ReadByte() : (sbyte)stream.ReadByte();
 
-                                    if (imdt.FLG && (val > 127))
+                                    if (imdt.FLG)
                                         val -= 128;
 
-                                    if ((packType & (VifUnpackType.V3_8 | VifUnpackType.V4_8)) != 0)
-                                    {
-                                        var fVal = (packType == VifUnpackType.V4_8) ? (val / 128.0f) : (val / 128.0f);
-
-                                        if (fVal < 0f)
-                                        {
-                                            sb.Append($"{fVal,-8:F4}");
-                                        }
-                                        else
-                                        {
-                                            sb.Append($" {fVal,-7:F4}");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (val < 0)
-                                        {
-                                            sb.Append($"{val,-8}");
-                                        }
-                                        else
-                                        {
-                                            sb.Append($" {val,-7}");
-                                        }
-                                    }
+                                    vals[i][n] = val;
                                 }
                             }
                             break;
@@ -454,48 +577,7 @@ namespace GMC2Snooper
                                 {
                                     long val = (imdt.USN) ? stream.ReadUInt16() : (long)stream.ReadInt16();
 
-                                    if (imdt.FLG && (val > 127))
-                                        val -= 128;
-
-                                    if (packType == VifUnpackType.V4_5551)
-                                    {
-                                        var r = (val >> 0) & 0x1F;
-                                        var g = (val >> 5) & 0x1F;
-                                        var b = (val >> 10) & 0x1F;
-                                        var a = (val >> 15) & 0x1;
-
-                                        sb.AppendFormat("r:{0,-6}", r);
-                                        sb.AppendFormat("g:{0,-6}", g);
-                                        sb.AppendFormat("b:{0,-6}", b);
-                                        sb.AppendFormat("a:{0,-6}", a);
-                                    }
-                                    else
-                                    {
-                                        if ((packType & (VifUnpackType.S_16 | VifUnpackType.V4_16)) != 0)
-                                        {
-                                            var fVal = (packType == VifUnpackType.S_16) ? (val / 2048.0f) : (val / 256.0f);
-
-                                            if (fVal < 0f)
-                                            {
-                                                sb.Append($"{fVal,-8:F4}");
-                                            }
-                                            else
-                                            {
-                                                sb.Append($" {fVal,-7:F4}");
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (val < 0)
-                                            {
-                                                sb.Append($"{val,-8}");
-                                            }
-                                            else
-                                            {
-                                                sb.Append($" {val,-7}");
-                                            }
-                                        }
-                                    }
+                                    vals[i][n] = val;
                                 }
                             }
                             break;
@@ -506,28 +588,14 @@ namespace GMC2Snooper
                                 {
                                     long val = (imdt.USN) ? stream.ReadUInt32() : (long)stream.ReadInt32();
 
-                                    if (val < 0)
-                                    {
-                                        sb.Append($"{val,-8}");
-                                    }
-                                    else
-                                    {
-                                        sb.Append($" {val,-7}");
-                                    }
+                                    vals[i][n] = val;
                                 }
                             }
                             break;
                         }
-
-                        if (--wl == 0)
-                        {
-                            sb.AppendLine("");
-                            wl = VIFCycleWriteLen;
-                        }
                     }
 
-                    if (logReads)
-                        Console.Write(sb.ToString());
+                    UnpackValues(packType, wl, (cmd.M == 1), vals);
                 }
             }
             else
