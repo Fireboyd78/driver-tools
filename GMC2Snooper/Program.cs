@@ -173,7 +173,8 @@ namespace GMC2Snooper
         {
             var sb = new StringBuilder();
             
-            Vertices = new List<Vertex>();
+            Vertices = new List<VertexStrip>();
+
             Normals = new List<Vertex>();
             UV1s = new List<Vertex>();
             UV2s = new List<Vertex>();
@@ -241,7 +242,7 @@ namespace GMC2Snooper
                     for (int v = minIndex; v < VIFITop; v++)
                     {
                         var vx = Vertices[v];
-
+                        
                         sb.AppendLine($"v {vx.X:F4} {vx.Y:F4} {vx.Z:F4}");
                         ++numVertices;
                     }
@@ -249,16 +250,15 @@ namespace GMC2Snooper
                     sb.AppendLine($"g model{i}_{ii}");
                     sb.AppendLine($"s off");
                     
-                    // no idea how to process these properly :/
-                    // the last field ('visibility'?) is probably the missing link...
-                    for (int t = 0; t < numVertices; t += 3)
+                    
+                    for (int t = 0; t < numVertices; t += 2)
                     {
                         int i0, i1, i2;
 
                         i0 = (minIndex + t) + 1;
                         i1 = (minIndex + t + 1) + 1;
                         i2 = (minIndex + t + 2) + 1;
-                        
+
                         sb.AppendLine($"f {i0} {i1} {i2}");
                     }
 
@@ -301,8 +301,14 @@ namespace GMC2Snooper
             public float Y { get; set; }
             public float Z { get; set; }
         }
+
+        public class VertexStrip : Vertex
+        {
+            public int Flags { get; set; }
+        }
         
-        public static List<Vertex> Vertices = new List<Vertex>();
+        public static List<VertexStrip> Vertices = new List<VertexStrip>();
+
         public static List<Vertex> Normals = new List<Vertex>();
 
         public static List<Vertex> UV1s = new List<Vertex>();
@@ -369,18 +375,16 @@ namespace GMC2Snooper
             case VifUnpackType.V4_8:
                 for (int i = 0; i < values.Length; i++)
                 {
-                    var vx = new Vertex() {
+                    var vx = new VertexStrip() {
                         X = (values[i][0] / 128.0f),
                         Y = (values[i][1] / 128.0f),
                         Z = ((values[i][2] / 128.0f) * 2.0f),
+                        Flags = (int)(values[i][3] & 0xFF),
                     };
 
                     Vertices.Add(vx);
                     
-                    // visible if < 128, otherwise invisible
-                    var visibility = (values[i][3] & 0xFF);
-
-                    sb.AppendLine($"-> {vx.X:F4}, {vx.Y:F4}, {vx.Z:F4}, {visibility}");
+                    sb.AppendLine($"-> {vx.X:F4}, {vx.Y:F4}, {vx.Z:F4}, {vx.Flags}");
                 }
 
                 break;
