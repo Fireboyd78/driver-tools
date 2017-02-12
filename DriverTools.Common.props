@@ -1,20 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Global configuration settings -->
   <PropertyGroup>
-    <OutputPath>$(ProjectDir)bin</OutputPath>
-    <IntermediateOutputPath>$(ProjectDir)obj</IntermediateOutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <OutputPath>$(ProjectDir)bin\</OutputPath>
+    <IntermediateOutputPath>$(ProjectDir)obj\</IntermediateOutputPath>
+    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   
-  <PropertyGroup>
-    <ErrorReport>prompt</ErrorReport>
-    <FileAlignment>4096</FileAlignment>
-    <DocumentationFile>$(OutputDir)$(AssemblyName).xml</DocumentationFile>
+  <!-- Platform-specific settings (will not override existing settings) -->
+  <PropertyGroup Condition="'$(PlatformTarget)' == ''">
+    <!-- Default to x86 -->
     <PlatformTarget>x86</PlatformTarget>
-    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <PlatformTarget Condition="'$(Platform)' == 'x86'">x86</PlatformTarget>
+    <PlatformTarget Condition="'$(Platform)' == 'x64'">x64</PlatformTarget>
   </PropertyGroup>
   
-  <!-- Global paths -->
+  <!-- Debug configuration settings -->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugType>full</DebugType>
+    <DefineConstants>TRACE;DEBUG;LOG</DefineConstants>
+    <Optimize>false</Optimize>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
+  </PropertyGroup>
+  
+  <!-- Release configuration settings -->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  
+  <!-- Global properties -->
   <PropertyGroup>
+    <SrcDir>$(ProjectDir)Source\</SrcDir>
+    
     <DToolsRoot>$(MSBuildThisFileDirectory)</DToolsRoot>
     
     <DToolsSharedDir>$(DToolsRoot)Shared\</DToolsSharedDir>
@@ -26,6 +49,18 @@
     <FreeImageNETDir Condition="!Exists('$(FreeImageDir)')">$(DToolsSharedLibsDir)FreeImageNET\</FreeImageNETDir>
     <HelixToolkitDir>$(DToolsSharedLibsDir)HelixToolkit\</HelixToolkitDir>
     
+    <libDSCName>DSCript</libDSCName>
+    <libDSCGuid>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</libDSCGuid>
     <libDSCDir>$(DToolsRoot)$(libDSCName)\</libDSCDir>
+    <libDSCProjectFile>$(libDSCDir)$(libDSCName).csproj</libDSCProjectFile>
+    
+    <IncludeDSCLibrary Condition="'$(IncludeDSCLibrary)' == ''">false</IncludeDSCLibrary>
   </PropertyGroup>
+  
+  <ItemGroup Condition="$(IncludeDSCLibrary)">
+    <ProjectReference Include="$(libDSCProjectFile)">
+      <Name>$(libDSCName)</Name>
+      <Project>$(libDSCGuid)</Project>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

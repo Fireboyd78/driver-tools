@@ -1,9 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!-- Project settings -->
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform>x86</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProjectGuid>{9956D1AB-1EC1-47D3-86BA-8FB1FE19AF13}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AssemblyName>GMC2Snooper</AssemblyName>
@@ -11,11 +12,18 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
   </PropertyGroup>
-  <Import Project="$(ProjectDir)..\DriverTools.Common.props" Condition=" Exists('$(ProjectDir)..\DriverTools.Common.props') " />
+  <!-- Global configuration settings -->
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>1591</NoWarn>
+    <WarningLevel>4</WarningLevel>
+    <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
+  <!-- Driver Tools properties -->
+  <PropertyGroup>
+    <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
+    <IncludeDSCLibrary>true</IncludeDSCLibrary>
+  </PropertyGroup>
+  <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -26,10 +34,6 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="Microsoft.CSharp" />
-    <ProjectReference Include="..\DSCript\DSCript.csproj">
-      <Name>DSCript</Name>
-      <Project>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BitmapHelper.cs" />
@@ -64,13 +68,5 @@
       <DependentUpon>BMPViewer.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

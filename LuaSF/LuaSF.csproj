@@ -1,33 +1,29 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!-- Project settings -->
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProjectGuid>{2BA15A66-248A-475A-926F-989DE86389EE}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LuaSF</RootNamespace>
     <AssemblyName>LuaSF</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
   </PropertyGroup>
-  <Import Project="$(ProjectDir)..\DriverTools.Common.props" Condition=" Exists('$(ProjectDir)..\DriverTools.Common.Props') " />
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+  <!-- Global configuration settings -->
+  <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
+  <!-- Driver Tools properties -->
+  <PropertyGroup>
+    <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
+    <IncludeDSCLibrary>true</IncludeDSCLibrary>
+  </PropertyGroup>
+  <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -52,17 +48,6 @@
       <Project>{ed5d3e22-804b-4baa-bd7f-f47f19804cf8}</Project>
       <Name>UnluacNET</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DSCript\DSCript.csproj">
-      <Project>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</Project>
-      <Name>DSCript</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
 </Project>

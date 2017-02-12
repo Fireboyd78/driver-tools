@@ -16,46 +16,19 @@
     <!-- C# 6.0 -->
     <LangVersion>6</LangVersion>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <PlatformTarget>x86</PlatformTarget>
-    <OutputPath>bin\x86\Debug\</OutputPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <PlatformTarget>x86</PlatformTarget>
-    <OutputPath>bin\x86\Release\</OutputPath>
-  </PropertyGroup>
-  <Import Project="$(ProjectDir)..\DriverTools.Common.props" Condition=" Exists('$(ProjectDir)..\DriverTools.Common.Props') " />
   <!-- Global configuration settings -->
   <PropertyGroup>
-    <PlatformTarget>x86</PlatformTarget>
+    <FileAlignment>4096</FileAlignment>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NoWarn>0164,1573,1591</NoWarn>
-    <ErrorReport>prompt</ErrorReport>
-    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     <WarningLevel>4</WarningLevel>
+    <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
-  <!-- Debug configuration settings -->
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <DefineConstants>TRACE;DEBUG;LOG</DefineConstants>
-    <Optimize>false</Optimize>
-    <UseVSHostingProcess>true</UseVSHostingProcess>
-  </PropertyGroup>
-  <!-- Release configuration settings -->
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>pdbonly</DebugType>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <UseVSHostingProcess>false</UseVSHostingProcess>
-  </PropertyGroup>
-  <!-- Path stuff -->
+  <!-- Driver Tools properties -->
   <PropertyGroup>
-    <AntilliDir>$(MSBuildThisFileDirectory)</AntilliDir>
-    <AntilliSrcRoot>$(AntilliDir)Source\</AntilliSrcRoot>
+    <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
+    <IncludeDSCLibrary>true</IncludeDSCLibrary>
   </PropertyGroup>
-  <!-- References -->
+  <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -90,122 +63,118 @@
       <HintPath>$(HelixToolkitDir)TDx.TDxInput.dll</HintPath>
       <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
-    <ProjectReference Include="..\DSCript\DSCript.csproj">
-      <Name>DSCript</Name>
-      <Project>{09c8aa4a-afb8-4bdb-866b-b8c88d48d9eb}</Project>
-    </ProjectReference>
   </ItemGroup>
   <!-- Source files -->
   <ItemGroup>
-    <ApplicationDefinition Include="$(AntilliSrcRoot)App.xaml">
+    <ApplicationDefinition Include="$(SrcDir)App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="$(AntilliSrcRoot)App.xaml.cs">
+    <Compile Include="$(SrcDir)App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <None Include="$(AntilliSrcRoot)App.config" />
-    <Compile Include="$(AntilliSrcRoot)ModelGroupListItem.cs" />
-    <Compile Include="$(AntilliSrcRoot)ModelListItem.cs" />
-    <Compile Include="$(AntilliSrcRoot)OBJExporter.cs" />
-    <Compile Include="$(AntilliSrcRoot)OBJFile.cs" />
-    <Compile Include="$(AntilliSrcRoot)ObservableObject.cs" />
-    <Compile Include="$(AntilliSrcRoot)Settings.cs" />
-    <Compile Include="$(AntilliSrcRoot)VisualParentHelper.cs" />
-    <Compile Include="$(AntilliSrcRoot)Extensions\Media3DExtensions.cs" />
-    <Compile Include="$(AntilliSrcRoot)Extensions\TreeViewExtensions.cs" />
-    <Compile Include="$(AntilliSrcRoot)Extensions\TypeExtensions.cs" />
-    <Compile Include="$(AntilliSrcRoot)Importers\ModelImporter.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\BoolToVisibilityConverter.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\Controls\AntilliViewport3D.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\Controls\AntilliWindow.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\Controls\ObservableWindow.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\Visuals\BlendModelVisual3D.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\Visuals\DriverModelVisual3D.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\Visuals\GeometryModelVisual3D.cs" />
-    <Compile Include="$(AntilliSrcRoot)WPF\ModelVisual3DGroup.cs" />
-    <Page Include="$(AntilliSrcRoot)ChunkEditor.xaml">
+    <None Include="$(SrcDir)App.config" />
+    <Compile Include="$(SrcDir)ModelGroupListItem.cs" />
+    <Compile Include="$(SrcDir)ModelListItem.cs" />
+    <Compile Include="$(SrcDir)OBJExporter.cs" />
+    <Compile Include="$(SrcDir)OBJFile.cs" />
+    <Compile Include="$(SrcDir)ObservableObject.cs" />
+    <Compile Include="$(SrcDir)Settings.cs" />
+    <Compile Include="$(SrcDir)VisualParentHelper.cs" />
+    <Compile Include="$(SrcDir)Extensions\Media3DExtensions.cs" />
+    <Compile Include="$(SrcDir)Extensions\TreeViewExtensions.cs" />
+    <Compile Include="$(SrcDir)Extensions\TypeExtensions.cs" />
+    <Compile Include="$(SrcDir)Importers\ModelImporter.cs" />
+    <Compile Include="$(SrcDir)WPF\BoolToVisibilityConverter.cs" />
+    <Compile Include="$(SrcDir)WPF\Controls\AntilliViewport3D.cs" />
+    <Compile Include="$(SrcDir)WPF\Controls\AntilliWindow.cs" />
+    <Compile Include="$(SrcDir)WPF\Controls\ObservableWindow.cs" />
+    <Compile Include="$(SrcDir)WPF\Visuals\BlendModelVisual3D.cs" />
+    <Compile Include="$(SrcDir)WPF\Visuals\DriverModelVisual3D.cs" />
+    <Compile Include="$(SrcDir)WPF\Visuals\GeometryModelVisual3D.cs" />
+    <Compile Include="$(SrcDir)WPF\ModelVisual3DGroup.cs" />
+    <Page Include="$(SrcDir)ChunkEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)ChunkEditor.xaml.cs">
+    <Compile Include="$(SrcDir)ChunkEditor.xaml.cs">
       <DependentUpon>ChunkEditor.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)Importer.xaml">
+    <Page Include="$(SrcDir)Importer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)Importer.xaml.cs">
+    <Compile Include="$(SrcDir)Importer.xaml.cs">
       <DependentUpon>Importer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)MainWindow.xaml">
+    <Page Include="$(SrcDir)MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)MainWindow.xaml.cs">
+    <Compile Include="$(SrcDir)MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)MaterialEditor.xaml">
+    <Page Include="$(SrcDir)MaterialEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)MaterialEditor.xaml.cs">
+    <Compile Include="$(SrcDir)MaterialEditor.xaml.cs">
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)MKInputBox.xaml">
+    <Page Include="$(SrcDir)MKInputBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)MKInputBox.xaml.cs">
+    <Compile Include="$(SrcDir)MKInputBox.xaml.cs">
       <DependentUpon>MKInputBox.xaml</DependentUpon>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)ModelViewer.xaml">
+    <Page Include="$(SrcDir)ModelViewer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)ModelViewer.xaml.cs">
+    <Compile Include="$(SrcDir)ModelViewer.xaml.cs">
       <DependentUpon>ModelViewer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)Resources.xaml">
+    <Page Include="$(SrcDir)Resources.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)Resources.xaml.cs">
+    <Compile Include="$(SrcDir)Resources.xaml.cs">
       <DependentUpon>Resources.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(AntilliSrcRoot)TextureViewer.xaml">
+    <Page Include="$(SrcDir)TextureViewer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(AntilliSrcRoot)TextureViewer.xaml.cs">
+    <Compile Include="$(SrcDir)TextureViewer.xaml.cs">
       <DependentUpon>TextureViewer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="$(AntilliDir)Properties\AssemblyInfo.cs " />
-    <Compile Include="$(AntilliDir)Properties\Resources.Designer.cs">
+    <Compile Include="Properties\AssemblyInfo.cs " />
+    <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <Compile Include="$(AntilliDir)Properties\Settings.Designer.cs">
+    <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <EmbeddedResource Include="$(AntilliDir)Properties\Resources.resx">
+    <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <None Include="$(AntilliDir)Properties\Settings.settings">
+    <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
