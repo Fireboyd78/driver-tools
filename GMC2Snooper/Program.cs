@@ -242,7 +242,7 @@ namespace GMC2Snooper
 
                     var numVertices = 0;
 
-                    for (int v = minIndex; v < VIFITop; v++)
+                    for (int v = minIndex; v < Vertices.Count; v++)
                     {
                         var vx = Vertices[v];
                         
@@ -394,7 +394,7 @@ namespace GMC2Snooper
             }
 
             if (sb.Length > 0)
-                Console.WriteLine(sb.ToString());
+                Console.Write(sb.ToString());
         }
         
         public static void DumpVIFTag(Stream stream)
