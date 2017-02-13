@@ -37,6 +37,10 @@ namespace GMC2Snooper
 
             int length = data.Stride * data.Height;
 
+            // only copy within the buffer size
+            if ((where + length) > modifyBytes.Length)
+                length = (modifyBytes.Length - where);
+
             Marshal.Copy(modifyBytes, where, data.Scan0, length);
 
             image.UnlockBits(data);

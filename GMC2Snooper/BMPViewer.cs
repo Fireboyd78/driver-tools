@@ -30,6 +30,15 @@ namespace GMC2Snooper
             pictureBox1.BackgroundImageLayout = ImageLayout.Center;
         }
 
+        public void AddImageByName(BitmapHelper helper, string name)
+        {
+            var bmap = new Bitmap(helper.Bitmap);
+            Images.Add(__i, bmap);
+
+            listBox1.Items.Add(name);
+            ++__i;
+        }
+
         public void AddImage(BitmapHelper helper)
         {
             AddImage(helper.Bitmap);
@@ -46,11 +55,17 @@ namespace GMC2Snooper
             ++__i;
         }
 
+        public bool HasImages
+        {
+            get { return __i > 0; }
+        }
+
         public void Init()
         {
             this.Show();
 
-            listBox1.SelectedIndex = 0;
+            if (listBox1.Items.Count > 0)
+                listBox1.SelectedIndex = 0;
         }
 
         private void BMPViewer_Load(object sender, EventArgs e)

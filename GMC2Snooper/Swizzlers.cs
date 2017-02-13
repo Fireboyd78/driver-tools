@@ -106,6 +106,24 @@ namespace GMC2Snooper
 
         public static byte[] UnSwizzle4(byte[] buffer, int width, int height, int where)
         {
+            var newBuffer = new byte[width * height];
+            var len16 = (newBuffer.Length / 2);
+
+            // don't try unswizzling it
+            if (len16 > (buffer.Length - where))
+                return buffer;
+
+            for (int i = 0; i < len16; i++)
+            {
+                var b = buffer[i + where];
+
+                newBuffer[i + 0] = (byte)((b & 0xF) * 16.999f);
+                newBuffer[i + 1] = (byte)(((b >> 4) & 0xF) * 16.999f);
+            }
+
+            return newBuffer;
+
+#if OLD_UNSWIZZLE
             // Don't swizzle if size if width or height is less than 128
             if (width < 128 || height < 128)
                 return new byte[] { };
@@ -158,8 +176,9 @@ namespace GMC2Snooper
                 }
             }
             return buffer;
+#endif
         }
-
+        
         public static byte[] UnSwizzle8(byte[] buffer, int width, int height, int where)
         {
             byte[] pSwizTexels = new byte[buffer.Length - where];

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -73,6 +74,8 @@ namespace GMC2Snooper
         public List<SubstanceDataPS2> Substances { get; set; }
         public List<TextureDataPS2> Textures { get; set; }
 
+        public byte[] TextureDataBuffer { get; set; }
+
         public void LoadBinary(Stream stream)
         {
             var baseOffset = stream.Position;
@@ -91,6 +94,12 @@ namespace GMC2Snooper
 
             for (int g = 0; g < data.ModelCount; g++)
             {
+                var modelOffset = modelOffsets[g];
+
+                // null model?
+                if (modelOffset == 0)
+                    continue;
+
                 stream.Position = (baseOffset + modelOffsets[g]);
 
                 var model = new ModelDefinition();
@@ -103,6 +112,10 @@ namespace GMC2Snooper
             // read material data
             var tsc2Offset = (baseOffset + data.MaterialDataOffset);
 
+            // make sure it actually has textures
+            if (tsc2Offset == stream.Length)
+                return;
+            
             stream.Position = tsc2Offset;
 
             var tsc2Header = new MaterialPackageHeader(MaterialPackageType.PS2, stream);
@@ -112,10 +125,12 @@ namespace GMC2Snooper
             for (int m = 0; m < Materials.Capacity; m++)
             {
                 stream.Position = tsc2Offset + (tsc2Header.MaterialsOffset + (m * tsc2Header.MaterialSize));
+                
+                var srCount = stream.ReadByte();
+                var frameCount = stream.ReadByte();
 
-                // table info
-                var srCount = stream.ReadInt32();
-
+                stream.Position += 2;
+                
                 var mAnimSpeed = stream.ReadFloat();
                 var mAnimToggle = (stream.ReadInt32() == 1);
 
@@ -128,14 +143,13 @@ namespace GMC2Snooper
 
                 Materials.Add(material);
 
+                stream.Position = srOffset;
+                var sOffset = stream.ReadInt32() + tsc2Offset;
+
                 // get substance(s)
                 for (int s = 0; s < srCount; s++)
-                {
-                    stream.Position = srOffset + (s * tsc2Header.LookupSize);
-
-                    var sOffset = stream.ReadInt32() + tsc2Offset;
-
-                    stream.Position = sOffset;
+                {                    
+                    stream.Position = sOffset + (s * 0xC);
 
                     var s1 = stream.ReadByte();
                     var s2 = stream.ReadByte();
@@ -176,12 +190,12 @@ namespace GMC2Snooper
                             Height = stream.ReadInt16(),
 
                             Unknown1 = stream.ReadInt32(),
-
+                            
                             DataOffset = stream.ReadInt32(),
 
                             Unknown2 = stream.ReadInt32(),
                         };
-
+                        
                         for (int c = 0; c < texInfo.Modes; c++)
                         {
                             var clutOffset = stream.ReadInt32();
@@ -194,6 +208,38 @@ namespace GMC2Snooper
                     }
                 }
             }
+
+            Debug.WriteLine($"TSC2 header size: 0x{stream.Position - tsc2Offset:X8}");
+
+            // resolve the texture buffer and all offsets
+            var texBufOffset = 0;
+            var texBufLength = 0;
+            
+            texBufOffset = (int)Memory.Align(stream.Position, 16);
+            texBufLength = (int)(stream.Length - texBufOffset);
+
+            // now resolve each texture's offset relative to the buffer, instead of the header
+            foreach (var texInfo in Textures)
+            {
+                texInfo.DataOffset = (int)((tsc2Offset + texInfo.DataOffset) - texBufOffset);
+
+                // resolve CLUT offsets as well
+                for (int c = 0; c < texInfo.CLUTs.Count; c++)
+                {
+                    var clut = texInfo.CLUTs[c];
+                    texInfo.CLUTs[c] = (int)((tsc2Offset + clut) - texBufOffset);
+                }
+            }
+            
+            Debug.WriteLine($"Reading texture buffer @ {texBufOffset:X8} (size:{texBufLength:X8})");
+
+            // initialize the buffer
+            TextureDataBuffer = new byte[texBufLength];
+
+            stream.Position = texBufOffset;
+
+            // finally, fill in the buffer!
+            stream.Read(TextureDataBuffer, 0, texBufLength);
         }
 
         public ModelPackagePS2()

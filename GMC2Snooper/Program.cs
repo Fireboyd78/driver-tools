@@ -128,6 +128,7 @@ namespace GMC2Snooper
                 var parent = spooler.Parent;
 
                 Console.WriteLine($">> ModelPackage index: {startIdx}");
+                Console.WriteLine($">> ModelPackage offset: 0x{spooler.BaseOffset:X}");
 
                 if (parent != null)
                     Console.WriteLine($">> ModelPackage parent: 0x{parent.Context:X8}");
@@ -141,8 +142,10 @@ namespace GMC2Snooper
                 Console.WriteLine(">> Dumping model info...");
                 DumpModelInfo(gmc2);
 
-                //Console.WriteLine(">> Dumping texture info...");
-                //DumpTextures(gmc2);
+                Console.WriteLine(">> Dumping texture info...");
+                DumpTextures(gmc2);
+
+                TestNewImageViewer(gmc2);
 
                 if (interactive)
                 {
@@ -612,27 +615,104 @@ namespace GMC2Snooper
 
         public static void DumpTextures(ModelPackagePS2 gmc2)
         {
+            var sb = new StringBuilder();
+
             // dump textures
-            foreach (var tex in gmc2.Textures)
+            for (int t = 0; t < gmc2.Textures.Count; t++)
             {
-                Console.WriteLine($"texture {tex.Reserved:X16} {{");
+                var tex = gmc2.Textures[t];
 
-                Console.WriteLine($"  type = {tex.Type};");
-                Console.WriteLine($"  flags = 0x{tex.Flags:X};");
-                Console.WriteLine($"  width = {tex.Width};");
-                Console.WriteLine($"  height = {tex.Height};");
-                Console.WriteLine($"  unknown1 = 0x{tex.Unknown1:X};");
-                Console.WriteLine($"  dataOffset = 0x{tex.DataOffset:X};");
-                Console.WriteLine($"  unknown2 = 0x{tex.Unknown2:X};");
+                sb.AppendLine($"texture[{t + 1}] : {tex.Reserved:X16} {{");
 
-                Console.WriteLine($"  cluts[{tex.Modes}] = [");
+                sb.AppendLine($"  type = {tex.Type};");
+                sb.AppendLine($"  flags = 0x{tex.Flags:X};");
+                sb.AppendLine($"  width = {tex.Width};");
+                sb.AppendLine($"  height = {tex.Height};");
+                sb.AppendLine($"  unknown1 = 0x{tex.Unknown1:X};");
+                sb.AppendLine($"  dataOffset = 0x{tex.DataOffset:X};");
+                sb.AppendLine($"  unknown2 = 0x{tex.Unknown2:X};");
+
+                sb.AppendLine($"  cluts[{tex.Modes}] = [");
 
                 foreach (var mode in tex.CLUTs)
-                    Console.WriteLine($"    0x{mode:X},");
+                    sb.AppendLine($"    0x{mode:X},");
 
-                Console.WriteLine("  ];");
+                sb.AppendLine("  ];");
+                sb.AppendLine("}");
+            }
 
-                Console.WriteLine("}");
+            Console.WriteLine(sb.ToString());
+        }
+
+        public static void TestNewImageViewer(ModelPackagePS2 gmc2)
+        {
+            BMPViewer viewer = new BMPViewer();
+
+            var texOffset = 0;
+
+            // add all supported textures
+            for (int t = 0; t < gmc2.Textures.Count; t++)
+            {
+                var tex = gmc2.Textures[t];
+                var texName = $"texture #{t + 1}";
+
+
+                var numCLUTs = tex.CLUTs.Count;
+
+                if (numCLUTs < 2)
+                {
+                    Debug.WriteLine($"{texName} only has {numCLUTs} CLUTs?? (type: {tex.Type})");
+                    continue;
+                }
+
+                if (tex.CLUTs[1] != tex.CLUTs[0])
+                    texOffset = tex.CLUTs[1];
+
+                switch (tex.Type)
+                {
+                case 1:
+                    {
+                        if (tex.CLUTs[1] != tex.CLUTs[0])
+                            texOffset = tex.CLUTs[1];
+
+                        var img = new BitmapHelper(gmc2.TextureDataBuffer, tex.Width, tex.Height, texOffset, PixelFormat.Format8bppIndexed);
+
+                        img.Unswizzle(tex.Width, tex.Height, SwizzleType.Swizzle8bit);
+                        img.Read8bppCLUT(gmc2.TextureDataBuffer, tex.CLUTs[0]);
+
+                        viewer.AddImageByName(img, $"{texName}");
+
+                        //if (numCLUTs >= 2)
+                        //{
+                        //    img.CLUTFromAlpha(gmc2.TextureDataBuffer, tex.CLUTs[0]);
+                        //    viewer.AddImageByName(img, $"{texName} [A]");
+                        //}
+
+                        //for (int i = 2; i < numCLUTs; i++)
+                        //{
+                        //    img.CLUTFromAlpha(gmc2.TextureDataBuffer, tex.CLUTs[i]);
+                        //    viewer.AddImageByName(img, $"{texName} [{i - 1}]");
+                        //}
+                    } break;
+                case 2:
+                    {
+                        // can't read 4-bit textures properly :(
+
+                        //var texBuf = Swizzlers.UnSwizzle4(gmc2.TextureDataBuffer, tex.Width, tex.Height, texOffset);
+                        //var img = new BitmapHelper(texBuf, tex.Width, tex.Height, PixelFormat.Format4bppIndexed);
+                        //
+                        ////img.Read4bppCLUT(gmc2.TextureDataBuffer, tex.CLUTs[1]);
+                        //
+                        //viewer.AddImageByName(img, $"{texName}");
+                    }
+                    break;
+                }
+            }
+
+            if (viewer.HasImages)
+            {
+                viewer.Init();
+                Application.Run(viewer);
             }
         }
 

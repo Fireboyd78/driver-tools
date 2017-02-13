@@ -141,12 +141,12 @@ namespace GMC2Snooper
         public int Modes { get; set; }
 
         /*
-            PAL8 = 1
-            PAL4 = 2
-            VQ2
-            VQ4
-            HY2
-            VQ4f
+            PAL8    = 1
+            PAL4    = 2
+            VQ2     = 3 (?)
+            VQ4     = 4 (?)
+            HY2     = 5 (?)
+            VQ4f    = 6 (?)
         */
         public int Type { get; set; }
 

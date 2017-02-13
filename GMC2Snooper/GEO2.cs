@@ -164,8 +164,10 @@ namespace GMC2Snooper
         
         public GEO2ModelData(Stream stream)
         {
-            if (stream.ReadInt32() != Magic)
-                throw new InvalidOperationException($"Invalid GEO2 data @ 0x{stream.Position:X8}");
+            var magic = stream.ReadInt32();
+
+            if (magic != Magic)
+                throw new InvalidOperationException($"Invalid GEO2 data!");
 
             LodCount = (byte)stream.ReadByte();
             LodInstanceCount = (byte)stream.ReadByte();
