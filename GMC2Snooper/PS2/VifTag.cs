@@ -37,25 +37,25 @@ namespace GMC2Snooper.PS2
             SetVal(info, (value) ? 1 : 0);
         }
 
-        public ushort Imdt
+        public ushort IMDT
         {
             get { return (ushort)GetVal(IMDT_VAL); }
             set { SetVal(IMDT_VAL, value); }
         }
 
-        public byte Num
+        public byte NUM
         {
             get { return (byte)GetVal(NUM_VAL); }
             set { SetVal(NUM_VAL, value); }
         }
 
-        public byte Cmd
+        public byte CMD
         {
             get { return (byte)GetVal(CMD_VAL); }
             set { SetVal(CMD_VAL, value); }
         }
 
-        public bool Irq
+        public bool IRQ
         {
             get { return GetBoolVal(IRQ_VAL); }
             set { SetBoolVal(IRQ_VAL, value); }
@@ -65,7 +65,7 @@ namespace GMC2Snooper.PS2
         {
             return m_tag;
         }
-
+        
         public VifTag(uint tag)
         {
             m_tag = tag;

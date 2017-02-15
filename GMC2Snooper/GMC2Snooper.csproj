@@ -53,6 +53,7 @@
     <Compile Include="PS2\Gif.cs" />
     <Compile Include="PS2\GifTag.cs" />
     <Compile Include="PS2\Types.cs" />
+    <Compile Include="PS2\VifParser.cs" />
     <Compile Include="PS2\VifTag.cs" />
     <Compile Include="Swizzlers.cs" />
     <Compile Include="TSC2.cs" />
