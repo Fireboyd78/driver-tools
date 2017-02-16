@@ -144,6 +144,9 @@ namespace GMC2Snooper
                 }
 
                 VIF = new VifParser();
+
+                _buffer1 = new VBuffer();
+                _buffer2 = new VBuffer();
                 
                 Console.WriteLine(">> Dumping model info...");
                 DumpModelInfo(gmc2);
@@ -177,144 +180,6 @@ namespace GMC2Snooper
                 break;
             }
         }
-        
-        public static void DumpModelInfo(ModelPackagePS2 gmc2)
-        {
-            var sb = new StringBuilder();
-            
-            Vertices = new List<VertexStrip>();
-
-            Normals = new List<Vertex>();
-            UV1s = new List<Vertex>();
-            UV2s = new List<Vertex>();
-
-            var minIndex = 0;
-            
-            // vif tag info :)
-            for (int i = 0; i < gmc2.Models.Count; i++)
-            {
-                var model = gmc2.Models[i];
-
-                Console.WriteLine($"**** Model {i + 1} / {gmc2.Models.Count} *****");
-                Console.WriteLine($"Type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
-                Console.WriteLine($"UID: {model.UID:X8}");
-                Console.WriteLine($"Handle: {model.Handle:X8}");
-                Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
-                Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
-                Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
-
-                sb.AppendLine($"# ----- Model {i + 1} ----- #");
-
-                for (int ii = 0; ii < model.SubModels.Count; ii++)
-                {
-                    var subModel = model.SubModels[ii];
-
-                    Console.WriteLine($"******** Sub model {ii + 1} / {model.SubModels.Count} *********");
-                    Console.WriteLine($"Type: {subModel.Type}");
-                    Console.WriteLine($"Flags: {subModel.Flags}");
-                    Console.WriteLine($"Unknown: ({subModel.Unknown1},{subModel.Unknown2})");
-                    Console.WriteLine($"TexId: {subModel.TextureId}");
-                    Console.WriteLine($"TexSource: {subModel.TextureSource:X4}");
-
-                    if (subModel.HasVectorData)
-                    {
-                        var v1 = subModel.V1;
-                        var v2 = subModel.V2;
-                        Console.WriteLine($"V1: ({v1.X:F4},{v1.Y:F4},{v1.Z:F4})");
-                        Console.WriteLine($"V2: ({v2.X:F4},{v2.Y:F4},{v2.Z:F4})");
-                    }
-
-                    if (subModel.HasTransform)
-                    {
-                        var transform = subModel.Transform;
-                        Console.WriteLine($"Transform X: ({transform.X.X:F4},{transform.X.Y:F4},{transform.X.Z:F4},{transform.X.W:F4})");
-                        Console.WriteLine($"Transform Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
-                        Console.WriteLine($"Transform Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
-                    }
-
-                    sb.AppendLine($"# ----- SubModel {ii + 1} ----- #");
-
-                    var numVertices = 0;
-
-                    using (var ms = new MemoryStream(subModel.ModelDataBuffer))
-                    {
-                        while (ms.Position < ms.Length)
-                        {
-                            // check alignment
-                            if ((ms.Position & 0x3) != 0)
-                                ms.Align(4);
-
-                            try
-                            {
-                                VIF.ReadTag(ms, UnpackValues);
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine($">> VIFcode read error: '{e.Message}', terminating...");
-                                Environment.Exit(1);
-                            }
-
-                            switch ((VifCommandType)VIF.Code.CMD)
-                            {
-                            case VifCommandType.MsCal:
-                            case VifCommandType.MsCalf:
-                            case VifCommandType.MsCnt:
-                                break;
-                            }
-                            
-                            DumpVIFTag();
-                        }
-                    }
-
-                    for (int v = minIndex; v < Vertices.Count; v++)
-                    {
-                        var vert = Vertices[v];
-
-                        var vx = (vert.X * model.Transform2.X);
-                        var vy = (vert.Y * model.Transform2.Y);
-                        var vz = (vert.Z * model.Transform2.Z);
-
-                        sb.AppendLine($"v {vx:F4} {vy:F4} {vz:F4}");
-                        ++numVertices;
-                    }
-                    
-                    sb.AppendLine($"g model{i}_{ii}");
-                    sb.AppendLine($"s off");
-                    
-                    //for (int t = 0; t < numVertices; t += 3)
-                    //{
-                    //    int i0, i1, i2;
-                    //
-                    //    i0 = (minIndex + t) + 1;
-                    //    i1 = (minIndex + t + 1) + 1;
-                    //    i2 = (minIndex + t + 2) + 1;
-                    //
-                    //    sb.AppendLine($"f {i0} {i1} {i2}");
-                    //}
-
-                    minIndex += numVertices;
-
-                    Console.WriteLine();
-                }
-                
-                Console.WriteLine();
-            }
-            
-            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "dump.obj"), sb.ToString());
-        }
-        
-        public static string[] VIFModeTypes = new[] {
-            "NORMAL",
-            "OFFSET",
-            "DIFFERENCE",
-        };
-        
-        public static string[] VIFMaskTypes = new[] {
-            "DATA",
-            "MASK_ROW",
-            "MASK_COL",
-            "WRITE_PROTECT",
-        };
 
         public class Vertex
         {
@@ -327,21 +192,65 @@ namespace GMC2Snooper
         {
             public int Flags { get; set; }
         }
-        
-        public static List<VertexStrip> Vertices = new List<VertexStrip>();
 
-        public static List<Vertex> Normals = new List<Vertex>();
+        public class MeshStrip
+        {
+            public int BaseVertexIndex { get; set; }
+            public int MinIndex { get; set; }
 
-        public static List<Vertex> UV1s = new List<Vertex>();
-        public static List<Vertex> UV2s = new List<Vertex>();
+            public int NumVertices { get; set; }
+        }
+
+        public class VBuffer
+        {
+            public int Top { get; set; }
+
+            public List<VertexStrip> Vertices { get; set; }
+
+            public List<Vertex> Normals { get; set; }
+
+            public List<Vertex> UV1s { get; set; }
+            public List<Vertex> UV2s { get; set; }
+
+            public VBuffer()
+            {
+                Vertices = new List<VertexStrip>();
+                Normals = new List<Vertex>();
+                UV1s = new List<Vertex>();
+                UV2s = new List<Vertex>();
+            }
+        }
+
+        private static VBuffer _buffer1 = new VBuffer();
+        private static VBuffer _buffer2 = new VBuffer();
+
+        public static VBuffer GetBuffer(VifParser parser)
+        {
+            return (parser.DoubleBuffered) ? _buffer2 : _buffer1;
+        }
+
+        public static void CollectVertices(VBuffer vBuf, ref int top, List<VertexStrip> vertices)
+        {
+            var numVertices = (vBuf.Vertices.Count - top);
+
+            for (int v = 0; v < numVertices; v++)
+            {
+                var vert = vBuf.Vertices[top + v];
+                vertices.Add(vert);
+            }
+
+            top += (numVertices - vBuf.Top);
+        }
 
         public static StringBuilder SBU = new StringBuilder();
-        
+
         public static void UnpackValues(VifParser parser, VifUnpackType packType, bool flag, bool masked, long[][] values)
         {
             var nextPack = (values.Length / parser.Cycle.WriteLength);
             var doublePacked = (nextPack != values.Length);
-            
+
+            var buffer = GetBuffer(parser);
+
             // shit
             switch (packType)
             {
@@ -367,7 +276,7 @@ namespace GMC2Snooper
                         Z = 1.0f,
                     };
 
-                    var uvs = (i < nextPack) ? UV1s : UV2s;
+                    var uvs = (i < nextPack) ? buffer.UV1s : buffer.UV2s;
 
                     uvs.Add(vt);
 
@@ -378,7 +287,7 @@ namespace GMC2Snooper
             case VifUnpackType.V3_8:
                 if (!masked)
                     throw new InvalidOperationException("can't do V3_8 non-masked :(");
-                
+
                 for (int i = 0; i < values.Length; i++)
                 {
                     var vn = new Vertex() {
@@ -387,7 +296,7 @@ namespace GMC2Snooper
                         Z = (values[i][2] / 256.0f),
                     };
 
-                    Normals.Add(vn);
+                    buffer.Normals.Add(vn);
 
                     SBU.AppendLine($"-> {vn.X:F4}, {vn.Y:F4}, {vn.Z:F4}");
                 }
@@ -403,7 +312,7 @@ namespace GMC2Snooper
                         Flags = (int)(values[i][3] & 0xFF),
                     };
 
-                    Vertices.Add(vx);
+                    buffer.Vertices.Add(vx);
 
                     SBU.AppendLine($"-> {vx.X:F4}, {vx.Y:F4}, {vx.Z:F4}, {vx.Flags}");
                 }
@@ -411,7 +320,171 @@ namespace GMC2Snooper
                 break;
             }
         }
+
+        public static void DumpModelInfo(ModelPackagePS2 gmc2)
+        {
+            var sb = new StringBuilder();
+            
+            var minIndex = 0;
+
+            var top1 = 0;
+            var top2 = 0;
+            
+            // vif tag info :)
+            for (int i = 0; i < gmc2.Models.Count; i++)
+            {
+                var model = gmc2.Models[i];
+
+                Console.WriteLine($"**** Model {i + 1} / {gmc2.Models.Count} *****");
+                Console.WriteLine($"Type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
+                Console.WriteLine($"UID: {model.UID:X8}");
+                Console.WriteLine($"Handle: {model.Handle:X8}");
+                Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
+                Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
+                Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
+                
+                sb.AppendLine($"# ----- Model {i + 1} ----- #");
+                sb.AppendLine($"# type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
+                sb.AppendLine($"# unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
+
+                sb.AppendLine($"o model{i+1:D4}");
+
+                var meshes = new List<MeshStrip>();
+                
+                for (int ii = 0; ii < model.SubModels.Count; ii++)
+                {
+                    var subModel = model.SubModels[ii];
+                    
+                    Console.WriteLine($"******** Sub model {ii + 1} / {model.SubModels.Count} *********");
+                    Console.WriteLine($"Type: {subModel.Type}");
+                    Console.WriteLine($"Flags: {subModel.Flags}");
+                    Console.WriteLine($"Unknown: ({subModel.Unknown1},{subModel.Unknown2})");
+                    Console.WriteLine($"TexId: {subModel.TextureId}");
+                    Console.WriteLine($"TexSource: {subModel.TextureSource:X4}");
+
+                    if (subModel.HasVectorData)
+                    {
+                        var v1 = subModel.V1;
+                        var v2 = subModel.V2;
+                        Console.WriteLine($"V1: ({v1.X:F4},{v1.Y:F4},{v1.Z:F4})");
+                        Console.WriteLine($"V2: ({v2.X:F4},{v2.Y:F4},{v2.Z:F4})");
+                    }
+
+                    if (subModel.HasTransform)
+                    {
+                        var transform = subModel.Transform;
+                        Console.WriteLine($"Transform X: ({transform.X.X:F4},{transform.X.Y:F4},{transform.X.Z:F4},{transform.X.W:F4})");
+                        Console.WriteLine($"Transform Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
+                        Console.WriteLine($"Transform Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
+                    }
+                    
+                    var dbf = VIF.DoubleBuffered;
+                    
+                    VBuffer vBuf = GetBuffer(VIF);
+
+                    using (var ms = new MemoryStream(subModel.ModelDataBuffer))
+                    {
+                        while (ms.Position < ms.Length)
+                        {
+                            // check alignment
+                            if ((ms.Position & 0x3) != 0)
+                                ms.Align(4);
+
+                            try
+                            {
+                                VIF.ReadTag(ms, UnpackValues);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($">> VIFcode read error: '{e.Message}', terminating...");
+                                Environment.Exit(1);
+                            }
+
+                            DumpVIFTag();
+                            
+                            switch ((VifCommandType)VIF.Code.CMD)
+                            {
+                            case VifCommandType.ITop:
+                                vBuf.Top = VIF.ITops;
+                                break;
+
+                            case VifCommandType.MsCal:
+                            case VifCommandType.MsCalf:
+                            case VifCommandType.MsCnt:
+                                // swap buffers
+                                vBuf = GetBuffer(VIF);
+                                break;
+                            }
+                        }
+                    }
+
+                    var vertices = new List<VertexStrip>();
+
+                    CollectVertices(_buffer1, ref top1, vertices);
+                    CollectVertices(_buffer2, ref top2, vertices);
+
+                    var numVertices = vertices.Count;
+
+                    var name = $"model{i + 1:D4}_{ii + 1:D4}";
+
+                    sb.AppendLine($"# ----- SubModel {ii + 1} ----- #");
+                    sb.AppendLine($"# type: {subModel.Type}");
+                    sb.AppendLine($"# flags: {subModel.Flags}");
+                    sb.AppendLine($"# unknown: ({subModel.Unknown1},{subModel.Unknown2})");
+                    sb.AppendLine($"# index: {minIndex + 1}");
+                    sb.AppendLine($"# vertices: {numVertices}");
+                    
+                    for (int v = 0; v < numVertices; v++)
+                    {
+                        var vert = vertices[v];
+                    
+                        var vx = (vert.X * model.Transform2.X);
+                        var vy = (vert.Y * model.Transform2.Y);
+                        var vz = (vert.Z * model.Transform2.Z);
+
+                        sb.AppendLine($"v {vx:F4} {vy:F4} {vz:F4}");
+                    }
+                    
+                    sb.AppendLine($"g {name}");
+                    sb.AppendLine($"s off");
+                    
+                    for (int t = 0; t < numVertices - 2; t += 3)
+                    {
+                        int i0, i1, i2;
+                    
+                        i0 = (minIndex + t) + 1;
+                        i1 = (minIndex + t + 1) + 1;
+                        i2 = (minIndex + t + 2) + 1;
+                    
+                        sb.AppendLine($"f {i0} {i1} {i2}");
+                    }
+
+                    minIndex += numVertices;
+                    Console.WriteLine();
+                }
+
+                Console.WriteLine();
+            }
+
+
+            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "dump.obj"), sb.ToString());
+        }
         
+        
+
+        public static string[] VIFModeTypes = new[] {
+            "NORMAL",
+            "OFFSET",
+            "DIFFERENCE",
+        };
+
+        public static string[] VIFMaskTypes = new[] {
+            "DATA",
+            "MASK_ROW",
+            "MASK_COL",
+            "WRITE_PROTECT",
+        };
+
         public static void DumpVIFTag()
         {
             var vif = VIF.Code;

@@ -291,6 +291,9 @@ namespace GMC2Snooper.PS2
                                     for (int n = 0; n < packNum; n++)
                                     {
                                         long val = (imdt.USN) ? stream.ReadByte() : (sbyte)stream.ReadByte();
+
+                                        if (imdt.FLG && (val > 127))
+                                            val -= 128;
                                         
                                         vals[i][n] = val;
                                     }
