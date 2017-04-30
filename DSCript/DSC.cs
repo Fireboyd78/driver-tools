@@ -80,8 +80,6 @@ namespace DSCript
             Update(null, message, progress);
         }
 
-        public static readonly CultureInfo CurrentCulture = new CultureInfo("en-US");
-        
         private static DSCConfiguration m_config;
 
         public static DSCConfiguration Configuration

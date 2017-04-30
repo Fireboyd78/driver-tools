@@ -16,35 +16,30 @@ namespace System.Text
     public static class StringBuilderExtensions
     {
         /// <summary>
-        /// This extension method forces the 'en-US' culture while formatting lines. See the default AppendFormat for more info.
+        /// Formats and appends a string using the <see cref="CultureInfo.InvariantCulture"/>.
         /// </summary>
-        /// <param name="format">A composite format string</param>
-        /// <param name="args">An array of objects to format.</param>
+        /// <param name="format">The string to format.</param>
+        /// <param name="args">The arguments for the formatted string.</param>
         public static StringBuilder AppendFormatEx(this StringBuilder sb, string format, params object[] args)
         {
-            return sb.AppendFormat(DSC.CurrentCulture, format, args);
+            return sb.AppendFormat(CultureInfo.InvariantCulture, format, args);
+        }
+
+        public static StringBuilder AppendColumn(this StringBuilder @this, string colText, int colPosition, bool rightAligned = false)
+        {
+            return @this.Append(String.Format((rightAligned) ? $"{{0,{colPosition}}} " : $"{{0,-{colPosition}}}", $"{colText}:"));
         }
 
         public static StringBuilder AppendLine(this StringBuilder sb, string format, params object[] args)
         {
-            return sb.AppendFormat(format, args).AppendLine();
+            return sb.AppendLine(String.Format(format, args));
         }
 
         public static StringBuilder AppendLine(this StringBuilder @this, object value)
         {
             return @this.AppendLine(value.ToString());
         }
-
-        public static StringBuilder AppendColumn(this StringBuilder @this, string colText, int colPosition, bool rightAligned = false)
-        {
-            return @this.AppendFormat("{0," + ((!rightAligned) ? "-" : "") + colPosition + "}" + ((rightAligned) ? " " : ""), (!colText.EndsWith(":")) ? colText + ":" : colText);
-        }
-
-        public static StringBuilder AppendLineEx(this StringBuilder sb, string format, params object[] args)
-        {
-            return sb.AppendFormatEx(format, args).AppendLine();
-        }
-
+        
         /// <summary>
         /// Appends a definitive amount of new lines to the end of the current <see cref="StringBuilder"/> object.
         /// </summary>

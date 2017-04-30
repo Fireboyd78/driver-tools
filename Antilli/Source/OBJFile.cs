@@ -389,8 +389,8 @@ namespace Antilli
             if (vals.Length < 2)
                 return -1;
 
-            x = (double)float.Parse(vals[0], DSC.CurrentCulture);
-            y = (double)float.Parse(vals[1], DSC.CurrentCulture);
+            x = StringHelper.ToDouble(vals[0]);
+            y = StringHelper.ToDouble(vals[1]);
 
             return 0;
         }
@@ -404,9 +404,9 @@ namespace Antilli
             if (vals.Length < 3)
                 return -1;
 
-            x = (double)float.Parse(vals[0], DSC.CurrentCulture);
-            y = (double)float.Parse(vals[1], DSC.CurrentCulture);
-            z = (double)float.Parse(vals[2], DSC.CurrentCulture);
+            x = StringHelper.ToDouble(vals[0]);
+            y = StringHelper.ToDouble(vals[1]);
+            z = StringHelper.ToDouble(vals[2]);
 
             return 0;
         }

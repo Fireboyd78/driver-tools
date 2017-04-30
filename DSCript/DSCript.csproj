@@ -58,6 +58,7 @@
     <Compile Include="DSC.cs" />
     <Compile Include="Configuration\IniConfiguration.cs" />
     <Compile Include="Configuration\IniFile.cs" />
+    <Compile Include="Helpers\StringHelper.cs" />
     <Compile Include="IO\LocaleReader.cs" />
     <Compile Include="IO\MECFile.cs" />
     <Compile Include="Log.cs" />

@@ -187,9 +187,9 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             // add vertices
                             foreach (var vertex in model.Vertices)
                             {
-                                vPos.AppendLineEx("v {0:F4} {1:F4} {2:F4}", vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
-                                vNor.AppendLineEx("vn {0:F4} {1:F4} {2:F4}", vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z);
-                                vTex.AppendLineEx("vt {0:F4} {1:F4} 0.0000", vertex.UV.X, -vertex.UV.Y);
+                                vPos.AppendLine("v {0:F4} {1:F4} {2:F4}", vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
+                                vNor.AppendLine("vn {0:F4} {1:F4} {2:F4}", vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z);
+                                vTex.AppendLine("vt {0:F4} {1:F4} 0.0000", vertex.UV.X, -vertex.UV.Y);
 
                                 nVerts++;
                             }

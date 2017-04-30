@@ -323,9 +323,9 @@ namespace DSCript.Models
                                     throw new Exception(String.Format("Bad vertex definition on line {0}!", curLine));
 
                                 Positions.Add(new Point3D() {
-                                    X = (double)float.Parse(vals[0], DSC.CurrentCulture),
-                                    Y = (double)float.Parse(vals[1], DSC.CurrentCulture),
-                                    Z = (double)float.Parse(vals[2], DSC.CurrentCulture)
+                                    X = StringHelper.ToDouble(vals[0]),
+                                    Y = StringHelper.ToDouble(vals[1]),
+                                    Z = StringHelper.ToDouble(vals[2])
                                 });
 
                             } goto setKey;
@@ -335,9 +335,9 @@ namespace DSCript.Models
                                     throw new Exception(String.Format("Bad vertex normal definition on line {0}!", curLine));
 
                                 Normals.Add(new Vector3D() {
-                                    X = (double)float.Parse(vals[0], DSC.CurrentCulture),
-                                    Y = (double)float.Parse(vals[1], DSC.CurrentCulture),
-                                    Z = (double)float.Parse(vals[2], DSC.CurrentCulture)
+                                    X = StringHelper.ToDouble(vals[0]),
+                                    Y = StringHelper.ToDouble(vals[1]),
+                                    Z = StringHelper.ToDouble(vals[2])
                                 });
 
                             } goto setKey;
@@ -346,8 +346,8 @@ namespace DSCript.Models
                                 if (vals.Length < 2)
                                     throw new Exception(String.Format("Bad vertex uv definition on line {0}!", curLine));
 
-                                double u = (double)float.Parse(vals[0], DSC.CurrentCulture);
-                                double v = (double)float.Parse(vals[1], DSC.CurrentCulture);
+                                double u = StringHelper.ToDouble(vals[0]);
+                                double v = StringHelper.ToDouble(vals[1]);
 
                                 TextureCoordinates.Add(new Point() {
                                     X = u,
@@ -412,13 +412,13 @@ namespace DSCript.Models
                                     bool hasVt = (type >= 2);
                                     bool hasVn = (type == 3 || type == 0);
 
-                                    vx = int.Parse(indice[0]) - 1;
+                                    vx = StringHelper.ToInt32(indice[0]) - 1;
                                     
                                     if (hasVt)
-                                        vt = int.Parse(indice[1]) - 1;
+                                        vt = StringHelper.ToInt32(indice[1]) - 1;
 
                                     if (hasVn)
-                                        vn = int.Parse(indice[(hasVt) ? 2 : 1]) - 1;
+                                        vn = StringHelper.ToInt32(indice[(hasVt) ? 2 : 1]) - 1;
 
                                     bool addPos = !mesh.Positions.Contains(Positions[vx]);
                                     bool addNor = (hasVn) ? !mesh.Normals.Contains(Normals[vn]) : false;

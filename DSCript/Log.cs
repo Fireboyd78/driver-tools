@@ -8,40 +8,25 @@ namespace DSCript
 {
     public static partial class DSC
     {
-        public static void Log(object str)
+        private static void LogImpl(string message)
         {
-        #if DEBUG
-            Debug.WriteLine(str);
-        #else
+#       if DEBUG
+            Debug.WriteLine(message);
+#       elif TRACE
+            Trace.WriteLine(message);
+#       else
             return;
-        #endif
+#       endif
         }
 
+        public static void Log(string message)
+        {
+            LogImpl(message);
+        }
+        
         public static void Log(string str, params object[] args)
         {
-        #if DEBUG
-            Debug.WriteLine(str, args);
-        #else
-            return;
-        #endif
-        }
-
-        public static void Log(int level, string str)
-        {
-        #if DEBUG
-            Debugger.Log(level, "DSCript", $"{str}\r\n");
-        #else
-            return;
-        #endif
-        }
-
-        public static void Log(int level, string str, params object[] args)
-        {
-        #if DEBUG
-            Log(level, String.Format(str, args));
-        #else
-            return;
-        #endif
+            LogImpl(String.Format(str, args));
         }
     }
 }
