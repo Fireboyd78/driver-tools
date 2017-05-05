@@ -79,7 +79,6 @@
     <Compile Include="$(SrcDir)ModelListItem.cs" />
     <Compile Include="$(SrcDir)OBJExporter.cs" />
     <Compile Include="$(SrcDir)OBJFile.cs" />
-    <Compile Include="$(SrcDir)ObservableObject.cs" />
     <Compile Include="$(SrcDir)Settings.cs" />
     <Compile Include="$(SrcDir)Extensions\Media3DExtensions.cs" />
     <Compile Include="$(SrcDir)Extensions\TreeViewExtensions.cs" />
