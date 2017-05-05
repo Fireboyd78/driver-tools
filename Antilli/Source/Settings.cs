@@ -16,8 +16,6 @@ namespace Antilli
 {
     public static class Settings
     {
-        //public static readonly RegistryConfiguration Configuration = new RegistryConfiguration(DSC.GetRegistryKey("Antilli"));
-
         public static readonly bool InfiniteSpin        = false;
         public static readonly int DefaultFOV           = 65;
         public static readonly double GhostOpacity      = 0.15;

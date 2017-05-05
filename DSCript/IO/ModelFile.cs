@@ -60,8 +60,6 @@ namespace DSCript.Models
                     f.Position += 0x2;
                 }
             }
-
-            DSC.Log("Successfully loaded StandaloneTextureData!");
         }
 
         protected override void Save()
@@ -145,14 +143,6 @@ namespace DSCript.Models
             base.OnFileLoadBegin();
         }
 
-        protected override void OnFileLoadEnd()
-        {
-            if (Models.Count >= 1)
-                DSC.Log("{0} model {1} loaded.", Models.Count, (Models.Count != 1) ? "packages" : "package");
-
-            base.OnFileLoadEnd();
-        }
-
         public Driv3rModelFile() { }
         public Driv3rModelFile(string filename) : base(filename) { }
     }
@@ -221,20 +211,8 @@ namespace DSCript.Models
 
             base.OnFileLoadBegin();
         }
-
-        protected override void OnFileLoadEnd()
-        {
-            if (Models.Count == Hierarchies.Count)
-                DSC.Log("Finished loading a VVS file!");
-
-            base.OnFileLoadEnd();
-        }
-
+        
         public Driv3rVehiclesFile() { }
         public Driv3rVehiclesFile(string filename) : base(filename) { }
-    }
-
-    
-
-    
+    }   
 }

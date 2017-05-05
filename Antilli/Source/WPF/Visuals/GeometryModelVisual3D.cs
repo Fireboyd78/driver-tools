@@ -164,16 +164,5 @@ namespace Antilli
             Vertices = vertices;
             TriangleIndices = triangleIndices;
         }
-
-        public GeometryModelVisual3D(Point3DCollection positions, Vector3DCollection normals, PointCollection textureCoordinates, Int32Collection triangleIndices)
-            : this()
-        {
-            Vertices = new List<Vertex>(positions.Count);
-
-            for (int v = 0; v < positions.Count; v++)
-                Vertices.Add(new Vertex(positions[v], normals[v], textureCoordinates[v]));
-
-            TriangleIndices = triangleIndices;
-        }
     }
 }
