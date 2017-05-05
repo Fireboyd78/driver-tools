@@ -397,24 +397,7 @@ namespace Antilli
             
             TextureViewer.SelectTexture(material.Substances[0].Textures[0]);
         }
-
-        //--nope
-        //public void ExportGlobals()
-        //{
-        //    if (HasGlobals)
-        //    {
-        //        ModelPackage modelPackage = ModelFile.SpooledFile.ModelData;
-        //
-        //        string path = Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(ModelFile.SpooledFile.ChunkFile.Filename));
-        //
-        //        modelPackage.Compile();
-        //        ModelFile.SpooledFile.ChunkFile.Export(path);
-        //
-        //        string msg = String.Format("Successfully exported to '{0}'!", path);
-        //        MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-        //    }
-        //}
-
+        
         private void ExportObjFile()
         {
             if (SelectedModelPackage == null)
@@ -592,83 +575,7 @@ namespace Antilli
 
             MessageBox.Show(msg, "VehicleHierarchy XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        //--nope
-        //public void ExportModelPackageXML()
-        //{
-        //    if (SelectedModelPackage == null)
-        //    {
-        //        MessageBox.Show("Nothing to export!");
-        //        return;
-        //    }
-        //
-        //    XmlDocument xml = new XmlDocument();
-        //
-        //    XmlElement mdpcNode = xml.AddElement("ModelPackage")
-        //                                .AddAttribute("Type", Path.GetExtension(ModelFile.ChunkFile.Filename).Split('.')[1].ToUpper())
-        //                                .AddAttribute("Version", 1);
-        //
-        //    XmlElement groupsNode = mdpcNode.AddElement("Groups");
-        //
-        //    var parts = SelectedModelPackage.PartsGroups;
-        //    int nParts = SelectedModelPackage.PartsGroups.Count;
-        //
-        //    for (int g = 0; g < nParts; g++)
-        //    {
-        //        var group = parts[g];
-        //
-        //        bool merged = (group.UID != 0 && g + 1 < nParts && parts[g + 1].UID == group.UID);
-        //
-        //        // Custom static extension allows us to conditionally add XML elements
-        //        var partsGroupNode = groupsNode.AddElementIf("MergedPartsGroup", merged)
-        //                                            .AddAttributeIf("UID", group.UID, merged)
-        //                                            .AddAttributeIf("File", String.Format("{0}.obj", group.UID), merged);
-        //
-        //        int m = 0;
-        //
-        //        bool loop = false;
-        //
-        //        do
-        //        {
-        //            if (loop)
-        //                group = parts[++g];
-        //
-        //            var groupNode = partsGroupNode.AddElement("PartsGroup")
-        //                                            .AddAttribute("Name", String.Format("Model{0}", ++m))
-        //                                            .AddAttributeIf("UID", group.UID, !merged)
-        //                                            .AddAttributeIf("File", String.Format("{0}.obj", group.UID), !merged);
-        //
-        //            foreach (PartDefinition part in group.Parts)
-        //            {
-        //                if (part.Group == null)
-        //                    continue;
-        //
-        //                groupNode.AddElement("Part")
-        //                            .AddAttribute("Slot", part.ID + 1)
-        //                            .AddAttribute("Type", part.Reserved)
-        //                            .AddAttribute("Source", String.Format("Model{0}_{1}", m, part.ID + 1));
-        //            }
-        //
-        //            loop = (merged && g + 1 < nParts && parts[g + 1].UID == group.UID);
-        //
-        //        } while (loop);
-        //    }
-        //
-        //    string dir = Settings.Configuration.GetDirectory("Export");
-        //
-        //    if (!Directory.Exists(dir))
-        //        Directory.CreateDirectory(dir);
-        //
-        //    string path = String.Format("{0}\\{1}.mdpc.xml",
-        //        dir, Path.GetFileName(ModelFile.ChunkFile.Filename));
-        //
-        //    xml.Save(path);
-        //
-        //    string msg = String.Format("Successfully exported XML file to '{0}'!", path);
-        //
-        //    MessageBox.Show(msg, "ModelPackage XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-        //}
-
+        
         public void ExportTexture(TextureData texture)
         {
             ExportTexture(texture, this);
@@ -728,7 +635,7 @@ namespace Antilli
             Settings.Verify();
 
             InitializeComponent();
-
+            
             DSC.ProgressUpdated += (o, e) => {
                 var progress_str = e.Message;
 
@@ -789,12 +696,9 @@ namespace Antilli
             viewTextures.Click += (o, e) => OpenTextureViewer();
             viewMaterials.Click += (o, e) => OpenMaterialEditor();
             viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
-
-            //--nope sorry
-            //exportGlobals.Click += (o, e) => ExportGlobals();
+            
             exportMDPC.Click += (o, e) => ExportModelPackage();
-            //exportXML.Click += (o, e) => ExportModelPackageXML();
-
+            
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
 
             exportXML.Click += (o, e) => ExportVehicleHierachyXML();
