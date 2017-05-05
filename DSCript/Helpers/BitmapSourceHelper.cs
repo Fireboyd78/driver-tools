@@ -50,9 +50,6 @@ namespace DSCript
         {
             using (MemoryStream stream = new MemoryStream(buffer))
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-
                 try
                 {
                     FREE_IMAGE_FORMAT format = FreeImage.GetFileTypeFromStream(stream);
@@ -71,7 +68,7 @@ namespace DSCript
                         {
                             try
                             {
-                                using (Bitmap bitmap = new Bitmap(stream))
+                                using (var bitmap = new Bitmap(stream))
                                 {
                                     return bitmap.ToBitmapSource();
                                 }
@@ -85,34 +82,25 @@ namespace DSCript
 
                     FIBITMAP bmap = FreeImage.LoadFromStream(stream, ref format);
 
-                    if (!bmap.IsNull)
-                    {
-                        bool useAlpha = flags.HasFlag(BitmapSourceLoadFlags.Transparency);
-                        bool alphaOnly = flags.HasFlag(BitmapSourceLoadFlags.AlphaMask);
-
-                        if (alphaOnly)
-                            bmap = FreeImage.GetChannel(bmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
-
-                        bmap = (useAlpha) ? FreeImage.ConvertTo32Bits(bmap) : FreeImage.ConvertTo24Bits(bmap);
-
-                        using (Bitmap bitmap = FreeImage.GetBitmap(bmap))
-                        {
-                            return bitmap.ToBitmapSource();
-                        }
-                    }
-                    else
-                    {
+                    if (bmap.IsNull)
                         return null;
+
+                    bool useAlpha = flags.HasFlag(BitmapSourceLoadFlags.Transparency);
+                    bool alphaOnly = flags.HasFlag(BitmapSourceLoadFlags.AlphaMask);
+
+                    if (alphaOnly)
+                        bmap = FreeImage.GetChannel(bmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+
+                    bmap = (useAlpha) ? FreeImage.ConvertTo32Bits(bmap) : FreeImage.ConvertTo24Bits(bmap);
+
+                    using (var bitmap = bmap.ToBitmap(true))
+                    {
+                        return bitmap.ToBitmapSource();
                     }
                 }
                 catch (BadImageFormatException)
                 {
                     return null;
-                }
-                finally
-                {
-                    stopwatch.Stop();
-                    DSC.Update($"GetBitmapSource took {stopwatch.Elapsed.TotalMilliseconds}ms");
                 }
             }
         }

@@ -352,9 +352,7 @@ namespace Antilli
             BlendWeights.Visibility = ((SelectedModelGroup.Parts[0].VertexBuffer.HasBlendWeights)) ? Visibility.Visible : Visibility.Collapsed;
 
             var models = new List<ModelVisual3DGroup>();
-
-            DSC.Update($"Adding {SelectedModelGroup.Parts.Count} part(s)");
-
+            
             foreach (var part in SelectedModelGroup.Parts)
             {
                 var partDef = part.Parts[CurrentLod];
@@ -368,8 +366,7 @@ namespace Antilli
                     continue;
 
                 var parts = new ModelVisual3DGroup();
-
-                DSC.Update($"Adding {group.Meshes.Count} mesh(es)");
+                
                 foreach (var prim in group.Meshes)
                 {
                     //Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, new ThreadStart(() => {
@@ -383,10 +380,6 @@ namespace Antilli
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new ThreadStart(() => {
                 Viewer.SetDriv3rModel(models);
             }));
-
-            stopwatch.Stop();
-
-            DSC.Update($"LoadSelectedModel took {stopwatch.Elapsed.TotalMilliseconds}ms.");
         }
         
         private void ViewModelTexture(object sender, RoutedEventArgs e)
@@ -737,17 +730,18 @@ namespace Antilli
             InitializeComponent();
 
             DSC.ProgressUpdated += (o, e) => {
-                Viewer.Viewport.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new ThreadStart(() => {
-                    var progress_str = e.Message;
+                var progress_str = e.Message;
 
-                    if (e.Progress > -1)
-                        progress_str += $" [{Math.Round(e.Progress):F1}%]";
-                    
-                    Viewer.Viewport.SetDebugInfo(progress_str);
+                if (e.Progress > -1)
+                    progress_str += $" [{Math.Round(e.Progress):F1}%]";
 
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new ThreadStart(() => {
-                        Console.WriteLine(progress_str);
-                    }));
+                // might re-use this eventually
+                //Viewer.Viewport.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new ThreadStart(() => {
+                //    Viewer.Viewport.SetDebugInfo(progress_str);
+                //}));
+
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new ThreadStart(() => {
+                    Console.WriteLine($"[INFO] {progress_str}");
                 }));
             };
 
