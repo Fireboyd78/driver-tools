@@ -25,7 +25,7 @@ namespace System.IO
             var value = stream.Position;
             return (stream.Position = ((alignment != 0) ? (value + (alignment - (value % alignment)) % alignment) : value));
         }
-
+        
         /// <summary>
         /// Fills the stream in its current position using the bytes from a specified buffer.
         /// </summary>

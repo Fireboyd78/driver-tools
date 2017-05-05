@@ -160,7 +160,7 @@ namespace Antilli
             EmissiveLayer.Children.Clear();
             TransparencyLayer.Children.Clear();
             TopmostLayer.Children.Clear();
-
+            
             Visuals = null;
         }
 
