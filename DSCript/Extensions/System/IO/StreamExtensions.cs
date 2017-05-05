@@ -15,6 +15,45 @@ namespace System.IO
 {
     public static class StreamExtensions
     {
+        public static T Read<T>(this Stream stream)
+        {
+            var length = Marshal.SizeOf(typeof(T));
+
+            return stream.Read<T>(length);
+        }
+
+        public static T Read<T>(this Stream stream, int length)
+        {
+            var data = new byte[length];
+            var ptr = Marshal.AllocHGlobal(length);
+
+            stream.Read(data, 0, length);
+            Marshal.Copy(data, 0, ptr, length);
+
+            var t = (T)Marshal.PtrToStructure(ptr, typeof(T));
+
+            Marshal.FreeHGlobal(ptr);
+            return t;
+        }
+
+        public static void Write<T>(this Stream stream, T data)
+        {
+            var length = Marshal.SizeOf(typeof(T));
+
+            Write<T>(stream, data, length);
+        }
+
+        public static void Write<T>(this Stream stream, T data, int length)
+        {
+            // this might be extremely unsafe to do, but it should work fine
+            var buffer = new byte[length];
+            var pData = Marshal.UnsafeAddrOfPinnedArrayElement(buffer, 0);
+
+            Marshal.StructureToPtr(data, pData, false);
+
+            stream.Write(buffer, 0, length);
+        }
+
         public static long Seek(this Stream stream, long offset, long origin)
         {
             return stream.Seek((origin + offset), SeekOrigin.Begin);
