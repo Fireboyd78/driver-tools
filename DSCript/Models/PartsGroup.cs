@@ -19,7 +19,7 @@ namespace DSCript.Models
         public int UID { get; set; }
         public int Handle { get; set; }
 
-        public Point4D Unknown { get; set; }
+        public Vector4 Unknown { get; set; }
 
         /// <summary>
         /// Gets or sets the Vertex Buffer to use when accessing vertices
@@ -32,7 +32,7 @@ namespace DSCript.Models
         // something shadow related?
         public int Unknown3 { get; set; }
 
-        public Point4D[] Transform { get; set; }    = new Point4D[8];
+        public Vector4[] Transform { get; set; }    = new Vector4[8];
         public PartDefinition[] Parts { get; set; } = new PartDefinition[7];
     }
 }

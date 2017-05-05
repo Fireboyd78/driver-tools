@@ -706,12 +706,7 @@ namespace DSCript.Models
                     UID = stream.ReadInt32(),
                     Handle = stream.ReadInt32(),
 
-                    Unknown = new Point4D() {
-                        X = stream.ReadFloat(),
-                        Y = stream.ReadFloat(),
-                        Z = stream.ReadFloat(),
-                        W = stream.ReadFloat()
-                    },
+                    Unknown = stream.Read<Vector4>(),
 
                     // INCOMING TRANSMISSION...
                     // RE: OPERATION S.T.E.R.N....
@@ -734,12 +729,7 @@ namespace DSCript.Models
                 // read unknown list of 8 Point4Ds
                 for (int t = 0; t < 8; t++)
                 {
-                    pGroup.Transform[t] = new Point4D() {
-                        X = stream.ReadFloat(),
-                        Y = stream.ReadFloat(),
-                        Z = stream.ReadFloat(),
-                        W = stream.ReadFloat()
-                    };
+                    pGroup.Transform[t] = stream.Read<Vector4>();
                 }
 
                 var lodStart = stream.Position;
@@ -791,20 +781,10 @@ namespace DSCript.Models
 
                         for (int i = 0; i < 3; i++)
                         {
-                            mGroup.Transform[i] = new Point4D() {
-                                X = stream.ReadFloat(),
-                                Y = stream.ReadFloat(),
-                                Z = stream.ReadFloat(),
-                                W = stream.ReadFloat()
-                            };
+                            mGroup.Transform[i] = stream.Read<Vector4>();
                         }
 
-                        mGroup.Unknown = new Point4D() {
-                            X = stream.ReadFloat(),
-                            Y = stream.ReadFloat(),
-                            Z = stream.ReadFloat(),
-                            W = stream.ReadFloat()
-                        };
+                        mGroup.Unknown = stream.Read<Vector4>();
 
                         var mCount = stream.ReadInt16();
 

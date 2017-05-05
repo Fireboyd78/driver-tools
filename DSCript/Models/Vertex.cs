@@ -17,51 +17,25 @@ namespace DSCript.Models
     public class Vertex
     {
         public FVFType VertexType { get; set; }
-
-        Vector3D _blendWeights;
-        double _unknown = -1.0;
-
+        
         /// <summary>Gets or sets the position of the vertex.</summary>
-        public Point3D Position { get; set; }
+        public Vector3 Position { get; set; }
 
         /// <summary>Gets or sets the normals of the vertex.</summary>
-        public Vector3D Normal { get; set; }
+        public Vector3 Normal { get; set; }
 
         /// <summary>Gets or sets the UV mapping of the vertex.</summary>
-        public Point UV { get; set; }
+        public Vector2 UV { get; set; }
 
         /// <summary>Gets or sets the RGBA diffuse color of the vertex.</summary>
         public Color Diffuse { get; set; }
 
         /// <summary>Gets or sets the blending weights of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
-        public Vector3D BlendWeights
-        {
-            get { return _blendWeights; }
-            set
-            {
-                if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
-                    _blendWeights = value;
-            }
-        }
+        public Vector3 BlendWeights { get; set; }
 
         /// <summary>Gets or sets the unknown value of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
-        public double Unknown
-        {
-            get { return _unknown; }
-            set
-            {
-                if (VertexType == FVFType.Vertex16)
-                    _unknown = value;
-
-                return;
-            }
-        }
-
-        public static Point3D Tween(Point3D positions, Vector3D weights, double tweenFactor)
-        {
-            return Point3D.Add(positions, Vector3D.Multiply(weights, tweenFactor));
-        }
-
+        public float Unknown { get; set; }
+        
         /// <summary>
         /// Returns the byte-array representing this <see cref="Vertex"/> in its compiled form.
         /// </summary>
@@ -100,60 +74,29 @@ namespace DSCript.Models
             }
         }
 
-        public Vertex Copy()
+        protected Vertex()
         {
-            return new Vertex(this, VertexType);
+            Position = new Vector3();
+            Normal = new Vector3();
+            UV = new Vector2();
+            Diffuse = Color.FromArgb(255, 0, 0, 0);
+
+            BlendWeights = new Vector3();
+
+            Unknown = 1.0f;
         }
 
         /// <summary>Creates a new <see cref="Vertex"/>.</summary>
         /// <param name="vertexType">The <see cref="FVFType"/> this <see cref="Vertex"/> will be based on.</param>
         public Vertex(FVFType vertexType)
+            : this()
         {
             if (vertexType == FVFType.Unknown)
                 throw new InvalidEnumArgumentException("vertexType", -1, typeof(FVFType));
 
-            VertexType = vertexType;
-
-            Position    = new Point3D();
-            Normal      = new Vector3D();
-            UV          = new Point();
-            Diffuse     = Color.FromArgb(255, 0, 0, 0);
-
-            if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
-            {
-                _blendWeights = new Vector3D();
-
-                if (VertexType == FVFType.Vertex16)
-                    _unknown = 0.0;
-            }
+            VertexType = vertexType;   
         }
-
-        /// <summary>
-        /// Creates a new <see cref="Vertex"/> based on an existing instance.
-        /// </summary>
-        /// <param name="vertex">The existing <see cref="Vertex"/> to copy values from</param>
-        /// <param name="vertexType">The vertex format used. The new vertex will reflect upon this format.</param>
-        public Vertex(Vertex vertex, FVFType vertexType)
-        {
-            if (vertexType == FVFType.Unknown)
-                throw new InvalidEnumArgumentException("vertexType", -1, typeof(FVFType));
-
-            VertexType = vertexType;
-
-            Position    = vertex.Position;
-            Normal      = vertex.Normal;
-            UV          = vertex.UV;
-            Diffuse     = vertex.Diffuse;
-
-            if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
-            {
-                _blendWeights = (vertex.BlendWeights != null) ? vertex.BlendWeights : new Vector3D();
-
-                if (VertexType == FVFType.Vertex16)
-                    _unknown = (vertex.Unknown != -1.0) ? vertex.Unknown : 0.0;
-            }
-        }
-
+        
         /// <summary>
         /// Creates a new <see cref="Vertex"/> based on a buffer.
         /// </summary>
@@ -170,26 +113,23 @@ namespace DSCript.Models
             {
                 // IMPORTANT NOTE: The Y & Z Axes are flipped and the X axis is negated!
 
-                Position = new Point3D() {
+                Position = new Vector3() {
                     X = -f.ReadSingle(),
                     Z = f.ReadSingle(),
                     Y = f.ReadSingle()
                 };
 
-                Normal = new Vector3D() {
+                Normal = new Vector3() {
                     X = -f.ReadSingle(),
                     Z = f.ReadSingle(),
                     Y = f.ReadSingle()
                 };
 
-                UV = new Point() {
-                    X = f.ReadSingle(),
-                    Y = f.ReadSingle()
-                };
+                UV = f.Read<Vector2>();
 
                 if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
                 {
-                    BlendWeights = new Vector3D() {
+                    BlendWeights = new Vector3() {
                         X = -f.ReadSingle(),
                         Z = f.ReadSingle(),
                         Y = f.ReadSingle()
@@ -208,7 +148,7 @@ namespace DSCript.Models
             }
         }
 
-        public Vertex(Point3D position, Vector3D normal, Point uv)
+        public Vertex(Vector3 position, Vector3 normal, Vector2 uv)
         {
             VertexType = FVFType.Vertex15;
 
@@ -218,7 +158,7 @@ namespace DSCript.Models
 
             Diffuse     = Color.FromArgb(255, 0, 0, 0);
 
-            _blendWeights = new Vector3D();
+            BlendWeights = new Vector3();
         }
     }
 }

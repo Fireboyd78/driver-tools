@@ -12,7 +12,6 @@ using System.Text;
 
 using System.Xml;
 using System.Xml.Serialization;
-using System.Windows.Media.Media3D;
 
 using DSCript.Spooling;
 
@@ -134,10 +133,8 @@ namespace DSCript.Models
 
         public class PartEntry
         {
-            [XmlAttribute]
             public short Type { get; set; }
-
-            [XmlAttribute]
+            
             public SlotType SlotType { get; set; }
 
             public short Flags1 { get; set; }
@@ -153,7 +150,7 @@ namespace DSCript.Models
             public byte Unknown4 { get; set; }
             
             public PDLEntry Physics { get; set; }
-            public Point4D? Position { get; set; }
+            public Vector4? Position { get; set; }
 
             public Thing2 Offset { get; set; }
             public Thing3 Transform { get; set; }
@@ -167,39 +164,39 @@ namespace DSCript.Models
 
         public class Thing2
         {
-            public Point4D Position { get; set; }
-            public Point4D Rotation { get; set; }
+            public Vector4 Position { get; set; }
+            public Vector4 Rotation { get; set; }
         }
 
         public class Thing3
         {
-            public Point4D RotationX { get; set; }
-            public Point4D RotationY { get; set; }
-            public Point4D RotationZ { get; set; }
-            public Point4D Unknown4 { get; set; }
-            public Point4D Unknown5 { get; set; }
+            public Vector4 RotationX { get; set; }
+            public Vector4 RotationY { get; set; }
+            public Vector4 RotationZ { get; set; }
+            public Vector4 Unknown4 { get; set; }
+            public Vector4 Unknown5 { get; set; }
         }
 
         public class Thing4
         {
-            public Point4D Unknown1 { get; set; }
-            public Point4D Unknown2 { get; set; }
-            public Point4D Unknown3 { get; set; }
-            public Point4D Unknown4 { get; set; }
+            public Vector4 Unknown1 { get; set; }
+            public Vector4 Unknown2 { get; set; }
+            public Vector4 Unknown3 { get; set; }
+            public Vector4 Unknown4 { get; set; }
         }
 
         public class PDLData
         {
-            public Point4D Position { get; set; }
+            public Vector4 Position { get; set; }
 
-            public Point4D Unknown1 { get; set; }
-            public Point4D Unknown2 { get; set; }
-            public Point4D Unknown3 { get; set; }
-            public Point4D Unknown4 { get; set; }
+            public Vector4 Unknown1 { get; set; }
+            public Vector4 Unknown2 { get; set; }
+            public Vector4 Unknown3 { get; set; }
+            public Vector4 Unknown4 { get; set; }
 
             public int Unknown5 { get; set; }
 
-            public Point3D Unknown6 { get; set; }
+            public Vector3 Unknown6 { get; set; }
         }
 
         public class PDLEntry
@@ -272,18 +269,8 @@ namespace DSCript.Models
                     f.Position = (i * 0x20) + t2Offset;
 
                     T2Entries.Add(new Thing2() {
-                        Position = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        Rotation = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        }
+                        Position = f.Read<Vector4>(),
+                        Rotation = f.Read<Vector4>(),
                     });
                 }
 
@@ -295,36 +282,11 @@ namespace DSCript.Models
                     f.Position = (i * 0x50) + t3Offset;
 
                     T3Entries.Add(new Thing3() {
-                        RotationX = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        RotationY = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        RotationZ = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        Unknown4 = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        Unknown5 = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
+                        RotationX = f.Read<Vector4>(),
+                        RotationY = f.Read<Vector4>(),
+                        RotationZ = f.Read<Vector4>(),
+                        Unknown4 = f.Read<Vector4>(),
+                        Unknown5 = f.Read<Vector4>(),
                     });
                 }
 
@@ -336,30 +298,10 @@ namespace DSCript.Models
                     f.Position = (i * 0x40) + t4Offset;
 
                     T4Entries.Add(new Thing4() {
-                        Unknown1 = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        Unknown2 = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        Unknown3 = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        },
-                        Unknown4 = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        }
+                        Unknown1 = f.Read<Vector4>(),
+                        Unknown2 = f.Read<Vector4>(),
+                        Unknown3 = f.Read<Vector4>(),
+                        Unknown4 = f.Read<Vector4>(),
                     });
                 }
 
@@ -398,42 +340,13 @@ namespace DSCript.Models
                         f.Position = (t * 0x60) + offset;
 
                         dataEntries.Add(new PDLData() {
-                            Position = new Point4D() {
-                                X = f.ReadFloat(),
-                                Y = f.ReadFloat(),
-                                Z = f.ReadFloat(),
-                                W = f.ReadFloat(),
-                            },
-                            Unknown1 = new Point4D() {
-                                X = f.ReadFloat(),
-                                Y = f.ReadFloat(),
-                                Z = f.ReadFloat(),
-                                W = f.ReadFloat(),
-                            },
-                            Unknown2 = new Point4D() {
-                                X = f.ReadFloat(),
-                                Y = f.ReadFloat(),
-                                Z = f.ReadFloat(),
-                                W = f.ReadFloat(),
-                            },
-                            Unknown3 = new Point4D() {
-                                X = f.ReadFloat(),
-                                Y = f.ReadFloat(),
-                                Z = f.ReadFloat(),
-                                W = f.ReadFloat(),
-                            },
-                            Unknown4 = new Point4D() {
-                                X = f.ReadFloat(),
-                                Y = f.ReadFloat(),
-                                Z = f.ReadFloat(),
-                                W = f.ReadFloat(),
-                            },
+                            Position = f.Read<Vector4>(),
+                            Unknown1 = f.Read<Vector4>(),
+                            Unknown2 = f.Read<Vector4>(),
+                            Unknown3 = f.Read<Vector4>(),
+                            Unknown4 = f.Read<Vector4>(),
                             Unknown5 = f.ReadInt32(),
-                            Unknown6 = new Point3D() {
-                                X = f.ReadFloat(),
-                                Y = f.ReadFloat(),
-                                Z = f.ReadFloat()
-                            }
+                            Unknown6 = f.Read<Vector3>(),
                         });
                     }
 
@@ -478,19 +391,14 @@ namespace DSCript.Models
                         Unknown6    = f.ReadInt16(),
                     };
                     
-                    var position = new Point4D();
+                    var position = new Vector4();
 
                     // get position data
                     if (entry.PositionId != -1)
                     {
                         f.Position = (entry.PositionId * 0x10) + t1Offset;
 
-                        position = new Point4D() {
-                            X = f.ReadFloat(),
-                            Y = f.ReadFloat(),
-                            Z = f.ReadFloat(),
-                            W = f.ReadFloat(),
-                        };
+                        position = f.Read<Vector4>();
                     }
 
                     var part = new PartEntry() {
@@ -647,20 +555,7 @@ namespace DSCript.Models
                 fs.Position += 0x4;
 
                 fs.Write(Reserved);
-
-                var writePoint3 = new Action<Point3D>((p) => {
-                    fs.WriteFloat(p.X);
-                    fs.WriteFloat(p.Y);
-                    fs.WriteFloat(p.Z);
-                });
-
-                var writePoint4 = new Action<Point4D>((p) => {
-                    fs.WriteFloat(p.X);
-                    fs.WriteFloat(p.Y);
-                    fs.WriteFloat(p.Z);
-                    fs.WriteFloat(p.W);
-                });
-
+                
                 var isEnabled = new Func<bool, short>((b) => {
                     return (short)(b ? 1 : -1);
                 });
@@ -742,48 +637,48 @@ namespace DSCript.Models
 
                         foreach (var pdl in phy.Children)
                         {
-                            writePoint4(pdl.Position);
-                            writePoint4(pdl.Unknown1);
-                            writePoint4(pdl.Unknown2);
-                            writePoint4(pdl.Unknown3);
-                            writePoint4(pdl.Unknown4);
+                            fs.Write(pdl.Position);
+                            fs.Write(pdl.Unknown1);
+                            fs.Write(pdl.Unknown2);
+                            fs.Write(pdl.Unknown3);
+                            fs.Write(pdl.Unknown4);
 
                             fs.Write(pdl.Unknown5);
 
-                            writePoint3(pdl.Unknown6);
+                            fs.Write(pdl.Unknown6);
                         }
                     }
 
                     if (hasPosition)
-                        writePoint4(part.Position.Value);
+                        fs.Write(part.Position.Value);
 
                     if (hasOffset)
                     {
                         var off = part.Offset;
 
-                        writePoint4(off.Position);
-                        writePoint4(off.Rotation);
+                        fs.Write(off.Position);
+                        fs.Write(off.Rotation);
                     }
 
                     if (hasUnknown5)
                     {
                         var unk5 = part.Transform;
 
-                        writePoint4(unk5.RotationX);
-                        writePoint4(unk5.RotationY);
-                        writePoint4(unk5.RotationZ);
-                        writePoint4(unk5.Unknown4);
-                        writePoint4(unk5.Unknown5);
+                        fs.Write(unk5.RotationX);
+                        fs.Write(unk5.RotationY);
+                        fs.Write(unk5.RotationZ);
+                        fs.Write(unk5.Unknown4);
+                        fs.Write(unk5.Unknown5);
                     }
 
                     if (hasAxis)
                     {
                         var axis = part.Axis;
 
-                        writePoint4(axis.Unknown1);
-                        writePoint4(axis.Unknown2);
-                        writePoint4(axis.Unknown3);
-                        writePoint4(axis.Unknown4);
+                        fs.Write(axis.Unknown1);
+                        fs.Write(axis.Unknown2);
+                        fs.Write(axis.Unknown3);
+                        fs.Write(axis.Unknown4);
                     }
 
                     // 128-bit alignment
@@ -832,23 +727,23 @@ namespace DSCript.Models
     
                     bulData.Position = headerSize;
 
-                    var unpackV4 = new Func<byte[], int, Point4D>((bytes, offset) => {
+                    var unpackV4 = new Func<byte[], int, Vector4>((bytes, offset) => {
                         var n = BitConverter.ToInt32(bytes, offset);
 
-                        return new Point4D() {
+                        return new Vector4() {
                             X = ((n << 22) >> 22) * 0.005859375f,
                             Y = ((n << 12) >> 22) * 0.005859375f,
                             Z = ((n >> 20) * 0.0073242188f),
-                            W = 1.0,
+                            W = 1.0f,
                         };
                     });
 
-                    var unpackV3 = new Func<byte[], int, Point4D>((bytes, offset) => {
-                        return new Point4D() {
-                            X = ((bytes[offset + 0] * 0.0039215689f) - 0.5) * 2,
-                            Y = ((bytes[offset + 1] * 0.0039215689f) - 0.5) * 2,
-                            Z = ((bytes[offset + 2] * 0.0039215689f) - 0.5) * 2,
-                            W = 0.0,
+                    var unpackV3 = new Func<byte[], int, Vector4>((bytes, offset) => {
+                        return new Vector4() {
+                            X = ((bytes[offset + 0] * 0.0039215689f) - 0.5f) * 2,
+                            Y = ((bytes[offset + 1] * 0.0039215689f) - 0.5f) * 2,
+                            Z = ((bytes[offset + 2] * 0.0039215689f) - 0.5f) * 2,
+                            W = 0.0f,
                         };
                     });
 
@@ -902,10 +797,10 @@ namespace DSCript.Models
 
                             if (version >= 6)
                             {
-                                writePoint4(v4_1);
-                                writePoint4(v4_2);
-                                writePoint4(v3_1);
-                                writePoint4(v3_2);
+                                fs.Write(v4_1);
+                                fs.Write(v4_2);
+                                fs.Write(v3_1);
+                                fs.Write(v3_2);
 
                                 fs.Write(unk_16);
 

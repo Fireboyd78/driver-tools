@@ -77,7 +77,10 @@ namespace Antilli
             {
                 if (vertex != null)
                 {
-                    Point3D pos = (UseBlendWeights) ? Vertex.Tween(vertex.Position, vertex.BlendWeights, tweenFactor) : vertex.Position;
+                    var pos = vertex.Position;
+
+                    if (UseBlendWeights)
+                        pos = (pos + (vertex.BlendWeights * (float)tweenFactor));
 
                     positions.Add(pos);
                     normals.Add(vertex.Normal);

@@ -18,15 +18,15 @@ namespace DSCript.Models
 
         public List<MeshDefinition> Meshes { get; set; }
 
-        public Point4D[] Transform { get; set; }
-        public Point4D Unknown { get; set; }
+        public Vector4[] Transform { get; set; }
+        public Vector4 Unknown { get; set; }
 
         public MeshGroup()
         {
             Meshes = new List<MeshDefinition>();
 
-            Transform = new Point4D[3];
-            Unknown = new Point4D();
+            Transform = new Vector4[3];
+            Unknown = new Vector4();
         }
     }
 }

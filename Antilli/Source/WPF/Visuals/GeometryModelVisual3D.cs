@@ -101,17 +101,6 @@ namespace Antilli
 
         protected virtual void OnGeometryChanged()
         {
-            // try cleaning up some memory
-            if (Model.Geometry != null)
-            {
-                var geom = Model.Geometry as MeshGeometry3D;
-
-                geom.Positions.Clear();
-                geom.Normals.Clear();
-                geom.TextureCoordinates.Clear();
-                geom.TriangleIndices.Clear();
-            }
-
             Model.Geometry = ToMesh();
         }
 
