@@ -623,7 +623,7 @@ namespace DSCript.Models
 
         public void SaveVPK(string filename)
         {
-            var version = 5;
+            var version = 6;
 
             // allocate 32mb buffer
             using (var fs = new MemoryStream(1024 * 32767))
@@ -791,67 +791,136 @@ namespace DSCript.Models
                 }
 
                 if (version >= 4)
-                {
                     fs.Align(16);
-                }
 
                 var bulDataOffset = (int)fs.Position;
-                
+
                 // write bullet hole data
-                fs.Write(m_bulData);
+                if (version < 6)
+                {
+                    fs.Write(m_bulData);
+                }
+                else
+                {
+                    fs.Write(0x4C4C5542); // 'BULL'
+                    fs.Write((short)1); // version
+                    fs.Write((short)1); // data type
+                }
+                
+                var bulDataLog = new StringBuilder();
 
-                // -- friggin bullet holes I swear..
-                //var bulDataLog = new StringBuilder();
-
-                //bulDataLog.AppendLine("# Bullet Hole Data Export Log");
-                //bulDataLog.AppendLine();
-
+                bulDataLog.AppendLine("# Bullet Hole Data Export Log");
+                
                 // bullet hole data
-                //using (var bulData = new MemoryStream(m_bulData))
-                //{
-                //    var count1 = bulData.ReadInt32();
-                //    var count2 = bulData.ReadInt32();
-                //
-                //    var headerSize = Memory.Align((count2 * 0x4) + 0x8, 16);
-                //    //var header = new byte[headerSize];
-                //    //
-                //    //Buffer.BlockCopy(m_bulData, 0, header, 0, header.Length);
-                //    //
-                //    //fs.Write(header);
-                //
-                //    bulData.Position = headerSize;
-                //
-                //    for (int i = 0; i < count1; i++)
-                //    {
-                //        //var bytes = bulData.ReadBytes(0x14);
-                //
-                //        var t11 = bulData.ReadInt16();
-                //        var t12 = bulData.ReadInt16();
-                //        var t13 = bulData.ReadInt16();
-                //
-                //        var t21 = bulData.ReadInt16();
-                //        var t22 = bulData.ReadInt16();
-                //        var t23 = bulData.ReadInt16();
-                //
-                //        var t31 = bulData.ReadInt16();
-                //        var t32 = bulData.ReadInt16();
-                //        var t33 = bulData.ReadInt16();
-                //
-                //        var t4 = bulData.ReadInt16();
-                //
-                //        bulDataLog.AppendLine("[{0}, {1}, {2}]\r\n[{3}, {4}, {5}]\r\n[{6}, {7}, {8}]\r\n{9}\r\n",
-                //            t11, t12, t13,
-                //            t21, t22, t23,
-                //            t31, t32, t33,
-                //            t4);
-                //
-                //        //fs.Write(bytes);
-                //        //fs.Align(16);
-                //    }
-                //}
+                using (var bulData = new MemoryStream(m_bulData))
+                {
+                    var nBullets = bulData.ReadInt32();
+                    var nPanels = bulData.ReadInt32();
 
-                //var logfile = Path.ChangeExtension(filename, ".bulletLog");
-                //File.WriteAllText(logfile, bulDataLog.ToString());
+                    fs.Write(nPanels);
+
+                    var panels = new int[nPanels];
+
+                    for (int i = 0; i < nPanels; i++)
+                        panels[i] = bulData.ReadInt32();
+                    
+                    bulDataLog.AppendLine($"# Bullets: {nBullets}");
+                    bulDataLog.AppendLine($"# Panels: {nPanels}");
+                    bulDataLog.AppendLine();
+
+                    var headerSize = Memory.Align(0x8 + (nPanels * 0x4), 16);
+    
+                    bulData.Position = headerSize;
+
+                    var unpackV4 = new Func<byte[], int, Point4D>((bytes, offset) => {
+                        var n = BitConverter.ToInt32(bytes, offset);
+
+                        return new Point4D() {
+                            X = ((n << 22) >> 22) * 0.005859375f,
+                            Y = ((n << 12) >> 22) * 0.005859375f,
+                            Z = ((n >> 20) * 0.0073242188f),
+                            W = 1.0,
+                        };
+                    });
+
+                    var unpackV3 = new Func<byte[], int, Point4D>((bytes, offset) => {
+                        return new Point4D() {
+                            X = ((bytes[offset + 0] * 0.0039215689f) - 0.5) * 2,
+                            Y = ((bytes[offset + 1] * 0.0039215689f) - 0.5) * 2,
+                            Z = ((bytes[offset + 2] * 0.0039215689f) - 0.5) * 2,
+                            W = 0.0,
+                        };
+                    });
+
+                    var nBulletsRead = 0;
+                    
+                    for (int p = 0; p < nPanels; ++p)
+                    {
+                        var nPanelBullets = ((p + 1) != nPanels)
+                            ? (panels[p + 1] - panels[p])
+                            : (nBullets - panels[p]);
+
+                        bulDataLog.AppendLine($"# -------- Panel {p + 1} -------- #");
+                        bulDataLog.AppendLine($"# Bullets: {nPanelBullets}");
+                        bulDataLog.AppendLine();
+
+                        fs.Write(nPanelBullets);
+
+                        for (int b = 0; b < nPanelBullets; b++)
+                        {
+                            // better safe than sorry! :)
+                            if (nBulletsRead == nBullets)
+                                throw new InvalidOperationException($"Panel {p} expected {nPanelBullets - b} more bullets when there's no more left!");
+
+                            var bytes = bulData.ReadBytes(0x14);
+                            ++nBulletsRead;
+
+                            var v4_1 = unpackV4(bytes, 0);
+                            var v4_2 = unpackV4(bytes, 4);
+
+                            var v3_1 = unpackV3(bytes, 8);
+                            var v3_2 = unpackV3(bytes, 12);
+
+                            var unk_11 = bytes[11];
+                            var unk_15 = bytes[15];
+
+                            var unk_16 = BitConverter.ToInt16(bytes, 16) * 0.000015259022f;
+                            var unk_18 = BitConverter.ToInt16(bytes, 18);
+
+                            // some kind of normalized value
+                            // takes into account panel deformation + health (needs more research)
+                            var offsetThing = ((1.0f - unk_16) * 1.0f);
+
+                            bulDataLog.AppendLine($"# Bullet {b + 1} ({nBulletsRead})");
+                            bulDataLog.AppendLine($"[{v4_1.X:F4}, {v4_1.Y:F4}, {v4_1.Z:F4}, {v4_1.W:F4}]");
+                            bulDataLog.AppendLine($"[{v4_2.X:F4}, {v4_2.Y:F4}, {v4_2.Z:F4}, {v4_2.W:F4}]");
+                            bulDataLog.AppendLine($"[{v3_1.X:F4}, {v3_1.Y:F4}, {v3_1.Z:F4}, {v3_1.W:F4}]");
+                            bulDataLog.AppendLine($"[{v3_2.X:F4}, {v3_2.Y:F4}, {v3_2.Z:F4}, {v3_2.W:F4}]");
+                            bulDataLog.AppendLine($"[{unk_16:F4} -> {offsetThing:F4}]");
+                            bulDataLog.AppendLine($"{{ {unk_11}, {unk_15}, {unk_18} }}");
+                            bulDataLog.AppendLine();
+
+                            if (version >= 6)
+                            {
+                                writePoint4(v4_1);
+                                writePoint4(v4_2);
+                                writePoint4(v3_1);
+                                writePoint4(v3_2);
+
+                                fs.Write(unk_16);
+
+                                fs.Write(unk_11);
+                                fs.Write(unk_15);
+
+                                fs.Write(unk_18);
+                                fs.Write(0xDF83); // ;)
+                            }
+                        }
+                    }
+                }
+
+                var logfile = Path.ChangeExtension(filename, ".bullets.log");
+                File.WriteAllText(logfile, bulDataLog.ToString());
                 
                 // trim file
                 fs.SetLength(fs.Position);
