@@ -98,6 +98,7 @@
     <Compile Include="Spooling\Spooler.cs" />
     <Compile Include="Spooling\SpoolerCollection.cs" />
     <Compile Include="TempFile.cs" />
+    <Compile Include="VectorTypes.cs" />
     <None Include="Models\ModelPackages\ModelPackagePC_X.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
     <Compile Include="Models\TextureCache.cs" />
