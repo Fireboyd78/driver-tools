@@ -49,10 +49,8 @@
                 <MenuItem x:Name="viewGlobalMaterials" Header="Global Materials" Visibility="Collapsed"/>
             </MenuItem>
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem Name="exportGlobals" Header="Export Globals"/>
                 <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
                 <MenuItem x:Name="exportVPK" Header="Export .VPK"/>
-                <MenuItem x:Name="exportXML" Header="Export .XML"/>
                 <MenuItem x:Name="exportObj" Header="Export .OBJ"/>
                 <Separator/>
                 <MenuItem x:Name="chunkViewer" Header="Chunk Editor"/>

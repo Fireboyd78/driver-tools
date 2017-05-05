@@ -477,104 +477,6 @@ namespace Antilli
 
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        // HACK: fix for duplicated parts being exported
-        static List<object> props = new List<object>();
-
-        private void addPropInfo(XmlElement elem, object obj)
-        {
-            if (props.Contains(obj))
-                return;
-
-            // register part to avoid dupes
-            props.Add(obj);
-
-            var type = obj.GetType();
-            var propNode = elem.AddElement(type.Name);
-
-            foreach (var prop in type.GetProperties())
-            {
-                var attr = prop.GetCustomAttributes(typeof(System.Xml.Serialization.XmlAttributeAttribute), false);
-                var val = prop.GetValue(obj, null);
-
-                // check if it's an attribute
-                if (attr.Length > 0)
-                {
-                    // don't add attribute if value is null
-                    if (val != null)
-                        propNode.AddAttribute(prop.Name, val);
-
-                    continue;
-                }
-
-                // add a new property
-                var node = propNode.AddElement("Property")
-                                    .AddAttribute("Name", prop.Name);
-
-                // make sure property isn't null
-                if (val != null)
-                {
-                    if (prop.PropertyType.IsValueType || prop.PropertyType == typeof(String))
-                    {
-                        node.AddAttribute("Value", val);
-                    }
-                    else
-                    {
-                        if (typeof(System.Collections.IList).IsAssignableFrom(prop.PropertyType))
-                        {
-                            foreach (var subObj in (System.Collections.IList)val)
-                                addPropInfo(node, subObj);
-                        }
-                        else
-                        {
-                            addPropInfo(node, val);
-                        }
-                    }
-                }
-            }
-        }
-
-        public void ExportVehicleHierachyXML()
-        {
-            var modelFile = ModelFile as Driv3rVehiclesFile;
-
-            if (SelectedModelPackage == null || ModelFile == null)
-            {
-                MessageBox.Show("Nothing to export!");
-                return;
-            }
-
-            var idx = (!modelFile.IsMissionVehicleFile) ? modelFile.Models.IndexOf(SelectedModelPackage) : Groups.SelectedIndex;
-
-            var hierarchy =  modelFile.Hierarchies[idx];
-            
-            var xml = new XmlDocument();
-
-            var awhfNode = xml.AddElement("VehicleHierarchy")
-                                .AddAttribute("UID", hierarchy.UID);
-
-            var partsNode = awhfNode.AddElement("Parts");
-
-            addPropInfo(partsNode, hierarchy.Parts[0]);
-
-            var dir = Settings.ExportDirectory;
-            var path = String.Format("{0}\\{1}.awhf.xml",
-                dir, Path.GetFileName(ModelFile.FileName));
-
-            var settings = new XmlWriterSettings() {
-                Indent = true,
-                IndentChars = "\t"
-            };
-
-            using (var fXml = XmlWriter.Create(path, settings))
-            {
-                xml.WriteTo(fXml);
-            }
-
-            var msg = String.Format("Successfully exported XML file to '{0}'!", path);
-
-            MessageBox.Show(msg, "VehicleHierarchy XML Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
         
         public void ExportTexture(TextureData texture)
         {
@@ -689,8 +591,7 @@ namespace Antilli
             BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
 
             fileOpen.Click += (o, e) => OpenFile();
-
-            //fileOpen.Click += (o, e) => OpenFileNew();
+            
             fileExit.Click += (o, e) => Environment.Exit(0);
 
             viewTextures.Click += (o, e) => OpenTextureViewer();
@@ -698,10 +599,7 @@ namespace Antilli
             viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
             
             exportMDPC.Click += (o, e) => ExportModelPackage();
-            
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
-
-            exportXML.Click += (o, e) => ExportVehicleHierachyXML();
             exportObj.Click += (o, e) => ExportObjFile();
 
             chunkViewer.Click += (o, e) => {
