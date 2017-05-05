@@ -81,11 +81,9 @@
     <Compile Include="$(SrcDir)OBJFile.cs" />
     <Compile Include="$(SrcDir)ObservableObject.cs" />
     <Compile Include="$(SrcDir)Settings.cs" />
-    <Compile Include="$(SrcDir)VisualParentHelper.cs" />
     <Compile Include="$(SrcDir)Extensions\Media3DExtensions.cs" />
     <Compile Include="$(SrcDir)Extensions\TreeViewExtensions.cs" />
     <Compile Include="$(SrcDir)Extensions\TypeExtensions.cs" />
-    <Compile Include="$(SrcDir)Importers\ModelImporter.cs" />
     <Compile Include="$(SrcDir)WPF\BoolToVisibilityConverter.cs" />
     <Compile Include="$(SrcDir)WPF\Controls\AntilliViewport3D.cs" />
     <Compile Include="$(SrcDir)WPF\Controls\AntilliWindow.cs" />
@@ -93,6 +91,7 @@
     <Compile Include="$(SrcDir)WPF\Visuals\BlendModelVisual3D.cs" />
     <Compile Include="$(SrcDir)WPF\Visuals\DriverModelVisual3D.cs" />
     <Compile Include="$(SrcDir)WPF\Visuals\GeometryModelVisual3D.cs" />
+    <Compile Include="$(SrcDir)WPF\Visuals\VisualParentHelper.cs" />
     <Compile Include="$(SrcDir)WPF\ModelVisual3DGroup.cs" />
     <Page Include="$(SrcDir)ChunkEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
