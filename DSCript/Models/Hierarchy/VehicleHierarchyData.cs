@@ -529,6 +529,51 @@ namespace DSCript.Models
             throw new NotImplementedException();
         }
 
+        private Vector3 UnpackV3(byte[] bytes, int offset)
+        {
+            const float unpackN = 0.0039215689f; // [+/-](0.0 - 1.0)
+
+            return new Vector3() {
+                X = ((bytes[offset + 0] * unpackN) - 0.5f) * 2,
+                Y = ((bytes[offset + 1] * unpackN) - 0.5f) * 2,
+                Z = ((bytes[offset + 2] * unpackN) - 0.5f) * 2,
+            };
+        }
+
+        private Vector4 UnpackV4(byte[] bytes, int offset)
+        {
+            // how many bits we're working with
+            const int nBits = 32;
+
+            // number of component bits
+            const int bitsT = 10;
+            const int bitsH = 12;
+
+            // max component values
+            const float maxT = 3.0f;
+            const float maxH = 15.0f;
+            
+            // unpacking constants
+            const float unpackT = maxT / (1 << (bitsT - 1));
+            const float unpackH = maxH / (1 << (bitsH - 1));
+
+            // component bit-shifts
+            const int bsT = nBits - bitsT;
+            const int bsH = nBits - bitsH;
+
+            const int bsTX = nBits - (bitsT * 1);
+            const int bsTY = nBits - (bitsT * 2);
+
+            var n = BitConverter.ToInt32(bytes, offset);
+
+            return new Vector4() {
+                X = ((n << bsTX) >> bsT) * unpackT,
+                Y = ((n << bsTY) >> bsT) * unpackT,
+                Z = ((n >> bsH) * unpackH),
+                W = 1.0f,
+            };
+        }
+
         public void SaveVPK(string filename)
         {
             var version = 6;
@@ -726,27 +771,7 @@ namespace DSCript.Models
                     var headerSize = Memory.Align(0x8 + (nPanels * 0x4), 16);
     
                     bulData.Position = headerSize;
-
-                    var unpackV4 = new Func<byte[], int, Vector4>((bytes, offset) => {
-                        var n = BitConverter.ToInt32(bytes, offset);
-
-                        return new Vector4() {
-                            X = ((n << 22) >> 22) * 0.005859375f,
-                            Y = ((n << 12) >> 22) * 0.005859375f,
-                            Z = ((n >> 20) * 0.0073242188f),
-                            W = 1.0f,
-                        };
-                    });
-
-                    var unpackV3 = new Func<byte[], int, Vector4>((bytes, offset) => {
-                        return new Vector4() {
-                            X = ((bytes[offset + 0] * 0.0039215689f) - 0.5f) * 2,
-                            Y = ((bytes[offset + 1] * 0.0039215689f) - 0.5f) * 2,
-                            Z = ((bytes[offset + 2] * 0.0039215689f) - 0.5f) * 2,
-                            W = 0.0f,
-                        };
-                    });
-
+                    
                     var nBulletsRead = 0;
                     
                     for (int p = 0; p < nPanels; ++p)
@@ -770,11 +795,11 @@ namespace DSCript.Models
                             var bytes = bulData.ReadBytes(0x14);
                             ++nBulletsRead;
 
-                            var v4_1 = unpackV4(bytes, 0);
-                            var v4_2 = unpackV4(bytes, 4);
+                            var v4_1 = UnpackV4(bytes, 0);
+                            var v4_2 = UnpackV4(bytes, 4);
 
-                            var v3_1 = unpackV3(bytes, 8);
-                            var v3_2 = unpackV3(bytes, 12);
+                            var v3_1 = UnpackV3(bytes, 8);
+                            var v3_2 = UnpackV3(bytes, 12);
 
                             var unk_11 = bytes[11];
                             var unk_15 = bytes[15];
@@ -787,10 +812,10 @@ namespace DSCript.Models
                             var offsetThing = ((1.0f - unk_16) * 1.0f);
 
                             bulDataLog.AppendLine($"# Bullet {b + 1} ({nBulletsRead})");
-                            bulDataLog.AppendLine($"[{v4_1.X:F4}, {v4_1.Y:F4}, {v4_1.Z:F4}, {v4_1.W:F4}]");
-                            bulDataLog.AppendLine($"[{v4_2.X:F4}, {v4_2.Y:F4}, {v4_2.Z:F4}, {v4_2.W:F4}]");
-                            bulDataLog.AppendLine($"[{v3_1.X:F4}, {v3_1.Y:F4}, {v3_1.Z:F4}, {v3_1.W:F4}]");
-                            bulDataLog.AppendLine($"[{v3_2.X:F4}, {v3_2.Y:F4}, {v3_2.Z:F4}, {v3_2.W:F4}]");
+                            bulDataLog.AppendLine($"[{v4_1.X,7:F4}, {v4_1.Y,7:F4}, {v4_1.Z,7:F4}, {v4_1.W,7:F4}]");
+                            bulDataLog.AppendLine($"[{v4_2.X,7:F4}, {v4_2.Y,7:F4}, {v4_2.Z,7:F4}, {v4_2.W,7:F4}]");
+                            bulDataLog.AppendLine($"[{v3_1.X,7:F4}, {v3_1.Y,7:F4}, {v3_1.Z,7:F4}]");
+                            bulDataLog.AppendLine($"[{v3_2.X,7:F4}, {v3_2.Y,7:F4}, {v3_2.Z,7:F4}]");
                             bulDataLog.AppendLine($"[{unk_16:F4} -> {offsetThing:F4}]");
                             bulDataLog.AppendLine($"{{ {unk_11}, {unk_15}, {unk_18} }}");
                             bulDataLog.AppendLine();
@@ -799,6 +824,7 @@ namespace DSCript.Models
                             {
                                 fs.Write(v4_1);
                                 fs.Write(v4_2);
+
                                 fs.Write(v3_1);
                                 fs.Write(v3_2);
 
@@ -808,7 +834,6 @@ namespace DSCript.Models
                                 fs.Write(unk_15);
 
                                 fs.Write(unk_18);
-                                fs.Write(0xDF83); // ;)
                             }
                         }
                     }
