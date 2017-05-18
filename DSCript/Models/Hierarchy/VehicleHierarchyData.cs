@@ -207,6 +207,175 @@ namespace DSCript.Models
             public List<PDLData> Children { get; set; }
         }
 
+        public enum BulletMaterialType : int
+        {
+            Metal = 0,
+            Glass = 1,
+        }
+        
+        public struct BulletData
+        {
+            private const int PACKED_SIZE = 0x14;
+            private const int UNPACKED_SIZE = 0x38; // VPK format
+
+            // number of component bits
+            private const int POS_NBITS = 32;
+
+            private const int POS_NBITS_T = 10;
+            private const int POS_NBITS_H = 12;
+
+            // max component values
+            private const float POS_MAX_T = 3.0f;
+            private const float POS_MAX_H = 15.0f;
+
+            // component bit-shifts
+            private const int POS_BITS_T = POS_NBITS - POS_NBITS_T;
+            private const int POS_BITS_H = POS_NBITS - POS_NBITS_H;
+
+            private const int POS_BITS_TX = POS_NBITS - (POS_NBITS_T * 1);
+            private const int POS_BITS_TY = POS_NBITS - (POS_NBITS_T * 2);
+
+            // packing constants
+            private const float POS_PACKING_T = POS_MAX_T / (1 << (POS_NBITS_T - 1));
+            private const float POS_PACKING_H = POS_MAX_H / (1 << (POS_NBITS_H - 1));
+
+            private const float ROT_PACKING = 0.0039215689f; // [+/-](0.0 - 1.0)
+            private const float WGT_PACKING = 0.000015259022f; // [+/-](0.0 - 1.0)
+            
+            public Vector3 Position1 { get; set; }
+            public Vector3 Position2 { get; set; }
+            
+            public Vector3 Rotation1 { get; set; }
+            public Vector3 Rotation2 { get; set; }
+
+            public BulletMaterialType MaterialType { get; set; }
+
+            public float Weight { get; set; }
+            
+            private static float Normalize(float value, float max)
+            {
+                if (value > max)
+                    return max;
+                if (value < -max)
+                    return -max;
+
+                return value;
+            }
+            
+            private static int PackPos(Vector3 value)
+            {
+                var pos = 0;
+
+                pos |= (int)(Normalize(value.X, POS_MAX_T) / POS_PACKING_T) << (POS_NBITS_T * 0);
+                pos |= (int)(Normalize(value.Y, POS_MAX_T) / POS_PACKING_T) << (POS_NBITS_T * 1);
+                pos |= (int)(Normalize(value.Z, POS_MAX_H) / POS_PACKING_H) << (POS_NBITS - POS_NBITS_H);
+
+                return pos;
+            }
+            
+            private static int PackRot(Vector3 value)
+            {
+                var rot = 0;
+
+                rot |= (byte)(((Normalize(value.X, 1.0f) / 2) + 0.5f) / ROT_PACKING) << 0;
+                rot |= (byte)(((Normalize(value.Y, 1.0f) / 2) + 0.5f) / ROT_PACKING) << 8;
+                rot |= (byte)(((Normalize(value.Z, 1.0f) / 2) + 0.5f) / ROT_PACKING) << 16;
+
+                return rot;
+            }
+
+            private static short PackWeight(float value)
+            {
+                return (short)(Normalize(value, 1.0f) / WGT_PACKING);
+            }
+            
+            private static Vector3 UnpackPos(byte[] bytes, int offset)
+            {
+                var pos = BitConverter.ToInt32(bytes, offset);
+
+                return new Vector3() {
+                    X = ((pos << POS_BITS_TX) >> POS_BITS_T) * POS_PACKING_T,
+                    Y = ((pos << POS_BITS_TY) >> POS_BITS_T) * POS_PACKING_T,
+                    Z = (pos >> POS_BITS_H) * POS_PACKING_H,
+                };
+            }
+
+            private static Vector3 UnpackRot(byte[] bytes, int offset)
+            {
+                return new Vector3() {
+                    X = ((bytes[offset + 0] * ROT_PACKING) - 0.5f) * 2,
+                    Y = ((bytes[offset + 1] * ROT_PACKING) - 0.5f) * 2,
+                    Z = ((bytes[offset + 2] * ROT_PACKING) - 0.5f) * 2,
+                };
+            }
+
+            private static float UnpackWeight(byte[] buffer, int offset)
+            {
+                return (BitConverter.ToInt16(buffer, offset) * WGT_PACKING);
+            }
+
+            public byte[] ToBinary(bool packed = false)
+            {
+                var buffer = new byte[(packed) ? PACKED_SIZE : UNPACKED_SIZE];
+
+                using (var ms = new MemoryStream(buffer))
+                {
+                    if (packed)
+                    {
+                        ms.Write(PackPos(Position1));
+                        ms.Write(PackPos(Position2));
+
+                        ms.Write(PackRot(Rotation1));
+                        ms.Write(PackRot(Rotation2));
+
+                        ms.Write(PackWeight(Weight));
+
+                        ms.Write((ushort)0xDF83); // ;)
+
+                        // set the material type
+                        ms.Position = 11;
+
+                        ms.WriteByte((byte)MaterialType);
+                    }
+                    else
+                    {
+                        ms.Write(Position1);
+                        ms.Write(Position2);
+
+                        ms.Write(Rotation1);
+                        ms.Write(Rotation2);
+
+                        ms.Write(Weight);
+
+                        ms.Write((ushort)MaterialType);
+                        ms.Write((ushort)0xDF83); // ;)
+                    }
+                }
+                
+                return buffer;
+            }
+
+            public static BulletData Unpack(byte[] buffer)
+            {
+                return new BulletData() {
+                    Position1 = UnpackPos(buffer, 0),
+                    Position2 = UnpackPos(buffer, 4),
+
+                    Rotation1 = UnpackRot(buffer, 8),
+                    Rotation2 = UnpackRot(buffer, 12),
+
+                    MaterialType = (BulletMaterialType)buffer[11],
+
+                    Weight = UnpackWeight(buffer, 16),
+                };
+            }
+        }
+
+        public class BulletHolder
+        {
+            
+        }
+
         // bullet hole data - not sure what to do with this yet
         private byte[] m_bulData;
 
@@ -529,50 +698,7 @@ namespace DSCript.Models
             throw new NotImplementedException();
         }
 
-        private Vector3 UnpackV3(byte[] bytes, int offset)
-        {
-            const float unpackN = 0.0039215689f; // [+/-](0.0 - 1.0)
-
-            return new Vector3() {
-                X = ((bytes[offset + 0] * unpackN) - 0.5f) * 2,
-                Y = ((bytes[offset + 1] * unpackN) - 0.5f) * 2,
-                Z = ((bytes[offset + 2] * unpackN) - 0.5f) * 2,
-            };
-        }
-
-        private Vector4 UnpackV4(byte[] bytes, int offset)
-        {
-            // how many bits we're working with
-            const int nBits = 32;
-
-            // number of component bits
-            const int bitsT = 10;
-            const int bitsH = 12;
-
-            // max component values
-            const float maxT = 3.0f;
-            const float maxH = 15.0f;
-            
-            // unpacking constants
-            const float unpackT = maxT / (1 << (bitsT - 1));
-            const float unpackH = maxH / (1 << (bitsH - 1));
-
-            // component bit-shifts
-            const int bsT = nBits - bitsT;
-            const int bsH = nBits - bitsH;
-
-            const int bsTX = nBits - (bitsT * 1);
-            const int bsTY = nBits - (bitsT * 2);
-
-            var n = BitConverter.ToInt32(bytes, offset);
-
-            return new Vector4() {
-                X = ((n << bsTX) >> bsT) * unpackT,
-                Y = ((n << bsTY) >> bsT) * unpackT,
-                Z = ((n >> bsH) * unpackH),
-                W = 1.0f,
-            };
-        }
+        
 
         public void SaveVPK(string filename)
         {
@@ -604,7 +730,7 @@ namespace DSCript.Models
                 var isEnabled = new Func<bool, short>((b) => {
                     return (short)(b ? 1 : -1);
                 });
-
+                
                 foreach (var part in Parts)
                 {
                     var nChildren = 1;
@@ -743,8 +869,8 @@ namespace DSCript.Models
                 else
                 {
                     fs.Write(0x4C4C5542); // 'BULL'
-                    fs.Write((short)1); // version
-                    fs.Write((short)1); // data type
+                    fs.Write((short)2); // version
+                    fs.Write((short)1); // data type (packed=0,unpacked=1)
                 }
                 
                 var bulDataLog = new StringBuilder();
@@ -795,45 +921,24 @@ namespace DSCript.Models
                             var bytes = bulData.ReadBytes(0x14);
                             ++nBulletsRead;
 
-                            var v4_1 = UnpackV4(bytes, 0);
-                            var v4_2 = UnpackV4(bytes, 4);
-
-                            var v3_1 = UnpackV3(bytes, 8);
-                            var v3_2 = UnpackV3(bytes, 12);
-
-                            var unk_11 = bytes[11];
-                            var unk_15 = bytes[15];
-
-                            var unk_16 = BitConverter.ToInt16(bytes, 16) * 0.000015259022f;
-                            var unk_18 = BitConverter.ToInt16(bytes, 18);
-
+                            var bullet = BulletData.Unpack(bytes);
+                            
                             // some kind of normalized value
                             // takes into account panel deformation + health (needs more research)
-                            var offsetThing = ((1.0f - unk_16) * 1.0f);
+                            //var offsetThing = ((1.0f - bullet.Weight) * 1.0f);
 
                             bulDataLog.AppendLine($"# Bullet {b + 1} ({nBulletsRead})");
-                            bulDataLog.AppendLine($"[{v4_1.X,7:F4}, {v4_1.Y,7:F4}, {v4_1.Z,7:F4}, {v4_1.W,7:F4}]");
-                            bulDataLog.AppendLine($"[{v4_2.X,7:F4}, {v4_2.Y,7:F4}, {v4_2.Z,7:F4}, {v4_2.W,7:F4}]");
-                            bulDataLog.AppendLine($"[{v3_1.X,7:F4}, {v3_1.Y,7:F4}, {v3_1.Z,7:F4}]");
-                            bulDataLog.AppendLine($"[{v3_2.X,7:F4}, {v3_2.Y,7:F4}, {v3_2.Z,7:F4}]");
-                            bulDataLog.AppendLine($"[{unk_16:F4} -> {offsetThing:F4}]");
-                            bulDataLog.AppendLine($"{{ {unk_11}, {unk_15}, {unk_18} }}");
+                            bulDataLog.AppendLine($"type: {bullet.MaterialType}");
+                            bulDataLog.AppendLine($"pos1: [{bullet.Position1.X,7:F4}, {bullet.Position1.Y,7:F4}, {bullet.Position1.Z,7:F4}]");
+                            bulDataLog.AppendLine($"pos2: [{bullet.Position2.X,7:F4}, {bullet.Position2.Y,7:F4}, {bullet.Position2.Z,7:F4}]");
+                            bulDataLog.AppendLine($"rot1: [{bullet.Rotation1.X,7:F4}, {bullet.Rotation1.Y,7:F4}, {bullet.Rotation1.Z,7:F4}]");
+                            bulDataLog.AppendLine($"rot2: [{bullet.Rotation2.X,7:F4}, {bullet.Rotation2.Y,7:F4}, {bullet.Rotation2.Z,7:F4}]");
+                            bulDataLog.AppendLine($"weight: {bullet.Weight:F4}");
                             bulDataLog.AppendLine();
 
                             if (version >= 6)
                             {
-                                fs.Write(v4_1);
-                                fs.Write(v4_2);
-
-                                fs.Write(v3_1);
-                                fs.Write(v3_2);
-
-                                fs.Write(unk_16);
-
-                                fs.Write(unk_11);
-                                fs.Write(unk_15);
-
-                                fs.Write(unk_18);
+                                fs.Write(bullet.ToBinary());
                             }
                         }
                     }
