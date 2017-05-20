@@ -355,6 +355,13 @@ namespace DSCript.Models
                 return buffer;
             }
 
+            public static BulletData Unpack(Stream stream)
+            {
+                var buffer = stream.ReadBytes(PACKED_SIZE);
+
+                return Unpack(buffer);
+            }
+
             public static BulletData Unpack(byte[] buffer)
             {
                 return new BulletData() {
@@ -373,12 +380,19 @@ namespace DSCript.Models
 
         public class BulletHolder
         {
-            
+            public List<BulletData> Bullets { get; set; }
+
+            public BulletHolder()
+            {
+                Bullets = new List<BulletData>();
+            }
+
+            public BulletHolder(int numBullets)
+            {
+                Bullets = new List<BulletData>(numBullets);
+            }
         }
-
-        // bullet hole data - not sure what to do with this yet
-        private byte[] m_bulData;
-
+        
         public ModelPackage ModelPackage { get; set; }
 
         public List<PartEntry> Parts { get; set; }
@@ -389,8 +403,23 @@ namespace DSCript.Models
 
         public List<PDLEntry> PDLEntries { get; set; }
 
+        public List<BulletHolder> BulletHolders { get; set; }
+
         public int UID { get; set; }
         public int Reserved { get; set; }
+
+        public int BulletCount
+        {
+            get
+            {
+                var nBullets = 0;
+
+                foreach (var holder in BulletHolders)
+                    nBullets += holder.Bullets.Count;
+
+                return nBullets;
+            }
+        }
 
         protected override void Load()
         {
@@ -421,11 +450,11 @@ namespace DSCript.Models
                 var partsOffset = 0x30;
 
                 // calculate offsets so we can read data
-                var t2Offset    = partsOffset + (nParts * 0x20);
-                var t3Offset    = t2Offset + (t2Count * 0x20);
-                var t1Offset    = t3Offset + (t3Count * 0x50);
-                var t4Offset    = t1Offset + (t1Count * 0x10);
-                var pdlOffset   = t4Offset + (t4Count * 0x40);
+                var t2Offset = partsOffset + (nParts * 0x20);
+                var t3Offset = t2Offset + (t2Count * 0x20);
+                var t1Offset = t3Offset + (t3Count * 0x50);
+                var t4Offset = t1Offset + (t1Count * 0x10);
+                var pdlOffset = t4Offset + (t4Count * 0x40);
 
                 // make offset absolute
                 bulDataOffset += pdlOffset;
@@ -477,11 +506,11 @@ namespace DSCript.Models
                 // read PDL data
                 f.Position = pdlOffset;
 
-                var entriesCount    = f.ReadInt32();
-                var pdlDataCount    = f.ReadInt32();
+                var entriesCount = f.ReadInt32();
+                var pdlDataCount = f.ReadInt32();
 
-                var entriesOffset   = f.ReadInt32() + pdlOffset;
-                var pdlDataOffset   = f.ReadInt32() + pdlOffset;
+                var entriesOffset = f.ReadInt32() + pdlOffset;
+                var pdlDataOffset = f.ReadInt32() + pdlOffset;
 
                 var pdlMagic = f.ReadString();
 
@@ -534,32 +563,32 @@ namespace DSCript.Models
                     f.Position = (i * 0x20) + partsOffset;
 
                     var entry = new {
-                        Type        = f.ReadInt16(),
-                        SlotType    = (SlotType)f.ReadInt16(),
+                        Type = f.ReadInt16(),
+                        SlotType = (SlotType)f.ReadInt16(),
 
-                        Flags1      = f.ReadInt16(),
-                        Flags2      = f.ReadInt16(),
+                        Flags1 = f.ReadInt16(),
+                        Flags2 = f.ReadInt16(),
 
-                        Unknown1    = f.ReadInt16(),
-                        Unknown2    = f.ReadInt16(),
+                        Unknown1 = f.ReadInt16(),
+                        Unknown2 = f.ReadInt16(),
 
                         NumChildren = f.ReadInt16(),
-                        Unknown3    = f.ReadInt16(),
+                        Unknown3 = f.ReadInt16(),
 
-                        Hinge       = f.ReadInt16(),
-                        PartId      = (byte)f.ReadByte(),
-                        Unknown4    = (byte)f.ReadByte(),
+                        Hinge = f.ReadInt16(),
+                        PartId = (byte)f.ReadByte(),
+                        Unknown4 = (byte)f.ReadByte(),
 
-                        PhysicsId   = f.ReadInt16(),
-                        PositionId  = f.ReadInt16(),
+                        PhysicsId = f.ReadInt16(),
+                        PositionId = f.ReadInt16(),
 
-                        OffsetId    = f.ReadInt16(),
+                        OffsetId = f.ReadInt16(),
                         TransformId = f.ReadInt16(),
 
-                        AxisId      = f.ReadInt16(),
-                        Unknown6    = f.ReadInt16(),
+                        AxisId = f.ReadInt16(),
+                        Unknown6 = f.ReadInt16(),
                     };
-                    
+
                     var position = new Vector4();
 
                     // get position data
@@ -571,30 +600,30 @@ namespace DSCript.Models
                     }
 
                     var part = new PartEntry() {
-                        Type        = entry.Type,
-                        SlotType    = entry.SlotType,
+                        Type = entry.Type,
+                        SlotType = entry.SlotType,
 
-                        Flags1      = entry.Flags1,
-                        Flags2      = entry.Flags2,
+                        Flags1 = entry.Flags1,
+                        Flags2 = entry.Flags2,
 
-                        Unknown1    = entry.Unknown1,
-                        Unknown2    = entry.Unknown2,
+                        Unknown1 = entry.Unknown1,
+                        Unknown2 = entry.Unknown2,
 
-                        Children    = (entry.NumChildren > 1) ? new List<PartEntry>(entry.NumChildren - 1) : null,
-                        Unknown3    = entry.Unknown3,
+                        Children = (entry.NumChildren > 1) ? new List<PartEntry>(entry.NumChildren - 1) : null,
+                        Unknown3 = entry.Unknown3,
 
-                        Hinge       = entry.Hinge,
-                        PartId      = entry.PartId,
-                        Unknown4    = entry.Unknown4,
+                        Hinge = entry.Hinge,
+                        PartId = entry.PartId,
+                        Unknown4 = entry.Unknown4,
 
-                        Physics     = (entry.PhysicsId >= 0) ? PDLEntries[entry.PhysicsId] : null,
-                        Position    = position,
+                        Physics = (entry.PhysicsId >= 0) ? PDLEntries[entry.PhysicsId] : null,
+                        Position = position,
 
-                        Offset      = (entry.OffsetId >= 0) ? T2Entries[entry.OffsetId] : null,
-                        Transform    = (entry.TransformId >= 0) ? T3Entries[entry.TransformId] : null,
+                        Offset = (entry.OffsetId >= 0) ? T2Entries[entry.OffsetId] : null,
+                        Transform = (entry.TransformId >= 0) ? T3Entries[entry.TransformId] : null,
 
-                        Axis        = (entry.AxisId >= 0) ? T4Entries[entry.AxisId] : null,
-                        Unknown6    = entry.Unknown6
+                        Axis = (entry.AxisId >= 0) ? T4Entries[entry.AxisId] : null,
+                        Unknown6 = entry.Unknown6
                     };
 
                     Parts.Add(part);
@@ -614,81 +643,47 @@ namespace DSCript.Models
                     }
                 }
 
+                // read bullet hole data
                 f.Position = bulDataOffset;
 
-                // read bullet hole data
-                m_bulData = new byte[f.Length - bulDataOffset];
-                
-                f.Read(m_bulData, 0, m_bulData.Length);
+                var nBullets = f.ReadInt32();
+                var nHolders = f.ReadInt32(); // => t3Count
 
-                using (var fBul = new MemoryStream(m_bulData))
+                if (nHolders != t3Count)
+                    throw new InvalidOperationException("UH-OH! Looks like the bullet hole data is corrupt!");
+
+                BulletHolders = new List<BulletHolder>(nHolders);
+
+                var holders = new int[nHolders];
+
+                for (int i = 0; i < nHolders; i++)
+                    holders[i] = f.ReadInt32();
+
+                f.Position = bulDataOffset + Memory.Align(0x8 + (nHolders * 0x4), 16);
+
+                // resolve bullet hole offsets and counts
+                var nBulletsRead = 0;
+
+                for (int p = 0; p < nHolders; ++p)
                 {
-                    bulDataOffset = 0;
+                    var holderLen = ((p + 1) != nHolders)
+                        ? (holders[p + 1] - holders[p])
+                        : (nBullets - holders[p]);
 
-                    var unk1 = fBul.ReadInt32();
-                    var nSections = fBul.ReadInt32();
+                    var holder = new BulletHolder();
 
-                    // data is 16-bit aligned
-                    var bDataOffset = Memory.Align(bulDataOffset + ((nSections * 4) + 8), 16);
-
-                    if (t3Count == 0)
-                        return;
-
-                    var bEntryOffset = bulDataOffset + 8;
-
-                    for (int i = 0; i < t3Count; i++)
+                    for (int b = 0; b < holderLen; b++)
                     {
-                        fBul.Position = bEntryOffset;
+                        if (nBulletsRead == nBullets)
+                            throw new InvalidOperationException($"Panel {p} expected {holderLen - b} more bullets when there's no more left!");
 
-                        var bEntry = fBul.ReadInt32();
-                        var bOffset = bDataOffset + (bEntry * 0x14);
+                        var bullet = BulletData.Unpack(f);
+                        ++nBulletsRead;
 
-                        var bUnk1 = 0;
-
-                        if ((i + 1) < nSections)
-                        {
-                            fBul.Position = bEntryOffset + 4;
-
-                            bUnk1 = fBul.ReadInt32();
-                        }
-                        else
-                        {
-                            bUnk1 = unk1;
-                        }
-
-                        if ((bUnk1 -= bEntry) > 0)
-                        {
-                            fBul.Position = (bOffset += 0xB);
-
-                            do
-                            {
-                                if (fBul.PeekByte() != 0)
-                                {
-                                    /*
-                                        005131D1 loc_5131D1:
-                                        005131D1  mov     ecx, [esp+150h+var_100]
-                                        005131D5  mov     byte ptr [ecx], 1
-                                    */
-                                    break;
-                                }
-
-                                fBul.Position = (bOffset += 0x14);
-
-                            } while (--bUnk1 > 0);
-                        }
-                        /*
-                            005131D8 loc_5131D8:                   ; Add
-                            005131D8  add     [esp+150h+var_144], 4
-                            005131DD  add     [esp+150h+var_100], 44h ; Add
-                            005131E2  mov     eax, edx
-                            005131E4  mov     edx, [ebx+18h]
-                            005131E7  movzx   ecx, [edx+AWHFData.nList3Entries] ; Move with Zero-Extend
-                            005131EB  cmp     eax, ecx             ; Compare Two Operands
-                            005131ED  jl      short read_bullet_data_section ; Jump if Less (SF!=OF)
-                        */
-
-                        bEntryOffset += 0x4;
+                        holder.Bullets.Add(bullet);
                     }
+
+                    BulletHolders.Add(holder);
                 }
             }
         }
@@ -697,9 +692,7 @@ namespace DSCript.Models
         {
             throw new NotImplementedException();
         }
-
         
-
         public void SaveVPK(string filename)
         {
             var version = 6;
@@ -707,11 +700,6 @@ namespace DSCript.Models
             // allocate 32mb buffer
             using (var fs = new MemoryStream(1024 * 32767))
             {
-                //fs.Fill(-1717986919);
-                
-                // go back to beginning
-                fs.Position = 0;
-
                 fs.Write(0xF12EB12D); // magic
                 fs.Write(version); // version
                 fs.Write(0); // reserved
@@ -851,101 +839,70 @@ namespace DSCript.Models
                         fs.Write(axis.Unknown3);
                         fs.Write(axis.Unknown4);
                     }
-
-                    // 128-bit alignment
-                    //fs.Align(128);
                 }
 
                 if (version >= 4)
                     fs.Align(16);
-
+                
                 var bulDataOffset = (int)fs.Position;
 
-                // write bullet hole data
-                if (version < 6)
-                {
-                    fs.Write(m_bulData);
-                }
-                else
-                {
-                    fs.Write(0x4C4C5542); // 'BULL'
-                    fs.Write((short)2); // version
-                    fs.Write((short)1); // data type (packed=0,unpacked=1)
-                }
+                var bulVersion = 2;
+                var bulType = (version < 6) ? 0 : 1; // packed=0, unpacked=1
+
+                var packBullets = (bulType == 0);
+
+                var nBullets = BulletCount;
+                var nHolders = BulletHolders.Count;
                 
-                var bulDataLog = new StringBuilder();
+                var bulletLog = new StringBuilder();
 
-                bulDataLog.AppendLine("# Bullet Hole Data Export Log");
+                bulletLog.AppendLine("# Bullet Hole Data Export Log");
+
+                bulletLog.AppendLine($"# Bullets: {nBullets}");
+                bulletLog.AppendLine($"# Holders: {nHolders}");
+                bulletLog.AppendLine();
+
+                // write bullet hole data!
+                fs.Write(0x4C4C5542); // 'BULL'
+                fs.Write((short)bulVersion);
+                fs.Write((short)bulType);
                 
-                // bullet hole data
-                using (var bulData = new MemoryStream(m_bulData))
+                fs.Write(nHolders);
+
+                var bulletIdx = 0;
+
+                for (int i = 0; i < nHolders; i++)
                 {
-                    var nBullets = bulData.ReadInt32();
-                    var nPanels = bulData.ReadInt32();
+                    var holder = BulletHolders[i];
+                    var nHolderBullets = holder.Bullets.Count;
 
-                    fs.Write(nPanels);
+                    bulletLog.AppendLine($"# -------- Holder {i + 1} -------- #");
+                    bulletLog.AppendLine($"# Bullets: {nHolderBullets}");
+                    bulletLog.AppendLine();
 
-                    var panels = new int[nPanels];
+                    fs.Write(nHolderBullets);
 
-                    for (int i = 0; i < nPanels; i++)
-                        panels[i] = bulData.ReadInt32();
-                    
-                    bulDataLog.AppendLine($"# Bullets: {nBullets}");
-                    bulDataLog.AppendLine($"# Panels: {nPanels}");
-                    bulDataLog.AppendLine();
-
-                    var headerSize = Memory.Align(0x8 + (nPanels * 0x4), 16);
-    
-                    bulData.Position = headerSize;
-                    
-                    var nBulletsRead = 0;
-                    
-                    for (int p = 0; p < nPanels; ++p)
+                    for (int b = 0; b < nHolderBullets; b++)
                     {
-                        var nPanelBullets = ((p + 1) != nPanels)
-                            ? (panels[p + 1] - panels[p])
-                            : (nBullets - panels[p]);
+                        var bullet = holder.Bullets[b];
 
-                        bulDataLog.AppendLine($"# -------- Panel {p + 1} -------- #");
-                        bulDataLog.AppendLine($"# Bullets: {nPanelBullets}");
-                        bulDataLog.AppendLine();
+                        bulletLog.AppendLine($"# Bullet {b + 1} ({bulletIdx + 1})");
+                        bulletLog.AppendLine($"type: {bullet.MaterialType}");
+                        bulletLog.AppendLine($"pos1: [{bullet.Position1.X,7:F4}, {bullet.Position1.Y,7:F4}, {bullet.Position1.Z,7:F4}]");
+                        bulletLog.AppendLine($"pos2: [{bullet.Position2.X,7:F4}, {bullet.Position2.Y,7:F4}, {bullet.Position2.Z,7:F4}]");
+                        bulletLog.AppendLine($"rot1: [{bullet.Rotation1.X,7:F4}, {bullet.Rotation1.Y,7:F4}, {bullet.Rotation1.Z,7:F4}]");
+                        bulletLog.AppendLine($"rot2: [{bullet.Rotation2.X,7:F4}, {bullet.Rotation2.Y,7:F4}, {bullet.Rotation2.Z,7:F4}]");
+                        bulletLog.AppendLine($"weight: {bullet.Weight:F4}");
+                        bulletLog.AppendLine();
 
-                        fs.Write(nPanelBullets);
+                        fs.Write(bullet.ToBinary(packBullets));
 
-                        for (int b = 0; b < nPanelBullets; b++)
-                        {
-                            // better safe than sorry! :)
-                            if (nBulletsRead == nBullets)
-                                throw new InvalidOperationException($"Panel {p} expected {nPanelBullets - b} more bullets when there's no more left!");
-
-                            var bytes = bulData.ReadBytes(0x14);
-                            ++nBulletsRead;
-
-                            var bullet = BulletData.Unpack(bytes);
-                            
-                            // some kind of normalized value
-                            // takes into account panel deformation + health (needs more research)
-                            //var offsetThing = ((1.0f - bullet.Weight) * 1.0f);
-
-                            bulDataLog.AppendLine($"# Bullet {b + 1} ({nBulletsRead})");
-                            bulDataLog.AppendLine($"type: {bullet.MaterialType}");
-                            bulDataLog.AppendLine($"pos1: [{bullet.Position1.X,7:F4}, {bullet.Position1.Y,7:F4}, {bullet.Position1.Z,7:F4}]");
-                            bulDataLog.AppendLine($"pos2: [{bullet.Position2.X,7:F4}, {bullet.Position2.Y,7:F4}, {bullet.Position2.Z,7:F4}]");
-                            bulDataLog.AppendLine($"rot1: [{bullet.Rotation1.X,7:F4}, {bullet.Rotation1.Y,7:F4}, {bullet.Rotation1.Z,7:F4}]");
-                            bulDataLog.AppendLine($"rot2: [{bullet.Rotation2.X,7:F4}, {bullet.Rotation2.Y,7:F4}, {bullet.Rotation2.Z,7:F4}]");
-                            bulDataLog.AppendLine($"weight: {bullet.Weight:F4}");
-                            bulDataLog.AppendLine();
-
-                            if (version >= 6)
-                            {
-                                fs.Write(bullet.ToBinary());
-                            }
-                        }
+                        ++bulletIdx;
                     }
                 }
 
                 var logfile = Path.ChangeExtension(filename, ".bullets.log");
-                File.WriteAllText(logfile, bulDataLog.ToString());
+                File.WriteAllText(logfile, bulletLog.ToString());
                 
                 // trim file
                 fs.SetLength(fs.Position);
