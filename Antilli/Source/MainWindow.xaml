@@ -60,7 +60,7 @@
 
         <Grid Grid.Column="0" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="255"/>
+                <ColumnDefinition Width="290"/>
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             
@@ -81,10 +81,12 @@
             
                 <!-- Lists -->
                 <GroupBox Header="Model Packages" Width="120" HorizontalAlignment="Left">
-                    <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}"/>
+                    <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
                 </GroupBox>
-                <GroupBox Header="Parts Groups" Width="120" HorizontalAlignment="Right">
-                    <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"/>
+                <GroupBox Header="Parts Groups"  Width="155" HorizontalAlignment="Right">
+                    <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"
+                             FontFamily="Consolas"
+                             FontStretch="UltraCondensed" />
                 </GroupBox>
 
                 <!-- Rendering options -->

@@ -33,14 +33,31 @@ namespace Antilli
         {
             get
             {
-                var grp = (UID >> 24) & 0xFF;
-                var id = UID & 0xFFFFFF;
+                //var bin = (UID >> 24) & 0xFF;
+                //var grp = (UID >> 16) & 0xFF;
+                
+                /*
+                var u1 = (Handle >> 24) & 0xFF;
+                var u2 = Handle & 0xFFFFFF;
 
-                return (!IsNull) ? $"{grp:X2}:{id:X6}" : "<NULL>";
+                var id1 = ((UID >> 24) & 0xFF) | (u2 << 8);
+                var id2 = (UID >> 16) & 0xFF;
+                var id3 = (UID & 0x3FFF);
+                */
+
+                var id1 = (Handle >> 8) & 0xFFFFFF;
+                var id2 = Handle & 0xFF;
+
+                var id3 = (UID & 0xFFFF);
+                var id4 = (UID >> 16) & 0xFFFF;
+
+
+                return (!IsNull) ? $"{id1:X6}:{id2:X2}:{id3:X4}:{id4:X4}" : "<NULL>";
             }
         }
 
         public int UID { get; private set; }
+        public int Handle { get; private set; }
 
         public bool IsNull
         {
@@ -63,6 +80,7 @@ namespace Antilli
             ModelPackage = modelPackage;
 
             UID = partBasedOn.UID;
+            Handle = partBasedOn.Handle;
 
             Parts = new List<PartsGroup>();
 

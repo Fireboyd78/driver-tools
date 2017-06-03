@@ -137,31 +137,7 @@ namespace Antilli
                 }));
             }
         }
-
-        private int currentLod = 0;
-
-        private Dictionary<int, RadioButton> lodButtons;
-
-        public int CurrentLod
-        {
-            get { return currentLod; }
-            set
-            {
-                if (SetValue(ref currentLod, value, "CurrentLod"))
-                {
-                    if (Viewer.SelectedModel != null)
-                        Viewer.OnModelDeselected();
-
-                    var selectedItem = Viewer.ModelsList.GetSelectedContainer();
-
-                    if (selectedItem != null)
-                        selectedItem.IsSelected = false;
-
-                    LoadSelectedModel();
-                }
-            }
-        }
-
+        
         public Driv3rModelFile ModelFile
         {
             get { return _modelFile; }
@@ -307,78 +283,140 @@ namespace Antilli
             }));
         }
 
-        public void ResetLODButtons()
+        // HACK: Hold a reference to the radio buttons so we resolve their tags only once.
+        // There's probably a better way to do this, but it works!
+        private RadioButton[] m_lodBtnRefs = new RadioButton[7];
+        private RadioButton m_curLodBtn;
+        
+        private void ResetLODButtons()
         {
-            foreach (RadioButton lod in LODButtons.Children)
-                lod.IsEnabled = false;
-
-            if (SelectedModelGroup != null)
+            foreach (var lodBtn in m_lodBtnRefs)
             {
-                foreach (PartsGroup part in SelectedModelGroup.Parts)
-                foreach (PartDefinition partDef in part.Parts)
-                foreach (var group in partDef.Groups)
+                // may be null refs!
+                if (lodBtn != null)
                 {
-                    if (group == null)
-                        continue;
+                    lodBtn.IsEnabled = false;
+                    lodBtn.IsChecked = false;
+                }
+            }
 
-                    foreach (ToggleButton lod in LODButtons.Children)
+            m_curLodBtn = null;
+        }
+
+        public void UpdateLODButtons()
+        {
+            ResetLODButtons();
+
+            // ignore empty models
+            if (SelectedModelGroup == null)
+                return;
+            
+            foreach (var part in SelectedModelGroup.Parts)
+            {
+                foreach (var partDef in part.Parts)
+                {
+                    var lod = partDef.ID;
+                    var lodBtn = m_lodBtnRefs[lod];
+
+                    if (lodBtn != null)
                     {
-                        if (int.Parse((string)lod.Tag) == partDef.ID)
-                            lod.IsEnabled = true;
+                        if (partDef.Groups.Count > 0)
+                        {
+                            lodBtn.IsEnabled = true;
+
+                            if (m_curLodBtn == null)
+                            {
+                                // button must be checked BEFORE setting the ref!
+                                lodBtn.IsChecked = true;
+                                m_curLodBtn = lodBtn;
+                            }
+                        }
                     }
                 }
             }
         }
 
-        public void LoadSelectedModel()
+        public int GetCurrentLod()
+        {
+            for (int i = 0; i < m_lodBtnRefs.Length; i++)
+            {
+                var lodBtn = m_lodBtnRefs[i];
+
+                if (lodBtn == null)
+                    continue;
+                
+                if (m_curLodBtn != null && (lodBtn == m_curLodBtn))
+                    return i;
+            }
+
+            // invalid!
+            return -1;
+        }
+        
+        public void LoadSelectedModel(bool updateLods)
         {
             var stopwatch = new Stopwatch();
 
             stopwatch.Start();
+            
+            if (Viewer.SelectedModel != null)
+                Viewer.OnModelDeselected();
 
-            ResetLODButtons();
+            var selectedItem = Viewer.ModelsList.GetSelectedContainer();
 
-            var lodButton = lodButtons[CurrentLod];
+            if (selectedItem != null)
+                selectedItem.IsSelected = false;
+            
+            if (updateLods)
+                UpdateLODButtons();
 
-            if (lodButton.IsEnabled && lodButton.IsChecked == false)
-                lodButton.IsChecked = true;
-            else if (!lodButton.IsEnabled)
+            var lod = GetCurrentLod();
+
+            if (lod == -1)
             {
-                CurrentLod = 0;
-                BlendWeights.Visibility = System.Windows.Visibility.Collapsed;
+                ResetLODButtons();
+                Viewer.ClearModels();
+
                 return;
             }
 
-            BlendWeights.Visibility = ((SelectedModelGroup.Parts[0].VertexBuffer.HasBlendWeights)) ? Visibility.Visible : Visibility.Collapsed;
-
             var models = new List<ModelVisual3DGroup>();
-            
+
             foreach (var part in SelectedModelGroup.Parts)
             {
-                var partDef = part.Parts[CurrentLod];
+                var partDef = part.Parts[lod];
 
-                if (partDef.Groups == null || partDef.Groups.Count == 0)
+                if (partDef.Groups == null)
                     continue;
 
-                var group = partDef.Groups[0];
+                var meshes = new ModelVisual3DGroup();
 
-                if (group == null)
-                    continue;
-
-                var parts = new ModelVisual3DGroup();
-                
-                foreach (var prim in group.Meshes)
+                foreach (var group in partDef.Groups)
                 {
-                    //Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, new ThreadStart(() => {
-                        parts.Children.Add(new DriverModelVisual3D(prim, Viewer.UseBlendWeights));
-                    //}));
+                    foreach (var mesh in group.Meshes)
+                    {
+                        //Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, new ThreadStart(() => {
+                        meshes.Children.Add(new DriverModelVisual3D(mesh, Viewer.UseBlendWeights));
+                        //}));
+                    }
                 }
-
-                models.Add(parts);
+                
+                if (meshes.Children.Count > 0)
+                    models.Add(meshes);
             }
 
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new ThreadStart(() => {
-                Viewer.SetDriv3rModel(models);
+                if (models.Count > 0)
+                {
+                    // set the new model
+                    Viewer.SetDriv3rModel(models);
+                }
+                else
+                {
+                    // just clear the models
+                    Viewer.ClearModels();
+                    Viewer.Viewport.SetDebugInfo("Level of detail contains no valid models.");
+                }
             }));
         }
         
@@ -524,7 +562,7 @@ namespace Antilli
                     tex.Texture.Width = Convert.ToUInt16(bmap.Width);
                     tex.Texture.Height = Convert.ToUInt16(bmap.Height);
 
-                    LoadSelectedModel();
+                    LoadSelectedModel(false);
 
                     if (IsTextureViewerOpen)
                         TextureViewer.ReloadTexture();
@@ -572,23 +610,44 @@ namespace Antilli
             Viewer.MainWindow = this;
 
             Packages.SelectionChanged += OnModelPackageSelected;
-            Groups.SelectionChanged += (o, e) => LoadSelectedModel();
-
-            lodButtons = new Dictionary<int, RadioButton>(LODButtons.Children.Count);
-
-            foreach (RadioButton lod in LODButtons.Children)
-            {
-                int id = int.Parse((string)lod.Tag);
-                lodButtons.Add(id, lod);
-
-                lod.Checked += (o, e) => {
-                    if (id != CurrentLod)
-                        CurrentLod = id;
-                };
-            }
-
+            Groups.SelectionChanged += (o, e) => LoadSelectedModel(true);
+            
             BlendWeights.Checked += (o, e) => Viewer.ToggleBlendWeights();
             BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
+
+            for (int i = 0; i < LODButtons.Children.Count; i++)
+            {
+                var lodBtn = LODButtons.Children[i] as RadioButton;
+
+                // just incase a non-radio button tries to sneak in
+                if (lodBtn == null)
+                    continue;
+
+                // this should be considered a crime!
+                var lodLevel = int.Parse((string)lodBtn.Tag);
+
+                // this is definitely an error, but we'll fail silently instead
+                if (lodLevel >= m_lodBtnRefs.Length)
+                    continue;
+
+                // add a unique Checked handler
+                lodBtn.Checked += (o, e) => {
+                    var curBtn = o as RadioButton;
+
+                    // only fire a new model selection event if absolutely necessary
+                    if (m_curLodBtn == null || (m_curLodBtn.IsChecked ?? false))
+                        return;
+
+                    if (curBtn != m_curLodBtn)
+                    {
+                        m_curLodBtn = curBtn;
+                        LoadSelectedModel(false);
+                    }
+                };
+
+                // finally, add the reference!
+                m_lodBtnRefs[lodLevel] = lodBtn;
+            }
 
             fileOpen.Click += (o, e) => OpenFile();
             
