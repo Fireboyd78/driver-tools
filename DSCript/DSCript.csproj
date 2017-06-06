@@ -79,6 +79,7 @@
     <Compile Include="IO\ModelFile.cs" />
     <Compile Include="IO\ObjFile.cs" />
     <Compile Include="Models\FVFType.cs" />
+    <Compile Include="Models\Hierarchy\HierarchyData.cs" />
     <Compile Include="Models\Hierarchy\VehicleHierarchyData.cs" />
     <Compile Include="Models\Materials\MaterialData.cs" />
     <Compile Include="Models\Materials\SubstanceData.cs" />
