@@ -23,6 +23,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
+using System.Windows.Threading;
 
 using System.Xml;
 
@@ -44,21 +45,7 @@ namespace Antilli
     public partial class MainWindow : AntilliWindow
     {
         private Driv3rModelFile _modelFile;
-
-        public static readonly string[] Filters = new []{
-            "All supported files|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk;",
-            //"Driver: San Francisco|dngvehicles.sp;san_francisco.dngc",
-            "Any file|*.*"
-        };
-
-        static OpenFileDialog OpenDialog = new OpenFileDialog() {
-            CheckFileExists  = true,
-            CheckPathExists  = true,
-            Filter           = String.Join("|", Filters),
-            InitialDirectory = Driv3r.RootDirectory,
-            ValidateNames    = true,
-        };
-
+        
         public TextureViewer TextureViewer { get; private set; }
         public MaterialEditor MaterialEditor { get; private set; }
         public MaterialEditor GlobalMaterialEditor { get; private set; }
@@ -67,77 +54,105 @@ namespace Antilli
         /// Gets the command line arguments that were passed to the application from either the command prompt or the desktop.
         /// </summary>
         public string[] CommandLineArgs { get; private set; }
+        
+        private int m_currentTab;
+
+        public int CurrentTab
+        {
+            get { return m_currentTab; }
+            set
+            {
+                m_currentTab = value;
+                // TODO: Temporarily unload stuff?
+            }
+        }
+
+        private void LoadDriv3rVehicles(string filename)
+        {
+            var vehicleFile = new Driv3rVehiclesFile(filename);
+
+            var city = Driv3r.GetCityFromFileName(filename);
+            var vgtFile = "";
+
+            if (city != Driv3r.City.Unknown)
+                vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
+
+            if (File.Exists(vgtFile))
+                vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
+
+            if (vehicleFile.HasVehicleGlobals)
+            {
+                viewGlobalMaterials.Visibility = Visibility.Visible;
+
+                if (IsGlobalMaterialEditorOpen)
+                    GlobalMaterialEditor.UpdateMaterials();
+            }
+            else
+            {
+                if (IsGlobalMaterialEditorOpen)
+                {
+                    GlobalMaterialEditor.Close();
+                    viewGlobalMaterials.Visibility = Visibility.Collapsed;
+                }
+
+                viewGlobalMaterials.Visibility = Visibility.Collapsed;
+            }
+
+            ModelFile = vehicleFile;
+        }
+
+        private void OnFileOpened(string filename)
+        {
+            var extension = Path.GetExtension(filename).ToLower();
+            var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
+
+            if (filter.Flags == GameFileFlags.None)
+            {
+                MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            
+            var timer = new Stopwatch();
+            timer.Start();
+            
+            switch (extension)
+            {
+            case ".vvs":
+            case ".vvv":
+                LoadDriv3rVehicles(filename);
+                break;
+            default:
+                ModelFile = new Driv3rModelFile(filename);
+                break;
+            }
+
+            SubTitle = filename;
+
+            if (ModelFile.HasModels)
+            {
+                Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
+
+                viewTextures.IsEnabled = true;
+                viewMaterials.IsEnabled = true;
+            }
+
+            timer.Stop();
+
+            DSC.Update($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
+        }
 
         public void OpenFile()
         {
-            if (OpenDialog.ShowDialog() ?? false)
+            var dialog = FileManager.Driv3rOpenDialog;
+
+            if (dialog.ShowDialog() ?? false)
             {
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new ThreadStart(() => {
-                    var timer = new Stopwatch();
-
-                    timer.Start();
-
-                    var filename = OpenDialog.FileName;
-
-                    switch (Path.GetExtension(filename).ToLower())
-                    {
-                    case ".vvs":
-                    case ".vvv":
-                        {
-                            var vehicleFile = new Driv3rVehiclesFile(filename);
-
-                            var city = Driv3r.GetCityFromFileName(filename);
-                            var vgtFile = "";
-
-                            if (city != Driv3r.City.Unknown)
-                                vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
-
-                            if (File.Exists(vgtFile))
-                                vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
-
-                            if (vehicleFile.HasVehicleGlobals)
-                            {
-                                viewGlobalMaterials.Visibility = Visibility.Visible;
-
-                                if (IsGlobalMaterialEditorOpen)
-                                    GlobalMaterialEditor.UpdateMaterials();
-                            }
-                            else
-                            {
-                                if (IsGlobalMaterialEditorOpen)
-                                {
-                                    GlobalMaterialEditor.Close();
-                                    viewGlobalMaterials.Visibility = Visibility.Collapsed;
-                                }
-
-                                viewGlobalMaterials.Visibility = Visibility.Collapsed;
-                            }
-
-                            ModelFile = vehicleFile;
-                        }
-                        break;
-                    default:
-                        ModelFile = new Driv3rModelFile(filename);
-                        break;
-                    }
-
-                    if (ModelFile.HasModels)
-                    {
-                        SubTitle = filename;
-
-                        Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
-
-                        viewTextures.IsEnabled = true;
-                        viewMaterials.IsEnabled = true;
-                    }
-
-                    timer.Stop();
-
-                    DSC.Update($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
+                Dispatcher.BeginInvoke(DispatcherPriority.Input, new ThreadStart(() => {
+                    OnFileOpened(dialog.FileName);
                 }));
             }
         }
-        
+
         public Driv3rModelFile ModelFile
         {
             get { return _modelFile; }
@@ -238,7 +253,7 @@ namespace Antilli
 
         public void OnModelPackageSelected(object sender, SelectionChangedEventArgs e)
         {
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new ThreadStart(() => {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new ThreadStart(() => {
 
             if (Viewer.SelectedModel != null)
                 Viewer.SelectedModel = null;
@@ -405,7 +420,7 @@ namespace Antilli
                     models.Add(meshes);
             }
 
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new ThreadStart(() => {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new ThreadStart(() => {
                 if (models.Count > 0)
                 {
                     // set the new model
@@ -587,7 +602,7 @@ namespace Antilli
                 //    Viewer.Viewport.SetDebugInfo(progress_str);
                 //}));
 
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new ThreadStart(() => {
+                Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new ThreadStart(() => {
                     Console.WriteLine($"[INFO] {progress_str}");
                 }));
             };

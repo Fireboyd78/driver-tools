@@ -11,11 +11,11 @@
         xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
         xmlns:dscm="clr-namespace:DSCript.Models;assembly=libDSC"
         mc:Ignorable="d" DataContext="{Binding RelativeSource={RelativeSource Self}}">
-    
+
     <at:AntilliWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-            <GradientStop Color="#FF282828" Offset="0.75" />
-            <GradientStop Color="#FF101010" Offset="1" />
+            <GradientStop Color="#FF1C1C1C" Offset="1" />
+            <GradientStop Color="#FF101010" Offset="0.925" />
         </LinearGradientBrush>
     </at:AntilliWindow.Background>
 
@@ -23,9 +23,10 @@
         <Grid.RowDefinitions>
             <!-- Toolbar -->
             <RowDefinition Height="25"/>
-            
+
             <!-- Content -->
             <RowDefinition Height="*"/>
+            <RowDefinition Height="5"/>
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
@@ -58,65 +59,199 @@
             </MenuItem>
         </Menu>
 
-        <Grid Grid.Column="0" Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="290"/>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            
-            <!-- Left column -->
-            <Grid Grid.Column="0" Margin="5">
-                <Grid.RowDefinitions>
-                    <RowDefinition/>
-                    <RowDefinition Height="90" MinHeight="90"/>
-                </Grid.RowDefinitions>
-                <Grid.Resources>
-                    <DataTemplate DataType="{x:Type dscm:ModelPackage}">
-                        <TextBlock Text="Model Package"/>
-                    </DataTemplate>
-                    <DataTemplate DataType="{x:Type at:ModelGroupListItem}">
-                        <TextBlock Text="{Binding Text}"/>
-                    </DataTemplate>
-                </Grid.Resources>
-            
-                <!-- Lists -->
-                <GroupBox Header="Model Packages" Width="120" HorizontalAlignment="Left">
-                    <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
-                </GroupBox>
-                <GroupBox Header="Parts Groups"  Width="155" HorizontalAlignment="Right">
-                    <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"
+        <TabControl Grid.Row="1" Style="{StaticResource atTabControlStyle}" SelectedIndex="{Binding CurrentTab}">
+            <TabControl.Background>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                    <GradientStop Color="#FF282828" Offset="0.625" />
+                    <GradientStop Color="#FF101010" Offset="1" />
+                </LinearGradientBrush>
+            </TabControl.Background>
+
+            <TabItem Header="Models">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="290"/>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left column -->
+                    <Grid Grid.Column="0" Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition Height="90" MinHeight="90"/>
+                        </Grid.RowDefinitions>
+                        <Grid.Resources>
+                            <DataTemplate DataType="{x:Type dscm:ModelPackage}">
+                                <TextBlock Text="Model Package"/>
+                            </DataTemplate>
+                            <DataTemplate DataType="{x:Type at:ModelGroupListItem}">
+                                <TextBlock Text="{Binding Text}"/>
+                            </DataTemplate>
+                        </Grid.Resources>
+
+                        <!-- Lists -->
+                        <GroupBox Header="Model Packages" Width="120" HorizontalAlignment="Left">
+                            <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
+                        </GroupBox>
+                        <GroupBox Header="Parts Groups"  Width="155" HorizontalAlignment="Right">
+                            <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"
                              FontFamily="Consolas"
                              FontStretch="UltraCondensed" />
-                </GroupBox>
+                        </GroupBox>
 
-                <!-- Rendering options -->
-                <GroupBox Grid.Row="1" Margin="0,5,0,0" Header="Rendering Options">
-                    <StackPanel Orientation="Vertical" x:Name="RenderingOptionsGrid" Style="{StaticResource LODBox}">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
-                            <Label Content="Level of Detail:" Margin="5" Padding="2" />
-                            <StackPanel x:Name="LODButtons" Margin="5" Orientation="Horizontal">
-                                <StackPanel.Resources>
-                                    <Style TargetType="RadioButton" BasedOn="{StaticResource RadioToggleButtonStyle_LOD}">
-                                        <Setter Property="Margin" Value="0,0,5,0"/>
-                                    </Style>
-                                </StackPanel.Resources>
-                                <RadioButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"/>
-                                <RadioButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"/>
-                                <RadioButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"/>
-                                <RadioButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low"/>
-                                <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"/>
-                            </StackPanel>
-                        </StackPanel>
-                        <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
+                        <!-- Rendering options -->
+                        <GroupBox Grid.Row="1" Margin="0,5,0,0" Header="Rendering Options">
+                            <StackPanel Orientation="Vertical" x:Name="RenderingOptionsGrid" Style="{StaticResource LODBox}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                                    <Label Content="Level of Detail:" Margin="5" Padding="2" />
+                                    <StackPanel x:Name="LODButtons" Margin="5" Orientation="Horizontal">
+                                        <StackPanel.Resources>
+                                            <Style TargetType="RadioButton" BasedOn="{StaticResource RadioToggleButtonStyle_LOD}">
+                                                <Setter Property="Margin" Value="0,0,5,0"/>
+                                            </Style>
+                                        </StackPanel.Resources>
+                                        <RadioButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"/>
+                                        <RadioButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"/>
+                                        <RadioButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"/>
+                                        <RadioButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low"/>
+                                        <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
                                   Visibility="Collapsed" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_border}" Focusable="False" Margin="5"/>
-                    </StackPanel>
-                </GroupBox>
-            </Grid>
-            
-            <!-- Viewer -->
-            <Grid Grid.Column="1" Grid.Row="1" Margin="0,5,5,5">
-                <at:ModelViewer x:Name="Viewer"/>
-            </Grid>
-        </Grid>
+                            </StackPanel>
+                        </GroupBox>
+                    </Grid>
+
+                    <!-- Viewer -->
+                    <Grid Grid.Column="1" Grid.Row="1" Margin="0,5,5,5">
+                        <at:ModelViewer x:Name="Viewer"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Materials">
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.Resources>
+                        <HierarchicalDataTemplate DataType="{x:Type at:MaterialTreeItem}"
+                                ItemsSource="{Binding Path=Substances}">
+                            <TextBlock Text="{Binding Path=Name}"/>
+                        </HierarchicalDataTemplate>
+
+                        <HierarchicalDataTemplate DataType="{x:Type at:SubstanceTreeItem}"
+                                ItemsSource="{Binding Path=Textures}">
+                            <TextBlock Text="{Binding Path=Name}"/>
+                        </HierarchicalDataTemplate>
+
+                        <DataTemplate DataType="{x:Type dscm:TextureData}">
+                            <TextBlock Text="Texture">
+                                <!--
+                                <TextBlock.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Replace..." Click="ReplaceTexture"/>
+                                        <Separator/>
+                                        <MenuItem Header="Export" Click="ExportTexture"/>
+                                    </ContextMenu>
+                                </TextBlock.ContextMenu>
+                                -->
+                            </TextBlock>
+                        </DataTemplate>
+                    </Grid.Resources>
+
+                    <GroupBox x:Name="MaterialsBox" Header="Materials" Grid.Column="0" Grid.Row="0">
+                        <TreeView x:Name="MaterialsList" ItemsSource="{Binding Materials}">
+                            <TreeView.ContextMenu>
+                                <ContextMenu Visibility="Hidden">
+                                    <MenuItem x:Name="addMtlMenu" Header="New...">
+                                        <MenuItem Header="Standard Material" Tag="STANDARD" ToolTip="A standard material with one (1) texture state for an object."/>
+                                        <Separator/>
+                                        <MenuItem Header="Vehicle Material">
+                                            <MenuItem Header="Body">
+                                                <MenuItem Header="Color Mask, Damages" Tag="VBD1" ToolTip="A material with clean/damaged textures and a color mask."/>
+                                                <MenuItem Header="No Mask, Damages" Tag="VBD2" ToolTip="A material with clean/damaged textures, but no color mask."/>
+                                                <Separator/>
+                                                <MenuItem Header="Color Mask, No Damage" Tag="VB1" ToolTip="A material with clean textures and a color mask."/>
+                                                <MenuItem Header="No Mask, No Damage" Tag="VB2" ToolTip="A material with clean/damaged textures, but no color mask."/>
+                                            </MenuItem>
+                                            <MenuItem Header="Wheel">
+                                                <MenuItem Header="1-State" Tag="WH1" ToolTip="A material with one (1) texture state for a wheel."/>
+                                                <MenuItem Header="4-State" Tag="WH4" ToolTip="A material with four (4) texture states for a wheel."/>
+                                            </MenuItem>
+                                        </MenuItem>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </TreeView.ContextMenu>
+                        </TreeView>
+                    </GroupBox>
+
+                    <Border BorderThickness="1" Grid.Column="1" Grid.Row="0" Margin="5,0,0,0">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="5">
+                            <Grid>
+                                <TextBlock x:Name="InfoBox" Text="{Binding ContentInfo}" FontFamily="Consolas" Visibility="Collapsed"/>
+                                <Image x:Name="TextureBox" Source="{Binding CurrentTexture}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Grid Grid.ColumnSpan="2" Grid.RowSpan="2" Background="Black" Opacity="0.35" Panel.ZIndex="1" />
+                    <TextBlock Grid.ColumnSpan="2" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Panel.ZIndex="2" FontSize="25">WORK IN PROGRESS ;)</TextBlock>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Textures">
+                <Grid Margin="5,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.Resources>
+                        <DataTemplate DataType="{x:Type dscm:TextureData}">
+                            <TextBlock Text="{Binding CRC32}">
+                                <!--
+                                <TextBlock.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Replace..." Click="ReplaceTexture"/>
+                                        <Separator/>
+                                        <MenuItem Header="Export" Click="ExportTexture"/>
+                                    </ContextMenu>
+                                </TextBlock.ContextMenu>
+                                -->
+                            </TextBlock>
+                        </DataTemplate>
+                    </Grid.Resources>
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="1*"/>
+                            <RowDefinition Height="1*"/>
+                        </Grid.RowDefinitions>
+
+                        <GroupBox Header="Textures" Grid.Row="0">
+                            <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}"/>
+                        </GroupBox>
+                        <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,5,0,0" Visibility="{Binding HasGlobals}">
+                            <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}"/>
+                        </GroupBox>
+                    </Grid>
+
+                    <Border BorderThickness="1" Grid.Column="1" Grid.Row="0" Margin="5,0,0,0">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto"  VerticalScrollBarVisibility="Auto" Padding="5">
+                            <Grid>
+                                <Image x:Name="txTextureBox" Source="{Binding Texture}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Grid Grid.ColumnSpan="2" Grid.RowSpan="2" Background="Black" Opacity="0.35" Panel.ZIndex="1" />
+                    <TextBlock Grid.ColumnSpan="2" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Panel.ZIndex="2" FontSize="25">WORK IN PROGRESS ;)</TextBlock>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </at:AntilliWindow>
