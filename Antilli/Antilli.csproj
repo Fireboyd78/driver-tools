@@ -74,6 +74,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Source\Antilli.cs" />
     <None Include="$(SrcDir)App.config" />
     <Compile Include="$(SrcDir)ModelGroupListItem.cs" />
     <Compile Include="$(SrcDir)ModelListItem.cs" />
