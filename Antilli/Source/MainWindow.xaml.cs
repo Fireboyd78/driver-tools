@@ -302,6 +302,11 @@ namespace Antilli
         // There's probably a better way to do this, but it works!
         private RadioButton[] m_lodBtnRefs = new RadioButton[7];
         private RadioButton m_curLodBtn;
+
+        /*
+            This whole LOD system is a hacked-together piece of S#@%!
+            It might as well be held together with toothpicks and broken dreams!
+        */
         
         private void ResetLODButtons()
         {
@@ -320,8 +325,6 @@ namespace Antilli
 
         public void UpdateLODButtons()
         {
-            ResetLODButtons();
-
             // ignore empty models
             if (SelectedModelGroup == null)
                 return;
@@ -333,18 +336,25 @@ namespace Antilli
                     var lod = partDef.ID;
                     var lodBtn = m_lodBtnRefs[lod];
 
+                    var hasSubModels = (partDef.Groups.Count > 0);
+
                     if (lodBtn != null)
                     {
-                        if (partDef.Groups.Count > 0)
-                        {
-                            lodBtn.IsEnabled = true;
+                        lodBtn.IsEnabled = hasSubModels;
 
-                            if (m_curLodBtn == null)
-                            {
-                                // button must be checked BEFORE setting the ref!
-                                lodBtn.IsChecked = true;
-                                m_curLodBtn = lodBtn;
-                            }
+                        if (m_curLodBtn == null)
+                        {
+                            // button must be checked BEFORE setting the ref!
+                            lodBtn.IsChecked = hasSubModels;
+                            m_curLodBtn = lodBtn;
+                        }
+
+                        if (!hasSubModels && !m_curLodBtn.IsEnabled)
+                        {
+                            // this seems incredibly hackish...
+                            m_curLodBtn.IsChecked = false;
+                            m_curLodBtn = m_lodBtnRefs[0];
+                            m_curLodBtn.IsChecked = true;
                         }
                     }
                 }
