@@ -118,7 +118,7 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
-                                  Visibility="Collapsed" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_border}" Focusable="False" Margin="5"/>
+                                  Visibility="{Binding BlendWeightsVisible}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                             </StackPanel>
                         </GroupBox>
                     </Grid>

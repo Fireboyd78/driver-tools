@@ -204,7 +204,7 @@ namespace Antilli
                         curPart = part;
                     }
                 }
-
+                
                 return items;
             }
         }
@@ -271,14 +271,7 @@ namespace Antilli
             // see if we need to load it
             if (!SelectedModelPackage.HasModels)
                 SelectedModelPackage.GetInterface().Load();
-
-            /* TODO: FIX ME
-            if (!modelPackage.HasBlendWeights && UseBlendWeights)
-                UseBlendWeights = false;
-
-            BlendWeights.Visibility = (modelPackage.HasBlendWeights) ? Visibility.Visible : System.Windows.Visibility.Hidden;
-            */
-
+            
             OnPropertyChanged("ModelGroups");
 
             if (SelectedModelPackage.HasModels)
@@ -290,7 +283,7 @@ namespace Antilli
                 Groups.SelectedIndex = -1;
                 Viewer.Visuals = null;
             }
-
+            
             if (IsTextureViewerOpen)
                 TextureViewer.UpdateTextures();
             if (IsMaterialEditorOpen)
@@ -298,21 +291,36 @@ namespace Antilli
             }));
         }
 
-        // HACK: Hold a reference to the radio buttons so we resolve their tags only once.
-        // There's probably a better way to do this, but it works!
-        private RadioButton[] m_lodBtnRefs = new RadioButton[7];
-        private RadioButton m_curLodBtn;
+        private bool m_hasBlendWeights;
 
-        /*
-            This whole LOD system is a hacked-together piece of S#@%!
-            It might as well be held together with toothpicks and broken dreams!
-        */
-        
-        private void ResetLODButtons()
+        public bool HasBlendWeights
         {
+            get { return m_hasBlendWeights; }
+            set
+            {
+                m_hasBlendWeights = value;
+                OnPropertyChanged("BlendWeightsVisible");
+            }
+        }
+
+        public Visibility BlendWeightsVisible
+        {
+            get { return (m_hasBlendWeights) ? Visibility.Visible : Visibility.Collapsed; }
+        }
+        
+        private RadioButton[] m_lodBtnRefs = new RadioButton[7];
+
+        private bool m_allowLodChanges = true;
+        private bool m_blockNextLodChange = false;
+
+        private int m_curLod = 0;
+
+        public void ResetLODButtons()
+        {
+            m_allowLodChanges = false;
+
             foreach (var lodBtn in m_lodBtnRefs)
             {
-                // may be null refs!
                 if (lodBtn != null)
                 {
                     lodBtn.IsEnabled = false;
@@ -320,68 +328,122 @@ namespace Antilli
                 }
             }
 
-            m_curLodBtn = null;
+            m_allowLodChanges = true;
         }
 
-        public void UpdateLODButtons()
+        public void OnLevelOfDetailChanged(int oldLod = -1)
         {
-            // ignore empty models
-            if (SelectedModelGroup == null)
-                return;
-            
-            foreach (var part in SelectedModelGroup.Parts)
+            if (oldLod != -1)
             {
-                foreach (var partDef in part.Parts)
+                if (oldLod != m_curLod)
+                    m_lodBtnRefs[oldLod].IsChecked = false;
+            }
+            else
+            {
+                if (oldLod != m_curLod)
                 {
-                    var lod = partDef.ID;
-                    var lodBtn = m_lodBtnRefs[lod];
+                    var lodBtn = m_lodBtnRefs[m_curLod];
 
-                    var hasSubModels = (partDef.Groups.Count > 0);
-
-                    if (lodBtn != null)
+                    if (lodBtn.IsChecked != true)
                     {
-                        lodBtn.IsEnabled = hasSubModels;
-
-                        if (m_curLodBtn == null)
-                        {
-                            // button must be checked BEFORE setting the ref!
-                            lodBtn.IsChecked = hasSubModels;
-                            m_curLodBtn = lodBtn;
-                        }
-
-                        if (!hasSubModels && !m_curLodBtn.IsEnabled)
-                        {
-                            // this seems incredibly hackish...
-                            m_curLodBtn.IsChecked = false;
-                            m_curLodBtn = m_lodBtnRefs[0];
-                            m_curLodBtn.IsChecked = true;
-                        }
+                        m_blockNextLodChange = true;
+                        lodBtn.IsChecked = true;
                     }
                 }
             }
+
+            if (m_curLod != -1)
+            {
+                if (oldLod != m_curLod)
+                    LoadSelectedModel(false);
+            }
+            else
+            {
+                Viewer.ClearModels();
+                Viewer.Viewport.SetDebugInfo("No valid levels of detail in model.");
+
+                ResetLODButtons();
+            }
         }
 
-        public int GetCurrentLod()
+        public int LevelOfDetail
         {
-            for (int i = 0; i < m_lodBtnRefs.Length; i++)
+            get { return m_curLod; }
+            set
+            {
+                var lod = value;
+                var lodBtn = m_lodBtnRefs[lod];
+
+                if (lodBtn == null)
+                {
+                    var newLod = -1;
+
+                    for (int i = 0; i < 7; i++)
+                    {
+                        if (m_lodBtnRefs[i] != null)
+                        {
+                            newLod = i;
+                            break;
+                        }
+                    }
+                    
+                    lod = newLod;
+                }
+
+                var oldLod = m_curLod;
+                m_curLod = lod;
+
+                OnLevelOfDetailChanged(oldLod);
+            }
+        }
+        
+        public void UpdateRenderingOptions()
+        {
+            var checkBlendWeights = true;
+
+            var lodCount = new int[7];
+
+            foreach (var part in SelectedModelGroup.Parts)
+            {
+                // run this check once to prevent unnecessary slowdown
+                if (checkBlendWeights)
+                {
+                    checkBlendWeights = false;
+                    HasBlendWeights = part.VertexBuffer.HasBlendWeights;
+                }
+                
+                // count all possible LODs
+                for (int i = 0; i < 7; i++)
+                {
+                    var partDef = part.Parts[i];
+
+                    if (partDef == null)
+                        continue;
+
+                    if (partDef.Groups.Count > 0)
+                        lodCount[i] += 1;
+                }
+            }
+
+            // enable LODs if more than one model present
+            for (int i = 0; i < 7; i++)
             {
                 var lodBtn = m_lodBtnRefs[i];
 
-                if (lodBtn == null)
-                    continue;
-                
-                if (m_curLodBtn != null && (lodBtn == m_curLodBtn))
-                    return i;
+                if (lodBtn != null)
+                    lodBtn.IsEnabled = (lodCount[i] > 0);
             }
-
-            // invalid!
-            return -1;
         }
         
-        public void LoadSelectedModel(bool updateLods)
+        public void LoadSelectedModel(bool fullUpdate)
         {
-            var stopwatch = new Stopwatch();
+            if (SelectedModelGroup == null)
+            {
+                Groups.SelectedIndex = 0;
+                return;
+            }
 
+            var stopwatch = new Stopwatch();
             stopwatch.Start();
             
             if (Viewer.SelectedModel != null)
@@ -391,25 +453,20 @@ namespace Antilli
 
             if (selectedItem != null)
                 selectedItem.IsSelected = false;
-            
-            if (updateLods)
-                UpdateLODButtons();
 
-            var lod = GetCurrentLod();
-
-            if (lod == -1)
+            if (fullUpdate)
             {
                 ResetLODButtons();
-                Viewer.ClearModels();
+                UpdateRenderingOptions();
 
-                return;
+                OnLevelOfDetailChanged(-1);
             }
-
+            
             var models = new List<ModelVisual3DGroup>();
 
             foreach (var part in SelectedModelGroup.Parts)
             {
-                var partDef = part.Parts[lod];
+                var partDef = part.Parts[LevelOfDetail];
 
                 if (partDef.Groups == null)
                     continue;
@@ -430,19 +487,17 @@ namespace Antilli
                     models.Add(meshes);
             }
 
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new ThreadStart(() => {
-                if (models.Count > 0)
-                {
-                    // set the new model
-                    Viewer.SetDriv3rModel(models);
-                }
-                else
-                {
-                    // just clear the models
-                    Viewer.ClearModels();
-                    Viewer.Viewport.SetDebugInfo("Level of detail contains no valid models.");
-                }
-            }));
+            if (models.Count > 0)
+            {
+                // set the new model
+                Viewer.SetDriv3rModel(models);
+            }
+            else
+            {
+                // just clear the models
+                Viewer.ClearModels();
+                Viewer.Viewport.SetDebugInfo("Level of detail contains no valid models.");
+            }
         }
         
         private void ViewModelTexture(object sender, RoutedEventArgs e)
@@ -636,44 +691,39 @@ namespace Antilli
 
             Packages.SelectionChanged += OnModelPackageSelected;
             Groups.SelectionChanged += (o, e) => LoadSelectedModel(true);
+
+            foreach (var child in LODButtons.Children)
+            {
+                var lodBtn = (child as RadioButton);
+
+                if (lodBtn != null)
+                {
+                    var lod = int.Parse((string)lodBtn.Tag);
+                    m_lodBtnRefs[lod] = lodBtn;
+
+                    lodBtn.Checked += (o, e) => {
+                        if (m_allowLodChanges)
+                        {
+                            if (!m_blockNextLodChange)
+                            {
+                                if (lodBtn.IsChecked != true)
+                                    return;
+
+                                // update the level of detail
+                                LevelOfDetail = lod;
+                            }
+                            else
+                            {
+                                m_blockNextLodChange = false;
+                            }
+                        }
+                    };
+                }
+            }
             
             BlendWeights.Checked += (o, e) => Viewer.ToggleBlendWeights();
             BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
-
-            for (int i = 0; i < LODButtons.Children.Count; i++)
-            {
-                var lodBtn = LODButtons.Children[i] as RadioButton;
-
-                // just incase a non-radio button tries to sneak in
-                if (lodBtn == null)
-                    continue;
-
-                // this should be considered a crime!
-                var lodLevel = int.Parse((string)lodBtn.Tag);
-
-                // this is definitely an error, but we'll fail silently instead
-                if (lodLevel >= m_lodBtnRefs.Length)
-                    continue;
-
-                // add a unique Checked handler
-                lodBtn.Checked += (o, e) => {
-                    var curBtn = o as RadioButton;
-
-                    // only fire a new model selection event if absolutely necessary
-                    if (m_curLodBtn == null || (m_curLodBtn.IsChecked ?? false))
-                        return;
-
-                    if (curBtn != m_curLodBtn)
-                    {
-                        m_curLodBtn = curBtn;
-                        LoadSelectedModel(false);
-                    }
-                };
-
-                // finally, add the reference!
-                m_lodBtnRefs[lodLevel] = lodBtn;
-            }
-
+            
             fileOpen.Click += (o, e) => OpenFile();
             
             fileExit.Click += (o, e) => Environment.Exit(0);
