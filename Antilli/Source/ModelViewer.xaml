@@ -118,7 +118,7 @@
                     <HierarchicalDataTemplate DataType="{x:Type at:ModelVisual3DGroupListItem}" ItemsSource="{Binding Models}">
                         <TextBlock Text="{Binding Name}"/>
                     </HierarchicalDataTemplate>
-                    
+
                     <DataTemplate DataType="{x:Type at:DriverModelVisual3D}">
                         <TextBlock Text="Model">
                             <TextBlock.ContextMenu>
@@ -129,9 +129,6 @@
                             </TextBlock.ContextMenu>
                         </TextBlock>
                     </DataTemplate>
-                    <!--<DataTemplate DataType="{x:Type at:ModelListItem}">
-                            <TextBlock Text="{Binding Name}"/>
-                        </DataTemplate>-->
                 </GroupBox.Resources>
                 <TreeView x:Name="ModelsList" ItemsSource="{Binding Elements}" SelectedItemChanged="OnModelSelected"/>
             </GroupBox>
