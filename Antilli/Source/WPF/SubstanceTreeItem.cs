@@ -22,7 +22,7 @@ namespace Antilli
                 int count = 0;
 
                 foreach (var texture in Substance.Textures)
-                    textures.Add(new TextureTreeItem(count, texture));
+                    textures.Add(new TextureTreeItem(count++, texture));
 
                 return textures;
             }

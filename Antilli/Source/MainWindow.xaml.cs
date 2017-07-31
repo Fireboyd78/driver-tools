@@ -220,7 +220,7 @@ namespace Antilli
                     int count = 0;
 
                     foreach (var texture in CurrentModelPackage.Textures)
-                        textures.Add(new TextureTreeItem(count, texture));
+                        textures.Add(new TextureTreeItem(count++, texture));
                     
                     return textures;
                 }
@@ -242,7 +242,7 @@ namespace Antilli
                     int count = 0;
 
                     foreach (var texture in modelPackage.Textures)
-                        textures.Add(new TextureTreeItem(count, texture));
+                        textures.Add(new TextureTreeItem(count++, texture));
 
                     return textures;
                 }
