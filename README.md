@@ -1,5 +1,8 @@
-# Driver Tools #
+# Driver Tools [![Build status](https://ci.appveyor.com/api/projects/status/serhjoggv2bkrm56?svg=true)](https://ci.appveyor.com/project/Fireboyd78/driver-tools) #
 Various modding tools for Driv3r, Driver: Parallel Lines, and Driver: San Francisco.
+
+## Download ##
+You may download the latest version of most programs [here](https://ci.appveyor.com/project/Fireboyd78/driver-tools/build/artifacts).
 
 ## Contributing ##
 If you're interested in contributing, fork the repo and feel free to submit a pull request. Please keep code styling consistent. Thanks!
