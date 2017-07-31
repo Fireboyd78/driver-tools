@@ -94,7 +94,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
             objBuilder.AppendFormat("mtllib {0}.mtl", filename).AppendLines(2);
 
-            var materials = new List<DSCript.Models.MaterialData>();
+            var materials = new List<DSCript.Models.MaterialDataPC>();
             
             var startIndex = 0;
             var modelIndex = 0;
@@ -161,7 +161,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                         foreach (var texture in material.Substances[s - 1].Textures)
                                         {
                                             var texFilename = String.Format("{0}_{1}_{2}.dds", ddsName, s, texIdx++);
-                                            texture.ExportFile(Path.Combine(path, texFilename));
+                                            FileManager.WriteFile(Path.Combine(path, texFilename), texture.Buffer);
                                         }
                                     }
 

@@ -35,9 +35,9 @@ namespace DSCript.Models
         public List<VertexData> VertexBuffers { get; set; }
         public IndexData IndexBuffer { get; set; }
 
-        public List<MaterialData> Materials { get; set; }
-        public List<SubstanceData> SubMaterials { get; set; }
-        public List<TextureData> Textures { get; set; }
+        public List<MaterialDataPC> Materials { get; set; }
+        public List<SubstanceDataPC> SubMaterials { get; set; }
+        public List<TextureDataPC> Textures { get; set; }
 
         public bool HasMaterials    => Materials?.Count > 0;
         public bool HasModels       => Parts?.Count > 0;

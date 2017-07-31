@@ -17,15 +17,57 @@ using FreeImageAPI;
 
 namespace DSCript.Models
 {
-    public class SubstanceData
+    public interface ISubstanceData
     {
+        int Flags { get; set; }
+
+        int Mode { get; set; }
+        int Type { get; set; }
+
+        IEnumerable<ITextureData> Textures { get; }
+
+        ITextureData GetTexture(int index);
+    }
+
+    public interface ISubstanceDataPC
+    {
+        bool AlphaMask { get; }
+
+        bool Damage { get; }
+
+        bool Specular { get; }
+        bool Emissive { get; }
+        bool Transparency { get; }
+    }
+
+    public abstract class SubstanceDataWrapper<TTextureData> : ISubstanceData
+        where TTextureData : ITextureData
+    {
+        IEnumerable<ITextureData> ISubstanceData.Textures
+        {
+            get { return (IEnumerable<ITextureData>)Textures; }
+        }
+
+        ITextureData ISubstanceData.GetTexture(int index)
+        {
+            return Textures[index];
+        }
+
         public int Flags { get; set; }
 
         public int Mode { get; set; }
         public int Type { get; set; }
 
-        public List<TextureData> Textures { get; set; }
+        public List<TTextureData> Textures { get; set; }
+        
+        public SubstanceDataWrapper()
+        {
+            Textures = new List<TTextureData>();
+        }
+    }
 
+    public class SubstanceDataPC : SubstanceDataWrapper<TextureDataPC>, ISubstanceDataPC
+    {
         public virtual bool AlphaMask
         {
             get { return (Type == 0x400 || Type == 0x1000); }
@@ -51,9 +93,6 @@ namespace DSCript.Models
             get { return (((Flags & 0x1) == 0x1 || Flags == 0x4) && !Specular); }
         }
 
-        public SubstanceData()
-        {
-            Textures = new List<TextureData>();
-        }
+        public SubstanceDataPC() : base() { }
     }
 }

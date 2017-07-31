@@ -17,16 +17,42 @@ using FreeImageAPI;
 
 namespace DSCript.Models
 {
-    public class MaterialData
+    public interface IMaterialData
     {
-        public List<SubstanceData> Substances { get; set; }
+        bool IsAnimated { get; set; }
+        float AnimationSpeed { get; set; }
 
-        public bool Animated            { get; set; } = false;
-        public double AnimationSpeed    { get; set; } = 25.0;
-        
-        public MaterialData()
+        IEnumerable<ISubstanceData> Substances { get; }
+
+        ISubstanceData GetSubstance(int index);
+    }
+
+    public abstract class MaterialDataWrapper<TSubstanceData> : IMaterialData
+        where TSubstanceData : ISubstanceData
+    {
+        IEnumerable<ISubstanceData> IMaterialData.Substances
         {
-            Substances = new List<SubstanceData>();
+            get { return (IEnumerable<ISubstanceData>)Substances; }
         }
+
+        ISubstanceData IMaterialData.GetSubstance(int index)
+        {
+            return Substances[index];
+        }
+
+        public bool IsAnimated { get; set; }
+        public float AnimationSpeed { get; set; }
+
+        public List<TSubstanceData> Substances { get; set; }
+        
+        public MaterialDataWrapper()
+        {
+            Substances = new List<TSubstanceData>();
+        }
+    }
+    
+    public sealed class MaterialDataPC : MaterialDataWrapper<SubstanceDataPC>
+    {
+        public MaterialDataPC() : base() { }
     }
 }

@@ -48,7 +48,7 @@ namespace Antilli
                 DependencyProperty.Register("Mesh", typeof(MeshDefinition), thisType,
                 new UIPropertyMetadata(null, MeshChanged));
             MaterialProperty =
-                DependencyProperty.Register("Material", typeof(DSCript.Models.MaterialData), thisType,
+                DependencyProperty.Register("Material", typeof(DSCript.Models.MaterialDataPC), thisType,
                 new UIPropertyMetadata(null, MaterialChanged));
         }
 
@@ -58,9 +58,9 @@ namespace Antilli
             set { SetValue(MeshProperty, value); }
         }
 
-        public new MaterialData Material
+        public new MaterialDataPC Material
         {
-            get { return (MaterialData)GetValue(MaterialProperty); }
+            get { return (MaterialDataPC)GetValue(MaterialProperty); }
             set { SetValue(MaterialProperty, value); }
         }
 
@@ -126,10 +126,12 @@ namespace Antilli
 
                 var texInfo = (UseBlendWeights && damage) ? (mask) ? subMaterial.Textures[2] : subMaterial.Textures[1] : subMaterial.Textures[0];
 
-                var cTex = TextureCache.GetCachedTexture(texInfo);
+                var cTex = TextureCache.GetTexture(texInfo);
+                var texMap = cTex.Bitmap;
+
                 var loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
 
-                var bmap = cTex.GetBitmapSource(loadFlags);
+                var bmap = texMap.ToBitmapSource(loadFlags);
 
                 matGroup.Children.Add(new DiffuseMaterial() {
                     Brush = new ImageBrush() {
@@ -155,7 +157,7 @@ namespace Antilli
                 {
                     matGroup.Children.Add(new SpecularMaterial() {
                         Brush = new ImageBrush() {
-                            ImageSource = cTex.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
+                            ImageSource = texMap.ToBitmapSource(BitmapSourceLoadFlags.AlphaMask),
                             TileMode = TileMode.Tile,
                             Stretch = Stretch.Fill,
                             ViewportUnits = BrushMappingMode.Absolute

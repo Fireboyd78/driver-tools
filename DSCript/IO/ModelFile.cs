@@ -24,7 +24,7 @@ namespace DSCript.Models
 
         public ModelPackagePC ModelPackage { get; set; }
 
-        public List<MaterialData> StandaloneTextures { get; set; }
+        public List<MaterialDataPC> StandaloneTextures { get; set; }
 
         protected override void Load()
         {
@@ -49,7 +49,7 @@ namespace DSCript.Models
                 if (count != materials.Count)
                     throw new Exception("Failed to load StandaloneTextureData - texture count mismatch!");
 
-                StandaloneTextures = new List<MaterialData>(count);
+                StandaloneTextures = new List<MaterialDataPC>(count);
 
                 for (int i = 0; i < count; i++)
                 {
@@ -72,7 +72,7 @@ namespace DSCript.Models
     {
         public StandaloneTextureData StandaloneTextureData { get; set; }
 
-        public MaterialData GetStandaloneTexture(int id)
+        public MaterialDataPC GetStandaloneTexture(int id)
         {
             return (HasTextures) ? StandaloneTextureData.StandaloneTextures[id] : null;
         }

@@ -883,9 +883,9 @@ namespace DSCript.Models
 
                 MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, f);
                 
-                Materials       = new List<MaterialData>(MaterialsHeader.MaterialsCount);
-                SubMaterials    = new List<SubstanceData>(MaterialsHeader.SubstancesCount);
-                Textures        = new List<TextureData>(MaterialsHeader.TexturesCount);
+                Materials       = new List<MaterialDataPC>(MaterialsHeader.MaterialsCount);
+                SubMaterials    = new List<SubstanceDataPC>(MaterialsHeader.SubstancesCount);
+                Textures        = new List<TextureDataPC>(MaterialsHeader.TexturesCount);
 
                 var texLookup   = new Dictionary<int, byte[]>();
 
@@ -899,10 +899,10 @@ namespace DSCript.Models
                     var mCount  = f.ReadInt32();
 
                     var mAnimToggle = (f.ReadInt32() == 1);
-                    var mAnimSpeed = f.ReadFloat();
+                    var mAnimSpeed = f.ReadSingle();
                     
-                    var material = new MaterialData() {
-                        Animated        = mAnimToggle,
+                    var material = new MaterialDataPC() {
+                        IsAnimated        = mAnimToggle,
                         AnimationSpeed  = mAnimSpeed
                     };
 
@@ -917,7 +917,7 @@ namespace DSCript.Models
 
                         f.Position  = sOffset;
 
-                        var subMat = new SubstanceData() {
+                        var subMat = new SubstanceDataPC() {
                             Flags   = f.ReadInt32(),
                             Mode    = f.ReadUInt16(),
                             Type    = f.ReadUInt16()
@@ -939,7 +939,7 @@ namespace DSCript.Models
 
                             f.Position = texOffset;
 
-                            var textureInfo = new TextureData();
+                            var textureInfo = new TextureDataPC();
                             
                             subMat.Textures.Add(textureInfo);
                             Textures.Add(textureInfo);
@@ -1297,7 +1297,7 @@ namespace DSCript.Models
                     f.Write(sLookup[sIdx]);
                     f.Write(material.Substances.Count);
 
-                    f.Write(material.Animated ? 1 : 0);
+                    f.Write(material.IsAnimated ? 1 : 0);
                     f.Write(material.AnimationSpeed);
 
                     sIdx += material.Substances.Count;

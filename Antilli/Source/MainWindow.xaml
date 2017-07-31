@@ -19,6 +19,30 @@
         </LinearGradientBrush>
     </at:AntilliWindow.Background>
 
+    <at:AntilliWindow.Resources>
+        <HierarchicalDataTemplate DataType="{x:Type at:MaterialTreeItem}"
+                                ItemsSource="{Binding Path=Substances}">
+            <TextBlock Text="{Binding Path=Name}"/>
+        </HierarchicalDataTemplate>
+
+        <HierarchicalDataTemplate DataType="{x:Type at:SubstanceTreeItem}"
+                                ItemsSource="{Binding Path=Textures}">
+            <TextBlock Text="{Binding Path=Name}"/>
+        </HierarchicalDataTemplate>
+
+        <DataTemplate DataType="{x:Type at:TextureTreeItem}">
+            <TextBlock Text="{Binding Path=Name}">
+                <TextBlock.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Replace..." Click="ReplaceTexture"/>
+                        <Separator/>
+                        <MenuItem Header="Export" Click="ExportTexture"/>
+                    </ContextMenu>
+                </TextBlock.ContextMenu>
+            </TextBlock>
+        </DataTemplate>
+    </at:AntilliWindow.Resources>
+    
     <Grid>
         <Grid.RowDefinitions>
             <!-- Toolbar -->
@@ -43,12 +67,6 @@
                 <Separator/>
                 <MenuItem x:Name="fileExit" Header="Exit"/>
             </MenuItem>
-            <MenuItem Header="View" Style="{DynamicResource atDark_menuItem}">
-                <!--<MenuItem x:Name="viewModels" Header="Models"/>-->
-                <MenuItem x:Name="viewTextures" Header="Textures" IsEnabled="False"/>
-                <MenuItem x:Name="viewMaterials" Header="Materials" IsEnabled="False"/>
-                <MenuItem x:Name="viewGlobalMaterials" Header="Global Materials" Visibility="Collapsed"/>
-            </MenuItem>
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
                 <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
                 <MenuItem x:Name="exportVPK" Header="Export .VPK"/>
@@ -59,7 +77,7 @@
             </MenuItem>
         </Menu>
 
-        <TabControl Grid.Row="1" Style="{StaticResource atTabControlStyle}" SelectedIndex="{Binding CurrentTab}">
+        <TabControl Grid.Row="1" Style="{StaticResource atTabControlStyle}" SelectedIndex="{Binding CurrentTab, Mode=TwoWay}">
             <TabControl.Background>
                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                     <GradientStop Color="#FF282828" Offset="0.625" />
@@ -67,10 +85,10 @@
                 </LinearGradientBrush>
             </TabControl.Background>
 
-            <TabItem Header="Models">
+            <TabItem Header="Viewport">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="290"/>
+                        <ColumnDefinition Width="300"/>
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
@@ -90,13 +108,13 @@
                         </Grid.Resources>
 
                         <!-- Lists -->
-                        <GroupBox Header="Model Packages" Width="120" HorizontalAlignment="Left">
+                        <GroupBox Header="Model Packages" Width="125" HorizontalAlignment="Left">
                             <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
                         </GroupBox>
-                        <GroupBox Header="Parts Groups"  Width="155" HorizontalAlignment="Right">
-                            <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"
+                        <GroupBox Header="Parts Groups"  Width="160" HorizontalAlignment="Right">
+                            <ListBox x:Name="Groups" ItemsSource="{Binding PartsGroups}"
                              FontFamily="Consolas"
-                             FontStretch="UltraCondensed" />
+                             FontStretch="UltraCondensed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
                         </GroupBox>
 
                         <!-- Rendering options -->
@@ -118,7 +136,7 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
-                                  Visibility="{Binding BlendWeightsVisible}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
+                                  Visibility="{Binding CanShowBlendWeights}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                             </StackPanel>
                         </GroupBox>
                     </Grid>
@@ -133,98 +151,9 @@
             <TabItem Header="Materials">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="175"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
-                    <Grid.Resources>
-                        <HierarchicalDataTemplate DataType="{x:Type at:MaterialTreeItem}"
-                                ItemsSource="{Binding Path=Substances}">
-                            <TextBlock Text="{Binding Path=Name}"/>
-                        </HierarchicalDataTemplate>
-
-                        <HierarchicalDataTemplate DataType="{x:Type at:SubstanceTreeItem}"
-                                ItemsSource="{Binding Path=Textures}">
-                            <TextBlock Text="{Binding Path=Name}"/>
-                        </HierarchicalDataTemplate>
-
-                        <DataTemplate DataType="{x:Type dscm:TextureData}">
-                            <TextBlock Text="Texture">
-                                <!--
-                                <TextBlock.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Replace..." Click="ReplaceTexture"/>
-                                        <Separator/>
-                                        <MenuItem Header="Export" Click="ExportTexture"/>
-                                    </ContextMenu>
-                                </TextBlock.ContextMenu>
-                                -->
-                            </TextBlock>
-                        </DataTemplate>
-                    </Grid.Resources>
-
-                    <GroupBox x:Name="MaterialsBox" Header="Materials" Grid.Column="0" Grid.Row="0">
-                        <TreeView x:Name="MaterialsList" ItemsSource="{Binding Materials}">
-                            <TreeView.ContextMenu>
-                                <ContextMenu Visibility="Hidden">
-                                    <MenuItem x:Name="addMtlMenu" Header="New...">
-                                        <MenuItem Header="Standard Material" Tag="STANDARD" ToolTip="A standard material with one (1) texture state for an object."/>
-                                        <Separator/>
-                                        <MenuItem Header="Vehicle Material">
-                                            <MenuItem Header="Body">
-                                                <MenuItem Header="Color Mask, Damages" Tag="VBD1" ToolTip="A material with clean/damaged textures and a color mask."/>
-                                                <MenuItem Header="No Mask, Damages" Tag="VBD2" ToolTip="A material with clean/damaged textures, but no color mask."/>
-                                                <Separator/>
-                                                <MenuItem Header="Color Mask, No Damage" Tag="VB1" ToolTip="A material with clean textures and a color mask."/>
-                                                <MenuItem Header="No Mask, No Damage" Tag="VB2" ToolTip="A material with clean/damaged textures, but no color mask."/>
-                                            </MenuItem>
-                                            <MenuItem Header="Wheel">
-                                                <MenuItem Header="1-State" Tag="WH1" ToolTip="A material with one (1) texture state for a wheel."/>
-                                                <MenuItem Header="4-State" Tag="WH4" ToolTip="A material with four (4) texture states for a wheel."/>
-                                            </MenuItem>
-                                        </MenuItem>
-                                    </MenuItem>
-                                </ContextMenu>
-                            </TreeView.ContextMenu>
-                        </TreeView>
-                    </GroupBox>
-
-                    <Border BorderThickness="1" Grid.Column="1" Grid.Row="0" Margin="5,0,0,0">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="5">
-                            <Grid>
-                                <TextBlock x:Name="InfoBox" Text="{Binding ContentInfo}" FontFamily="Consolas" Visibility="Collapsed"/>
-                                <Image x:Name="TextureBox" Source="{Binding CurrentTexture}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
-                            </Grid>
-                        </ScrollViewer>
-                    </Border>
-
-                    <Grid Grid.ColumnSpan="2" Grid.RowSpan="2" Background="Black" Opacity="0.35" Panel.ZIndex="1" />
-                    <TextBlock Grid.ColumnSpan="2" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Panel.ZIndex="2" FontSize="25">WORK IN PROGRESS ;)</TextBlock>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Textures">
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="150"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Grid.Resources>
-                        <DataTemplate DataType="{x:Type dscm:TextureData}">
-                            <TextBlock Text="{Binding CRC32}">
-                                <!--
-                                <TextBlock.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Replace..." Click="ReplaceTexture"/>
-                                        <Separator/>
-                                        <MenuItem Header="Export" Click="ExportTexture"/>
-                                    </ContextMenu>
-                                </TextBlock.ContextMenu>
-                                -->
-                            </TextBlock>
-                        </DataTemplate>
-                    </Grid.Resources>
 
                     <Grid>
                         <Grid.RowDefinitions>
@@ -232,24 +161,68 @@
                             <RowDefinition Height="1*"/>
                         </Grid.RowDefinitions>
 
-                        <GroupBox Header="Textures" Grid.Row="0">
-                            <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}"/>
+                        <GroupBox x:Name="MaterialsBox" Header="Materials" Grid.Column="0" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
+                            <TreeView x:Name="MaterialsList" ItemsSource="{Binding Materials}" SelectedItemChanged="OnMaterialListSelectionChanged">
+                                <TreeView.ContextMenu>
+                                    <ContextMenu Visibility="Hidden">
+                                        <MenuItem x:Name="addMtlMenu" Header="New...">
+                                            <MenuItem Header="Standard Material" Tag="STANDARD" ToolTip="A standard material with one (1) texture state for an object."/>
+                                            <Separator/>
+                                            <MenuItem Header="Vehicle Material">
+                                                <MenuItem Header="Body">
+                                                    <MenuItem Header="Color Mask, Damages" Tag="VBD1" ToolTip="A material with clean/damaged textures and a color mask."/>
+                                                    <MenuItem Header="No Mask, Damages" Tag="VBD2" ToolTip="A material with clean/damaged textures, but no color mask."/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Color Mask, No Damage" Tag="VB1" ToolTip="A material with clean textures and a color mask."/>
+                                                    <MenuItem Header="No Mask, No Damage" Tag="VB2" ToolTip="A material with clean/damaged textures, but no color mask."/>
+                                                </MenuItem>
+                                                <MenuItem Header="Wheel">
+                                                    <MenuItem Header="1-State" Tag="WH1" ToolTip="A material with one (1) texture state for a wheel."/>
+                                                    <MenuItem Header="4-State" Tag="WH4" ToolTip="A material with four (4) texture states for a wheel."/>
+                                                </MenuItem>
+                                            </MenuItem>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </TreeView.ContextMenu>
+                            </TreeView>
                         </GroupBox>
-                        <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,5,0,0" Visibility="{Binding HasGlobals}">
-                            <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}"/>
+                        <GroupBox Header="Global Materials" Grid.Row="1" Margin="0,5,0,0" Visibility="{Binding CanShowGlobals}">
+                            <TreeView x:Name="GlobalMaterialsList" ItemsSource="{Binding GlobalMaterials}" SelectedItemChanged="OnMaterialListSelectionChanged"/>
                         </GroupBox>
                     </Grid>
 
-                    <Border BorderThickness="1" Grid.Column="1" Grid.Row="0" Margin="5,0,0,0">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto"  VerticalScrollBarVisibility="Auto" Padding="5">
-                            <Grid>
-                                <Image x:Name="txTextureBox" Source="{Binding Texture}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Grid>
-                        </ScrollViewer>
-                    </Border>
+                    <Grid Grid.Column="1" Margin="5,0,0,0">
+                        <at:ImageWidget x:Name="MaterialViewWidget" />
+                    </Grid>
+                </Grid>
+            </TabItem>
 
-                    <Grid Grid.ColumnSpan="2" Grid.RowSpan="2" Background="Black" Opacity="0.35" Panel.ZIndex="1" />
-                    <TextBlock Grid.ColumnSpan="2" Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" Panel.ZIndex="2" FontSize="25">WORK IN PROGRESS ;)</TextBlock>
+            <TabItem Header="Textures">
+                <Grid Margin="5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="175"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="1*"/>
+                            <RowDefinition Height="1*"/>
+                        </Grid.RowDefinitions>
+
+                        <GroupBox Header="Textures" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
+                            <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}" SelectionChanged="OnTextureListSelectionChanged"
+                                     VirtualizingStackPanel.IsVirtualizing="False"/>
+                        </GroupBox>
+                        <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,5,0,0" Visibility="{Binding CanShowGlobals}">
+                            <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}" SelectionChanged="OnTextureListSelectionChanged"
+                                     VirtualizingStackPanel.IsVirtualizing="False"/>
+                        </GroupBox>
+                    </Grid>
+
+                    <Grid Grid.Column="1" Margin="5,0,0,0">
+                        <at:ImageWidget x:Name="TextureViewWidget" />
+                    </Grid>
                 </Grid>
             </TabItem>
         </TabControl>

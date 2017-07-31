@@ -17,25 +17,43 @@ using FreeImageAPI;
 
 namespace DSCript.Models
 {
-    public class TextureData : CacheableTexture
+    public interface ITextureData
     {
+        int UID { get; set; }
+        
+        int Type { get; set; }
+        int Flags { get; set; }
+
+        int Width { get; set; }
+        int Height { get; set; }
+
+        byte[] Buffer { get; set; }
+    }
+
+    public sealed class TextureDataPC : ITextureData
+    {
+        int ITextureData.UID
+        {
+            get { return CRC32; }
+            set { CRC32 = value; }
+        }
+
+        int ITextureData.Flags
+        {
+            get { return Reserved; }
+            set { Reserved = value; }
+        }
+        
         public int Reserved { get; set; }
         public int CRC32 { get; set; }
+
         public int Type { get; set; }
+
+        public int Width { get; set; }
+        public int Height { get; set; }
 
         public int Unknown { get; set; }
 
-        public void ExportFile(string filename)
-        {
-            string dir = Path.GetDirectoryName(filename);
-
-            using (MemoryStream f = new MemoryStream(Buffer))
-            {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                if (!File.Exists(filename))
-                    f.WriteTo(File.Create(filename, (int)f.Length));
-            }
-        }
+        public byte[] Buffer { get; set; }
     }
 }

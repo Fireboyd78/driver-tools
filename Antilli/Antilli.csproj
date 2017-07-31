@@ -75,6 +75,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Source\Antilli.cs" />
+    <Compile Include="Source\ImageWidget.xaml.cs">
+      <DependentUpon>ImageWidget.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Source\WPF\MaterialTreeItem.cs" />
+    <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
+    <Compile Include="Source\WPF\TextureTreeItem.cs" />
     <None Include="$(SrcDir)App.config" />
     <Compile Include="$(SrcDir)ModelGroupListItem.cs" />
     <Compile Include="$(SrcDir)ModelListItem.cs" />
@@ -117,14 +123,14 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(SrcDir)MaterialEditor.xaml">
+    <None Include="$(SrcDir)MaterialEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Compile Include="$(SrcDir)MaterialEditor.xaml.cs">
+    </None>
+    <None Include="$(SrcDir)MaterialEditor.xaml.cs">
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
       <SubType>Code</SubType>
-    </Compile>
+    </None>
     <Page Include="$(SrcDir)MKInputBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -148,14 +154,18 @@
       <DependentUpon>Resources.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(SrcDir)TextureViewer.xaml">
+    <None Include="$(SrcDir)TextureViewer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-    </Page>
-    <Compile Include="$(SrcDir)TextureViewer.xaml.cs">
+    </None>
+    <None Include="$(SrcDir)TextureViewer.xaml.cs">
       <DependentUpon>TextureViewer.xaml</DependentUpon>
       <SubType>Code</SubType>
-    </Compile>
+    </None>
+    <Page Include="Source\ImageWidget.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs " />

@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using System.Windows;
+using System.Windows.Input;
 using System.Xml;
 
 using Microsoft.Win32;
@@ -121,6 +122,186 @@ namespace Antilli
         }
     }
     
+    public static class AT
+    {
+        public delegate void ObjectSelectedEventHandler(object selection, EventArgs e);
+
+        public struct StateData : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            
+            public void NotifyChange(string property)
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
+            }
+
+            private bool SetValue<T>(ref T backingField, T value, string propertyName)
+            {
+                if (object.Equals(backingField, value))
+                    return false;
+
+                backingField = value;
+                NotifyChange(propertyName);
+                return true;
+            }
+            
+            int m_currentTab;
+            
+            public int CurrentTab
+            {
+                get { return m_currentTab; }
+                set
+                {
+                    m_currentTab = value;
+                    // TODO: Temporarily unload stuff?
+                }
+            }
+
+            public bool IsModelViewerOpen
+            {
+                get { return CurrentTab == 0; }
+            }
+
+            public bool IsMaterialEditorOpen
+            {
+                get { return CurrentTab == 1; }
+            }
+
+            public bool IsTextureViewerOpen
+            {
+                get { return CurrentTab == 2; }
+            }
+
+            Driv3rModelFile m_modelFile;
+            ModelPackagePC m_modelPackage;
+
+            bool m_useGlobals;
+            bool m_useBlendWeights;
+            
+            public Driv3rModelFile ModelFile
+            {
+                get { return m_modelFile; }
+                set
+                {
+                    if (SetValue(ref m_modelFile, value, "CurrentModelFile"))
+                    {
+                        TextureCache.Flush();
+                        NotifyChange("ModelPackages");
+                    }
+                }
+            }
+            
+            public ModelPackagePC SelectedModelPackage
+            {
+                get { return m_modelPackage; }
+                set
+                {
+                    if (SetValue(ref m_modelPackage, value, "CurrentModelPackage"))
+                    {
+                        // see if we need to load it
+                        if (!SelectedModelPackage.HasModels)
+                            SelectedModelPackage.GetInterface().Load();
+
+                        NotifyChange("PartsGroups");
+                        
+                        UpdateMaterials();
+                        UpdateTextures();
+                    }
+                }
+            }
+
+            public List<ModelPackagePC> ModelPackages
+            {
+                get
+                {
+                    if (ModelFile != null)
+                    {
+                        var models = ModelFile.Models;
+
+                        if (models.Count != 0)
+                            SelectedModelPackage = models[0];
+                        
+                        return models;
+                    }
+
+                    return null;
+                }
+            }
+            
+            public bool CanUseGlobals
+            {
+                get { return m_useGlobals; }
+                set
+                {
+                    if (SetValue(ref m_useGlobals, value, "CanShowGlobals"))
+                    {
+                        UpdateMaterials();
+                        UpdateTextures();
+                    }
+                }
+            }
+
+            public bool CanUseBlendWeights
+            {
+                get { return m_useBlendWeights; }
+                set { SetValue(ref m_useBlendWeights, value, "CanShowBlendWeights"); }
+            }
+
+            public Visibility CanShowGlobals
+            {
+                get { return CanUseGlobals ? Visibility.Visible : Visibility.Collapsed; }
+            }
+
+            public Visibility CanShowBlendWeights
+            {
+                get { return CanUseBlendWeights ? Visibility.Visible : Visibility.Collapsed; }
+            }
+            
+            public void UpdateMaterials()
+            {
+                NotifyChange("Materials");
+
+                if (CanUseGlobals)
+                    NotifyChange("GlobalMaterials");
+
+                NotifyChange("MatTexRowSpan");
+            }
+
+            public void UpdateTextures()
+            {
+                NotifyChange("Textures");
+
+                if (CanUseGlobals)
+                    NotifyChange("GlobalTextures");
+
+                NotifyChange("MatTexRowSpan");
+            }
+
+            public EventHandler MaterialSelectQueried;
+            public EventHandler TextureSelectQueried;
+
+            public void QueryMaterialSelect(IMaterialData material)
+            {
+                MaterialSelectQueried?.Invoke(material, null);
+            }
+
+            public void QueryTextureSelect(ITextureData texture)
+            {
+                TextureSelectQueried?.Invoke(texture, null);
+            }
+        }
+
+        public static StateData CurrentState;
+
+        public static string[] CommandLine { get; }
+        
+        static AT()
+        {
+            CommandLine = Environment.GetCommandLineArgs();
+            CurrentState = new StateData();
+        }
+    }
+    
     public static class FileManager
     {
         public static readonly GameFileFilter[] D3Filters = new GameFileFilter[] {
@@ -199,6 +380,16 @@ namespace Antilli
             }
 
             return GameFileFilter.GenericFilter;
+        }
+
+        public static void WriteFile(string filename, byte[] buffer)
+        {
+            var dir = Path.GetDirectoryName(filename);
+
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            File.WriteAllBytes(filename, buffer);
         }
     }
 }

@@ -95,7 +95,7 @@ namespace DSCript.Models
         /// </summary>
         public int SourceUID { get; set; }
 
-        public MaterialData GetMaterial()
+        public MaterialDataPC GetMaterial()
         {
             if (SourceUID == ModelPackage.UID || SourceUID == 0xFFFD)
                 return ModelPackage.Materials[MaterialId];

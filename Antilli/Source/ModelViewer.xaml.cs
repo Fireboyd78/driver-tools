@@ -221,7 +221,7 @@ namespace Antilli
 
         private void ViewModelTexture(object sender, RoutedEventArgs e)
         {
-            var material = ((MenuItem)e.Source).Tag as DSCript.Models.MaterialData;
+            var material = ((MenuItem)e.Source).Tag as IMaterialData;
 
             if (material == null)
             {
@@ -229,18 +229,24 @@ namespace Antilli
                 return;
             }
 
-            if (MainWindow != null)
-            {
-                if (!MainWindow.IsTextureViewerOpen)
-                    MainWindow.OpenTextureViewer();
+            var substance = material.GetSubstance(0);
+            var texIdx = 0;
 
-                MainWindow.TextureViewer.SelectTexture(material.Substances[0].Textures[0]);
+            // HACK: make sure we can retrieve the damage texture!
+            if (substance is ISubstanceDataPC)
+            {
+                var substance_pc = (substance as SubstanceDataPC);
+                var mayHaveDamage = (substance_pc.Textures.Count >= 4);
+
+                texIdx = (UseBlendWeights && mayHaveDamage) ? 2 : 0;
             }
+
+            AT.CurrentState.QueryTextureSelect(substance.GetTexture(texIdx));
         }
 
         private void ViewModelMaterial(object sender, RoutedEventArgs e)
         {
-            var material = ((MenuItem)e.Source).Tag as DSCript.Models.MaterialData;
+            var material = ((MenuItem)e.Source).Tag as IMaterialData;
 
             if (material == null)
             {
@@ -248,29 +254,7 @@ namespace Antilli
                 return;
             }
 
-            if (MainWindow != null)
-            {
-                if (!MainWindow.IsMaterialEditorOpen)
-                    MainWindow.OpenMaterialEditor();
-
-                var matEditor = MainWindow.MaterialEditor;
-
-                var itemsHost = matEditor.MaterialsList.GetItemsHost();
-
-                if (itemsHost != null)
-                {
-                    foreach (TreeViewItem item in itemsHost.Children)
-                    {
-                        var matItem = item.Header as MaterialTreeItem;
-
-                        if (matItem != null && matItem.Material == material)
-                        {
-                            item.IsSelected = true;
-                            break;
-                        }
-                    }
-                }
-            }
+            AT.CurrentState.QueryMaterialSelect(material);
         }
 
         public void SetDriv3rModel(List<ModelVisual3DGroup> models)
@@ -324,6 +308,22 @@ namespace Antilli
             {
                 Viewport.CameraMode = CameraMode.Inspect;
                 Viewport.CameraInertiaFactor = 0.93;
+            }
+        }
+
+        public void OnKeyPressed(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+            case Key.I:
+                ToggleInfiniteSpin();
+                break;
+            case Key.G:
+                ToggleDebugMode();
+                break;
+            case Key.C:
+                ToggleCameraMode();
+                break;
             }
         }
 

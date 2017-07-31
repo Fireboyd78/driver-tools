@@ -38,7 +38,7 @@
                 </Grid.RowDefinitions>
                 
                 <Grid.Resources>
-                    <DataTemplate DataType="{x:Type dsc:TextureData}">
+                    <DataTemplate DataType="{x:Type dsc:TextureDataPC}">
                         <TextBlock Text="{Binding CRC32}">
                             <TextBlock.ContextMenu>
                                 <ContextMenu>

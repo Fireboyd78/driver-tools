@@ -1,0 +1,19 @@
+﻿<UserControl x:Class="Antilli.ImageWidget" DataContext="{Binding RelativeSource={RelativeSource Self}}"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Antilli"
+             mc:Ignorable="d"
+             d:DesignHeight="256" d:DesignWidth="256">
+    <Grid>
+        <Border BorderThickness="1">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="5">
+                <Grid>
+                    <Image Source="{Binding CurrentImage}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ContentInfo}" FontFamily="Consolas" Panel.ZIndex="1"/>
+                </Grid>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -31,6 +31,18 @@ namespace Antilli
             return propInfo.GetValue(@this, flags) as Panel;
         }
 
+        public static TreeView GetParentTreeView(this TreeViewItem @this)
+        {
+            var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+            var propInfo = typeof(TreeViewItem).GetProperty("ParentTreeView", flags);
+
+            if (propInfo == null)
+                return null;
+
+            return propInfo.GetValue(@this, flags) as TreeView;
+        }
+
         // ###################################################################################################
         // Based on original code by gauthampj
         // Source: http://www.experts-exchange.com/Programming/Microsoft_Development/Q_26529451.html#a34161941
