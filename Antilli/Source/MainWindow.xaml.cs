@@ -5,6 +5,7 @@ using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -764,6 +765,31 @@ namespace Antilli
         private void Initialize()
         {
             Settings.Verify();
+            
+            AppDomain.CurrentDomain.UnhandledException += (o, e) => {
+                var exception = e.ExceptionObject as Exception;
+                var sb = new StringBuilder();
+
+                sb.AppendLine($"A fatal error has occurred! The program will now close.");
+                sb.AppendLine();
+
+                // this is literally useless
+                if (exception is TargetInvocationException)
+                    exception = exception.InnerException;
+
+                var stk = new StackTrace(exception, true);
+                var stkFrame = stk.GetFrame(0);
+
+                sb.AppendLine($"{exception.Message}");
+                sb.AppendLine();
+                
+                sb.AppendLine($"===== Stack trace =====");
+                sb.AppendLine($"{stk.ToString()}");
+                sb.AppendLine($"=======================");
+
+                if (MessageBox.Show(sb.ToString(), "Antilli - ERROR!", MessageBoxButton.OK, MessageBoxImage.Error) == MessageBoxResult.OK)
+                    Environment.Exit(1);
+            };
 
             InitializeComponent();
 
