@@ -46,7 +46,7 @@
     
     <FreeImageDir>$(DToolsSharedLibsDir)FreeImage\</FreeImageDir>
     <FreeImageNETDir>$(DToolsSharedLibsDir)FreeImage.NET\</FreeImageNETDir>
-    <FreeImageNETDir Condition="!Exists('$(FreeImageDir)')">$(DToolsSharedLibsDir)FreeImageNET\</FreeImageNETDir>
+    <FreeImageNETDir Condition="!Exists('$(FreeImageNETDir)')">$(DToolsSharedLibsDir)FreeImageNET\</FreeImageNETDir>
     <HelixToolkitDir>$(DToolsSharedLibsDir)HelixToolkit\</HelixToolkitDir>
     
     <libDSCName>DSCript</libDSCName>
@@ -55,6 +55,9 @@
     <libDSCProjectFile>$(libDSCDir)$(libDSCName).csproj</libDSCProjectFile>
     
     <IncludeDSCLibrary Condition="'$(IncludeDSCLibrary)' == ''">false</IncludeDSCLibrary>
+    
+    <UsesFreeImage Condition="'$(UsesFreeImage)' == ''">false</UsesFreeImage>
+    <UsesFreeImage Condition="$(IncludeDSCLibrary)">true</UsesFreeImage>
   </PropertyGroup>
   
   <ItemGroup Condition="$(IncludeDSCLibrary)">
@@ -63,4 +66,16 @@
       <Project>$(libDSCGuid)</Project>
     </ProjectReference>
   </ItemGroup>
+  
+  <Target Name="CopyFIDependencies" AfterTargets="Build" Condition="$(UsesFreeImage)">
+    <ItemGroup>
+      <FreeImageFiles Include="$(FreeImageDir)*.*"/>
+    </ItemGroup>
+    <Error Text="Couldn't find FreeImage dependencies!" Condition="'@(FreeImageFiles)' == ''" />
+    <Message Text="Copying FreeImage DLL:" Importance="High" />
+    <Copy SourceFiles="@(FreeImageFiles)" DestinationFolder="$(OutputPath)">
+      <Output ItemName="Dependency" TaskParameter="CopiedFiles" />
+    </Copy>
+    <Message Text="  - %(Dependency.Identity)" Importance="High" />
+  </Target>
 </Project>

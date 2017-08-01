@@ -24,6 +24,7 @@
   <!-- Driver Tools properties -->
   <PropertyGroup>
     <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
+    <UsesFreeImage>true</UsesFreeImage>
   </PropertyGroup>
   <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>
