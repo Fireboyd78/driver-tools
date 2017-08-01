@@ -109,10 +109,10 @@ namespace Antilli
 
         protected new void OnMaterialChanged()
         {
-            if (Model.Geometry == null)
+            if ((Model == null) || (Model.Geometry == null))
                 return;
             
-            MaterialGroup matGroup = new MaterialGroup();
+            var matGroup = new MaterialGroup();
 
             if (Material != null)
             {
