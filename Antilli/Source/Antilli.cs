@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -125,6 +126,8 @@ namespace Antilli
     public static class AT
     {
         public delegate void ObjectSelectedEventHandler(object selection, EventArgs e);
+
+        public static CultureInfo CurrentCulture = new CultureInfo("en-US", false);
 
         public struct StateData : INotifyPropertyChanged
         {

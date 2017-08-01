@@ -1033,6 +1033,9 @@ namespace Antilli
 
         public MainWindow(string[] args = null)
         {
+            Thread.CurrentThread.CurrentCulture = AT.CurrentCulture;
+            Thread.CurrentThread.CurrentUICulture = AT.CurrentCulture;
+
             Initialize();
         }
     }
