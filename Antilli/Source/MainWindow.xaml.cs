@@ -49,70 +49,6 @@ namespace Antilli
         //public MaterialEditor MaterialEditor { get; private set; }
         //public MaterialEditor GlobalMaterialEditor { get; private set; }
         
-        private void LoadDriv3rVehicles(string filename)
-        {
-            var vehicleFile = new Driv3rVehiclesFile(filename);
-
-            var city = Driv3r.GetCityFromFileName(filename);
-            var vgtFile = "";
-
-            if (city != Driv3r.City.Unknown)
-                vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
-
-            if (File.Exists(vgtFile))
-                vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
-
-            AT.CurrentState.ModelFile = vehicleFile;
-            AT.CurrentState.CanUseGlobals = vehicleFile.HasVehicleGlobals;
-        }
-
-        private void OnFileOpened(string filename)
-        {
-            var extension = Path.GetExtension(filename).ToLower();
-            var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
-
-            if (filter.Flags == GameFileFlags.None)
-            {
-                MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-            
-            var timer = new Stopwatch();
-            timer.Start();
-            
-            switch (extension)
-            {
-            case ".vvs":
-            case ".vvv":
-                LoadDriv3rVehicles(filename);
-                break;
-            default:
-                AT.CurrentState.ModelFile = new Driv3rModelFile(filename);
-                AT.CurrentState.CanUseGlobals = false;
-                break;
-            }
-
-            SubTitle = filename;
-
-            if (CurrentModelFile.HasModels)
-            {
-                Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
-                Packages.SelectedIndex = 0;
-            }
-
-            timer.Stop();
-
-            DSC.Update($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
-        }
-
-        public void OpenFile()
-        {
-            var dialog = FileManager.Driv3rOpenDialog;
-
-            if (dialog.ShowDialog() ?? false)
-                OnFileOpened(dialog.FileName);
-        }
-
         public int CurrentTab
         {
             get { return AT.CurrentState.CurrentTab; }
@@ -177,6 +113,9 @@ namespace Antilli
         {
             get
             {
+                if (CurrentModelPackage == null || !CurrentModelPackage.HasMaterials)
+                    return null;
+
                 var materials = new List<MaterialTreeItem>();
                 int count = 0;
                 
@@ -196,16 +135,16 @@ namespace Antilli
             {
                 var modelFile = CurrentModelFile as Driv3rVehiclesFile;
 
+                if (modelFile == null || !modelFile.HasVehicleGlobals)
+                    return null;
+
+                var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
+
                 var materials = new List<MaterialTreeItem>();
                 int count = 0;
-
-                if (modelFile != null && modelFile.HasVehicleGlobals)
-                {
-                    var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
-
-                    foreach (var material in modelPackage.Materials)
-                        materials.Add(new MaterialTreeItem(++count, material));
-                }
+                
+                foreach (var material in modelPackage.Materials)
+                    materials.Add(new MaterialTreeItem(++count, material));
 
                 return materials;
             }
@@ -215,17 +154,16 @@ namespace Antilli
         {
             get
             {
-                if (CurrentModelPackage != null)
-                {
-                    var textures = new List<TextureTreeItem>();
-                    int count = 0;
+                if (CurrentModelPackage == null || !CurrentModelPackage.HasMaterials)
+                    return null;
 
-                    foreach (var texture in CurrentModelPackage.Textures)
-                        textures.Add(new TextureTreeItem(count++, texture));
-                    
-                    return textures;
-                }
-                return null;
+                var textures = new List<TextureTreeItem>();
+                int count = 0;
+
+                foreach (var texture in CurrentModelPackage.Textures)
+                    textures.Add(new TextureTreeItem(count++, texture));
+
+                return textures;
             }
         }
 
@@ -234,68 +172,132 @@ namespace Antilli
             get
             {
                 var modelFile = CurrentModelFile as Driv3rVehiclesFile;
-                
-                if (modelFile != null && modelFile.HasVehicleGlobals)
+
+                if (modelFile == null || !modelFile.HasVehicleGlobals)
+                    return null;
+
+                var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
+
+                var textures = new List<TextureTreeItem>();
+                int count = 0;
+
+                foreach (var texture in modelPackage.Textures)
+                    textures.Add(new TextureTreeItem(count++, texture));
+
+                return textures;
+            }
+        }
+
+        public ImageWidget CurrentViewWidget
+        {
+            get
+            {
+                switch (CurrentTab)
                 {
-                    var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
-
-                    var textures = new List<TextureTreeItem>();
-                    int count = 0;
-
-                    foreach (var texture in modelPackage.Textures)
-                        textures.Add(new TextureTreeItem(count++, texture));
-
-                    return textures;
+                case 1: return MaterialViewWidget;
+                case 2: return TextureViewWidget;
                 }
+
                 return null;
             }
         }
 
-        public void MoveToTab(int index)
+        public bool IsViewWidgetVisible
+        {
+            get { return CurrentViewWidget != null; }
+        }
+
+        public int MatTexRowSpan
+        {
+            get { return (AT.CurrentState.CanUseGlobals) ? 1 : 2; }
+        }
+
+        private void MoveToTab(int index)
         {
             CurrentTab = index;
             OnPropertyChanged("CurrentTab");
         }
 
-        public void OnModelPackageSelected(object sender, SelectionChangedEventArgs e)
+        private void LoadDriv3rVehicles(string filename)
         {
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new ThreadStart(() => {
-                if (Viewer.SelectedModel != null)
-                    Viewer.SelectedModel = null;
+            var vehicleFile = new Driv3rVehiclesFile(filename);
 
-                int index = Packages.SelectedIndex;
+            var city = Driv3r.GetCityFromFileName(filename);
+            var vgtFile = "";
 
-                if (index == -1)
-                    return;
+            if (city != Driv3r.City.Unknown)
+                vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
 
-                TextureCache.FlushIfNeeded();
-                var modelPackage = ModelPackages[index];
+            if (File.Exists(vgtFile))
+                vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
 
-                AT.CurrentState.SelectedModelPackage = modelPackage;
-                
-                if (CurrentModelPackage.HasModels)
-                {
-                    Groups.SelectedIndex = 0;
-                }
-                else
-                {
-                    Groups.SelectedIndex = -1;
-                    Viewer.Visuals = null;
-                }
-            }));
+            AT.CurrentState.ModelFile = vehicleFile;
+            AT.CurrentState.CanUseGlobals = vehicleFile.HasVehicleGlobals;
         }
-        
+
+        private void OnFileOpened(string filename)
+        {
+            var extension = Path.GetExtension(filename).ToLower();
+            var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
+
+            if (filter.Flags == GameFileFlags.None)
+            {
+                MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var timer = new Stopwatch();
+            timer.Start();
+
+            switch (extension)
+            {
+            case ".vvs":
+            case ".vvv":
+                LoadDriv3rVehicles(filename);
+                break;
+            default:
+                AT.CurrentState.ModelFile = new Driv3rModelFile(filename);
+                AT.CurrentState.CanUseGlobals = false;
+                break;
+            }
+
+            SubTitle = filename;
+
+            if (CurrentModelFile.HasModels)
+            {
+                Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
+                Packages.SelectedIndex = 0;
+            }
+
+            timer.Stop();
+
+            AT.Log($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        private void OnFileOpenClick()
+        {
+            var dialog = FileManager.Driv3rOpenDialog;
+
+            if (dialog.ShowDialog() ?? false)
+                OnFileOpened(dialog.FileName);
+        }
+
         private RadioButton[] m_lodBtnRefs = new RadioButton[7];
 
-        private bool m_allowLodChanges = true;
-        private bool m_blockNextLodChange = false;
-
-        private int m_curLod = 0;
-
-        public void ResetLODButtons()
+        private void ResetViewWidgets()
         {
-            m_allowLodChanges = false;
+            MaterialViewWidget.Clear();
+            TextureViewWidget.Clear();
+        }
 
+        private void UpdateViewWidgets()
+        {
+            MaterialViewWidget.Update();
+            TextureViewWidget.Update();
+        }
+
+        private void ResetLODButtons()
+        {
             foreach (var lodBtn in m_lodBtnRefs)
             {
                 if (lodBtn != null)
@@ -304,199 +306,64 @@ namespace Antilli
                     lodBtn.IsChecked = false;
                 }
             }
-
-            m_allowLodChanges = true;
         }
 
-        public void OnLevelOfDetailChanged(int oldLod = -1)
-        {
-            if (oldLod != -1)
-            {
-                if (oldLod != m_curLod)
-                    m_lodBtnRefs[oldLod].IsChecked = false;
-            }
-            else
-            {
-                if (oldLod != m_curLod)
-                {
-                    var lodBtn = m_lodBtnRefs[m_curLod];
-
-                    if (lodBtn.IsChecked != true)
-                    {
-                        m_blockNextLodChange = true;
-                        lodBtn.IsChecked = true;
-                    }
-                }
-            }
-
-            if (m_curLod != -1)
-            {
-                if (oldLod != m_curLod)
-                    LoadSelectedModel(false);
-            }
-            else
-            {
-                Viewer.ClearModels();
-                Viewer.Viewport.SetDebugInfo("No valid levels of detail in model.");
-
-                ResetLODButtons();
-            }
-        }
-
-        public int LevelOfDetail
-        {
-            get { return m_curLod; }
-            set
-            {
-                var lod = value;
-                var lodBtn = m_lodBtnRefs[lod];
-
-                if (lodBtn == null)
-                {
-                    var newLod = -1;
-
-                    for (int i = 0; i < 7; i++)
-                    {
-                        if (m_lodBtnRefs[i] != null)
-                        {
-                            newLod = i;
-                            break;
-                        }
-                    }
-                    
-                    lod = newLod;
-                }
-
-                var oldLod = m_curLod;
-                m_curLod = lod;
-
-                OnLevelOfDetailChanged(oldLod);
-            }
-        }
-        
-        public void UpdateRenderingOptions()
+        private void UpdateRenderingOptions()
         {
             var checkBlendWeights = true;
 
             var lodCount = new int[7];
 
-            foreach (var part in SelectedPartsGroup.Parts)
+            if (SelectedPartsGroup != null)
             {
-                // run this check once to prevent unnecessary slowdown
-                if (checkBlendWeights)
+                foreach (var part in SelectedPartsGroup.Parts)
                 {
-                    checkBlendWeights = false;
-                    AT.CurrentState.CanUseBlendWeights = part.VertexBuffer.HasBlendWeights;
-                }
-                
-                // count all possible LODs
-                for (int i = 0; i < 7; i++)
-                {
-                    var partDef = part.Parts[i];
-
-                    if (partDef == null)
-                        continue;
-
-                    if (partDef.Groups.Count > 0)
-                        lodCount[i] += 1;
-                }
-            }
-
-            // enable LODs if more than one model present
-            for (int i = 0; i < 7; i++)
-            {
-                var lodBtn = m_lodBtnRefs[i];
-
-                if (lodBtn != null)
-                    lodBtn.IsEnabled = (lodCount[i] > 0);
-            }
-        }
-        
-        public void LoadSelectedModel(bool fullUpdate)
-        {
-            if (SelectedPartsGroup == null)
-            {
-                Groups.SelectedIndex = 0;
-                return;
-            }
-
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-            
-            if (Viewer.SelectedModel != null)
-                Viewer.OnModelDeselected();
-
-            var selectedItem = Viewer.ModelsList.GetSelectedContainer();
-
-            if (selectedItem != null)
-                selectedItem.IsSelected = false;
-
-            if (fullUpdate)
-            {
-                ResetLODButtons();
-                UpdateRenderingOptions();
-
-                OnLevelOfDetailChanged(-1);
-            }
-            
-            var models = new List<ModelVisual3DGroup>();
-
-            foreach (var part in SelectedPartsGroup.Parts)
-            {
-                var partDef = part.Parts[LevelOfDetail];
-
-                if (partDef.Groups == null)
-                    continue;
-
-                var meshes = new ModelVisual3DGroup();
-
-                foreach (var group in partDef.Groups)
-                {
-                    foreach (var mesh in group.Meshes)
+                    // run this check once to prevent unnecessary slowdown
+                    if (checkBlendWeights)
                     {
-                        //Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Send, new ThreadStart(() => {
-                        meshes.Children.Add(new DriverModelVisual3D(mesh, Viewer.UseBlendWeights));
-                        //}));
+                        checkBlendWeights = false;
+                        AT.CurrentState.CanUseBlendWeights = part.VertexBuffer.HasBlendWeights;
+                    }
+
+                    // count all possible LODs
+                    for (int i = 0; i < 7; i++)
+                    {
+                        var partDef = part.Parts[i];
+
+                        if (partDef == null)
+                            continue;
+
+                        if (partDef.Groups.Count > 0)
+                            lodCount[i] += 1;
                     }
                 }
-                
-                if (meshes.Children.Count > 0)
-                    models.Add(meshes);
-            }
 
-            if (models.Count > 0)
-            {
-                // set the new model
-                Viewer.SetDriv3rModel(models);
-            }
-            else
-            {
-                // just clear the models
-                Viewer.ClearModels();
-                Viewer.Viewport.SetDebugInfo("Level of detail contains no valid models.");
-            }
-        }
-        
-        private void ViewModelTexture(object sender, RoutedEventArgs e)
-        {
-            var material = ((MenuItem)e.Source).Tag as DSCript.Models.MaterialDataPC;
+                // enable LODs if more than one model present
+                for (int i = 0; i < 7; i++)
+                {
+                    var lodBtn = m_lodBtnRefs[i];
 
-            if (material == null)
-            {
-                MessageBox.Show("No texture assigned!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
+                    if (lodBtn != null)
+                    {
+                        var hasLods = (lodCount[i] > 0);
 
-            if (!AT.CurrentState.IsTextureViewerOpen)
-                AT.CurrentState.CurrentTab = 2;
+                        // do we need to uncheck it?
+                        if (lodBtn.IsChecked ?? false)
+                            lodBtn.IsChecked = hasLods;
+
+                        lodBtn.IsEnabled = (lodCount[i] > 0);
+                    }
+                }
+            }
             
-            //TextureViewer.SelectTexture(material.Substances[0].Textures[0]);
+            // select the correct LOD
+            m_lodBtnRefs[Viewer.LevelOfDetail].IsChecked = true;
         }
         
         private void ExportObjFile()
         {
             if (CurrentModelPackage == null)
-                MessageBox.Show("Nothing to export!");
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
             else
             {
                 // TODO: Implement OBJ exporter
@@ -529,33 +396,33 @@ namespace Antilli
             }
         }
 
-        public void ExportModelPackage()
+        private void ExportModelPackage()
         {
             if (CurrentModelPackage == null)
-                MessageBox.Show("Nothing to export!");
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
             else
             {
                 string path = Path.Combine(Settings.ExportDirectory, Path.GetFileName(CurrentModelFile.FileName));
                 
-                DSC.Log("Compiling ModelPackage...");
+                AT.Log("Compiling ModelPackage...");
                 CurrentModelPackage.GetInterface().Save();
                 
-                DSC.Log("Exporting ModelPackage...");
+                AT.Log("Exporting ModelPackage...");
                 CurrentModelPackage.ModelFile.Save(path, false);
-                DSC.Log("Done!");
+                AT.Log("Done!");
                 
                 string msg = String.Format("Successfully exported to '{0}'!", path);
                 MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
-        public void ExportVehicleHierarchyVPK()
+        private void ExportVehicleHierarchyVPK()
         {
             var modelFile = CurrentModelFile as Driv3rVehiclesFile;
 
             if (CurrentModelPackage == null || CurrentModelFile == null)
             {
-                MessageBox.Show("Nothing to export!");
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -573,22 +440,16 @@ namespace Antilli
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         
-        public void ExportTexture(ITextureData texture)
-        {
-            ExportTexture(texture, this);
-        }
-
-        public void ExportTexture(ITextureData texture, Window owner)
+        private void ExportTexture(ITextureData texture)
         {
             var path = Path.Combine(Settings.ExportDirectory, String.Format("{0}.dds", texture.UID));
-            
+
             FileManager.WriteFile(path, texture.Buffer);
 
-            string msg = String.Format("Successfully exported to '{0}'!", path);
-            MessageBox.Show(owner, msg, "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"Successfully exported to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        public void ReplaceTexture(ITextureData texture)
+        
+        private void ReplaceTexture(ITextureData texture)
         {
             OpenFileDialog replaceTexture = new OpenFileDialog() {
                 AddExtension = true,
@@ -601,20 +462,16 @@ namespace Antilli
 
             if (replaceTexture.ShowDialog() ?? false)
             {
+                var ddsBuffer = File.ReadAllBytes(replaceTexture.FileName);
+
                 var texRef = TextureCache.GetTexture(texture);
+                texRef.SetBuffer(ddsBuffer);
+                
+                Viewer.UpdateActiveModel();
 
-                using (var ddsFile = File.Open(replaceTexture.FileName, FileMode.Open))
-                {
-                    var buffer = new byte[ddsFile.Length];
-
-                    ddsFile.Read(buffer, 0, buffer.Length);
-                    texRef.SetBuffer(buffer);
-                    
-                    LoadSelectedModel(false);
-
-                    if (IsViewWidgetVisible)
-                        CurrentViewWidget.SetTexture(texture);
-                }
+                // reload the active texture if necessary
+                if (IsViewWidgetVisible)
+                    CurrentViewWidget.SetTexture(texture);
             }
         }
 
@@ -627,7 +484,7 @@ namespace Antilli
                 var tex = item.Texture;
                 ReplaceTexture(tex);
 
-                CurrentViewWidget.Update();
+                UpdateViewWidgets();
             }
         }
 
@@ -642,28 +499,60 @@ namespace Antilli
             }
         }
         
-        public ImageWidget CurrentViewWidget
-        {
-            get
-            {
-                switch (CurrentTab)
-                {
-                case 1: return MaterialViewWidget;
-                case 2: return TextureViewWidget;
-                }
+        // requiring this is probably a design flaw...but it works :P
+        volatile bool m_deferSelectionChange = false;
 
-                return null;
+        private void OnModelPackageSelected(object sender, EventArgs e)
+        {
+            m_deferSelectionChange = true;
+            OnPropertyChanged("PartsGroups");
+            m_deferSelectionChange = false;
+
+            if (CurrentModelPackage != null && CurrentModelFile.HasModels)
+            {
+                Groups.SelectedIndex = 0;
+            }
+            else
+            {
+                Groups.SelectedIndex = -1;
             }
         }
 
-        public bool IsViewWidgetVisible
+        private void OnModelPackageItemSelected(object sender, SelectionChangedEventArgs e)
         {
-            get { return CurrentViewWidget != null; }
+            if (Viewer.SelectedModel != null)
+                Viewer.SelectedModel = null;
+
+            TextureCache.FlushIfNeeded();
+
+            int index = Packages.SelectedIndex;
+
+            AT.CurrentState.SelectedModelPackage = (index != -1) ? ModelPackages[index] : null;
+            ResetViewWidgets();
         }
 
-        public int MatTexRowSpan
+        private void OnPartsGroupItemSelected(object sender, EventArgs e)
         {
-            get { return (AT.CurrentState.CanUseGlobals) ? 1 : 2; }
+            if (m_deferSelectionChange)
+                return;
+
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new ThreadStart(() => {
+                if (Groups.SelectedIndex == -1)
+                {
+                    Viewer.RemoveActiveModel();
+                    ResetLODButtons();
+
+                    // select the first group
+                    m_deferSelectionChange = true;
+                    Groups.SelectedIndex = 0;
+                }
+
+                Viewer.SetActiveModel(SelectedPartsGroup.Parts);
+                UpdateRenderingOptions();
+            }));
+
+            if (m_deferSelectionChange)
+                m_deferSelectionChange = false;
         }
 
         private void SetCurrentViewElement<T>(Action<T> setterFunc, T element)
@@ -753,12 +642,34 @@ namespace Antilli
             {
                 if (Object.ReferenceEquals(texture, item.Texture))
                 {
-                    MoveToTab(2);
-
                     list.SelectedItem = item;
                     return true;
                 }
             }
+            return false;
+        }
+        
+        /*
+            This will check the globals (if applicable),
+            then the current model package for the material/texture
+        */
+        private bool OnQuerySelection<TQueryInput, TQueryObject>(Func<TQueryInput, TQueryObject, bool> fnQuery,
+            TQueryInput queryGlobals, TQueryInput queryOther, object obj, int tabIdx = -1)
+            where TQueryInput : class
+            where TQueryObject : class
+        {
+            var queryObj = obj as TQueryObject;
+
+            if (queryObj != null)
+            {
+                if (tabIdx != -1)
+                    MoveToTab(tabIdx);
+
+                return (AT.CurrentState.CanUseGlobals && fnQuery(queryGlobals, queryObj))
+                || fnQuery(queryOther, queryObj);
+            }
+
+            // no material!
             return false;
         }
         
@@ -794,45 +705,37 @@ namespace Antilli
             InitializeComponent();
 
             AT.CurrentState.PropertyChanged += (o, e) => {
-                Debug.WriteLine($"OnPropertyChanged: '{e.PropertyName}'");
+                //Debug.WriteLine($">> State change: '{e.PropertyName}'");
                 OnPropertyChanged(e.PropertyName);
             };
-
-            /*
-                These methods check the globals (if applicable),
-                then checks the model packages for the material/texture
-            */
-            AT.CurrentState.MaterialSelectQueried += (o, e) => {
-                var material = o as IMaterialData;
-
-                MoveToTab(1);
-
-                var selected = (AT.CurrentState.CanUseGlobals && TrySelectMaterial(GlobalMaterialsList, material))
-                || TrySelectMaterial(MaterialsList, material);
-            };
-            AT.CurrentState.TextureSelectQueried += (o, e) => {
-                var texture = o as ITextureData;
-                
-                var selected = (AT.CurrentState.CanUseGlobals && TrySelectTexture(GlobalTextureList, texture))
-                    || TrySelectTexture(TextureList, texture);
-            };
             
+            AT.CurrentState.MaterialSelectQueried += (o, e) => {
+                var selected = OnQuerySelection<TreeView, IMaterialData>(TrySelectMaterial, GlobalMaterialsList, MaterialsList, o, 1);
+
+                if (!selected)
+                    MessageBox.Show("No material found!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+            };
+
+            AT.CurrentState.TextureSelectQueried += (o, e) => {
+                var selected = OnQuerySelection<ListBox, ITextureData>(TrySelectTexture, GlobalTextureList, TextureList, o, 2);
+
+                if (!selected)
+                    MessageBox.Show("No texture found!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+            };
+
+            AT.CurrentState.ModelPackageSelected += OnModelPackageSelected;
+
             DSC.ProgressUpdated += (o, e) => {
                 var progress_str = e.Message;
 
                 if (e.Progress > -1)
                     progress_str += $" [{Math.Round(e.Progress):F1}%]";
-
-                // might re-use this eventually
-                //Viewer.Viewport.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new ThreadStart(() => {
-                //    Viewer.Viewport.SetDebugInfo(progress_str);
-                //}));
-
+                
                 Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new ThreadStart(() => {
-                    Console.WriteLine($"[INFO] {progress_str}");
+                    Debug.WriteLine($"[INFO] {progress_str}");
                 }));
             };
-
+            
             KeyDown += (o,e) => {
                 switch (CurrentTab)
                 {
@@ -847,11 +750,9 @@ namespace Antilli
                     break;
                 }
             };
-
-            Viewer.MainWindow = this;
-
-            Packages.SelectionChanged += OnModelPackageSelected;
-            Groups.SelectionChanged += (o, e) => LoadSelectedModel(true);
+            
+            Packages.SelectionChanged += OnModelPackageItemSelected;
+            Groups.SelectionChanged += OnPartsGroupItemSelected;
             
             foreach (var child in LODButtons.Children)
             {
@@ -862,22 +763,9 @@ namespace Antilli
                     var lod = int.Parse((string)lodBtn.Tag);
                     m_lodBtnRefs[lod] = lodBtn;
 
-                    lodBtn.Checked += (o, e) => {
-                        if (m_allowLodChanges)
-                        {
-                            if (!m_blockNextLodChange)
-                            {
-                                if (lodBtn.IsChecked != true)
-                                    return;
-
-                                // update the level of detail
-                                LevelOfDetail = lod;
-                            }
-                            else
-                            {
-                                m_blockNextLodChange = false;
-                            }
-                        }
+                    lodBtn.Click += (o, e) => {
+                        if (lodBtn.IsChecked ?? false)
+                            Viewer.LevelOfDetail = lod;
                     };
                 }
             }
@@ -885,15 +773,9 @@ namespace Antilli
             BlendWeights.Checked += (o, e) => Viewer.ToggleBlendWeights();
             BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
             
-            fileOpen.Click += (o, e) => OpenFile();
+            fileOpen.Click += (o, e) => OnFileOpenClick();
             
             fileExit.Click += (o, e) => Environment.Exit(0);
-
-            /*
-            viewTextures.Click += (o, e) => OpenTextureViewer();
-            viewMaterials.Click += (o, e) => OpenMaterialEditor();
-            viewGlobalMaterials.Click += (o, e) => OpenGlobalMaterialEditor();
-            */
             
             exportMDPC.Click += (o, e) => ExportModelPackage();
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();

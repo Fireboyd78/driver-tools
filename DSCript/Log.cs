@@ -4,29 +4,24 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
+#if DEBUG
+    using Logger = System.Diagnostics.Debug;
+#else
+    using Logger = System.Diagnostics.Trace;
+#endif
+
 namespace DSCript
 {
     public static partial class DSC
     {
-        private static void LogImpl(string message)
-        {
-#       if DEBUG
-            Debug.WriteLine(message);
-#       elif TRACE
-            Trace.WriteLine(message);
-#       else
-            return;
-#       endif
-        }
-
         public static void Log(string message)
         {
-            LogImpl(message);
+            Logger.WriteLine($"[DSC] {message}");
         }
         
         public static void Log(string str, params object[] args)
         {
-            LogImpl(String.Format(str, args));
+            Log(String.Format(str, args));
         }
     }
 }

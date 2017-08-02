@@ -285,7 +285,7 @@ namespace Antilli
                         }
                     };
 
-                    DSC.Log("Loading...");
+                    AT.Log("Loading...");
 
                     stopwatch.Start();
 
@@ -420,7 +420,7 @@ namespace Antilli
 
                     if (SpoolerClipboard != null && SpoolerClipboard.Parent == null)
                     {
-                        DSC.Log("Clipboard set.");
+                        AT.Log("Clipboard set.");
                         IsDirty = true;
                     }
                 }
@@ -537,7 +537,7 @@ namespace Antilli
 
                 spooler.SetBuffer(File.ReadAllBytes(openFile.FileName));
 
-                DSC.Log("Replaced buffer.");
+                AT.Log("Replaced buffer.");
                 IsDirty = true;
             }
         }
@@ -551,7 +551,7 @@ namespace Antilli
                 var bak = FileName + ".bak";
                 var stopwatch = new Stopwatch();
 
-                DSC.Log("Saving...");
+                AT.Log("Saving...");
                 stopwatch.Start();
 
                 // make our backup
@@ -578,7 +578,7 @@ namespace Antilli
             var stopwatch = new Stopwatch();
             var filename = Path.Combine(Settings.ExportDirectory, Path.GetFileName(FileName));
 
-            DSC.Log("Exporting...");
+            AT.Log("Exporting...");
 
             stopwatch.Start();
             ChunkFile.Save(filename, false);

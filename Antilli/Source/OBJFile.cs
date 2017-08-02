@@ -447,7 +447,7 @@ namespace Antilli
 
                 CurrentMaterial = null;
 
-                DSC.Log("Done reading material file!");
+                AT.Log("Done reading material file!");
             }
         }
 
@@ -575,7 +575,7 @@ namespace Antilli
                     lastVal = val;
                 }
 
-                DSC.Log("Reached end of file.");
+                AT.Log("Reached end of file.");
             }
         }
 

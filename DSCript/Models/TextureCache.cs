@@ -15,8 +15,6 @@ using System.Windows.Media.Media3D;
 
 using Interop = System.Windows.Interop;
 
-using DSCript;
-
 using FreeImageAPI;
 
 namespace DSCript.Models
@@ -32,20 +30,21 @@ namespace DSCript.Models
 
         public static void FlushIfNeeded()
         {
-            DSC.Log($"FlushIfNeeded: {Cache.Count} textures.");
-
             if (Cache.Count > 25)
                 Flush();
         }
 
         public static void Flush()
         {
-            DSC.Log($"Flushing {Cache.Count} textures in the cache.");
+            if (Cache.Count > 0)
+            {
+                DSC.Log($"Flushing {Cache.Count} textures in the cache.");
 
-            foreach (var texture in Cache)
-                texture.Free();
+                foreach (var texture in Cache)
+                    texture.Free();
 
-            Cache.Clear();
+                Cache.Clear();
+            }
         }
 
         static int GetCachedTextureIndex(ITextureData texture)

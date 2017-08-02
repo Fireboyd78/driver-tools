@@ -654,7 +654,7 @@ namespace DSCript.Models
                     var unk3 = stream.ReadInt32();
                     var unk4 = stream.ReadInt32();
 
-                    Console.WriteLine($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
+                    DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
                 }
 
                 VertexBuffers.Add(vertexBuffer);

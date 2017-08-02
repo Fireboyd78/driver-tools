@@ -24,6 +24,12 @@ using DSCript;
 using DSCript.Models;
 using DSCript.Spooling;
 
+#if DEBUG
+    using Logger = System.Diagnostics.Debug;
+#else
+    using Logger = System.Diagnostics.Trace;
+#endif
+
 namespace Antilli
 {
     public enum GameType : int
@@ -123,11 +129,21 @@ namespace Antilli
         }
     }
     
-    public static class AT
+    internal static class AT
     {
         public delegate void ObjectSelectedEventHandler(object selection, EventArgs e);
 
         public static CultureInfo CurrentCulture = new CultureInfo("en-US", false);
+
+        public static void Log(string message)
+        {
+            Logger.WriteLine($"[ANTILLI] {message}");
+        }
+
+        public static void Log(string message, params object[] args)
+        {
+            Log(String.Format(message, args));
+        }
 
         public struct StateData : INotifyPropertyChanged
         {
@@ -199,17 +215,25 @@ namespace Antilli
                 get { return m_modelPackage; }
                 set
                 {
-                    if (SetValue(ref m_modelPackage, value, "CurrentModelPackage"))
+                    m_modelPackage = value;
+
+                    if (m_modelPackage != null)
                     {
                         // see if we need to load it
-                        if (!SelectedModelPackage.HasModels)
-                            SelectedModelPackage.GetInterface().Load();
-
-                        NotifyChange("PartsGroups");
-                        
-                        UpdateMaterials();
-                        UpdateTextures();
+                        if (!m_modelPackage.HasModels)
+                            m_modelPackage.GetInterface().Load();
                     }
+
+                    NotifyChange("Materials");
+                    NotifyChange("Textures");
+
+                    if (CanUseGlobals)
+                    {
+                        NotifyChange("GlobalMaterials");
+                        NotifyChange("GlobalTextures");
+                    }
+
+                    ModelPackageSelected?.Invoke(m_modelPackage, null);
                 }
             }
 
@@ -218,14 +242,7 @@ namespace Antilli
                 get
                 {
                     if (ModelFile != null)
-                    {
-                        var models = ModelFile.Models;
-
-                        if (models.Count != 0)
-                            SelectedModelPackage = models[0];
-                        
-                        return models;
-                    }
+                        return ModelFile.Models;
 
                     return null;
                 }
@@ -238,8 +255,10 @@ namespace Antilli
                 {
                     if (SetValue(ref m_useGlobals, value, "CanShowGlobals"))
                     {
-                        UpdateMaterials();
-                        UpdateTextures();
+                        NotifyChange("GlobalMaterials");
+                        NotifyChange("GlobalTextures");
+                        
+                        NotifyChange("MatTexRowSpan");
                     }
                 }
             }
@@ -260,26 +279,8 @@ namespace Antilli
                 get { return CanUseBlendWeights ? Visibility.Visible : Visibility.Collapsed; }
             }
             
-            public void UpdateMaterials()
-            {
-                NotifyChange("Materials");
-
-                if (CanUseGlobals)
-                    NotifyChange("GlobalMaterials");
-
-                NotifyChange("MatTexRowSpan");
-            }
-
-            public void UpdateTextures()
-            {
-                NotifyChange("Textures");
-
-                if (CanUseGlobals)
-                    NotifyChange("GlobalTextures");
-
-                NotifyChange("MatTexRowSpan");
-            }
-
+            public EventHandler ModelPackageSelected;
+            
             public EventHandler MaterialSelectQueried;
             public EventHandler TextureSelectQueried;
 
@@ -358,15 +359,10 @@ namespace Antilli
             };
         }
         
-        public static GameFileFilter FindFilter(string extension, GameFileFilter[] filters, GameFileFlags searchFlags = GameFileFlags.None)
+        public static GameFileFilter FindFilter(string extension, GameFileFilter[] filters)
         {
-            var checkFlags = (searchFlags != GameFileFlags.None);
-
             foreach (var filter in filters)
             {
-                if (checkFlags && !filter.Flags.HasFlag(searchFlags))
-                    continue;
-
                 if (filter.HasExtension(extension))
                     return filter;
             }
@@ -376,13 +372,22 @@ namespace Antilli
         
         public static GameFileFilter FindFilter(string extension, GameType gameType, GameFileFlags searchFlags = GameFileFlags.None)
         {
+            var filter = GameFileFilter.GenericFilter;
+
             switch (gameType)
             {
             case GameType.Driv3r:
-                return FindFilter(extension, D3Filters, searchFlags);
+                filter = FindFilter(extension, D3Filters);
+                break;
             }
 
-            return GameFileFilter.GenericFilter;
+            if (searchFlags != GameFileFlags.None)
+            {
+                if ((filter.Flags & searchFlags) == GameFileFlags.None)
+                    return GameFileFilter.GenericFilter;
+            }
+
+            return filter;
         }
 
         public static void WriteFile(string filename, byte[] buffer)

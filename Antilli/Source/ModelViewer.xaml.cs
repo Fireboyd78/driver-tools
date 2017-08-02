@@ -58,8 +58,19 @@ namespace Antilli
         private List<ModelVisual3DGroup> _visuals;
 
         private bool _useBlendWeights;
+        private int m_lod;
+        
+        public int LevelOfDetail
+        {
+            get { return m_lod; }
+            set
+            {
+                var oldLod = m_lod;
+                m_lod = value;
 
-        public MainWindow MainWindow { get; set; }
+                OnLevelOfDetailChanged(oldLod);
+            }
+        }
 
         public bool UseBlendWeights
         {
@@ -257,26 +268,78 @@ namespace Antilli
             AT.CurrentState.QueryMaterialSelect(material);
         }
 
-        public void SetDriv3rModel(List<ModelVisual3DGroup> models)
+        List<PartsGroup> m_partsGroups;
+
+        public void RemoveActiveModel()
+        {
+            if (m_partsGroups != null)
+            {
+                ClearModels();
+                m_partsGroups = null;
+            }
+        }
+
+        public bool UpdateActiveModel()
         {
             ClearModels();
 
-            foreach (var model in models)
+            // no active model present
+            if (m_partsGroups == null)
+                return true;
+
+            var models = new List<ModelVisual3DGroup>();
+
+            foreach (var part in m_partsGroups)
             {
-                foreach (DriverModelVisual3D dmodel in model.Children)
+                var partDef = part.Parts[LevelOfDetail];
+
+                if (partDef.Groups == null)
+                    continue;
+
+                var meshes = new ModelVisual3DGroup();
+
+                foreach (var group in partDef.Groups)
                 {
-                    if (dmodel.IsEmissive)
-                        EmissiveLayer.Children.Add(dmodel);
-                    else if (dmodel.HasTransparency)
-                        TransparencyLayer.Children.Add(dmodel);
-                    else
-                        VisualsLayer.Children.Add(dmodel);
+                    foreach (var mesh in group.Meshes)
+                        meshes.Children.Add(new DriverModelVisual3D(mesh, UseBlendWeights));
                 }
+
+                if (meshes.Children.Count > 0)
+                    models.Add(meshes);
             }
 
-            Visuals = models;
+            if (models.Count > 0)
+            {
+                // set the new model
+                foreach (var model in models)
+                {
+                    foreach (DriverModelVisual3D dmodel in model.Children)
+                    {
+                        if (dmodel.IsEmissive)
+                            EmissiveLayer.Children.Add(dmodel);
+                        else if (dmodel.HasTransparency)
+                            TransparencyLayer.Children.Add(dmodel);
+                        else
+                            VisualsLayer.Children.Add(dmodel);
+                    }
+                }
+
+                Visuals = models;
+                return true;
+            }
+            else
+            {
+                Viewport.SetDebugInfo("Level of detail contains no valid models.");
+                return false;
+            }
         }
 
+        public bool SetActiveModel(List<PartsGroup> partsGroups)
+        {
+            m_partsGroups = partsGroups;
+            return UpdateActiveModel();
+        }
+        
         public void ToggleBlendWeights()
         {
             UseBlendWeights = !UseBlendWeights;
@@ -327,10 +390,16 @@ namespace Antilli
             }
         }
 
+        private void OnLevelOfDetailChanged(int oldLod)
+        {
+            if (oldLod != m_lod)
+                UpdateActiveModel();
+        }
+
         public ModelViewer()
         {
             InitializeComponent();
-
+            
             DeselectModel.Click += (o, e) => {
                 SelectedModel = null;
             };

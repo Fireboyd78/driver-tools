@@ -243,7 +243,7 @@ namespace DSCript.Models
                 }
                 else if (PrimitiveType == D3DPRIMITIVETYPE.D3DPT_TRIANGLELIST)
                 {
-                    DSCript.DSC.Log("Loading a triangle list primitive!");
+                    DSC.Log("Loading a triangle list primitive!");
 
                     i0 = indices[idx + i];
                     i1 = indices[idx + (i + 1)];
