@@ -176,8 +176,8 @@ namespace DSCript
             public static readonly string SoundDefinition           = new FormattedPath("{0}.DAT", Folders.Sounds);
 
             public static readonly string MissionMood               = new FormattedPath("mood{0}.txt", Folders.Moods);
-            public static readonly string MissionCharacters         = new FormattedPath("{0}.dam", Folders.Vehicles);
-            public static readonly string MissionScript             = new FormattedPath("{0}.mpc", Folders.Vehicles);
+            public static readonly string MissionCharacters         = new FormattedPath("mission{0}.dam", Folders.Missions);
+            public static readonly string MissionScript             = new FormattedPath("mission{0}.mpc", Folders.Missions);
             public static readonly string MissionVehicles           = new FormattedPath("{0}.vvv", Folders.Vehicles);
 
             public static readonly string OverlayBin                = new FormattedPath("{0}.bin", Folders.Overlays);
@@ -325,6 +325,13 @@ namespace DSCript
                 return null;
 
             return GetPathFormat(FormattedPaths.SpooledVehicles, city.ToString());
+        }
+
+        public static string GetMissionScript(int missionId)
+        {
+            var idFmt = (missionId < 100) ? "{0:D2}" : "{0:D}";
+
+            return GetPathFormat(FormattedPaths.MissionScript, String.Format(idFmt, missionId));
         }
 
         public static string GetMissionVehicles(City city)
