@@ -28,12 +28,20 @@ namespace Antilli
         };
 
         protected ObjFile ObjFile { get; set; }
-
-        protected ObjFile.ObjGroup SelectedModel
+        
+        protected object CurrentSelection
         {
-            get { return TModels.SelectedItem as ObjFile.ObjGroup; }
+            get { return TModels.SelectedItem; }
         }
 
+        private int GetObjDataType(object obj)
+        {
+            return (obj is ObjFile.ObjGroup) ? 0
+                : (obj is ObjFile.ObjMesh) ? 1
+                : (obj is ObjFile.ObjMaterial) ? 2
+                : -1;
+        }
+        
         public List<ObjFile.ObjGroup> Models
         {
             get
@@ -45,14 +53,33 @@ namespace Antilli
             }
         }
 
-        public object ModelProperties
+        public List<FrameworkElement> ModelProperties
         {
             get
             {
-                if (SelectedModel != null)
-                    return SelectedModel.Name;
+                var items = new List<FrameworkElement>();
+                
+                if (CurrentSelection != null)
+                {
+                    var objId = GetObjDataType(CurrentSelection);
 
-                return null;
+                    switch (objId)
+                    {
+                    case 1:
+                        {
+                            var mesh = CurrentSelection as ObjFile.ObjMesh;
+                            var group = mesh.Group;
+                            var mat = mesh.Material;
+
+                            var meshIdx = group.Meshes.IndexOf(mesh) + 1;
+                            
+                            if (mat != null)   
+                                items.Add(new TextBlock() { Text = $"Material: \"{mat.Name}\"" });
+                        } break;
+                    }
+                }
+
+                return items;
             }
         }
 

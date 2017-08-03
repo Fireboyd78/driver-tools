@@ -52,7 +52,13 @@
             <ItemsControl Grid.Row="1" Margin="4" ItemsSource="{Binding ModelProperties}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <StackPanel Orientation="Vertical" IsItemsHost="True"/>
+                        <StackPanel Orientation="Vertical" IsItemsHost="True">
+                            <StackPanel.Resources>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Setter Property="Foreground" Value="{StaticResource atDark_fg}" />
+                                </Style>
+                            </StackPanel.Resources>
+                        </StackPanel>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>
