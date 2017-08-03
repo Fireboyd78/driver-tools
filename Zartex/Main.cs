@@ -287,8 +287,7 @@ namespace Zartex
             Cursor = Cursors.Default;
             */
         }
-
-        /*
+        
         private void GenerateWireCollection()
         {
             // Get widget ready
@@ -297,42 +296,47 @@ namespace Zartex
 
             Cursor = Cursors.WaitCursor;
 
-            int nWires = MissionPackage.WireCollections.Count;
-
-            IDictionary<int, string> opcodes = LogicData.Types.NodeDefinitionTypes;
-
+            List<NodeDefinition> nodeDefs = MissionPackage.MissionData.LogicExportData.Nodes.Definitions;
+            var wireCollections = MissionPackage.MissionData.LogicExportData.WireCollection.WireCollections;
+            int nWires = wireCollections.Count;
+            
             for (int w = 0; w < nWires; w++)
             {
-                WireCollectionGroup wires = MissionPackage.WireCollections[w];
+                var wires = wireCollections[w].Wires;
+                var lNodeIdx = nodeDefs.FindIndex(0, (def) => (int)def.Properties[0].Value == w);
 
-                LogicDefinition lNode = MissionPackage.LogicNodeDefinitions.First((def) => (int)def.Properties[0].Value == w);
+                var lNode = nodeDefs[lNodeIdx];
+                var lNodeName = MissionPackage.MissionData.LogicExportData.StringCollection[lNode.StringId];
+                
+                var text = $"[{lNodeIdx}]: {NodeTypes.GetNodeType(lNode.OpCode)}";
 
-                int nodeId = lNode.Opcode;
-
-                TreeNode wireGroupNode = new TreeNode() {
-                    Text = String.Format(
-                        //"{0}: Wire Collection",
-                        "{0}: {1}",
-                        w,
-                        opcodes.ContainsKey(nodeId) ? opcodes[nodeId] : "unknown"
-                        //MissionPackage.StringCollection[MissionPackage.LogicNodeDefinitions[w].StringId]
-                    ),
-                    Tag = wires
+                if (!String.IsNullOrEmpty(lNodeName))
+                    text = $"{text} \"{lNodeName}\"";
+                
+                var wireGroupNode = new TreeNode() {
+                    BackColor = lNode.Color,
+                    Text = $"[{w}]: <{text}>",
+                    Tag = lNode,
                 };
 
                 for (int n = 0; n < wires.Count; n++)
                 {
-                    WireCollectionEntry wire = wires.Entries[n];
+                    var wire = wires[n];
+                    
+                    var node = nodeDefs[wire.NodeId];
+                    var nodeName = MissionPackage.MissionData.LogicExportData.StringCollection[node.StringId];
 
-                    TreeNode wireNode = new TreeNode() {
-                        Text = String.Format(
-                            "{0}: {1}",
-                            wire.NodeId,
-                            (opcodes.ContainsKey(wire.Opcode) ? opcodes[wire.Opcode] : wire.Opcode.ToString())
-                        ),
-                        Tag = wire
+                    var wireText = $"[{wire.NodeId}]: {NodeTypes.GetNodeType(wire.OpCode)}";
+
+                    if (!String.IsNullOrEmpty(lNodeName))
+                        wireText = $"{wireText} \"{nodeName}\"";
+
+                    var wireNode = new TreeNode() {
+                        BackColor = node.Color,
+                        Text = $"[{n}]: {wire.GetWireNodeType()}: <{wireText}>",
+                        Tag = wire,
                     };
-
+                    
                     wireGroupNode.Nodes.Add(wireNode);
                 }
 
@@ -345,8 +349,7 @@ namespace Zartex
             
             Cursor = Cursors.Default;
         }
-        */
-
+        
         private void AddNodeProperty(TreeNode node, NodeProperty prop)
         {
             var propName = MissionPackage.MissionData.LogicExportData.StringCollection[prop.StringId];
@@ -369,6 +372,9 @@ namespace Zartex
 
                         propName = String.Format("{0}: <[{1}]: {2}>", propName, value, actorName);
                         break;
+                    case 9:
+                        propName = String.Format("{0}: 0x{1:X8}", propName, value);
+                        break;
                     case 19:
                         var wires = MissionPackage.MissionData.LogicExportData.WireCollection[value].Wires;
 
@@ -379,7 +385,10 @@ namespace Zartex
                         break;
                     case 20:
                         if (MissionPackage.HasLocaleString(value))
-                            propName = String.Format("{0} -> \"{1}\"", propName, MissionPackage.GetLocaleString(value));
+                            propName = String.Format("{0}: \"{1}\"", propName, MissionPackage.GetLocaleString(value));
+                        break;
+                    default:
+                        propName = $"{propName}: {prop.ToString()}";
                         break;
                     }
                 }
@@ -392,11 +401,23 @@ namespace Zartex
                 case 8:
                     {
                         var strId = (short)prop.Value;
-                        propName = String.Format("{0} -> \"{1}\"", propName, MissionPackage.MissionData.LogicExportData.StringCollection[(short)prop.Value]);
+
+                        // wut
+                        if (strId < 0)
+                            strId &= 0xFF;
+
+                        var propValue = String.Format("\"{1}\"", propName, MissionPackage.MissionData.LogicExportData.StringCollection[strId]);
 
                         if (prop.OpCode == 8)
-                            propName = String.Format("{0}, {1}", propName, ((AIPersonalityProperty)prop).PersonalityIndex);
+                            propValue = String.Format("{{ {0}, {1} }}", propValue, ((AIPersonalityProperty)prop).PersonalityIndex);
+
+                        propName = $"{propName}: {propValue}";
+
+
                     } break;
+                default:
+                    propName = $"{propName}: {prop.ToString()}";
+                    break;
                 }
             }
 
@@ -878,10 +899,7 @@ namespace Zartex
 
         private void LoadScriptFile(int missionId)
         {
-            //MissionPackage = new Mission(missionId);
-            //Filename = MissionPackage.Filename;
-            //
-            //InitTools();
+            LoadScriptFile(Driv3r.GetMissionScript(missionId));
         }
 
         private void LoadScriptFile(string filename)
@@ -943,13 +961,15 @@ namespace Zartex
                 switch (cType)
                 {
                 case ChunkType.ExportedMissionObjects:
-                    GenerateExportedMissionObjects();
+                    MessageBox.Show("Sorry, not implemented.", "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //GenerateExportedMissionObjects();
                     break;
                 case ChunkType.LogicExportStringCollection:
                     GenerateStringCollection();
                     break;
                 case ChunkType.LogicExportActorSetTable:
-                    GenerateActorSetTable();
+                    MessageBox.Show("Sorry, not implemented.", "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //GenerateActorSetTable();
                     break;
                 case ChunkType.LogicExportActorsChunk:
                     GenerateActors();
@@ -958,10 +978,10 @@ namespace Zartex
                     GenerateLogicNodes();
                     break;
                 case ChunkType.LogicExportWireCollections:
-                    //GenerateWireCollection();
+                    GenerateWireCollection();
                     break;
                 default:
-                    MessageBox.Show("Not implemented!");
+                    MessageBox.Show("Sorry, not implemented.", "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     break;
                 }
 

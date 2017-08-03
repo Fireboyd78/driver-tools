@@ -85,7 +85,7 @@ namespace Zartex
 
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
-            switch ((ChunkType)sender.Magic)
+            switch ((ChunkType)sender.Context)
             {
             case ChunkType.ExportedMissionChunk:
                 {

@@ -56,6 +56,11 @@ namespace Zartex
             }
             set { _value = value; }
         }
+
+        public override string ToString()
+        {
+            return _value.ToString();
+        }
     }
 
     public sealed class UnknownProperty : NodeProperty
@@ -109,7 +114,7 @@ namespace Zartex
             get { return (int)base.Value; }
             set { base.Value = value; }
         }
-
+        
         public IntegerProperty(int value)
         {
             Value = value;
@@ -161,11 +166,10 @@ namespace Zartex
         {
             get { return "Represents a boolean (true/false, cops on/off, etc.)"; }
         }
-
-        [TypeConverter(typeof(BooleanConverter))]
-        public override object Value
+        
+        public new bool Value
         {
-            get { return base.Value; }
+            get { return (bool)base.Value; }
             set { base.Value = value; }
         }
 
@@ -309,6 +313,11 @@ namespace Zartex
             set { base.Value = value; }
         }
 
+        public override string ToString()
+        {
+            return $"[{Value.X:F}, {Value.Y:F}, {Value.Z:F}, {Value.W:F}]";
+        }
+
         public Float4Property(Vector4 value)
         {
             Value = value;
@@ -389,6 +398,11 @@ namespace Zartex
         public override string Notes
         {
             get { return "Represents a raw-data buffer."; }
+        }
+
+        public override string ToString()
+        {
+            return $"byte[{((byte[])Value).Length}]";
         }
 
         public RawDataProperty(byte[] value)

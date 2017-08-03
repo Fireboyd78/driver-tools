@@ -76,11 +76,19 @@ namespace Zartex
                         }
                     }*/
 
-                    // experimental node expansion
-                    foreach (TreeNode propNode in node.Nodes)
+                    if (nProps > 0)
                     {
-                        var newNode = (TreeNode)propNode.Clone();
+                        // experimental node expansion
+                        foreach (TreeNode propNode in node.Nodes)
+                        {
+                            var newNode = (TreeNode)propNode.Clone();
 
+                            e.Node.Nodes.Add(newNode);
+                        }
+                    }
+                    else
+                    {
+                        var newNode = (TreeNode)node.Clone();
                         e.Node.Nodes.Add(newNode);
                     }
 
