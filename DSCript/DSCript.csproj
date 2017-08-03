@@ -104,7 +104,7 @@
     <None Include="Models\ModelPackages\ModelPackagePC_X.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
     <Compile Include="Models\TextureCache.cs" />
-    <Compile Include="Models\D3DPRIMITIVETYPE.cs" />
+    <Compile Include="Models\PrimitiveType.cs" />
     <Compile Include="Models\IndexData.cs" />
     <Compile Include="Models\MeshDefinition.cs" />
     <Compile Include="Models\PackageTypes.cs" />

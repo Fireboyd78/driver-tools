@@ -824,7 +824,7 @@ namespace DSCript.Models
                                 throw new NotImplementedException("Small mesh types not supported!");
 
                             var mesh = new MeshDefinition(this) {
-                                PrimitiveType = (D3DPRIMITIVETYPE)primType,
+                                PrimitiveType = (PrimitiveType)primType,
                                 BaseVertexIndex = stream.ReadInt32(),
                                 MinIndex = stream.ReadUInt32(),
                                 NumVertices = stream.ReadUInt32(),

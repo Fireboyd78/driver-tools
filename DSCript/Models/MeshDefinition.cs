@@ -56,9 +56,9 @@ namespace DSCript.Models
         public MeshGroup MeshGroup { get; set; }
 
         /// <summary>
-        /// Member of the <see cref="D3DPRIMITIVETYPE"/> enumerated type, describing the type of primitive to render. D3DPT_POINTLIST is not supported with this method.
+        /// Member of the <see cref="Models.PrimitiveType"/> enumerated type, describing the type of primitive to render.
         /// </summary>
-        public D3DPRIMITIVETYPE PrimitiveType { get; set; }
+        public PrimitiveType PrimitiveType { get; set; }
 
         /// <summary>
         /// Offset from the start of the vertex buffer to the first vertex.
@@ -216,7 +216,7 @@ namespace DSCript.Models
 
                 int i0, i1, i2;
 
-                if (PrimitiveType == D3DPRIMITIVETYPE.D3DPT_TRIANGLESTRIP)
+                if (PrimitiveType == PrimitiveType.TriangleStrip)
                 {
                     if (i % 2 == 1.0)
                     {
@@ -241,7 +241,7 @@ namespace DSCript.Models
                         tris.Add((int)(i0 - MinIndex));
                     }
                 }
-                else if (PrimitiveType == D3DPRIMITIVETYPE.D3DPT_TRIANGLELIST)
+                else if (PrimitiveType == PrimitiveType.TriangleList)
                 {
                     DSC.Log("Loading a triangle list primitive!");
 
