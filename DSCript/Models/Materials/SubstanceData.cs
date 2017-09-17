@@ -90,7 +90,7 @@ namespace DSCript.Models
 
         public virtual bool Transparency
         {
-            get { return (((Flags & 0x1) == 0x1 || Flags == 0x4) && !Specular); }
+            get { return (((Flags & 0x1) != 0 || Flags == 0x4) && !Specular); }
         }
 
         public SubstanceDataPC() : base() { }
