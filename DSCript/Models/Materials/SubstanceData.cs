@@ -85,7 +85,7 @@ namespace DSCript.Models
 
         public virtual bool Emissive
         {
-            get { return ((Flags & 0x18000) == 0x18000 || (Flags & 0x1E) == 0x1E); }
+            get { return ((Flags & 0x18000) != 0 || (Flags & 0x1E) == 0x1E); }
         }
 
         public virtual bool Transparency
