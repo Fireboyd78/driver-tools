@@ -151,8 +151,8 @@ namespace GMC2Snooper
                 Console.WriteLine(">> Dumping model info...");
                 DumpModelInfo(gmc2);
 
-                Console.WriteLine(">> Dumping texture info...");
-                DumpTextures(gmc2);
+                Console.WriteLine(">> Dumping material info...");
+                DumpMaterials(gmc2);
 
                 TestNewImageViewer(gmc2);
 
@@ -612,34 +612,57 @@ namespace GMC2Snooper
             }
         }
 
-        public static void DumpTextures(ModelPackagePS2 gmc2)
+        public static void DumpMaterials(ModelPackagePS2 gmc2)
         {
             var sb = new StringBuilder();
 
-            // dump textures
-            for (int t = 0; t < gmc2.Textures.Count; t++)
+            for (int m = 0; m < gmc2.Materials.Count; m++)
             {
-                var tex = gmc2.Textures[t];
+                var mat = gmc2.Materials[m];
 
-                sb.AppendLine($"texture[{t + 1}] : {tex.Reserved:X16} {{");
+                sb.AppendLine($"material[{m + 1}] {{");
+                sb.AppendLine($"  animated =  {((mat.Animated) ? 1 : 0)};");
+                sb.AppendLine($"  anim_speed = {mat.AnimationSpeed};"); 
+                sb.AppendLine($"  substances[{mat.Substances.Count}] = [");
 
-                sb.AppendLine($"  type = {tex.Type};");
-                sb.AppendLine($"  flags = 0x{tex.Flags:X};");
-                sb.AppendLine($"  width = {tex.Width};");
-                sb.AppendLine($"  height = {tex.Height};");
-                sb.AppendLine($"  unknown1 = 0x{tex.Unknown1:X};");
-                sb.AppendLine($"  dataOffset = 0x{tex.DataOffset:X};");
-                sb.AppendLine($"  unknown2 = 0x{tex.Unknown2:X};");
+                for (int s = 0; s < mat.Substances.Count; s++)
+                {
+                    var sub = mat.Substances[s];
 
-                sb.AppendLine($"  cluts[{tex.Modes}] = [");
+                    sb.AppendLine($"    substance[{s + 1}] {{");
+                    sb.AppendLine($"      flags = {sub.Flags:X4};");
+                    sb.AppendLine($"      mode = {sub.Mode:X4};");
+                    sb.AppendLine($"      type = {sub.Type:X4};");
+                    sb.AppendLine($"      textures[{sub.Textures.Count}] = [");
 
-                foreach (var mode in tex.CLUTs)
-                    sb.AppendLine($"    0x{mode:X},");
+                    for (int t = 0; t < sub.Textures.Count; t++)
+                    {
+                        var tex = sub.Textures[t];
 
+                        sb.AppendLine($"        texture[{t + 1}] : {tex.Reserved:X16} {{");
+
+                        sb.AppendLine($"          type = {tex.Type};");
+                        sb.AppendLine($"          flags = 0x{tex.Flags:X};");
+                        sb.AppendLine($"          width = {tex.Width};");
+                        sb.AppendLine($"          height = {tex.Height};");
+                        sb.AppendLine($"          unknown1 = 0x{tex.Unknown1:X};");
+                        sb.AppendLine($"          dataOffset = 0x{tex.DataOffset:X};");
+                        sb.AppendLine($"          unknown2 = 0x{tex.Unknown2:X};");
+
+                        sb.AppendLine($"          cluts[{tex.Modes}] = [");
+
+                        foreach (var mode in tex.CLUTs)
+                            sb.AppendLine($"            0x{mode:X},");
+
+                        sb.AppendLine("          ];");
+                        sb.AppendLine("        }");
+                    }
+
+                    sb.AppendLine("      ];");
+                }
                 sb.AppendLine("  ];");
-                sb.AppendLine("}");
             }
-
+            
             Console.WriteLine(sb.ToString());
         }
 
