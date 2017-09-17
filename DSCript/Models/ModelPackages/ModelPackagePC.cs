@@ -716,7 +716,8 @@ namespace DSCript.Models
                     // <END OF TRANSMISSION>...
                     VertexBuffer = VertexBuffers[stream.ReadInt16()],
 
-                    Unknown1 = stream.ReadInt16(),
+                    VertexType = stream.ReadInt16(),
+                    
                     Unknown2 = stream.ReadInt32(),
                     Unknown3 = stream.ReadInt32()
                 };
@@ -1149,7 +1150,8 @@ namespace DSCript.Models
 
                         f.Write((short)vBufferId);
 
-                        f.Write(part.Unknown1);
+                        f.Write(part.VertexType);
+
                         f.Write(part.Unknown2);
                         f.Write(part.Unknown3);
 
