@@ -884,7 +884,7 @@ namespace DSCript.Models
                 MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, f);
                 
                 Materials       = new List<MaterialDataPC>(MaterialsHeader.MaterialsCount);
-                SubMaterials    = new List<SubstanceDataPC>(MaterialsHeader.SubstancesCount);
+                Substances    = new List<SubstanceDataPC>(MaterialsHeader.SubstancesCount);
                 Textures        = new List<TextureDataPC>(MaterialsHeader.TexturesCount);
 
                 var texLookup   = new Dictionary<int, byte[]>();
@@ -917,14 +917,14 @@ namespace DSCript.Models
 
                         f.Position  = sOffset;
 
-                        var subMat = new SubstanceDataPC() {
+                        var substance = new SubstanceDataPC() {
                             Flags   = f.ReadInt32(),
                             Mode    = f.ReadUInt16(),
                             Type    = f.ReadUInt16()
                         };
 
-                        material.Substances.Add(subMat);
-                        SubMaterials.Add(subMat);
+                        material.Substances.Add(substance);
+                        Substances.Add(substance);
 
                         f.Position += 0x8;
 
@@ -941,7 +941,7 @@ namespace DSCript.Models
 
                             var textureInfo = new TextureDataPC();
                             
-                            subMat.Textures.Add(textureInfo);
+                            substance.Textures.Add(textureInfo);
                             Textures.Add(textureInfo);
                             
                             textureInfo.Reserved    = f.ReadInt32();
@@ -1004,7 +1004,7 @@ namespace DSCript.Models
             var pcmpOffset = bufferSize;
             var pcmpSize = 0;
             
-            MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, Materials.Count, SubMaterials.Count, Textures.Count);
+            MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, Materials.Count, Substances.Count, Textures.Count);
 
             pcmpSize = MaterialsHeader.TextureDataOffset;
 
@@ -1253,24 +1253,24 @@ namespace DSCript.Models
                 // write substances
                 for (int s = 0; s < MaterialsHeader.SubstancesCount; s++)
                 {
-                    var subMat = SubMaterials[s];
+                    var substance = Substances[s];
                     var sOffset = MaterialsHeader.SubstancesOffset + (s * MaterialsHeader.SubMaterialSize);
 
                     sLookup[s] = sOffset;
 
                     f.Position = pcmpOffset + sOffset;
 
-                    f.Write(subMat.Flags);
+                    f.Write(substance.Flags);
 
-                    f.Write(subMat.Mode);
-                    f.Write(subMat.Type);
+                    f.Write(substance.Mode);
+                    f.Write(substance.Type);
 
                     f.Position += 0x8;
                     
                     f.Write(texLookup[tIdx]);
-                    f.Write(subMat.Textures.Count);
+                    f.Write(substance.Textures.Count);
 
-                    tIdx += subMat.Textures.Count;
+                    tIdx += substance.Textures.Count;
                 }
 
                 // write substance lookup

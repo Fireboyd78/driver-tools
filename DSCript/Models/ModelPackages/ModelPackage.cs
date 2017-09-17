@@ -36,7 +36,7 @@ namespace DSCript.Models
         public IndexData IndexBuffer { get; set; }
 
         public List<MaterialDataPC> Materials { get; set; }
-        public List<SubstanceDataPC> SubMaterials { get; set; }
+        public List<SubstanceDataPC> Substances { get; set; }
         public List<TextureDataPC> Textures { get; set; }
 
         public bool HasMaterials    => Materials?.Count > 0;
