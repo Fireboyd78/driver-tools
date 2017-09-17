@@ -1106,19 +1106,11 @@ namespace DSCript.Models
 
                         f.Position += 0x4;
 
-                        for (int i = 0; i < group.Transform.Length; i++)
-                        {
-                            f.WriteFloat(group.Transform[i].X);
-                            f.WriteFloat(group.Transform[i].Y);
-                            f.WriteFloat(group.Transform[i].Z);
-                            f.WriteFloat(group.Transform[i].W);
-                        }
-
-                        f.WriteFloat(group.Unknown.X);
-                        f.WriteFloat(group.Unknown.Y);
-                        f.WriteFloat(group.Unknown.Z);
-                        f.WriteFloat(group.Unknown.W);
-
+                        foreach (var transform in group.Transform)
+                            f.Write(transform);
+                        
+                        f.Write(group.Unknown);
+                        
                         var mCount = group.Meshes.Count;
 
                         f.Write(mCount);
@@ -1138,11 +1130,8 @@ namespace DSCript.Models
                         f.Write(part.UID);
                         f.Write(part.Handle);
 
-                        f.WriteFloat(part.Unknown.X);
-                        f.WriteFloat(part.Unknown.Y);
-                        f.WriteFloat(part.Unknown.Z);
-                        f.WriteFloat(part.Unknown.W);
-                        
+                        f.Write(part.Unknown);
+                       
                         var vBufferId = VertexBuffers.IndexOf(part.VertexBuffer);
 
                         if (vBufferId == -1)
@@ -1157,14 +1146,9 @@ namespace DSCript.Models
 
                         f.Position += 0x4;
 
-                        for (int t = 0; t < part.Transform.Length; t++)
-                        {
-                            f.WriteFloat(part.Transform[t].X);
-                            f.WriteFloat(part.Transform[t].Y);
-                            f.WriteFloat(part.Transform[t].Z);
-                            f.WriteFloat(part.Transform[t].W);
-                        }
-
+                        foreach (var transform in part.Transform)
+                            f.Write(transform);
+                        
                         var lodsOffset = f.Position;
                         
                         for (int d = 0; d < part.Parts.Length; d++)
