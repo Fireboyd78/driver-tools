@@ -317,14 +317,40 @@ namespace System.IO
             return str;
         }
 
-        public static string ReadString(this Stream stream, int length)
+        public static string ReadString(this Stream stream, int count)
         {
-            return Encoding.UTF8.GetString(stream.ReadBytes(length));
+            var buf = stream.ReadBytes(count);
+            var length = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var c = buf[i];
+
+                if (c == '\0')
+                    break;
+
+                ++length;
+            }
+
+            return Encoding.UTF8.GetString(buf, 0, length);
         }
 
-        public static string ReadUnicodeString(this Stream stream, int length)
+        public static string ReadUnicodeString(this Stream stream, int count)
         {
-            return Encoding.Unicode.GetString(stream.ReadBytes(length));
+            var buf = stream.ReadBytes(count * 2);
+            var length = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var c = BitConverter.ToInt16(buf, (i * 2));
+
+                if (c == '\0')
+                    break;
+
+                length += 2;
+            }
+
+            return Encoding.Unicode.GetString(buf, 0, length);
         }
         #endregion
 
