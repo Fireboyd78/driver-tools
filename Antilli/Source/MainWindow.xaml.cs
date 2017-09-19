@@ -564,6 +564,135 @@ namespace Antilli
 
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+        private void ExportAntilliModelFile()
+        {
+            var modelFile = CurrentModelFile as Driv3rVehiclesFile;
+
+            if (CurrentModelPackage == null || CurrentModelFile == null)
+            {
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var idx = (!modelFile.IsMissionVehicleFile) ? modelFile.Models.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
+
+            var hierarchy = modelFile.Hierarchies[idx];
+
+            var dir = Settings.ExportDirectory;
+            var path = String.Format("{0}\\{1}_{2}.aimodel", dir, Path.GetFileName(CurrentModelFile.FileName).Replace('.', '_'), hierarchy.UID);
+
+            var header = Encoding.UTF8.GetBytes("ANTILLI!");
+
+            var version = 1;
+            var flags = 0; // reserved for future use
+            
+            using (var ms = new MemoryStream())
+            {
+                ms.Write(header);
+                ms.Write((short)((flags << 8) | version));
+                ms.Write((short)MagicNumber.FB); // ;)
+                
+                // size of model data
+                ms.Position += 4;
+                
+                var parts = CurrentModelPackage.Parts;
+                var vBuffers = CurrentModelPackage.VertexBuffers;
+                var materials = CurrentModelPackage.Materials;
+                var textures = CurrentModelPackage.Textures;
+
+                // model package stuff
+                ms.Write(CurrentModelPackage.UID);
+
+                ms.Write((short)parts.Count);
+                ms.Write((short)vBuffers.Count);
+                ms.Write((short)materials.Count);
+                ms.Write((short)textures.Count);
+
+                // reserved -- must be -1 to skip
+                ms.Write(-1);
+
+                // vertex buffers
+                foreach (var vBuf in vBuffers)
+                {
+                    var verts = vBuf.Buffer;
+
+                    ms.Write(verts.Length);
+
+                    ms.Write((short)vBuf.Length);
+                    ms.Write((short)0); // reserved: extra data present?
+
+                    foreach (var vertex in vBuf.Buffer)
+                        ms.Write(vertex.GetBytes());
+                }
+
+                var texLookup = new Dictionary<int, int>();
+                var texLookupCount = 0;
+
+                var texNames = new List<String>();
+
+                // individual texture names
+                foreach (var tex in textures)
+                {
+                    if (texLookup.ContainsKey(tex.CRC32))
+                        continue;
+
+                    var texName = $"{tex.CRC32}.dds";
+                    texLookup.Add(tex.CRC32, texLookupCount++);
+
+                    texNames.Add(texName);
+                }
+
+                ms.Write(texLookupCount);
+
+                foreach (var texName in texNames)
+                    ms.Write(texName + '\0');
+
+                // materials
+                foreach (var mat in materials)
+                {
+                    ms.Write((short)(mat.Substances.Count));
+                    ms.Write((short)(mat.IsAnimated ? 1 : 0));
+
+                    ms.Write(mat.AnimationSpeed);
+
+                    foreach (var substance in mat.Substances)
+                    {
+                        ms.Write(substance.Flags);
+                        ms.Write((short)substance.Mode);
+                        ms.Write((short)substance.Type);
+
+                        ms.Write(substance.Textures.Count);
+
+                        foreach (var texture in substance.Textures)
+                        {
+                            ms.Write(texture.Reserved);
+                            ms.Write((short)texture.Type);
+                            ms.Write((short)texLookup[texture.CRC32]);
+                            ms.Write(texture.Unknown);
+                        }
+                    }
+                }
+
+                // TODO: Write model data
+
+                var hierPtr = ms.Position;
+                var modelSize = (int)(hierPtr - 16);
+
+                ms.Position = 0xC;
+                ms.Write(modelSize);
+
+                ms.Position = hierPtr;
+                // TODO: Write hierarchy data
+
+                // commit changes
+                ms.SetLength(ms.Position);
+
+                File.WriteAllBytes(path, ms.ToArray());
+            }
+
+            MessageBox.Show($"Successfully exported AIModel file to '{path}'!", "Antilli Model Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
         
         private void ExportTexture(ITextureData texture)
         {
@@ -905,6 +1034,7 @@ namespace Antilli
             exportMDPC.Click += (o, e) => ExportModelPackage();
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
             exportObj.Click += (o, e) => ExportObjFile();
+            exportAIModel.Click += (o, e) => ExportAntilliModelFile();
 
             chunkViewer.Click += (o, e) => {
                 var cViewer = new ChunkViewer();
