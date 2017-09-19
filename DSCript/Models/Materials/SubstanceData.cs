@@ -85,12 +85,12 @@ namespace DSCript.Models
 
         public virtual bool Emissive
         {
-            get { return ((Flags & 0x18000) != 0 || (Flags & 0x1E) == 0x1E); }
+            get { return ((Flags & 0x18000) != 0 || (Flags & 0x7F) == 0x1E); }
         }
 
         public virtual bool Transparency
         {
-            get { return (((Flags & 0x1) != 0 || Flags == 0x4) && !Specular); }
+            get { return ((Flags & 0x400) != 0) && !Specular; }
         }
 
         public SubstanceDataPC() : base() { }
