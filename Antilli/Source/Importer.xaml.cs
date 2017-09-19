@@ -13,6 +13,10 @@ using System.Windows.Shapes;
 
 using Microsoft.Win32;
 
+using DSCript;
+using DSCript.Models;
+using DSCript.Spooling;
+
 namespace Antilli
 {
     /// <summary>
@@ -85,7 +89,11 @@ namespace Antilli
 
         public bool CanSave
         {
-            get { return false; }
+            get
+            {
+                //return (ObjFile != null) && (Models != null);
+                return false;
+            }
         }
 
         private void ModelSelected(object sender, RoutedEventArgs e)
@@ -104,7 +112,56 @@ namespace Antilli
 
         private void SaveFileClick(object sender, RoutedEventArgs e)
         {
+            var saveModel = new SaveFileDialog() {
+                Title               = "Save model as:",
+                DefaultExt          = ".rimodel",
+                InitialDirectory    = Settings.ExportDirectory,
+                AddExtension        = true,
+            };
 
+            if (saveModel.ShowDialog(Owner) ?? false)
+            {
+                var spooler = SpoolableResourceFactory.Create<ModelPackagePC>();
+                
+                var nVertices = ObjFile.Positions.Count;
+                var vertices = new List<Vertex>(nVertices);
+
+                for (int v = 0; v < ObjFile.Positions.Count; v++)
+                {
+                    var vp = ObjFile.Positions[v];
+
+                    vertices[v].Position = new Vector3(
+                        (float)vp.X,
+                        (float)vp.Y,
+                        (float)vp.Z);
+                }
+
+                for (int t = 0; t < ObjFile.TextureCoordinates.Count; t++)
+                {
+                    var vt = ObjFile.TextureCoordinates[t];
+
+                    vertices[t].UV = new Vector2(
+                        (float)vt.X,
+                        (float)vt.Y);
+                }
+
+                for (int n = 0; n < ObjFile.Normals.Count; n++)
+                {
+                    var vt = ObjFile.Normals[n];
+
+                    vertices[n].Normal = new Vector3(
+                        (float)vt.X,
+                        (float)vt.Y,
+                        (float)vt.Z);
+                }
+
+                spooler.VertexBuffers = new List<VertexData>();
+
+                /*
+                    This is where I realized this won't work!
+                    The OBJ format just isn't made for this kind of stuff :(
+                */
+            }
         }
 
         public Importer()
@@ -112,5 +169,9 @@ namespace Antilli
             InitializeComponent();
         }
 
+        private void BTConvert_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
