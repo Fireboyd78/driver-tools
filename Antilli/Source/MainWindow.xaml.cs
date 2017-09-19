@@ -254,6 +254,123 @@ namespace Antilli
             
             switch (extension)
             {
+            case ".dam":
+                modelFile.SpoolerLoaded += (s, e) => {
+                    if (s.Context == (int)ChunkType.CharacterSkeletons)
+                    {
+                        var skel = s as SpoolableBuffer;
+
+                        if (skel == null)
+                            return;
+
+                        var result = MessageBox.Show("Would you like to dump the skeleton data? :)", "Antilli", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            var sb = new StringBuilder();
+
+                            var fmtVec = new Func<Vector4, string>((v) => {
+                                var fmtStr = "{0,7:F4}";
+
+                                return String.Format("[{0},{1},{2},{3}]",
+                                    String.Format(fmtStr, v.X),
+                                    String.Format(fmtStr, v.Y),
+                                    String.Format(fmtStr, v.Z),
+                                    String.Format(fmtStr, v.W)
+                                    );
+                            });
+
+                            using (var ms = skel.GetMemoryStream())
+                            {
+                                var count = ms.ReadInt32();
+                                var unk = ms.ReadInt32();
+
+                                sb.AppendLine($"# SkeletonPackage");
+                                sb.AppendLine($"# Unk: {unk:X8}");
+                                sb.AppendLine();
+
+                                for (int i = 0; i < count; i++)
+                                {
+                                    // make sure we're 16-bit aligned first
+                                    ms.Align(16);
+
+                                    var skelName = ms.ReadString(40);
+
+                                    ms.Position += 4;
+                                    var nBones = ms.ReadInt32();
+
+                                    var boneLookup = new string[nBones];
+
+                                    var bonesOffset = ms.Position;
+                                    var parentsOffset = (bonesOffset + (nBones * 0xB0));
+
+                                    sb.AppendLine($"Skeleton : {skelName} {{");
+
+                                    for (int b = 0; b < nBones; b++)
+                                    {
+                                        ms.Position = (bonesOffset + (b * 0xB0));
+
+                                        var boneName = ms.ReadString(40);
+                                        ms.Position += 8;
+
+                                        var tr1X = ms.Read<Vector4>();
+                                        var tr1Y = ms.Read<Vector4>();
+                                        var tr1Z = ms.Read<Vector4>();
+                                        var tr1R = ms.Read<Vector4>();
+
+                                        var tr2X = ms.Read<Vector4>();
+                                        var tr2Y = ms.Read<Vector4>();
+                                        var tr2Z = ms.Read<Vector4>();
+                                        var tr2R = ms.Read<Vector4>();
+
+                                        boneLookup[b] = boneName;
+
+                                        ms.Position = (parentsOffset + (b * 4));
+
+                                        var parentIdx = ms.ReadInt32();
+                                        var parentName = "ROOT";
+
+                                        // because idk the format
+                                        if (parentIdx <= 65535)
+                                            parentIdx = (short)parentIdx;
+
+                                        sb.AppendLine($"  Bone : {boneName} {{");
+
+                                        if (parentIdx != -1)
+                                            parentName = boneLookup[parentIdx];
+
+                                        sb.AppendLine($"    parent = {parentName} ");
+                                        sb.AppendLine($"    transform[1] = [");
+                                        sb.AppendLine($"      {fmtVec(tr1X)}, ");
+                                        sb.AppendLine($"      {fmtVec(tr1Y)}, ");
+                                        sb.AppendLine($"      {fmtVec(tr1Z)}, ");
+                                        sb.AppendLine($"      {fmtVec(tr1R)}, ");
+                                        sb.AppendLine($"    ]");
+                                        sb.AppendLine($"    transform[2] = [");
+                                        sb.AppendLine($"      {fmtVec(tr2X)}, ");
+                                        sb.AppendLine($"      {fmtVec(tr2Y)}, ");
+                                        sb.AppendLine($"      {fmtVec(tr2Z)}, ");
+                                        sb.AppendLine($"      {fmtVec(tr2R)}, ");
+                                        sb.AppendLine($"    ]");
+                                        sb.AppendLine($"  }}");
+
+                                        if ((b + 1) < nBones)
+                                            sb.AppendLine();
+                                    }
+
+                                    sb.AppendLine($"}}\r\n");
+                                }
+                            }
+
+                            var boneFile = Path.Combine(Settings.ExportDirectory, $"{Path.GetFileNameWithoutExtension(filename)}_skeletons.txt");
+
+                            File.WriteAllText(boneFile, sb.ToString());
+
+                            MessageBox.Show($"Bone data exported to '{boneFile}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                    }
+                };
+                break;
             case ".vvs":
             case ".vvv":
                 LoadDriv3rVehicles(filename);
