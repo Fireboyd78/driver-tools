@@ -51,8 +51,8 @@ d 1.0000
 Tr 0.0000
 Tf 1.0000 1.0000 1.0000
 illum 2
-Ka 0.0000 0.0000 0.0000
-Kd 0.0000 0.0000 0.0000
+Ka 1.0000 1.0000 1.0000
+Kd 1.0000 1.0000 1.0000
 Ks 0.0000 0.0000 0.0000
 Ke 0.0000 0.0000 0.0000
 map_Ka {1}_1_1.dds
@@ -211,6 +211,9 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
                             minIndex += vCount;
                         }
+
+                        // blender support
+                        objBuilder.AppendLine($"o Model{modelIndex:D2}_{lodType}");
 
                         objBuilder.AppendLine(vPos);
                         objBuilder.AppendLine(vNor);
