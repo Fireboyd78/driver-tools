@@ -109,11 +109,33 @@ namespace Antilli
             {
                 var substance_pc = (substance as ISubstanceDataPC);
 
+                sb.AppendLine();
+                sb.AppendLine("==== Flags ====");
+
                 sb.AppendColumn("Transparent", col, true).AppendLine(substance_pc.Transparency);
                 sb.AppendColumn("Damage", col, true).AppendLine(substance_pc.Damage);
                 sb.AppendColumn("Mask", col, true).AppendLine(substance_pc.AlphaMask);
                 sb.AppendColumn("Specular", col, true).AppendLine(substance_pc.Specular);
                 sb.AppendColumn("Emissive", col, true).AppendLine(substance_pc.Emissive);
+
+                sb.AppendLine();
+                sb.AppendLine("==== Debug Information ====");
+                
+                var resolved = substance_pc.GetResolvedData();
+
+                var rst = (resolved >> 0) & 0xFF;
+                var stage = (resolved >> 8) & 0xFFFF;
+                var flags = (resolved >> 16) & 0xFFFF;
+
+                sb.AppendColumn("Resolved", col, true).AppendLine("0x{0:X6} ; Resolved value by Driv3r", resolved);
+                sb.AppendColumn(".rst", col, true).AppendLine("0x{0:X2}", rst);
+                sb.AppendColumn(".stage", col, true).AppendLine("0x{0:X2}", stage);
+                sb.AppendColumn(".flags", col, true).AppendLine("0x{0:X2}", flags);
+
+                sb.AppendLine();
+                sb.AppendColumn("FlagsTest", col, true).AppendLine("0x{0:X6} ; Flags from resolved data", substance_pc.GetCompiledFlags(resolved));
+
+                
             }
 
             m_contentInfo = sb.ToString();
