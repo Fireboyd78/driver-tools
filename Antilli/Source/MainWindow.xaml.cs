@@ -249,16 +249,24 @@ namespace Antilli
             var timer = new Stopwatch();
             timer.Start();
 
+            var modelFile = new Driv3rModelFile();
+            var setupModels = true;
+            
             switch (extension)
             {
             case ".vvs":
             case ".vvv":
                 LoadDriv3rVehicles(filename);
+                setupModels = false;
                 break;
-            default:
-                AT.CurrentState.ModelFile = new Driv3rModelFile(filename);
+            }
+
+            if (setupModels)
+            {
+                modelFile.Load(filename);
+
+                AT.CurrentState.ModelFile = modelFile;
                 AT.CurrentState.CanUseGlobals = false;
-                break;
             }
 
             SubTitle = filename;
