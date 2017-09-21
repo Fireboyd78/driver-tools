@@ -184,7 +184,8 @@ namespace GMC2Snooper
                             Modes = stream.ReadByte(),
                             Type = stream.ReadByte(),
 
-                            Flags = stream.ReadInt16(),
+                            MipMaps = stream.ReadByte(),
+                            Flags = stream.ReadByte(),
 
                             Width = stream.ReadInt16(),
                             Height = stream.ReadInt16(),

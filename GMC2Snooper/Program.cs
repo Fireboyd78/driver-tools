@@ -123,7 +123,7 @@ namespace GMC2Snooper
                 Console.WriteLine($"ERROR: Index was larger than the actual number of models available.");
                 return;
             }
-            
+
             while (idx < modPacks.Count)
             {
                 var gmc2 = new ModelPackagePS2();
@@ -147,14 +147,14 @@ namespace GMC2Snooper
 
                 _buffer1 = new VBuffer();
                 _buffer2 = new VBuffer();
-                
+
                 Console.WriteLine(">> Dumping model info...");
                 DumpModelInfo(gmc2);
 
                 Console.WriteLine(">> Dumping material info...");
                 DumpMaterials(gmc2);
 
-                TestNewImageViewer(gmc2);
+                TestNewImageViewer(gmc2, idx);
 
                 if (interactive)
                 {
@@ -175,7 +175,7 @@ namespace GMC2Snooper
                         Console.ReadKey();
                     }
                 }
-                
+
                 // that's all, folks!
                 break;
             }
@@ -324,12 +324,12 @@ namespace GMC2Snooper
         public static void DumpModelInfo(ModelPackagePS2 gmc2)
         {
             var sb = new StringBuilder();
-            
+
             var minIndex = 0;
 
             var top1 = 0;
             var top2 = 0;
-            
+
             // vif tag info :)
             for (int i = 0; i < gmc2.Models.Count; i++)
             {
@@ -342,19 +342,19 @@ namespace GMC2Snooper
                 Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
                 Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
                 Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
-                
+#           if DUMP_MODELS
                 sb.AppendLine($"# ----- Model {i + 1} ----- #");
                 sb.AppendLine($"# type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
                 sb.AppendLine($"# unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
 
                 sb.AppendLine($"o model{i+1:D4}");
-
+#           endif
                 var meshes = new List<MeshStrip>();
-                
+
                 for (int ii = 0; ii < model.SubModels.Count; ii++)
                 {
                     var subModel = model.SubModels[ii];
-                    
+
                     Console.WriteLine($"******** Sub model {ii + 1} / {model.SubModels.Count} *********");
                     Console.WriteLine($"Type: {subModel.Type}");
                     Console.WriteLine($"Flags: {subModel.Flags}");
@@ -377,9 +377,9 @@ namespace GMC2Snooper
                         Console.WriteLine($"Transform Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
                         Console.WriteLine($"Transform Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
                     }
-                    
+
                     var dbf = VIF.DoubleBuffered;
-                    
+
                     VBuffer vBuf = GetBuffer(VIF);
 
                     using (var ms = new MemoryStream(subModel.ModelDataBuffer))
@@ -401,7 +401,7 @@ namespace GMC2Snooper
                             }
 
                             DumpVIFTag();
-                            
+
                             switch ((VifCommandType)VIF.Code.CMD)
                             {
                             case VifCommandType.ITop:
@@ -418,6 +418,7 @@ namespace GMC2Snooper
                         }
                     }
 
+#               if DUMP_MODELS
                     var vertices = new List<VertexStrip>();
 
                     CollectVertices(_buffer1, ref top1, vertices);
@@ -461,16 +462,17 @@ namespace GMC2Snooper
 
                     minIndex += numVertices;
                     Console.WriteLine();
+#               endif
                 }
 
                 Console.WriteLine();
             }
-
-
+#       if DUMP_MODELS
             File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "dump.obj"), sb.ToString());
+#       endif
         }
-        
-        
+
+
 
         public static string[] VIFModeTypes = new[] {
             "NORMAL",
@@ -491,7 +493,7 @@ namespace GMC2Snooper
 
             var imdt = new VifImmediate(vif.IMDT);
             var cmd = new VifCommand(vif.CMD);
-            
+
             var cmdName = "";
             var cmdInfo = "";
 
@@ -504,7 +506,7 @@ namespace GMC2Snooper
                 break;
             case VifCommandType.StCycl:
                 cmdName = "STCYCL";
-                cmdInfo = String.Format("{0,-10}{1,-10}", 
+                cmdInfo = String.Format("{0,-10}{1,-10}",
                     $"CL:{VIF.Cycle.Length},",
                     $"WL:{VIF.Cycle.WriteLength}");
                 break;
@@ -535,11 +537,11 @@ namespace GMC2Snooper
 
                 cmdName = "STMASK";
                 cmdInfo = String.Format("{0,-10}", $"MASK:{(int)mask:X8}");
-                
-                sb.AppendFormat("-> {0,-16}{1,-16}{2,-16}{3,-16}", 
-                    "MASK_X", 
-                    "MASK_Y", 
-                    "MASK_Z", 
+
+                sb.AppendFormat("-> {0,-16}{1,-16}{2,-16}{3,-16}",
+                    "MASK_X",
+                    "MASK_Y",
+                    "MASK_Z",
                     "MASK_W");
 
                 sb.AppendLine();
@@ -598,7 +600,7 @@ namespace GMC2Snooper
                 props += "+FLAG ";
             if (imdt.USN)
                 props += "+UNSIGNED ";
-            
+
             Console.WriteLine($"  {cmdName,-16}{" : ",4}{props,-16}{": ",4}{cmdInfo,-8}");
 
             if (sb.Length > 0)
@@ -622,7 +624,7 @@ namespace GMC2Snooper
 
                 sb.AppendLine($"material[{m + 1}] {{");
                 sb.AppendLine($"  animated =  {((mat.Animated) ? 1 : 0)};");
-                sb.AppendLine($"  anim_speed = {mat.AnimationSpeed};"); 
+                sb.AppendLine($"  anim_speed = {mat.AnimationSpeed};");
                 sb.AppendLine($"  substances[{mat.Substances.Count}] = [");
 
                 for (int s = 0; s < mat.Substances.Count; s++)
@@ -642,6 +644,7 @@ namespace GMC2Snooper
                         sb.AppendLine($"        texture[{t + 1}] : {tex.Reserved:X16} {{");
 
                         sb.AppendLine($"          type = {tex.Type};");
+                        sb.AppendLine($"          mipmaps = {tex.MipMaps};");
                         sb.AppendLine($"          flags = 0x{tex.Flags:X};");
                         sb.AppendLine($"          width = {tex.Width};");
                         sb.AppendLine($"          height = {tex.Height};");
@@ -655,85 +658,317 @@ namespace GMC2Snooper
                             sb.AppendLine($"            0x{mode:X},");
 
                         sb.AppendLine("          ];");
-                        sb.AppendLine("        }");
+                        sb.AppendLine("        },");
                     }
 
                     sb.AppendLine("      ];");
+                    sb.AppendLine("    },");
                 }
+
                 sb.AppendLine("  ];");
+                sb.AppendLine("};");
             }
-            
+
+            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "materials.txt"), sb.ToString());
             Console.WriteLine(sb.ToString());
         }
 
-        public static void TestNewImageViewer(ModelPackagePS2 gmc2)
+        private static Color[] Read8bppCLUT(byte[] buffer, int where)
+        {
+            Color[] palette = new Color[256];
+            byte[][] clut = new byte[256][];
+
+            int pointer = 0;
+
+            for (int i = 0; i < 256; i++)
+            {
+                uint pal = BitConverter.ToUInt32(buffer, where + pointer);
+
+                clut[i] = new byte[4];
+
+                //clut[i][0] = (byte)(((pal >> 24) & 0xFF) == 0x80 ? 0xFF : (((pal >> 24) & 0x7F) << 1));
+                clut[i][0] = 0xFF;
+                clut[i][1] = (byte)(pal & 0xFF);
+                clut[i][2] = (byte)((pal >> 8) & 0xFF);
+                clut[i][3] = (byte)((pal >> 16) & 0xFF);
+
+                pointer += 4;
+            }
+
+            byte[][] clutCopy = new byte[256][];
+            Array.Copy(clut, clutCopy, 256);
+
+            for (int i = 0; i < 256; i++)
+            {
+                var entry = (i & 0xE7);
+
+                entry |= ((i >> 4) & 0x1) << 3;
+                entry |= ((i >> 3) & 0x1) << 4;
+
+                clut[i] = clutCopy[entry];
+
+                palette[i] =
+                    Color.FromArgb(
+                        clut[i][0],
+                        clut[i][1],
+                        clut[i][2],
+                        clut[i][3]
+                    );
+            }
+
+            return palette;
+        }
+        
+        private static BitmapHelper GetTextureBitmap(byte[] texBuffer, TextureDataPS2 tex, int clutOffset = -1)
+        {
+            switch (tex.Type)
+            {
+            // 8bpp, indexed
+            case 1:
+                {
+                    if (clutOffset == -1)
+                        clutOffset = tex.CLUTs[0];
+
+                    var clut = Read8bppCLUT(texBuffer, clutOffset);
+                    var img = new BitmapHelper(texBuffer, tex.Width, tex.Height, tex.CLUTs[1], PixelFormat.Format8bppIndexed);
+
+                    img.Unswizzle(tex.Width, tex.Height, SwizzleType.Swizzle8bit);
+                    img.SetColorPalette(clut);
+
+                    return img;
+                }
+            // 4bpp, indexed
+            case 2:
+                {
+                    /* can't do these yet :( */
+                } break;
+            }
+            return null;
+        }
+
+        private static Color[] CombineCLUTs(Color[] clutR, Color[] clutG, Color[] clutB, Color[] clutA)
+        {
+            var clut = new Color[256];
+
+            for (int i = 0; i < 256; i++)
+            {
+                clut[i] =
+                    Color.FromArgb(
+                        clutA[i].A,
+                        clutR[i].R,
+                        clutG[i].G,
+                        clutB[i].B
+                    );
+            }
+
+            return clut;
+        }
+        
+        public static void TestNewImageViewer(ModelPackagePS2 gmc2, int modIdx)
         {
             BMPViewer viewer = new BMPViewer();
 
             var texOffset = 0;
 
-            // add all supported textures
-            for (int t = 0; t < gmc2.Textures.Count; t++)
+            var dumpDir = Path.Combine(Environment.CurrentDirectory, "texture_dump");
+
+            if (!Directory.Exists(dumpDir))
+                Directory.CreateDirectory(dumpDir);
+
+            File.WriteAllBytes(Path.Combine(dumpDir, $"{gmc2.UID:D4}[{modIdx:D4}]_buffer.dat"), gmc2.TextureDataBuffer ?? new byte[0]);
+
+            for (int m = 0; m < gmc2.Materials.Count; m++)
             {
-                var tex = gmc2.Textures[t];
-                var texName = $"texture #{t + 1}";
+                var material = gmc2.Materials[m];
 
-
-                var numCLUTs = tex.CLUTs.Count;
-
-                if (numCLUTs < 2)
+                for (int s = 0; s < material.Substances.Count; s++)
                 {
-                    Debug.WriteLine($"{texName} only has {numCLUTs} CLUTs?? (type: {tex.Type})");
-                    continue;
-                }
+                    var substance = material.Substances[s];
+                    var processAll = true;
 
-                if (tex.CLUTs[1] != tex.CLUTs[0])
-                    texOffset = tex.CLUTs[1];
+                    var texName = $"{m:D4}_{s:D2}";
 
-                switch (tex.Type)
-                {
-                case 1:
+                    if (substance.Mode == 2)
                     {
-                        if (tex.CLUTs[1] != tex.CLUTs[0])
-                            texOffset = tex.CLUTs[1];
+                        processAll = false;
 
-                        var img = new BitmapHelper(gmc2.TextureDataBuffer, tex.Width, tex.Height, texOffset, PixelFormat.Format8bppIndexed);
+                        // process vehicle textures
+                        switch (substance.Type)
+                        {
+                        case 0:
+                            {
+                                var lodTexList = substance.Textures.GetRange(0, 4);
+                                var cluts = new Color[4][];
 
-                        img.Unswizzle(tex.Width, tex.Height, SwizzleType.Swizzle8bit);
-                        img.Read8bppCLUT(gmc2.TextureDataBuffer, tex.CLUTs[0]);
+                                for (int c = 0; c < 4; c++)
+                                    cluts[c] = Read8bppCLUT(gmc2.TextureDataBuffer, lodTexList[c].CLUTs[0]);
 
-                        viewer.AddImageByName(img, $"{texName}");
+                                var lodTex = GetTextureBitmap(gmc2.TextureDataBuffer, substance.Textures[0]);
 
-                        //if (numCLUTs >= 2)
-                        //{
-                        //    img.CLUTFromAlpha(gmc2.TextureDataBuffer, tex.CLUTs[0]);
-                        //    viewer.AddImageByName(img, $"{texName} [A]");
-                        //}
+                                if (lodTex != null)
+                                {
+                                    lodTex.SetColorPalette(CombineCLUTs(cluts[0], cluts[1], cluts[2], cluts[3]));
 
-                        //for (int i = 2; i < numCLUTs; i++)
-                        //{
-                        //    img.CLUTFromAlpha(gmc2.TextureDataBuffer, tex.CLUTs[i]);
-                        //    viewer.AddImageByName(img, $"{texName} [{i - 1}]");
-                        //}
-                    } break;
-                case 2:
-                    {
-                        // can't read 4-bit textures properly :(
+                                    viewer.AddImageByName(lodTex, $"{texName}_LOD");
+                                }
+                            } break;
+                        case 5:
+                            {
+                                BitmapHelper cleanTex = null;
+                                BitmapHelper damageTex = null;
 
-                        //var texBuf = Swizzlers.UnSwizzle4(gmc2.TextureDataBuffer, tex.Width, tex.Height, texOffset);
-                        //var img = new BitmapHelper(texBuf, tex.Width, tex.Height, PixelFormat.Format4bppIndexed);
-                        //
-                        ////img.Read4bppCLUT(gmc2.TextureDataBuffer, tex.CLUTs[1]);
-                        //
-                        //viewer.AddImageByName(img, $"{texName}");
+                                if (substance.Textures.Count > 2)
+                                {
+                                    cleanTex = GetTextureBitmap(gmc2.TextureDataBuffer, substance.Textures[0]);
+
+                                    var cleanTexList = substance.Textures.GetRange(0, 4);
+                                    var cluts1 = new Color[4][];
+
+                                    for (int c = 0; c < 4; c++)
+                                        cluts1[c] = Read8bppCLUT(gmc2.TextureDataBuffer, cleanTexList[c].CLUTs[0]);
+
+                                    cleanTex.SetColorPalette(CombineCLUTs(cluts1[0], cluts1[1], cluts1[2], cluts1[3]));
+
+                                    // damage textures?
+                                    if (substance.Textures.Count > 4)
+                                    {
+                                        damageTex = GetTextureBitmap(gmc2.TextureDataBuffer, substance.Textures[4]);
+
+                                        var damageTexList = substance.Textures.GetRange(4, 4);
+                                        var cluts2 = new Color[4][];
+
+                                        for (int c = 0; c < 4; c++)
+                                            cluts2[c] = Read8bppCLUT(gmc2.TextureDataBuffer, damageTexList[c].CLUTs[0]);
+
+                                        damageTex.SetColorPalette(CombineCLUTs(cluts2[0], cluts2[1], cluts2[2], cluts2[3]));
+                                    }
+                                }
+                                else
+                                {
+                                    cleanTex = GetTextureBitmap(gmc2.TextureDataBuffer, substance.Textures[0]);
+                                    damageTex = GetTextureBitmap(gmc2.TextureDataBuffer, substance.Textures[0], substance.Textures[1].CLUTs[0]);
+                                }
+                                
+                                if (cleanTex != null)
+                                    viewer.AddImageByName(cleanTex, $"{texName}_CLEAN");
+                                if (damageTex != null)
+                                    viewer.AddImageByName(damageTex, $"{texName}_DAMAGE");
+                            } break;
+                        }
                     }
-                    break;
+
+                    // do we process all textures normally?
+                    if (processAll)
+                    {
+                        for (int t = 0; t < substance.Textures.Count; t++)
+                        {
+                            var texture = substance.Textures[t];
+                            var img = GetTextureBitmap(gmc2.TextureDataBuffer, texture);
+
+                            if (img == null)
+                                continue;
+
+                            viewer.AddImageByName(img, $"{texName}_{t:D2} : {texture.Reserved:X16}");
+                        }
+                    }
                 }
             }
 
+            // add all supported textures
+            //for (int t = 0; t < gmc2.Textures.Count; t++)
+            //{
+            //    var tex = gmc2.Textures[t];
+            //    var texName = $"[{t + 1}]: {tex.Reserved:X16}";
+            //    
+            //    var numCLUTs = tex.CLUTs.Count;
+            //
+            //    if (numCLUTs < 2)
+            //    {
+            //        Debug.WriteLine($"{texName} only has {numCLUTs} CLUTs?? (type: {tex.Type})");
+            //        continue;
+            //    }
+            //    
+            //    // HACK: check if we should reuse the previous CLUT
+            //    // but also assign the texOffset its first value
+            //    if ((tex.CLUTs[1] != tex.CLUTs[0]) || (texOffset == 0))
+            //        texOffset = tex.CLUTs[1];
+            //    
+            //    var dumpFile = Path.Combine(dumpDir, $"{gmc2.UID:D4}[{modIdx:D4}][{t:D4}]_{tex.Reserved:X16}_{tex.Type}-({tex.Width} x {tex.Height}).tsc");
+            //    
+            //    switch (tex.Type)
+            //    {
+            //    case 1:
+            //        {
+            //            var img = new BitmapHelper(gmc2.TextureDataBuffer, tex.Width, tex.Height, texOffset, PixelFormat.Format8bppIndexed);
+            //
+            //            img.Unswizzle(tex.Width, tex.Height, SwizzleType.Swizzle8bit);
+            //            img.Read8bppCLUT(gmc2.TextureDataBuffer, tex.CLUTs[0]);
+            //
+            //            viewer.AddImageByName(img, $"{texName}");
+            //
+            //            //if (numCLUTs >= 2)
+            //            //{
+            //            //    img.CLUTFromAlpha(gmc2.TextureDataBuffer, tex.CLUTs[0]);
+            //            //    viewer.AddImageByName(img, $"{texName} [A]");
+            //            //}
+            //
+            //            //for (int i = 2; i < numCLUTs; i++)
+            //            //{
+            //            //    img.CLUTFromAlpha(gmc2.TextureDataBuffer, tex.CLUTs[i]);
+            //            //    viewer.AddImageByName(img, $"{texName} [{i - 1}]");
+            //            //}
+            //        } break;
+            //    case 2:
+            //        {
+            //            // can't read 4-bit textures properly :(
+            //
+            //            //var texBuf = Swizzlers.UnSwizzle4(gmc2.TextureDataBuffer, tex.Width, tex.Height, texOffset);
+            //            //var img = new BitmapHelper(texBuf, tex.Width, tex.Height, PixelFormat.Format4bppIndexed);
+            //            //
+            //            ////img.Read4bppCLUT(gmc2.TextureDataBuffer, tex.CLUTs[1]);
+            //            //
+            //            //viewer.AddImageByName(img, $"{texName}");
+            //        }
+            //        break;
+            //    }
+            //
+            //    //-- not working properly
+            //    //var texDiv = 1;
+            //    //var export = true;
+            //    //
+            //    //switch (tex.Type)
+            //    //{
+            //    //case 1:
+            //    //    texDiv = 8;
+            //    //    export = false;
+            //    //    break;
+            //    //case 2:
+            //    //    texDiv = 2; // 4bpp
+            //    //    break;
+            //    //case 3:
+            //    //case 6:
+            //    //    texDiv = 4; // ???
+            //    //    break;
+            //    //}
+            //    //
+            //    //if (export)
+            //    //{
+            //    //    // hack yack hack
+            //    //    var texLen = 0;
+            //    //    texLen += ((tex.Width * tex.Height) / texDiv);
+            //    //
+            //    //    var texBuf = new byte[texLen];
+            //    //
+            //    //    Array.Copy(gmc2.TextureDataBuffer, texOffset, texBuf, 0, texLen);
+            //    //    File.WriteAllBytes(dumpFile, texBuf);
+            //    //}
+            //}
+            
             if (viewer.HasImages)
             {
                 viewer.Init();
+                Console.WriteLine("The texture viewer is now ready. Please close it to continue.");
+
                 Application.Run(viewer);
             }
         }

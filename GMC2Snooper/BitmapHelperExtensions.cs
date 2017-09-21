@@ -114,6 +114,19 @@ namespace GMC2Snooper
             bitmap.Palette = palette;
         }
 
+        public static void SetColorPalette(this BitmapHelper bitmap, Color[] clut)
+        {
+            var palette = bitmap.Palette;
+
+            if (clut.Length > palette.Entries.Length)
+                throw new InvalidOperationException("Existing palette does not have required space for new data!");
+
+            for (int i = 0; i < clut.Length; i++)
+                palette.Entries[i] = clut[i];
+
+            bitmap.Palette = palette;
+        }
+
         public static void Read8bppCLUT(this BitmapHelper bitmap, byte[] buffer, int where)
         {
             ColorPalette palette = bitmap.Palette;

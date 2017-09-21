@@ -134,6 +134,15 @@ namespace GMC2Snooper
         }
     }
 
+    public enum TextureFormatType
+    {
+        Indexed8bpp = 1,
+        Indexed4bpp = 2,
+
+        Quantized8bpp = 3,
+        Quantized4bpp = 4,
+    }
+
     public class TextureDataPS2
     {
         public long Reserved { get; set; }
@@ -150,6 +159,7 @@ namespace GMC2Snooper
         */
         public int Type { get; set; }
 
+        public int MipMaps { get; set; }
         public int Flags { get; set; }
 
         public int Width { get; set; }
