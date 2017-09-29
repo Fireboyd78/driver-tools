@@ -104,6 +104,19 @@ namespace DSCript.Spooling
         private byte _version;
 
         private string _description;
+
+        public static explicit operator ChunkEntry(Spooler spooler)
+        {
+            return new ChunkEntry() {
+                Context     = spooler.Context,
+                Offset      = spooler.Offset,
+                Version     = spooler.Version,
+                StrLen      = spooler.StrLen,
+                Alignment   = spooler.Alignment,
+                Reserved    = 0xFB, // ;)
+                Size        = spooler.Size,
+            };
+        }
         
         /// <summary>
         /// Disposes of the resources used by this spooler.

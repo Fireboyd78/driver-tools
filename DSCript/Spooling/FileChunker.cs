@@ -20,6 +20,18 @@ namespace DSCript.Spooling
     /// <param name="sender">The spooler who triggered this event.</param>
     /// <param name="e">The event arguments accompanying the spooler.</param>
     public delegate void SpoolerEventHandler(Spooler sender, EventArgs e);
+    
+    [StructLayout(LayoutKind.Sequential, Pack = 1, Size = 0x10)]
+    public struct ChunkEntry
+    {
+        public int Context;
+        public int Offset;
+        public byte Version;
+        public byte StrLen;
+        public SpoolerAlignment Alignment;
+        public byte Reserved;
+        public int Size;
+    }
 
     public class FileChunker : IDisposable
     {
@@ -209,10 +221,10 @@ namespace DSCript.Spooling
 
             var size = _stream.ReadInt32();
             var count = _stream.ReadInt32();
-            var flags = _stream.ReadInt32();
+            var version = _stream.ReadInt32();
 
-            if (flags != 3)
-                throw new Exception("Unknown flags - cannot load chunk file!");
+            if (version != Chunk.Version)
+                throw new Exception("Unsupported version - cannot load chunk file!");
 
             DSC.Update($"Processing {count} chunks...");
             
@@ -220,34 +232,26 @@ namespace DSCript.Spooling
             {
                 DSC.Update($"Loading chunk {idx} / {count}", (idx / (double)count) * 100.0);
 
-                _stream.Seek((i * 0x10), entriesOffset);
+                _stream.Position = (entriesOffset + (i * 0x10));
 
-                var entry = new {
-                    Context     = _stream.ReadInt32(),
-                    Offset      = _stream.ReadInt32(),
-                    Version     = (byte)_stream.ReadByte(),
-                    StrLen      = (byte)_stream.ReadByte(),
-                    Align       = (SpoolerAlignment)((byte)_stream.ReadByte()),
-                    PadByte     = (byte)_stream.ReadByte(),
-                    Size        = _stream.ReadInt32()
-                };
+                var entry = _stream.Read<ChunkEntry>(0x10);
 
                 string description  = null;
                 
                 if (entry.StrLen > 0)
                 {
-                    _stream.Seek((entry.Offset + entry.Size), baseOffset);
+                    _stream.Position = (baseOffset + (entry.Offset + entry.Size));
                     description = _stream.ReadString(entry.StrLen);
                 }
 
-                _stream.Seek(entry.Offset, baseOffset);
+                _stream.Position = (baseOffset + entry.Offset);
 
                 Spooler spooler = null;
 
                 if (_stream.PeekInt32() == (int)ChunkType.Chunk)
                 {
                     spooler = new SpoolablePackage(entry.Size) {
-                        Alignment   = entry.Align,
+                        Alignment   = entry.Alignment,
                         Description = description,
                         Context     = entry.Context,
                         Offset      = entry.Offset,
@@ -259,7 +263,7 @@ namespace DSCript.Spooling
                 else
                 {
                     spooler = new SpoolableBuffer(entry.Size) {
-                        Alignment   = entry.Align,
+                        Alignment   = entry.Alignment,
                         Description = description,
                         Context     = entry.Context,
                         Offset      = entry.Offset,
@@ -308,19 +312,12 @@ namespace DSCript.Spooling
             {
                 DSC.Update($"Writing chunk {idx} / {count}", (idx / (double)count) * 100.0);
 
-                stream.Seek(i * 0x10, entryStart);
+                stream.Position = (entryStart + (i * 0x10));
 
                 var entry = chunk.Children[i];
-
-                stream.Write(entry.Context);
-                stream.Write(entry.Offset);
-                stream.Write(entry.Version);
-                stream.Write(entry.StrLen);
-                stream.Write((byte)entry.Alignment);
-                stream.Write((byte)0xFB); // ;)
-                stream.Write(entry.Size);
-
-                stream.Seek(entry.Offset, baseOffset);
+                
+                stream.Write((ChunkEntry)entry);
+                stream.Position = (baseOffset + entry.Offset);
 
                 if (entry is SpoolablePackage)
                 {
@@ -338,7 +335,7 @@ namespace DSCript.Spooling
                 // write description where applicable
                 if (entry.StrLen > 0)
                 {
-                    stream.Seek(entry.Offset + entry.Size, baseOffset);
+                    stream.Position = (baseOffset + (entry.Offset + entry.Size));
                     stream.Write(entry.Description);
                 }
             }
