@@ -202,6 +202,12 @@ namespace DSCript
             return (!String.IsNullOrEmpty(dir) && Directory.Exists(dir));
         }
 
+        public static bool VerifyGameDirectory(string name, string callee)
+        {
+            // use 'name' as 'gameName' too
+            return VerifyGameDirectory(name, name, callee);
+        }
+
         public static bool VerifyGameDirectory(string name, string gameName, string callee)
         {
             if (VerifyGameDirectory(name))
