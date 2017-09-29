@@ -226,7 +226,7 @@ namespace Antilli
             var vgtFile = "";
 
             if (city != Driv3r.City.Unknown)
-                vgtFile = String.Format("{0}\\{1}\\CarGlobals{1}.vgt", Path.GetDirectoryName(filename), city.ToString());
+                vgtFile = Driv3r.GetVehicleGlobals(city);
 
             if (File.Exists(vgtFile))
                 vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
