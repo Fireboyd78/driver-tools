@@ -1056,12 +1056,9 @@ namespace Antilli
             });
 
             Viewer.Loaded += (o, e) => {
-                //if (String.IsNullOrEmpty((string)DSC.Configuration["Driv3r"]))
-                //{
-                //    MessageBox.Show("ERROR: Driv3r not found!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                //    Environment.Exit(1);
-                //}
-
+                // for those who don't install Driv3r to a known directory
+                DSC.VerifyGameDirectory("Driv3r", "Antilli");
+                
 #region disabled code
                 /*
                 var filename = @"C:\Dev\Research\Driv3r\__Research\PS2\city3.chunk";
