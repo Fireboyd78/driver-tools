@@ -503,6 +503,7 @@ namespace DSCript.Models
                 TexturesOffset = stream.ReadInt32();
 
                 TextureDataOffset = stream.ReadInt32();
+                DataSize = stream.ReadInt32();
             }
         }
 
@@ -556,6 +557,8 @@ namespace DSCript.Models
                 stream.Write(TextureLookupOffset);
                 stream.Write(TexturesCount);
                 stream.Write(TexturesOffset);
+
+                stream.Write(TextureDataOffset);
                 stream.Write(DataSize);
             }
         }
@@ -615,8 +618,8 @@ namespace DSCript.Models
 
     public class ModelPackagePC : ModelPackage
     {
-        protected ModelPackageData Header { get; set; }
-        protected MaterialPackageHeader MaterialsHeader { get; set; }
+        protected ModelPackageData Header;
+        protected MaterialPackageHeader MaterialsHeader;
 
         protected void ReadHeader(Stream stream)
         {
@@ -1022,6 +1025,8 @@ namespace DSCript.Models
                 pcmpSize += tex.Buffer.Length;
             }
 
+            MaterialsHeader.DataSize = pcmpSize;
+
             // add the PCMP size to the buffer size
             bufferSize += Memory.Align(pcmpSize, 4096);
 
@@ -1039,7 +1044,7 @@ namespace DSCript.Models
 
                     for (int vB = 0; vB < VertexBuffers.Count; vB++)
                     {
-                        f.Position = Header.VertexDeclsOffset + (Header.VertexDeclsCount * Header.VertexDeclSize);
+                        f.Position = Header.VertexDeclsOffset + (vB * Header.VertexDeclSize);
 
                         var vBuffer = VertexBuffers[vB];
                         var vBSize = vBuffer.Size;
@@ -1180,8 +1185,6 @@ namespace DSCript.Models
                 
                 MaterialsHeader.Write(f);
                 
-                f.Write(pcmpSize);
-
                 var texLookup = new int[MaterialsHeader.TexturesCount];
                 var texDataOffset = pcmpOffset + MaterialsHeader.TextureDataOffset;
 
@@ -1248,8 +1251,8 @@ namespace DSCript.Models
 
                     f.Write(substance.Flags);
 
-                    f.Write(substance.Mode);
-                    f.Write(substance.Type);
+                    f.Write((short)substance.Mode);
+                    f.Write((short)substance.Type);
 
                     f.Position += 0x8;
                     
