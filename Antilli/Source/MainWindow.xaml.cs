@@ -930,31 +930,34 @@ namespace Antilli
         private void Initialize()
         {
             Settings.Verify();
-            
-            AppDomain.CurrentDomain.UnhandledException += (o, e) => {
-                var exception = e.ExceptionObject as Exception;
-                var sb = new StringBuilder();
 
-                sb.AppendLine($"A fatal error has occurred! The program will now close.");
-                sb.AppendLine();
+            if (!Debugger.IsAttached)
+            {
+                AppDomain.CurrentDomain.UnhandledException += (o, e) => {
+                    var exception = e.ExceptionObject as Exception;
+                    var sb = new StringBuilder();
 
-                // this is literally useless
-                if (exception is TargetInvocationException)
-                    exception = exception.InnerException;
+                    sb.AppendLine($"A fatal error has occurred! The program will now close.");
+                    sb.AppendLine();
 
-                var stk = new StackTrace(exception, true);
-                var stkFrame = stk.GetFrame(0);
+                    // this is literally useless
+                    if (exception is TargetInvocationException)
+                        exception = exception.InnerException;
 
-                sb.AppendLine($"{exception.Message}");
-                sb.AppendLine();
-                
-                sb.AppendLine($"===== Stack trace =====");
-                sb.AppendLine($"{stk.ToString()}");
-                sb.AppendLine($"=======================");
+                    var stk = new StackTrace(exception, true);
+                    var stkFrame = stk.GetFrame(0);
 
-                if (MessageBox.Show(sb.ToString(), "Antilli - ERROR!", MessageBoxButton.OK, MessageBoxImage.Error) == MessageBoxResult.OK)
-                    Environment.Exit(1);
-            };
+                    sb.AppendLine($"{exception.Message}");
+                    sb.AppendLine();
+
+                    sb.AppendLine($"===== Stack trace =====");
+                    sb.AppendLine($"{stk.ToString()}");
+                    sb.AppendLine($"=======================");
+
+                    if (MessageBox.Show(sb.ToString(), "Antilli - ERROR!", MessageBoxButton.OK, MessageBoxImage.Error) == MessageBoxResult.OK)
+                        Environment.Exit(1);
+                };
+            }
 
             InitializeComponent();
 
@@ -1059,7 +1062,7 @@ namespace Antilli
                 //    Environment.Exit(1);
                 //}
 
-                #region disabled code
+#region disabled code
                 /*
                 var filename = @"C:\Dev\Research\Driv3r\__Research\PS2\city3.chunk";
                 //var vvsFile = new DSCript.Spoolers.SpoolableChunk(filename);
@@ -1124,7 +1127,7 @@ namespace Antilli
                 vvsFile.Spoolers.RemoveRange(nCars, nCars);
                 vvsFile.Save(Path.Combine(Settings.Configuration.GetDirectory("Export"), Path.GetFileName(filename)));
 #endif
-#if false   
+#if false
                 // Split cars
                 int nCars = vvsFile.Spoolers.Count;
 
@@ -1190,7 +1193,7 @@ namespace Antilli
                 //CurrentModel = groups;
                 //
                 //DSC.Log("Done");
-                #endregion
+#endregion
             };
         }
 
