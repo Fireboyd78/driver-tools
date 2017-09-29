@@ -1011,18 +1011,21 @@ namespace DSCript.Models
             MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, Materials.Count, Substances.Count, Textures.Count);
 
             pcmpSize = MaterialsHeader.TextureDataOffset;
-
-            var texOffsets = new int[MaterialsHeader.TexturesCount];
+            
+            var texOffsets = new Dictionary<int, int>(MaterialsHeader.TexturesCount);
 
             for (int i = 0; i < MaterialsHeader.TexturesCount; i++)
             {
                 var tex = Textures[i];
 
-                pcmpSize = Memory.Align(pcmpSize, 128);
+                if (!texOffsets.ContainsKey(tex.CRC32))
+                {
+                    pcmpSize = Memory.Align(pcmpSize, 128);
 
-                texOffsets[i] = (pcmpSize - MaterialsHeader.TextureDataOffset);
+                    texOffsets.Add(tex.CRC32, (pcmpSize - MaterialsHeader.TextureDataOffset));
 
-                pcmpSize += tex.Buffer.Length;
+                    pcmpSize += tex.Buffer.Length;
+                }
             }
 
             MaterialsHeader.DataSize = pcmpSize;
@@ -1204,10 +1207,12 @@ namespace DSCript.Models
 
                     f.Position = pcmpOffset + tOffset;
 
+                    var dataOffset = texOffsets[tex.CRC32];
+
                     f.Write(tex.Reserved);
                     f.Write(tex.CRC32);
 
-                    f.Write(texOffsets[t]);
+                    f.Write(dataOffset);
                     f.Write(tex.Buffer.Length);
                     f.Write(tex.Type);
 
@@ -1216,7 +1221,7 @@ namespace DSCript.Models
 
                     f.Write(tex.Unknown);
 
-                    f.Position = texDataOffset + texOffsets[t];
+                    f.Position = texDataOffset + dataOffset;
 
                     // skip dupes
                     if (f.PeekInt32() == 0)
