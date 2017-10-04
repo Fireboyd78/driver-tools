@@ -50,6 +50,11 @@ namespace DSCript.Spooling
         /// The state of the chunker, whether any files have been loaded or not.
         /// </summary>
         public bool IsLoaded { get; protected set; }
+
+        /// <summary>
+        /// Gets or sets if the chunker uses LZW-compression.
+        /// </summary>
+        public bool IsCompressed { get; set; }
         
         /// <summary>
         /// Determines whether or not the chunker can load a file.
@@ -64,7 +69,10 @@ namespace DSCript.Spooling
         /// </summary>
         public virtual bool CanSave
         {
-            get { return true; }
+            get
+            {
+                return !IsCompressed;
+            }
         }
 
         /// <summary>
@@ -204,7 +212,33 @@ namespace DSCript.Spooling
 
             var buffer = new byte[spooler.Size];
 
-            _stream.Read(buffer, 0, buffer.Length);
+            if (IsCompressed)
+            {
+                var comType = _stream.ReadInt32();
+                var bufferSize = _stream.ReadInt32(); // aligned to 2048-bytes
+                var dataSize = _stream.ReadInt32(); // size of compressed data (incl. header)
+
+                if (comType == 1)
+                {
+                    // uncompressed data
+                    // this is actually never used, but it doesn't hurt to support it!
+                    _stream.Read(buffer, 0, (dataSize - 0xC));
+                }
+                else
+                {
+                    /* TODO: decompress the LZW data */
+                    DSC.Log("WARNING: LZW decompression is not yet implemented.");
+
+                    // return ALL of the compressed data (including the header)
+                    // this way, we can use the data for research purposes if needed
+                    _stream.Position -= 0xC;
+                    _stream.Read(buffer, 0, dataSize);
+                }
+            }
+            else
+            {
+                _stream.Read(buffer, 0, buffer.Length);
+            }
 
             return buffer;
         }
@@ -222,6 +256,13 @@ namespace DSCript.Spooling
             var size = _stream.ReadInt32();
             var count = _stream.ReadInt32();
             var version = _stream.ReadInt32();
+
+            // does chunk contain LZW-compressed data?
+            if ((version & 0x80000000) != 0)
+            {
+                IsCompressed = true;
+                version &= 0x7FFFFFFF;
+            }
 
             if (version != Chunk.Version)
                 throw new Exception("Unsupported version - cannot load chunk file!");

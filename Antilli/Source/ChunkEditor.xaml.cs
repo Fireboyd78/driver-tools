@@ -146,13 +146,13 @@ namespace Antilli
         {
             get
             {
-                return (CurrentSpooler != null && CurrentSpooler is SpoolableBuffer) ? Visibility.Visible : Visibility.Collapsed;
+                return (CanModifySpooler && CurrentSpooler is SpoolableBuffer) ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 
         public bool CanModifySpooler
         {
-            get { return (CurrentSpooler != null); }
+            get { return (CurrentSpooler != null) && !ChunkFile.IsCompressed; }
         }
 
         public bool CanPasteSpooler
@@ -525,6 +525,12 @@ namespace Antilli
 
         private void ReplaceBuffer(object sender, RoutedEventArgs e)
         {
+            if (ChunkFile.IsCompressed)
+            {
+                MessageBox.Show("Sorry, compressed chunk files cannot be modified.", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             var openFile = new OpenFileDialog() {
                 CheckFileExists = true,
                 CheckPathExists = true,
@@ -544,6 +550,12 @@ namespace Antilli
 
         public void SaveChunkFile()
         {
+            if (ChunkFile.IsCompressed)
+            {
+                MessageBox.Show("Sorry, compressed chunk files cannot be modified.", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             if (IsDirty)
             {
                 Mouse.OverrideCursor = Cursors.Wait;
@@ -573,6 +585,12 @@ namespace Antilli
 
         public void ExportChunkFile()
         {
+            if (ChunkFile.IsCompressed)
+            {
+                MessageBox.Show("Sorry, compressed chunk files cannot be exported.", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             Mouse.OverrideCursor = Cursors.Wait;
 
             var stopwatch = new Stopwatch();
