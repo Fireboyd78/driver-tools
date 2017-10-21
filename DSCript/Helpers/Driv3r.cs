@@ -50,6 +50,8 @@ namespace DSCript
         public static readonly OpenFileDialog OpenFileDialog;
         public static readonly string FileFilter;
 
+        public static readonly string InvalidPath = "???";
+
         static Driv3r()
         {
             //var filters = new[] {
@@ -210,6 +212,31 @@ namespace DSCript
             return GetPath(String.Format(path, file));
         }
 
+        public static string GetTerritoryPath(string territory)
+        {
+            return GetPath(Path.Combine(Folders.Territory, territory));
+        }
+
+        public static string GetTerritoryName()
+        {
+            try
+            {
+                var gIniFile = GetPath("game.ini");
+                var gIni = new IniFile(gIniFile);
+
+                return gIni.GetSections()[0];
+            }
+            catch (Exception e)
+            {
+                return InvalidPath;
+            }
+        }
+
+        public static string GetLocalePath(string territory, string locale = "English")
+        {
+            return Path.Combine(GetTerritoryPath(territory), "Locale", locale);
+        }
+
         private static string GetCityType(City city, CityDefinitionType type)
         {
             if (city == City.Unknown)
@@ -326,12 +353,15 @@ namespace DSCript
 
             return GetPathFormat(FormattedPaths.SpooledVehicles, city.ToString());
         }
-
+        
+        public static string GetMissionLocale(int missionId, string territory, string locale = "English")
+        {
+            return Path.Combine(GetLocalePath(territory, locale), String.Format(Locale.FormattedPaths.MissionLocale, $"{missionId:D2}"));
+        }
+        
         public static string GetMissionScript(int missionId)
         {
-            var idFmt = (missionId < 100) ? "{0:D2}" : "{0:D}";
-
-            return GetPathFormat(FormattedPaths.MissionScript, String.Format(idFmt, missionId));
+            return GetPathFormat(FormattedPaths.MissionScript, $"{missionId:D2}");
         }
 
         public static string GetMissionVehicles(City city)
