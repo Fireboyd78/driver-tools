@@ -24,6 +24,11 @@ namespace Zartex
 {
     public partial class Main : Form
     {
+        static Main()
+        {
+            DSC.VerifyGameDirectory("Driv3r");
+        }
+
         string title;
 
         MissionScriptFile MissionPackage;
