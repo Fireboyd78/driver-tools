@@ -26,7 +26,7 @@ namespace Zartex
     {
         static Main()
         {
-            DSC.VerifyGameDirectory("Driv3r");
+            DSC.VerifyGameDirectory("Driv3r", "Zartex");
         }
 
         string title;
