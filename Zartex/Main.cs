@@ -50,11 +50,9 @@ namespace Zartex
             title = this.Text;
 
             Console.WriteLine("Driv3r Directory: {0}\nLocale: {1}",
-                Configuration.Settings.InstallDirectory,
+                Driv3r.RootDirectory,
                 Configuration.Settings.Locale);
-
-            //Console.WriteLine(MPCFile.MissionScriptDebug(77));
-
+            
             foreach (Control control in Controls.Find("LeftMenu", true)[0].Controls)
             {
                 if (control.Name.StartsWith("btn"))

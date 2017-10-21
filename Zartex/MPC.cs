@@ -6,68 +6,42 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
-using Zartex;
-using Zartex.MissionObjects;
-using Zartex.Settings;
+using DSCript;
 
-using ChunkType = DSCript.ChunkType;
+using Zartex.Settings;
 
 namespace Zartex
 {
     public sealed class MPCFile
     {
         #region Static properties / formatting strings
-        static bool _localeError = false;
 
-        static string ROOT   = Configuration.Settings.InstallDirectory;
-        static string LOCALE = Configuration.Settings.Locale;
+        static string m_locale = "English";
+        static string m_territory = Driv3r.InvalidPath;
+        
+        // can we load locale files automagically?
+        static bool m_autoLocale = false;
 
-        static string FMT_FILE_M  = "mission{0:d2}";
-        static string FMT_DIR_M   = @"{0}\Missions";
-        //static string FMT_W  = "mood{0:d2}";
-
-        static string F_TERRITORY = String.Format(@"{0}\Territory", ROOT);
-        static string F_MISSIONS  = String.Format(@"{0}\{1}", String.Format(FMT_DIR_M, ROOT), FMT_FILE_M);
-        //static string F_MOODS     = String.Format(@"{0}\Moods\{1}", ROOT, FMT_W);
-        //static string F_VEHICLES  = String.Format(@"{0}\Vehicles\{1}", ROOT, FMT_M);
-
-        static string MI_OBJECTS  = String.Format(@"{0}.dam", F_MISSIONS, FMT_FILE_M);
-        static string MI_SCRIPT   = String.Format(@"{0}.mpc", F_MISSIONS, FMT_FILE_M);
-        //static string MI_VEHICLES = String.Format(@"{0}\{1}.vvv", F_LOCALE, FMT_M);
-
-        // These get set below
-        static string REGION, F_LOCALE, F_LOCALE_M, MI_LOCALE;
+        // only valid if we found the right territory!
+        static string m_localeDir = String.Empty;
 
         static MPCFile()
         {
-            string[] dirs = Directory.GetDirectories(F_TERRITORY);
-            string dirName = (dirs.Length > 0) ? new DirectoryInfo(dirs[0]).Name : "NULL";
+            m_locale = Configuration.Settings.Locale;
 
-            if (dirs.Length > 1)
+            var terrDir = Driv3r.GetTerritoryName();
+
+            if (terrDir != Driv3r.InvalidPath)
             {
-                _localeError = true;
-                MessageBox.Show(
-                    String.Format("ERROR 0x961:\r\nThe region could not be properly determined. Defaulting to '{0}'.", dirName),
-                    "Zartex Mission Editor",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
-            }
-            else if (dirs.Length <= 0)
-            {
-                _localeError = true;
-                MessageBox.Show("ERROR 0x962: FATAL LOCALE ERROR! Please contact the developer!", "Zartex Mission Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+                m_territory = Driv3r.GetTerritoryPath(terrDir);
 
-            REGION = dirName;
-
-            F_LOCALE = String.Format(@"{0}\{1}\Locale\{2}", F_TERRITORY, REGION, LOCALE);
-            F_LOCALE_M = String.Format(FMT_DIR_M, F_LOCALE);
-            MI_LOCALE = String.Format(@"{0}\Missions\{1}.txt", F_LOCALE, FMT_FILE_M);
+                m_autoLocale = true;
+                m_localeDir = Driv3r.GetLocalePath(m_territory, m_locale);
+            }
         }
-        #endregion
+#endregion
 
-        #region Static script filenames
+#region Static script filenames
         public static IDictionary<int, string> ScriptFiles = new Dictionary<int, string>()
         {
             /*-------------------------------------
@@ -151,47 +125,24 @@ namespace Zartex
             { 83, "Take a Ride, Istanbul"         },
             { 84, "Take a Ride, Istanbul (Semi)"  }
         };
-        #endregion
+#endregion
 
-        #region Static methods
+#region Static methods
         public static string GetMissionLocaleDirectory()
         {
-            return F_LOCALE_M;
+            return (m_autoLocale) ? Path.Combine(m_localeDir, "Missions") : Driv3r.RootDirectory;
         }
 
         public static string GetMissionLocaleFilepath(int missionId)
         {
-            return String.Format(MI_LOCALE, missionId);
+            return (m_autoLocale) ? Driv3r.GetMissionLocale(missionId, m_territory, m_locale) : Driv3r.InvalidPath;
         }
 
         public static string GetMissionScriptDirectory()
         {
-            return String.Format(FMT_DIR_M, ROOT);
+            return Driv3r.GetPath("Missions");
         }
-
-        public static string GetMissionScriptFilepath(int missionId)
-        {
-            return String.Format(MI_SCRIPT, missionId);
-        }
-
-        public static string MissionScriptDebug(int missionId)
-        {
-            string locale = GetMissionLocaleFilepath(missionId);
-            return String.Format(
-@"Name: {0}
-Script File: {1}
-Objects File: {2}
-Locale File: {3}
-
-The locale file {4}.",
-                ScriptFiles[missionId],
-                String.Format(MI_SCRIPT, missionId),
-                String.Format(MI_OBJECTS, missionId),
-                locale,
-                ((File.Exists(locale)) ? "exists" : "DOES NOT exist")
-            );
-        }
-        #endregion Static methods
+#endregion Static methods
 
         private bool _isLoaded = false;
         private bool _hasLocale = false;
@@ -200,14 +151,8 @@ The locale file {4}.",
         {
             get { return _isLoaded; }
         }
-
         
-
         public string Filename { get; set; }
-
-        
-
-        
 
 #if FALSE
         // LEGACY
@@ -264,7 +209,7 @@ The locale file {4}.",
             return definition;
         }
 
-        #region Legacy loaders
+#region Legacy loaders
         public void LoadStringCollection(SubChunkBlock stringCollection)
         {
             using (BinaryReader f = new BinaryReader(Stream))
@@ -570,9 +515,9 @@ The locale file {4}.",
                 }
             }
         }
-        #endregion
+#endregion
 
-        #region new loaders
+#region new loaders
         public void LoadStringCollection(SpoolableDataOld stringCollection)
         {
             using (var ms = new MemoryStream(stringCollection.Buffer))
@@ -925,7 +870,7 @@ The locale file {4}.",
                 }
             }
         }
-        #endregion
+#endregion
 
         
 
