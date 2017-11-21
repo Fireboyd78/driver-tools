@@ -13,8 +13,6 @@ using System.Windows.Forms;
 
 using DSCript;
 
-using Zartex.MissionObjects;
-
 using Zartex.Settings;
 
 // HACK: Fix discrepencies between "Form.DialogResult" and "System.Windows.Forms.DialogResult"
@@ -38,13 +36,7 @@ namespace Zartex
             Filter = "Mission Script|*.mpc;*.mps;*.mxb",
             InitialDirectory = MPCFile.GetMissionScriptDirectory(),
         };
-
-        OpenFileDialog LocaleFile = new OpenFileDialog() {
-            Title = "Select a mission locale file (optional)",
-            Filter = "Mission Locale (*.txt)|*.txt",
-            InitialDirectory = MPCFile.GetMissionLocaleDirectory()
-        };
-
+        
         string Filename;
 
         public Main()
@@ -103,166 +95,296 @@ namespace Zartex
             }
         }
 
+        public enum CityType
+        {
+            Miami,
+            Nice,
+            Istanbul,
+        }
+
+        public enum GameModeType
+        {
+            Undercover,
+
+            TakeARide,
+
+            QuickChase,
+            QuickGetaway,
+            TrailBlazer,
+            Survival,
+            CheckpointRace,
+            GateRace,
+        }
+
+        public struct MissionDescriptor
+        {
+            public string Name { get; }
+
+            public GameModeType GameMode { get; }
+            public CityType City { get; }
+
+            public int[] MissionIds { get; }
+
+            public bool HasSubMissions
+            {
+                get { return MissionIds.Length > 1; }
+            }
+            
+            // driving games/take a ride
+            public MissionDescriptor(GameModeType gameMode, CityType city, params int[] missionIds)
+                : this($"{gameMode.ToString()}, {city.ToString()}", gameMode, city, missionIds) { }
+
+            // undercover
+            public MissionDescriptor(string name, CityType city, params int[] missionIds)
+                : this(name, GameModeType.Undercover, city, missionIds) { }
+
+            public MissionDescriptor(string name, GameModeType gameMode, CityType city, params int[] missionIds)
+            {
+                Name = name;
+                City = city;
+                GameMode = gameMode;
+                MissionIds = missionIds;
+            }
+        }
+
+        public static readonly MissionDescriptor[] MissionDescriptors = new[] {
+            /*
+                Undercover (Miami)
+            */
+            new MissionDescriptor("Police HQ",                  CityType.Miami,         1,  101, 102),
+            new MissionDescriptor("Lead on Baccus",             CityType.Miami,         2,  103),
+            new MissionDescriptor("The Siege",                  CityType.Miami,         3,  105),
+            new MissionDescriptor("Rooftops",                   CityType.Miami,         4,  106, 107),
+            new MissionDescriptor("Impress Lomaz",              CityType.Miami,         5,  108, 109, 121),
+            new MissionDescriptor("Gator's Yacht",              CityType.Miami,         6,  110, 111),
+            new MissionDescriptor("The Hit",                    CityType.Miami,         7,  112, 122),
+            new MissionDescriptor("Trapped",                    CityType.Miami,         8,  113, 114, 115),
+            new MissionDescriptor("Dodge Island",               CityType.Miami,         9,  116, 117),
+            new MissionDescriptor("Retribution",                CityType.Miami,         10, 118, 119, 120),
+            /*
+                Undercover (Nice)
+            */
+            new MissionDescriptor("Welcome to Nice",            CityType.Nice,          11, 130, 131),
+            new MissionDescriptor("Smash and Run",              CityType.Nice,          13, 134),
+            new MissionDescriptor("18-wheeler",                 CityType.Nice,          14, 135, 150),
+            new MissionDescriptor("Hijack",                     CityType.Nice,          15, 136),
+            new MissionDescriptor("Arms Deal",                  CityType.Nice,          16, 137, 138, 139, 149),
+            new MissionDescriptor("Booby Trap",                 CityType.Nice,          17, 140, 151, 152),
+            new MissionDescriptor("Calita in Trouble",          CityType.Nice,          18, 141, 142),
+            new MissionDescriptor("Rescue Dubois",              CityType.Nice,          19, 143, 144),
+            new MissionDescriptor("Hunted",                     CityType.Nice,          21, 146, 147, 148),
+            /*
+                Undercover (Istanbul)
+            */
+            new MissionDescriptor("Surveillance",               CityType.Istanbul,      22, 160, 161, 162),
+            new MissionDescriptor("Tanner Escapes",             CityType.Istanbul,      24, 164, 165, 180),
+            new MissionDescriptor("Another Lead",               CityType.Istanbul,      25, 166, 167, 168, 181),
+            new MissionDescriptor("Alleyway",                   CityType.Istanbul,      27, 171, 172),
+            new MissionDescriptor("The Chase",                  CityType.Istanbul,      28, 173, 174),
+            new MissionDescriptor("Bomb Truck",                 CityType.Istanbul,      30, 176),
+            new MissionDescriptor("Chase the Train",            CityType.Istanbul,      31, 177, 178, 179),
+            /*
+                Driving games
+            */
+            new MissionDescriptor(GameModeType.QuickChase,      CityType.Miami,         32, 33),
+            new MissionDescriptor(GameModeType.QuickChase,      CityType.Nice,          34, 35),
+            new MissionDescriptor(GameModeType.QuickChase,      CityType.Istanbul,      36, 37),
+            new MissionDescriptor(GameModeType.QuickGetaway,    CityType.Miami,         38, 39, 40),
+            new MissionDescriptor(GameModeType.QuickGetaway,    CityType.Nice,          42, 43, 44),
+            new MissionDescriptor(GameModeType.QuickGetaway,    CityType.Istanbul,      46, 47, 48),
+            new MissionDescriptor(GameModeType.TrailBlazer,     CityType.Miami,         50, 51),
+            new MissionDescriptor(GameModeType.TrailBlazer,     CityType.Nice,          52, 53),
+            new MissionDescriptor(GameModeType.TrailBlazer,     CityType.Istanbul,      54, 55),
+            new MissionDescriptor(GameModeType.Survival,        CityType.Miami,         56),
+            new MissionDescriptor(GameModeType.Survival,        CityType.Nice,          57),
+            new MissionDescriptor(GameModeType.Survival,        CityType.Istanbul,      58),
+            new MissionDescriptor(GameModeType.CheckpointRace,  CityType.Miami,         59, 60, 61),
+            new MissionDescriptor(GameModeType.CheckpointRace,  CityType.Nice,          62, 63, 64),
+            new MissionDescriptor(GameModeType.CheckpointRace,  CityType.Istanbul,      65, 66, 67),
+            new MissionDescriptor(GameModeType.GateRace,        CityType.Miami,         71, 72),
+            new MissionDescriptor(GameModeType.GateRace,        CityType.Nice,          73, 74),
+            new MissionDescriptor(GameModeType.GateRace,        CityType.Istanbul,      75, 76),
+            /*
+                Take a Ride
+            */
+            new MissionDescriptor(GameModeType.TakeARide,       CityType.Miami,         77, 78),
+            new MissionDescriptor(GameModeType.TakeARide,       CityType.Nice,          80, 81),
+            new MissionDescriptor(GameModeType.TakeARide,       CityType.Istanbul,      83, 84),
+        };
+
+        private ToolStripMenuItem GetMenuItemByCity(CityType city)
+        {
+            switch (city)
+            {
+            case CityType.Miami:    return mnMiami;
+            case CityType.Nice:     return mnNice;
+            case CityType.Istanbul: return mnIstanbul;
+            }
+
+            return null;
+        }
+
+        private string GetItemNameForMission(MissionDescriptor mission)
+        {
+            switch (mission.GameMode)
+            {
+            case GameModeType.TakeARide:        return "Take A Ride";
+            case GameModeType.QuickChase:       return "Quick Chase";
+            case GameModeType.QuickGetaway:     return "Quick Getaway";
+            case GameModeType.TrailBlazer:      return "Trail Blazer";
+            case GameModeType.Survival:         return "Survival";
+            case GameModeType.CheckpointRace:   return "Checkpoint Race";
+            case GameModeType.GateRace:         return "Gate Race";
+            }
+
+            return mission.Name;
+        }
+
+        private ToolStripMenuItem BuildMenuItem(MissionDescriptor mission)
+        {
+            var itemText = GetItemNameForMission(mission);
+            var menuItem = new ToolStripMenuItem(itemText) {
+                Tag = mission.MissionIds[0]
+            };
+
+            menuItem.Click += MenuLoadMission;
+
+            return menuItem;
+        }
+
+        private ToolStripMenuItem BuildMenuItem(MissionDescriptor mission, List<ToolStripMenuItem> subItems)
+        {
+            var itemText = GetItemNameForMission(mission);
+            var menuItem = new ToolStripMenuItem(itemText);
+
+            foreach (var subItem in subItems)
+            {
+                if (subItem.Tag != null)
+                    subItem.Click += MenuLoadMission;
+
+                menuItem.DropDownItems.Add(subItem);
+            }
+
+            return menuItem;
+        }
+
         public void PopulateMainMenu()
         {
-            // Leaving these here for if they're ever needed..
-            // const string miami          = "Miami";
-            // const string nice           = "Nice";
-            // const string istanbul       = "Istanbul";
-
-            const string undercover     = "Undercover";
-            const string takeARide      = "Take a Ride";
-            const string takeARideSemi  = "Take a Ride (Semi)";
-            const string quickChase     = "Quick Chase";
-            const string quickGetaway   = "Quick Getaway";
-            const string trailBlazer    = "Trail Blazer";
-            const string survival       = "Survival";
-            const string checkpointRace = "Checkpoint Race";
-            const string gateRace       = "Gate Race";
-
-            const string seperator      = "----";
-
-            const string subGame        = "Sub-game";
-
-            string[] menuNames = {
-                undercover,
-                seperator,
-                takeARide,
-                takeARideSemi,
-                seperator,
-                quickChase,
-                quickGetaway,
-                trailBlazer,
-                survival,
-                checkpointRace,
-                gateRace
-            };
-            
-            // Each array represents a city and its respective mission IDs
-            // NOTE: To avoid jagged arrays, -1 is used as a terminator
-            int[,] undercoverMissions = {
-                { 01, 02, 03, 04, 05, 06, 07, 08, 09, 10 }, // Miami
-                { 11, 13, 14, 15, 16, 17, 18, 19, 21, -1 }, // Nice
-                { 22, 24, 25, 27, 28, 30, 31, -1, -1, -1 }  // Istanbul
+            CityType[] cityTypes = {
+                CityType.Miami,
+                CityType.Nice,
+                CityType.Istanbul,
             };
 
-            int[,] takeARideIDs = {
-                { 77, 78 },
-                { 80, 81 },
-                { 83, 84 }
-            };
-
-            // Array is structured like this:
-            // --[City]
-            // ----Quick Chase
-            // ----Quick Getaway
-            // ----Trail Blazer
-            // ----Survival
-            // ----Checkpoint Race
-            // ----Gate Race
-
-            // NOTE: To avoid jagged arrays, -1 is used as a terminator
-            int[,,] drivingGames = {
-                { // Miami
-                    { 32, 33, -1 },
-                    { 38, 39, 40 },
-                    { 50, 51, -1 },
-                    { 56, -1, -1 },
-                    { 59, 60, 61 },
-                    { 71, 72, -1 }
-                },
-                { // Nice
-                    { 34, 35, -1 },
-                    { 42, 43, 44 },
-                    { 52, 53, -1 },
-                    { 57, -1, -1 },
-                    { 62, 63, 64 },
-                    { 73, 74, -1 }
-                },
-                { // Istanbul
-                    { 36, 37, -1 },
-                    { 46, 47, 48 },
-                    { 54, 55, -1 },
-                    { 58, -1, -1 },
-                    { 65, 66, 67 },
-                    { 75, 76, -1 }
-                },
-            };
-
-            ToolStripMenuItem[] menus = {
-                mnMiami,
-                mnNice,
-                mnIstanbul
-            };
-
-            // Loop for each city
-            for (int i = 0; i < menus.Length; i++)
+            foreach (var city in cityTypes)
             {
-                ToolStripMenuItem menu = menus[i];
+                var menu = GetMenuItemByCity(city);
 
-                for (int m = 0, n = 0; m < menuNames.Length; m++)
+                if (menu == null)
+                    throw new NullReferenceException($"FATAL: Could not find menu item for city '{city.ToString()}'!");
+
+                var cityMissions = MissionDescriptors.Where((m) => m.City == city);
+
+                GameModeType?[] gameModes = {
+                    GameModeType.Undercover,
+                    null,
+                    GameModeType.TakeARide,
+                    null,
+                    GameModeType.QuickChase,
+                    GameModeType.QuickGetaway,
+                    GameModeType.TrailBlazer,
+                    GameModeType.Survival,
+                    GameModeType.CheckpointRace,
+                    GameModeType.GateRace,
+                };
+
+                foreach (var gameMode in gameModes)
                 {
-                    if (menuNames[m] == seperator)
+                    IEnumerable<MissionDescriptor> missions = (gameMode != null) 
+                        ? cityMissions.Where((m) => m.GameMode == gameMode)
+                        : null;
+
+                    if (missions == null)
                     {
                         menu.DropDownItems.Add(new ToolStripSeparator());
+                        continue;
                     }
-                    else
+
+                    ToolStripMenuItem menuItem = null;
+
+                    switch (gameMode)
                     {
-                        ToolStripMenuItem subMenu = new ToolStripMenuItem(menuNames[m]);
-
-                        switch (menuNames[m])
+                    case GameModeType.Undercover:
                         {
-                        case undercover:
+                            menuItem = new ToolStripMenuItem("Undercover");
+
+                            foreach (var mission in missions)
                             {
-                                for (int v = 0, missionId; v < undercoverMissions.GetLength(1) && ((missionId = undercoverMissions[i, v]) != -1); v++)
-                                {
-                                    ToolStripMenuItem newMenu = new ToolStripMenuItem() {
-                                        Text = MPCFile.ScriptFiles[missionId],
-                                        Tag = missionId
-                                    };
+                                var subItems = new List<ToolStripMenuItem>() {
+                                    new ToolStripMenuItem("Intro") { Tag = mission.MissionIds[0] }
+                                };
 
-                                    newMenu.Click += (o, e) => MenuLoadMission(o, e);
-                                    subMenu.DropDownItems.Add(newMenu);
-                                }
+                                for (int i = 1; i < mission.MissionIds.Length; i++)
+                                    subItems.Add(new ToolStripMenuItem($"Part {i}") { Tag = mission.MissionIds[i] });
+
+                                var subMenuItem = BuildMenuItem(mission, subItems);
+                                menuItem.DropDownItems.Add(subMenuItem);
                             }
-                            break;
-                        case takeARide:
-                            subMenu.Tag = takeARideIDs[i, 0];
-                            break;
-                        case takeARideSemi:
-                            subMenu.Tag = takeARideIDs[i, 1];
-                            break;
-                        default:
+
+                            menu.DropDownItems.Add(menuItem);
+                        } break;
+                    case GameModeType.TakeARide:
+                        {
+                            foreach (var mission in missions)
                             {
-                                for (int k = 0, missionId; k < drivingGames.GetLength(2) && ((missionId = drivingGames[i, n, k]) != -1); k++)
-                                {
-                                    if (menuNames[m] == survival)
-                                        subMenu.Tag = missionId;
-                                    else
-                                    {
-                                        ToolStripMenuItem newMenu = new ToolStripMenuItem() {
-                                            Text = String.Format("{0} {1}", subGame, k + 1),
-                                            Tag = missionId,
-                                        };
+                                if (menuItem != null)
+                                    throw new InvalidOperationException($"Too many Take a Ride missions defined for {city.ToString()}!");
 
-                                        newMenu.Click += (o, e) => MenuLoadMission(o, e);
-                                        subMenu.DropDownItems.Add(newMenu);
-                                    }
-                                }
-                                ++n;
+                                var subItems = new List<ToolStripMenuItem>() {
+                                    new ToolStripMenuItem("Default")    { Tag = mission.MissionIds[0] },
+                                    new ToolStripMenuItem("Semi-truck") { Tag = mission.MissionIds[1] },
+                                };
+
+                                menuItem = BuildMenuItem(mission, subItems);
+                                menu.DropDownItems.Add(menuItem);
                             }
-                            break;
-                        }
+                        } break;
+                    case GameModeType.QuickChase:
+                    case GameModeType.QuickGetaway:
+                    case GameModeType.TrailBlazer:
+                    case GameModeType.CheckpointRace:
+                    case GameModeType.GateRace:
+                        {
+                            foreach (var mission in missions)
+                            {
+                                if (menuItem != null)
+                                    throw new InvalidOperationException($"Too many {gameMode.ToString()} driving games defined for {city.ToString()}!");
 
-                        if (subMenu.Tag != null)
-                            subMenu.Click += (o, e) => MenuLoadMission(o, e);
+                                var subItems = new List<ToolStripMenuItem>();
 
-                        menu.DropDownItems.Add(subMenu);
+                                for (int i = 0; i < mission.MissionIds.Length; i++)
+                                    subItems.Add(new ToolStripMenuItem($"Sub-game {i + 1}") { Tag = mission.MissionIds[i] });
+
+                                menuItem = BuildMenuItem(mission, subItems);
+                                menu.DropDownItems.Add(menuItem);
+                            }
+                        } break;
+                    case GameModeType.Survival:
+                        {
+                            foreach (var mission in missions)
+                            {
+                                if (menuItem != null)
+                                    throw new InvalidOperationException($"Too many Survival's defined for {city.ToString()}!");
+
+                                menuItem = BuildMenuItem(mission);
+                                menu.DropDownItems.Add(menuItem);
+                            }
+                        } break;
                     }
                 }
             }
         }
-
+        
         private void GenerateExportedMissionObjects()
         {
             /*
@@ -274,7 +396,7 @@ namespace Zartex
             TreeNode master = new TreeNode() {
                 Text = "Exported Mission Objects"
             };
-
+            
             Console.WriteLine("There's {0} mission objects.", MissionPackage.ExportedMissionObjects.Count);
 
             for (int i = 0; i < MissionPackage.ExportedMissionObjects.Count; i++)
@@ -299,8 +421,8 @@ namespace Zartex
 
             Cursor = Cursors.WaitCursor;
 
-            List<NodeDefinition> nodeDefs = MissionPackage.MissionData.LogicExportData.Nodes.Definitions;
-            var wireCollections = MissionPackage.MissionData.LogicExportData.WireCollection.WireCollections;
+            List<NodeDefinition> nodeDefs = MissionPackage.MissionData.LogicData.Nodes.Definitions;
+            var wireCollections = MissionPackage.MissionData.LogicData.WireCollection.WireCollections;
             int nWires = wireCollections.Count;
             
             for (int w = 0; w < nWires; w++)
@@ -309,7 +431,7 @@ namespace Zartex
                 var lNodeIdx = nodeDefs.FindIndex(0, (def) => (int)def.Properties[0].Value == w);
 
                 var lNode = nodeDefs[lNodeIdx];
-                var lNodeName = MissionPackage.MissionData.LogicExportData.StringCollection[lNode.StringId];
+                var lNodeName = MissionPackage.MissionData.LogicData.StringCollection[lNode.StringId];
                 
                 var text = $"[{lNodeIdx}]: {NodeTypes.GetNodeType(lNode.OpCode)}";
 
@@ -327,7 +449,7 @@ namespace Zartex
                     var wire = wires[n];
                     
                     var node = nodeDefs[wire.NodeId];
-                    var nodeName = MissionPackage.MissionData.LogicExportData.StringCollection[node.StringId];
+                    var nodeName = MissionPackage.MissionData.LogicData.StringCollection[node.StringId];
 
                     var wireText = $"[{wire.NodeId}]: {NodeTypes.GetNodeType(wire.OpCode)}";
 
@@ -355,51 +477,47 @@ namespace Zartex
         
         private void AddNodeProperty(TreeNode node, NodeProperty prop)
         {
-            var propName = MissionPackage.MissionData.LogicExportData.StringCollection[prop.StringId];
-
+            var propName = MissionPackage.MissionData.LogicData.StringCollection[prop.StringId];
+            var propValue = prop.ToString();
+            
             if (prop is IntegerProperty)
             {
                 var value = (int)prop.Value;
-
-                if (value > -1)
+                
+                switch (prop.OpCode)
                 {
-                    switch (prop.OpCode)
+                case 7:
+                    if (value != -1)
                     {
-                    case 7:
-                        var actor = MissionPackage.MissionData.LogicExportData.Actors[value];
+                        var actor = MissionPackage.MissionData.LogicData.Actors[value];
                         var actorName = NodeTypes.GetActorType(actor.OpCode);
-                        var actorText = MissionPackage.MissionData.LogicExportData.StringCollection[actor.StringId];
+                        var actorText = MissionPackage.MissionData.LogicData.StringCollection[actor.StringId];
 
                         if (actorText != "Unknown" && actorText != "Unnamed")
-                            actorName = String.Format("{0} \"{1}\"", actorName, MissionPackage.MissionData.LogicExportData.StringCollection[actor.StringId]);
+                            actorName = String.Format("{0} \"{1}\"", actorName, MissionPackage.MissionData.LogicData.StringCollection[actor.StringId]);
 
-                        propName = String.Format("{0}: <[{1}]: {2}>", propName, value, actorName);
-                        break;
-                    case 9:
-                        propName = String.Format("{0}: 0x{1:X8}", propName, value);
-                        break;
-                    case 19:
-                        var wires = MissionPackage.MissionData.LogicExportData.WireCollection[value].Wires;
-
-                        // skip empty wire collection properties
-                        if (wires.Count == 0)
-                            return;
-
-                        break;
-                    case 20:
-                        if (MissionPackage.HasLocaleString(value))
-                            propName = String.Format("{0}: \"{1}\"", propName, MissionPackage.GetLocaleString(value));
-                        break;
-                    default:
-                        propName = $"{propName}: {prop.ToString()}";
-                        break;
+                        propValue = String.Format("<[{0}]: {1}>", value, actorName);
                     }
+                    break;
+                case 9:
+                    propValue = String.Format("0x{0:X8}", value);
+                    break;
+                case 20:
+                    if (value != -1)
+                    {
+                        if (MissionPackage.HasLocaleString(value))
+                            propValue = String.Format("\"{0}\"", MissionPackage.GetLocaleString(value));
+                    }
+                    break;
                 }
             }
             else
             {
                 switch (prop.OpCode)
                 {
+                case 2:
+                    propValue = String.Format("{0:0.0###}", (float)prop.Value);
+                    break;
                 case 3:
                 case 8:
                     {
@@ -409,23 +527,16 @@ namespace Zartex
                         if (strId < 0)
                             strId &= 0xFF;
 
-                        var propValue = String.Format("\"{1}\"", propName, MissionPackage.MissionData.LogicExportData.StringCollection[strId]);
+                        propValue = String.Format("\"{0}\"", MissionPackage.MissionData.LogicData.StringCollection[strId]);
 
                         if (prop.OpCode == 8)
                             propValue = String.Format("{{ {0}, {1} }}", propValue, ((AIPersonalityProperty)prop).PersonalityIndex);
-
-                        propName = $"{propName}: {propValue}";
-
-
                     } break;
-                default:
-                    propName = $"{propName}: {prop.ToString()}";
-                    break;
                 }
             }
-
+            
             var propNode = new TreeNode() {
-                Text = propName,
+                Text = (prop.OpCode != 19) ? $"{propName}: {propValue}" : propName,
                 Tag = prop
             };
 
@@ -436,7 +547,7 @@ namespace Zartex
         private void StyleNode(TreeNode node, NodeDefinition def)
         {
             var text = (def is ActorDefinition) ? NodeTypes.GetActorType(def.OpCode) : NodeTypes.GetNodeType(def.OpCode);
-            var name = MissionPackage.MissionData.LogicExportData.StringCollection[def.StringId];
+            var name = MissionPackage.MissionData.LogicData.StringCollection[def.StringId];
 
             if (name != "Unknown" && name != "Unnamed")
                 text = String.Format("{0} \"{1}\"", text, name);
@@ -483,7 +594,7 @@ namespace Zartex
 
                     if (e.Node.Nodes.Count == 0)
                     {
-                        var actor = MissionPackage.MissionData.LogicExportData.Actors[prop.Value] as ActorDefinition;
+                        var actor = MissionPackage.MissionData.LogicData.Actors[prop.Value] as ActorDefinition;
                         
                         foreach (var actorProp in actor.Properties)
                             AddNodeProperty(e.Node, actorProp);
@@ -530,7 +641,7 @@ namespace Zartex
 
                             Width   = 400,
 
-                            SelectedText = MissionPackage.MissionData.LogicExportData.StringCollection[def.StringId]
+                            SelectedText = MissionPackage.MissionData.LogicData.StringCollection[def.StringId]
                         };
 
                         Button confirmation = new Button() {
@@ -552,7 +663,7 @@ namespace Zartex
 
                         if (prompt.ShowDialog() == DialogResult.OK)
                         {
-                            def.StringId = (short)MissionPackage.MissionData.LogicExportData.StringCollection.AppendString(textBox.Text);
+                            def.StringId = (short)MissionPackage.MissionData.LogicData.StringCollection.AppendString(textBox.Text);
 
                             StyleNode(node, def);
                             node.Text = String.Format("[{0}]: {1}", nodes.Nodes.IndexOf(node), node.Text);
@@ -596,7 +707,7 @@ namespace Zartex
                 
                 var wireId = (int)prop.Value;
 
-                foreach (var wire in MissionPackage.MissionData.LogicExportData.WireCollection.WireCollections[wireId].Wires)
+                foreach (var wire in MissionPackage.MissionData.LogicData.WireCollection.WireCollections[wireId].Wires)
                 {
                     var defNode = nodes.Nodes[wire.NodeId];
 
@@ -620,7 +731,7 @@ namespace Zartex
 
         private void GenerateLogicNodes()
         {
-            CreateNodes(MissionPackage.MissionData.LogicExportData.Nodes.Definitions);
+            CreateNodes(MissionPackage.MissionData.LogicData.Nodes.Definitions);
             //CreateLogicNodesFlowgraph(MissionPackage.LogicNodeDefinitions);
 
             // // Nest wires
@@ -642,7 +753,7 @@ namespace Zartex
 
         private void GenerateActors()
         {
-            CreateNodes(MissionPackage.MissionData.LogicExportData.Actors.Definitions);
+            CreateNodes(MissionPackage.MissionData.LogicData.Actors.Definitions);
         }
 
         public void GenerateDefinition(FlowgraphWidget flowgraph, NodeDefinition def, int x, int y)
@@ -652,14 +763,14 @@ namespace Zartex
                 ? NodeTypes.LogicNodeTypes
                 : NodeTypes.ActorNodeTypes;
 
-            string strName = MissionPackage.MissionData.LogicExportData.StringCollection[def.StringId];
+            string strName = MissionPackage.MissionData.LogicData.StringCollection[def.StringId];
             string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
             string opcodeName = opcodes.ContainsKey(def.OpCode) ? opcodes[def.OpCode] : def.OpCode.ToString();
 
             NodeWidget node = new NodeWidget() {
                 Flowgraph = flowgraph,
                 //BackColor = Color.FromArgb(def.Byte4, def.Byte1, def.Byte2, def.Byte3),
-                HeaderText = String.Format("{0}: {1} {2}", MissionPackage.MissionData.LogicExportData.Nodes.Definitions.IndexOf(def), opcodeName, nodeName),
+                HeaderText = String.Format("{0}: {1} {2}", MissionPackage.MissionData.LogicData.Nodes.Definitions.IndexOf(def), opcodeName, nodeName),
                 Left = x,
                 Top = y,
                 Tag = def
@@ -676,7 +787,7 @@ namespace Zartex
             {
                 NodeProperty prop = def.Properties[p];
 
-                string propName = MissionPackage.MissionData.LogicExportData.StringCollection[prop.StringId];
+                string propName = MissionPackage.MissionData.LogicData.StringCollection[prop.StringId];
 
                 // if (prop.Opcode == 20 && MissionPackage.HasLocale)
                 // {
@@ -759,15 +870,15 @@ namespace Zartex
 
                 int oldY = y;
 
-                for (int w = 0; w < MissionPackage.MissionData.LogicExportData.WireCollection[wireId].Wires.Count; w++)
+                for (int w = 0; w < MissionPackage.MissionData.LogicData.WireCollection[wireId].Wires.Count; w++)
                 {
                     Flowgraph.Nodes[i].Left = x;
                     Flowgraph.Nodes[i].Top = y;
 
-                    Flowgraph.Nodes[MissionPackage.MissionData.LogicExportData.WireCollection[wireId][w].NodeId].Left = x + Flowgraph.Nodes[i].Left + 235;
-                    Flowgraph.Nodes[MissionPackage.MissionData.LogicExportData.WireCollection[wireId][w].NodeId].Top = y + Flowgraph.Nodes[i].Top;
+                    Flowgraph.Nodes[MissionPackage.MissionData.LogicData.WireCollection[wireId][w].NodeId].Left = x + Flowgraph.Nodes[i].Left + 235;
+                    Flowgraph.Nodes[MissionPackage.MissionData.LogicData.WireCollection[wireId][w].NodeId].Top = y + Flowgraph.Nodes[i].Top;
 
-                    Flowgraph.LinkNodes(Flowgraph.Nodes[i], Flowgraph.Nodes[MissionPackage.MissionData.LogicExportData.WireCollection[wireId][w].NodeId]);
+                    Flowgraph.LinkNodes(Flowgraph.Nodes[i], Flowgraph.Nodes[MissionPackage.MissionData.LogicData.WireCollection[wireId][w].NodeId]);
 
                     y += 75;
                 }
@@ -877,8 +988,8 @@ namespace Zartex
 
             Cursor = Cursors.WaitCursor;
 
-            for (int i = 0; i < MissionPackage.MissionData.LogicExportData.StringCollection.Count; i++)
-                DataGrid.Rows.Add(i, MissionPackage.MissionData.LogicExportData.StringCollection[i]);
+            for (int i = 0; i < MissionPackage.MissionData.LogicData.StringCollection.Count; i++)
+                DataGrid.Rows.Add(i, MissionPackage.MissionData.LogicData.StringCollection[i]);
 
             SafeAddControl(DataGridWidget);
 
@@ -912,31 +1023,13 @@ namespace Zartex
 
             InitTools();
         }
-
-        private void LoadScriptFile(int missionId, string localeFile)
-        {
-            //MissionPackage = new MPCFile(missionId, localeFile);
-            //Filename = MissionPackage.Filename;
-            //
-            //InitTools();
-        }
-
-        private void LoadScriptFile(string filename, string localeFile)
-        {
-            //Filename = filename;
-            //MissionPackage = new MPCFile(Filename, localeFile);
-            //
-            //InitTools();
-        }
-
+        
         private void InitTools()
         {
             if (MissionPackage.IsLoaded)
             {
                 Text = String.Format("{0} - {1}", title, Filename);
                 GenerateLogicNodes();
-
-                mnTools.Enabled = true;
             }
         }
 
@@ -1006,21 +1099,7 @@ namespace Zartex
                 mnFile_Save.Enabled = true;
             }
         }
-
-        private void LoadLocaleTool(object sender, EventArgs e)
-        {
-            //OpenFileDialog LocaleOpen = new OpenFileDialog() {
-            //    InitialDirectory = MPCFile.GetMissionLocaleDirectory(),
-            //    Filter = "Mission Locale (*.txt)|*.txt"
-            //};
-            //
-            //if (LocaleOpen.ShowDialog() == DialogResult.OK)
-            //{
-            //    MissionPackage.LoadLocaleFile(LocaleOpen.FileName);
-            //    GenerateLogicNodes();
-            //}
-        }
-
+        
         private void onPaintFlowgraph(object sender, PaintEventArgs e)
         {
             base.OnPaint(e);

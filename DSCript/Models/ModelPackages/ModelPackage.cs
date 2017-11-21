@@ -32,7 +32,7 @@ namespace DSCript.Models
         public List<MeshGroup> MeshGroups { get; set; }
         public List<MeshDefinition> Meshes { get; set; }
 
-        public List<VertexData> VertexBuffers { get; set; }
+        public List<VertexBuffer> VertexBuffers { get; set; }
         public IndexData IndexBuffer { get; set; }
 
         public List<MaterialDataPC> Materials { get; set; }

@@ -24,7 +24,7 @@ namespace DSCript.Models
         /// <summary>
         /// Gets or sets the Vertex Buffer to use when accessing vertices
         /// </summary>
-        public VertexData VertexBuffer { get; set; }
+        public VertexBuffer VertexBuffer { get; set; }
         
         // type of vertices in the buffer
         // resolves to a vertex declaration

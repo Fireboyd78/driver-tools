@@ -447,7 +447,7 @@ namespace Antilli
                     if (checkBlendWeights)
                     {
                         checkBlendWeights = false;
-                        AT.CurrentState.CanUseBlendWeights = part.VertexBuffer.HasBlendWeights;
+                        AT.CurrentState.CanUseBlendWeights = (part.VertexType == 5);
                     }
 
                     // count all possible LODs
@@ -614,17 +614,7 @@ namespace Antilli
 
                 // vertex buffers
                 foreach (var vBuf in vBuffers)
-                {
-                    var verts = vBuf.Buffer;
-
-                    ms.Write(verts.Length);
-
-                    ms.Write((short)vBuf.Length);
-                    ms.Write((short)0); // reserved: extra data present?
-
-                    foreach (var vertex in vBuf.Buffer)
-                        ms.Write(vertex.GetBytes());
-                }
+                    vBuf.WriteTo(ms);
 
                 var texLookup = new Dictionary<int, int>();
                 var texLookupCount = 0;

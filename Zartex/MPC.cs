@@ -14,8 +14,6 @@ namespace Zartex
 {
     public sealed class MPCFile
     {
-        #region Static properties / formatting strings
-
         static string m_locale = "English";
         static string m_territory = Driv3r.InvalidPath;
         
@@ -39,95 +37,142 @@ namespace Zartex
                 m_localeDir = Driv3r.GetLocalePath(m_territory, m_locale);
             }
         }
-#endregion
-
-#region Static script filenames
-        public static IDictionary<int, string> ScriptFiles = new Dictionary<int, string>()
+        
+        // driv3r's way of getting the base id
+        // leaving this here just in case
+        private static int GetBaseMissionId(int missionId)
         {
-            /*-------------------------------------
-              MISSIONS
-              ------------------------------------*/
-            { 1,  "Police HQ"                     }, // Miami
-            { 2,  "Lead on Baccus"                },
-            { 3,  "The Siege"                     },
-            { 4,  "Rooftops"                      },
-            { 5,  "Impress Lomaz"                 },
-            { 6,  "Gator's Yacht"                 },
-            { 7,  "The Hit"                       },
-            { 8,  "Trapped"                       },
-            { 9,  "Dodge Island"                  },
-            { 10, "Retribution"                   },                                                    
-            { 11, "Welcome to Nice"               }, // Nice
-            { 13, "Smash and Run"                 },
-            { 14, "18-wheeler"                    },
-            { 15, "Hijack"                        },
-            { 16, "Arms Deal"                     },
-            { 17, "Booby Trap"                    },
-            { 18, "Calita in Trouble"             },
-            { 19, "Rescue Dubois"                 },
-            { 21, "Hunted"                        },         
-            { 22, "Surveillance"                  }, // Istanbul
-            { 24, "Tanner Escapes"                },
-            { 25, "Another Lead"                  },
-            { 27, "Alleyway"                      },
-            { 28, "The Chase"                     },
-            { 30, "Bomb Truck"                    },
-            { 31, "Chase the Train"               },
-            /*-------------------------------------
-              DRIVING GAMES
-              ------------------------------------*/
-            { 32, "Quick Chase, Miami #1"         },
-            { 33, "Quick Chase, Miami #2"         },
-            { 34, "Quick Chase, Nice #1"          },
-            { 35, "Quick Chase, Nice #2"          },
-            { 36, "Quick Chase, Istanbul #1"      },
-            { 37, "Quick Chase, Istanbul #2"      },
-            { 38, "Quick Getaway, Miami #1"       },
-            { 39, "Quick Getaway, Miami #2"       },
-            { 40, "Quick Getaway, Miami #3"       },
-            { 42, "Quick Getaway, Nice #1"        },
-            { 43, "Quick Getaway, Nice #2"        },
-            { 44, "Quick Getaway, Nice #3"        },
-            { 46, "Quick Getaway, Istanbul #1"    },
-            { 47, "Quick Getaway, Istanbul #2"    },
-            { 48, "Quick Getaway, Istanbul #3"    },
-            { 50, "Trail Blazer, Miami #1"        },
-            { 51, "Trail Blazer, Miami #2"        },
-            { 52, "Trail Blazer, Nice #1"         },
-            { 53, "Trail Blazer, Nice #2"         },
-            { 54, "Trail Blazer, Istanbul #1"     },
-            { 55, "Trail Blazer, Istanbul #2"     },
-            { 56, "Survival, Miami"               },
-            { 57, "Survival, Nice"                },
-            { 58, "Survival, Istanbul"            },
-            { 59, "Checkpoint Race, Miami #1"     },
-            { 60, "Checkpoint Race, Miami #2"     },
-            { 61, "Checkpoint Race, Miami #3"     },
-            { 62, "Checkpoint Race, Nice #1"      },
-            { 63, "Checkpoint Race, Nice #2"      },
-            { 64, "Checkpoint Race, Nice #3"      },
-            { 65, "Checkpoint Race, Istanbul #1"  },
-            { 66, "Checkpoint Race, Istanbul #2"  },
-            { 67, "Checkpoint Race, Istanbul #3"  },
-            { 71, "Gate Race, Miami #1"           },
-            { 72, "Gate Race, Miami #2"           },
-            { 73, "Gate Race, Nice #1"            },
-            { 74, "Gate Race, Nice #2"            },
-            { 75, "Gate Race, Istanbul #1"        },
-            { 76, "Gate Race, Istanbul #2"        },
-            /*-------------------------------------
-              TAKE-A-RIDE
-              ------------------------------------*/
-            { 77, "Take a Ride, Miami"            },
-            { 78, "Take a Ride, Miami (Semi)"     },
-            { 80, "Take a Ride, Nice"             },
-            { 81, "Take a Ride, Nice (Semi)"      },
-            { 83, "Take a Ride, Istanbul"         },
-            { 84, "Take a Ride, Istanbul (Semi)"  }
-        };
-#endregion
+            switch (missionId)
+            {
+            case 1:
+            case 101:
+            case 102:
+                return 1;
+            case 2:
+            case 103:
+                return 2;
+            case 3:
+            case 105:
+                return 3;
+            case 4:
+            case 106:
+            case 107:
+                return 4;
+            case 5:
+            case 108:
+            case 109:
+            case 121:
+                return 5;
+            case 6:
+            case 110:
+            case 111:
+                return 6;
+            case 7:
+            case 112:
+            case 122:
+                return 7;
+            case 8:
+            case 113:
+            case 114:
+            case 115:
+                return 8;
+            case 9:
+            case 116:
+            case 117:
+                return 9;
+            case 10:
+            case 118:
+            case 119:
+            case 120:
+                return 10;
+            case 11:
+            case 130:
+            case 131:
+                return 11;
+            case 12:
+                return 12;
+            case 13:
+            case 134:
+                return 13;
+            case 14:
+            case 135:
+            case 150:
+                return 14;
+            case 15:
+            case 136:
+                return 15;
+            case 16:
+            case 137:
+            case 138:
+            case 139:
+            case 149:
+                return 16;
+            case 17:
+            case 140:
+            case 151:
+            case 152:
+                return 17;
+            case 18:
+            case 141:
+            case 142:
+                return 18;
+            case 19:
+            case 143:
+            case 144:
+                return 19;
+            case 20:
+                return 20;
+            case 21:
+            case 146:
+            case 147:
+            case 148:
+                return 21;
+            case 22:
+            case 160:
+            case 161:
+            case 162:
+                return 22;
+            case 23:
+                return 23;
+            case 24:
+            case 164:
+            case 165:
+            case 180:
+                return 24;
+            case 25:
+            case 166:
+            case 167:
+            case 168:
+            case 181:
+                return 25;
+            case 26:
+                return 26;
+            case 27:
+            case 171:
+            case 172:
+                return 27;
+            case 28:
+            case 173:
+            case 174:
+                return 28;
+            case 29:
+            case 175:
+            case 182:
+                return 29;
+            case 30:
+            case 176:
+                return 30;
+            case 31:
+            case 177:
+            case 178:
+            case 179:
+                return 31;
+            }
 
-#region Static methods
+            // mission has no sub-missions
+            return missionId;
+        }
+        
         public static string GetMissionLocaleDirectory()
         {
             return (m_autoLocale) ? Path.Combine(m_localeDir, "Missions") : Driv3r.RootDirectory;
@@ -142,11 +187,9 @@ namespace Zartex
         {
             return Driv3r.GetPath("Missions");
         }
-#endregion Static methods
 
         private bool _isLoaded = false;
-        private bool _hasLocale = false;
-
+        
         public bool IsLoaded
         {
             get { return _isLoaded; }

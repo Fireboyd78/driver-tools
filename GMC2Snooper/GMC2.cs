@@ -110,7 +110,7 @@ namespace GMC2Snooper
             }
 
             // read material data
-            var tsc2Offset = (baseOffset + data.MaterialDataOffset);
+            var tsc2Offset = (int)(baseOffset + data.MaterialDataOffset);
 
             // make sure it actually has textures
             if (tsc2Offset == stream.Length)
@@ -122,90 +122,54 @@ namespace GMC2Snooper
 
             Materials = new List<MaterialDataPS2>(tsc2Header.MaterialsCount);
 
+            // get materials
             for (int m = 0; m < Materials.Capacity; m++)
             {
                 stream.Position = tsc2Offset + (tsc2Header.MaterialsOffset + (m * tsc2Header.MaterialSize));
                 
-                var srCount = stream.ReadByte();
-                var frameCount = stream.ReadByte();
+                var _m = stream.Read<MaterialDataPS2.Detail>();
+                _m.SubstanceRefsOffset += tsc2Offset;
 
-                stream.Position += 2;
-                
-                var mAnimSpeed = stream.ReadFloat();
-                var mAnimToggle = (stream.ReadInt32() == 1);
-
-                var srOffset = stream.ReadInt32() + tsc2Offset;
-
-                var material = new MaterialDataPS2() {
-                    Animated = mAnimToggle,
-                    AnimationSpeed = mAnimSpeed
-                };
+                var material = _m.Copy();
 
                 Materials.Add(material);
+                
+                // get substances
+                for (int s = 0; s < _m.NumSubstances; s++)
+                {
+                    stream.Position = _m.SubstanceRefsOffset + (s * tsc2Header.LookupSize);
+                    stream.Position = stream.ReadInt32() + tsc2Offset;
 
-                stream.Position = srOffset;
-                var sOffset = stream.ReadInt32() + tsc2Offset;
+                    var _s = stream.Read<SubstanceDataPS2.Detail>();
+                    _s.TextureRefsOffset += tsc2Offset;
 
-                // get substance(s)
-                for (int s = 0; s < srCount; s++)
-                {                    
-                    stream.Position = sOffset + (s * 0xC);
-
-                    var s1 = stream.ReadByte();
-                    var s2 = stream.ReadByte();
-                    var tCount = stream.ReadByte();
-                    var s4 = stream.ReadByte();
-
-                    var substance = new SubstanceDataPS2() {
-                        Mode = s1,
-                        Flags = s2,
-                        Type = s4,
-                    };
-
-                    material.Substances.Add(substance);
-                    Substances.Add(substance);
+                    var substance = _s.Copy();
                     
-                    // reserved
-                    stream.Position += 0x4;
-
-                    var tOffset = stream.ReadInt32() + tsc2Offset;
-
-                    for (int t = 0; t < tCount; t++)
+                    Substances.Add(substance);
+                    material.Substances.Add(substance);
+                    
+                    // get textures
+                    for (int t = 0; t < _s.NumTextures; t++)
                     {
-                        stream.Position = tOffset + (t * tsc2Header.LookupSize);
-
-                        var texOffset = stream.ReadInt32() + tsc2Offset;
-
-                        stream.Position = texOffset;
-
-                        var texInfo = new TextureDataPS2() {
-                            Reserved = stream.ReadInt64(),
-
-                            Modes = stream.ReadByte(),
-                            Type = stream.ReadByte(),
-
-                            MipMaps = stream.ReadByte(),
-                            Flags = stream.ReadByte(),
-
-                            Width = stream.ReadInt16(),
-                            Height = stream.ReadInt16(),
-
-                            Unknown1 = stream.ReadInt32(),
-                            
-                            DataOffset = stream.ReadInt32(),
-
-                            Unknown2 = stream.ReadInt32(),
-                        };
+                        stream.Position = _s.TextureRefsOffset + (t * tsc2Header.LookupSize);
+                        stream.Position = stream.ReadInt32() + tsc2Offset;
                         
-                        for (int c = 0; c < texInfo.Modes; c++)
-                        {
-                            var clutOffset = stream.ReadInt32();
+                        var _t = stream.Read<TextureDataPS2.Detail>();
+                        _t.DataOffset += tsc2Offset;
 
-                            texInfo.CLUTs.Add(clutOffset);
+                        var texture = _t.Copy();
+
+                        // read cluts
+                        texture.CLUTs = new List<int>(_t.Pixmaps);
+
+                        for (int c = 0; c < _t.Pixmaps; c++)
+                        {
+                            var offset = stream.ReadInt32() + tsc2Offset;
+                            texture.CLUTs.Add(offset);
                         }
 
-                        substance.Textures.Add(texInfo);
-                        Textures.Add(texInfo);
+                        Textures.Add(texture);
+                        substance.Textures.Add(texture);
                     }
                 }
             }
@@ -222,14 +186,11 @@ namespace GMC2Snooper
             // now resolve each texture's offset relative to the buffer, instead of the header
             foreach (var texInfo in Textures)
             {
-                texInfo.DataOffset = (int)((tsc2Offset + texInfo.DataOffset) - texBufOffset);
+                texInfo.DataOffset -= texBufOffset;
 
                 // resolve CLUT offsets as well
                 for (int c = 0; c < texInfo.CLUTs.Count; c++)
-                {
-                    var clut = texInfo.CLUTs[c];
-                    texInfo.CLUTs[c] = (int)((tsc2Offset + clut) - texBufOffset);
-                }
+                    texInfo.CLUTs[c] -= texBufOffset;
             }
             
             Debug.WriteLine($"Reading texture buffer @ {texBufOffset:X8} (size:{texBufLength:X8})");

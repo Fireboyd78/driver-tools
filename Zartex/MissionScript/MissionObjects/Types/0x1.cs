@@ -8,10 +8,20 @@ using System.Text;
 
 using Zartex.Converters;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
-    public class BlockType_0x1 : MissionObject
+    public class MissionObject_1 : MissionObject
     {
+        public interface IFieldData
+        {
+            int Type { get; }
+            
+            int Reserved { get; set; }
+
+            void Load(Stream stream);
+            void Save(Stream stream);
+        }
+        
         public class FieldData
         {
             public int Offset { get; set; }
@@ -30,7 +40,7 @@ namespace Zartex.MissionObjects
 
         public override int Id
         {
-            get { return 0x1; }
+            get { return 1; }
         }
 
         public override int Size
@@ -43,62 +53,12 @@ namespace Zartex.MissionObjects
                 return (32 + FieldSize);
             }
         }
-
-        [TypeConverter(typeof(CollectionConverter))]
-        public List<double> Floats { get; set; }
-
+        
         public short Reserved { get; set; }
         public short Unknown { get; set; }
 
+        public Vector3 Position { get; set; }
+
         public int VehicleID { get; set; }
-
-        public BlockType_0x1(BinaryReader reader)
-        {
-            Offset = (int)reader.GetPosition();
-
-            FieldSize = reader.ReadInt16();
-            Reserved = reader.ReadInt16();
-
-            Unknown = reader.ReadInt16();
-
-            long baseOffset = Offset + 4;
-
-            Fields = new List<FieldData>(3);
-
-            for (int i = 0; i < Fields.Capacity; i++)
-            {
-                reader.Seek(baseOffset + 2 + (i * 2), SeekOrigin.Begin);
-
-                var field = new FieldData();
-
-                field.Offset = reader.ReadInt16();
-
-                reader.Seek(baseOffset + field.Offset, SeekOrigin.Begin);
-
-                field.Type = reader.ReadByte();
-
-                var size = reader.ReadByte() - 4;
-                var nFloats = (size > 0) ? size / 4 : 0;
-
-                reader.Seek(2, SeekOrigin.Current);
-
-                field.Floats = new List<double>(nFloats);
-                
-                if (nFloats > 0)
-                {
-                    for (int k = 0; k < field.Floats.Capacity; k++)
-                        field.Floats.Add((double)reader.ReadSingle());
-                }
-
-                Fields.Add(field);
-            }
-
-            Floats = new List<double>(3);
-
-            for (int v = 0; v < Floats.Capacity; v++)
-                Floats.Add((double)reader.ReadSingle());
-
-            VehicleID = reader.ReadInt32();
-        }
     }
 }

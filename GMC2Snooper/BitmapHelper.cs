@@ -13,7 +13,7 @@ namespace GMC2Snooper
         public Bitmap Bitmap { get; set; }
 
         public PixelFormat Format { get; set; }
-
+        
         public byte[] Pixels
         {
             get { return Bitmap.ToByteArray(Format); }
@@ -39,6 +39,16 @@ namespace GMC2Snooper
         {
             Bitmap.Dispose();
             Format = PixelFormat.Undefined;
+        }
+
+        public void Save(string filename)
+        {
+            Save(filename, ImageFormat.Bmp);
+        }
+
+        public void Save(string filename, ImageFormat format)
+        {
+            Bitmap.Save(filename, format);
         }
 
         public BitmapHelper(string file, PixelFormat format)

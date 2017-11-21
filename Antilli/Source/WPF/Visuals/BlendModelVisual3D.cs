@@ -32,7 +32,7 @@ namespace Antilli
 {
     public class BlendModelVisual3D : GeometryModelVisual3D
     {
-        static double tweenFactor = 1.0;
+        static float tweenFactor = 1.0f;
 
         public static readonly DependencyProperty UseBlendWeightsProperty;
 
@@ -78,9 +78,13 @@ namespace Antilli
                 if (vertex != null)
                 {
                     var pos = vertex.Position;
+                    var nor = vertex.Normal;
 
                     if (UseBlendWeights)
-                        pos = (pos + (vertex.BlendWeights * (float)tweenFactor));
+                    {
+                        pos = (pos + (vertex.PositionW * tweenFactor));
+                        nor = (nor + (vertex.NormalW * tweenFactor));
+                    }
 
                     positions.Add(pos);
                     normals.Add(vertex.Normal);

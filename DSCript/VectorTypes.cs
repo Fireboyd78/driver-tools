@@ -10,22 +10,23 @@ namespace DSCript
 {
     public struct Vector2
     {
-        public float X { get; set; }
-        public float Y { get; set; }
+        public float X;
+        public float Y;
 
         public override int GetHashCode()
         {
             return X.GetHashCode() ^ Y.GetHashCode();
         }
 
-        public static bool Equals(Vector2 vector1, Vector2 vector2)
+        public static bool Equals(Vector2 left, Vector2 right)
         {
-            return (vector1 == vector2);
+            return left.Equals(right);
         }
 
-        public bool Equals(Vector2 value)
+        public bool Equals(Vector2 other)
         {
-            return Equals(this, value);
+            return (other.X == X)
+                && (other.Y == Y);
         }
 
         public override bool Equals(object o)
@@ -75,22 +76,26 @@ namespace DSCript
             return Multiply(vector, scalar);
         }
 
-        public static bool operator ==(Vector2 vector1, Vector2 vector2)
+        public static bool operator ==(Vector2 left, Vector2 right)
         {
-            return (vector1.X == vector2.X)
-                && (vector1.Y == vector2.Y);
+            return left.Equals(right);
         }
 
-        public static bool operator !=(Vector2 vector1, Vector2 vector2)
+        public static bool operator !=(Vector2 left, Vector2 right)
         {
-            return !(vector1 == vector2);
+            return !left.Equals(right);
         }
-        
+
         public static implicit operator Point(Vector2 value)
         {
             return new Point(value.X, value.Y);
         }
         
+        public override string ToString()
+        {
+            return $"{X:F4},{Y:F4}";
+        }
+
         public Vector2(float x, float y)
         {
             X = x;
@@ -100,23 +105,25 @@ namespace DSCript
 
     public struct Vector3
     {
-        public float X { get; set; }
-        public float Y { get; set; }
-        public float Z { get; set; }
+        public float X;
+        public float Y;
+        public float Z;
 
         public override int GetHashCode()
         {
             return X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode();
         }
 
-        public static bool Equals(Vector3 vector1, Vector3 vector2)
+        public static bool Equals(Vector3 left, Vector3 right)
         {
-            return (vector1 == vector2);
+            return left.Equals(right);
         }
 
-        public bool Equals(Vector3 value)
+        public bool Equals(Vector3 other)
         {
-            return Equals(this, value);
+            return (other.X == X)
+                && (other.Y == Y)
+                && (other.Z == Z);
         }
 
         public override bool Equals(object o)
@@ -169,16 +176,14 @@ namespace DSCript
             return Multiply(vector, scalar);
         }
 
-        public static bool operator ==(Vector3 vector1, Vector3 vector2)
+        public static bool operator ==(Vector3 left, Vector3 right)
         {
-            return (vector1.X == vector2.X)
-                && (vector1.Y == vector2.Y)
-                && (vector1.Z == vector2.Z);
+            return left.Equals(right);
         }
 
-        public static bool operator !=(Vector3 vector1, Vector3 vector2)
+        public static bool operator !=(Vector3 left, Vector3 right)
         {
-            return !(vector1 == vector2);
+            return !left.Equals(right);
         }
 
         public static implicit operator Point3D(Vector3 value)
@@ -191,6 +196,21 @@ namespace DSCript
             return new Vector3D(value.X, value.Y, value.Z);
         }
 
+        public static implicit operator Color(Vector3 value)
+        {
+            return Color.FromScRgb(1.0f, value.X, value.Y, value.Z);
+        }
+
+        public static implicit operator Vector4(Vector3 value)
+        {
+            return new Vector4(value.X, value.Y, value.Z, 1.0f);
+        }
+
+        public override string ToString()
+        {
+            return $"{X:F4},{Y:F4},{Z:F4}";
+        }
+
         public Vector3(float x, float y, float z)
         {
             X = x;
@@ -201,24 +221,27 @@ namespace DSCript
 
     public struct Vector4
     {
-        public float X { get; set; }
-        public float Y { get; set; }
-        public float Z { get; set; }
-        public float W { get; set; }
+        public float X;
+        public float Y;
+        public float Z;
+        public float W;
 
         public override int GetHashCode()
         {
             return X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode() ^ W.GetHashCode();
         }
 
-        public static bool Equals(Vector4 vector1, Vector4 vector2)
+        public static bool Equals(Vector4 left, Vector4 right)
         {
-            return (vector1 == vector2);
+            return left.Equals(right);
         }
 
-        public bool Equals(Vector4 value)
+        public bool Equals(Vector4 other)
         {
-            return Equals(this, value);
+            return (other.X == X)
+                && (other.Y == Y)
+                && (other.Z == Z)
+                && (other.W == W);
         }
 
         public override bool Equals(object o)
@@ -226,7 +249,7 @@ namespace DSCript
             if (o == null || !(o is Vector4))
                 return false;
 
-            return Equals(this, (Vector4)o);
+            return Equals((Vector4)o);
         }
         
         public static Vector4 Add(Vector4 vector1, Vector4 vector2)
@@ -245,7 +268,7 @@ namespace DSCript
                 vector1.X - vector2.X,
                 vector1.Y - vector2.Y,
                 vector1.Z - vector2.Z,
-                vector1.W + vector2.W
+                vector1.W - vector2.W
             );
         }
 
@@ -274,22 +297,29 @@ namespace DSCript
             return Multiply(vector, scalar);
         }
 
-        public static bool operator ==(Vector4 vector1, Vector4 vector2)
+        public static bool operator ==(Vector4 left, Vector4 right)
         {
-            return (vector1.X == vector2.X)
-                && (vector1.Y == vector2.Y)
-                && (vector1.Z == vector2.Z)
-                && (vector1.W == vector2.W);
+            return left.Equals(right);
         }
 
-        public static bool operator !=(Vector4 vector1, Vector4 vector2)
+        public static bool operator !=(Vector4 left, Vector4 right)
         {
-            return !(vector1 == vector2);
+            return !left.Equals(right);
         }
 
         public static implicit operator Point4D(Vector4 value)
         {
             return new Point4D(value.X, value.Y, value.Z, value.W);
+        }
+
+        public static implicit operator Color(Vector4 value)
+        {
+            return Color.FromScRgb(value.W, value.X, value.Y, value.Z);
+        }
+
+        public override string ToString()
+        {
+            return $"{X:F4},{Y:F4},{Z:F4},{W:F4}";
         }
 
         public Vector4(float x, float y, float z, float w)

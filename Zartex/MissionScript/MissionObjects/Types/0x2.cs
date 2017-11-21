@@ -8,15 +8,15 @@ using System.Text;
 
 using Zartex.Converters;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
-    public class BlockType_0x2 : MissionObject
+    public class MissionObject_2 : MissionObject
     {
         private short _type = 0;
 
         public override int Id
         {
-            get { return 0x2; }
+            get { return 2; }
         }
 
         public override int Size
@@ -45,50 +45,5 @@ namespace Zartex.MissionObjects
 
         [TypeConverter(typeof(HexStringConverter))]
         public int Flags2 { get; set; }
-
-        public BlockType_0x2(BinaryReader reader)
-        {
-            Offset = (int)reader.GetPosition();
-
-            var offset = reader.ReadInt16();
-
-            Reserved = reader.ReadInt16();
-
-            Flags1 = reader.ReadInt32();
-
-            if (offset == 0x14)
-            {
-                reader.Seek(4, SeekOrigin.Current);
-                Floats1 = new List<double>(2);
-            }
-            else if (offset == 0x1C)
-            {
-                Floats1 = new List<double>(4);
-            }
-            else throw new Exception("Unknown offset type, cannot continue operation");
-
-            for (int i = 0; i < Floats1.Capacity; i++)
-                Floats1.Add((double)reader.ReadSingle());
-
-            reader.Seek(Offset + offset, SeekOrigin.Begin);
-
-            if (offset == 0x14)
-            {
-                reader.Seek(4, SeekOrigin.Current);
-
-                Floats2 = new List<double>(3);
-            }
-            else if (offset == 0x1C)
-            {
-                Floats2 = new List<double>(4);
-            }
-            else throw new Exception("Unknown offset type, cannot continue operation");
-
-            for (int i = 0; i < Floats2.Capacity; i++)
-                Floats2.Add((double)reader.ReadSingle());
-
-            GUID = reader.ReadInt32();
-            Flags2 = reader.ReadInt32();
-        }
     }
 }

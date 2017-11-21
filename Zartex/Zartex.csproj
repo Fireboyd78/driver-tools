@@ -64,6 +64,7 @@
     <Compile Include="InspectorWidget.Designer.cs">
       <DependentUpon>InspectorWidget.cs</DependentUpon>
     </Compile>
+    <Compile Include="MissionScript\ExportedMissionObjects.cs" />
     <Compile Include="MissionScript\LogicExport\NodeTypes.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>

@@ -124,7 +124,7 @@ namespace Zartex
                 } break;
             case 11:
                 {
-                    var val = (long)stream.ReadUInt64();
+                    var val = stream.Read<AudioInfo>();
                     prop = new AudioProperty(val);
                 } break;
             case 17:
@@ -234,7 +234,7 @@ namespace Zartex
             else if (property is AudioProperty)
             {
                 stream.Write(0x8);
-                stream.Write((long)property.Value);
+                stream.Write(((AudioProperty)property).Value);
             }
             else if (property is Float4Property)
             {

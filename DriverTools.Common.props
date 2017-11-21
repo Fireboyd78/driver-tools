@@ -56,8 +56,8 @@
     
     <IncludeDSCLibrary Condition="'$(IncludeDSCLibrary)' == ''">false</IncludeDSCLibrary>
     
+    <UsesFreeImage Condition="'$(UsesFreeImage)' == '' and $(IncludeDSCLibrary)">true</UsesFreeImage>
     <UsesFreeImage Condition="'$(UsesFreeImage)' == ''">false</UsesFreeImage>
-    <UsesFreeImage Condition="$(IncludeDSCLibrary)">true</UsesFreeImage>
   </PropertyGroup>
   
   <ItemGroup Condition="$(IncludeDSCLibrary)">

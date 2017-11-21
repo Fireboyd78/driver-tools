@@ -21,395 +21,48 @@ namespace DSCript.Models
     {
         public static readonly MagicNumber VPKBulletMagic = "BULL";
         public static readonly int VPKBulletVersion = 2;
-
-        public enum VehiclePartType
-        {
-            Type1       = 1,
-            Type2       = 2,
-            Marker      = 3,
-            Container   = 4,
-            Type8       = 8,
-            DamageWheel = 9,
-        }
-
-        public enum VehiclePartSlotType
-        {
-            Generic                 = 0x00,
-            
-            Hood                    = 0x04,
-            Trunk                   = 0x05,
-
-            ExhaustSmokeEmitter     = 0x06,
-            EngineSmokeEmitter      = 0x07,
-
-            CameraTargetExternal    = 0x08,
-
-            DriverSeat              = 0x0A,
-            PassengerSeat           = 0x0B,
-
-            SignalLeft              = 0x0C,
-            SignalRight             = 0x0D,
-
-            BumperCameraRear        = 0x10,
-            CameraPositionExternal  = 0x11,
-            BumperCameraFront       = 0x12,
-
-            DashboardCamera         = 0x13,
-
-            WheelCameraLeft         = 0x14,
-            WheelCameraRight        = 0x15,
-
-            CameraInteriorUnknown   = 0x16,
-
-            FirstPersonCamera       = 0x17,
-
-            WheelFrontLeft          = 0x1B,
-            WheelFrontRight         = 0x1C,
-            WheelRearLeft           = 0x1D,
-            WheelRearRight          = 0x1E,
-
-            DoorFrontLeft           = 0x1F,
-            DoorFrontRight          = 0x20,
-
-            FenderLeft              = 0x21,
-            FenderRight             = 0x22,
-
-            BumperFront             = 0x23,
-            BumperRear              = 0x24,
-
-            BodyFront               = 0x25,
-            BodyMiddle              = 0x26,
-            BodyRear                = 0x27,
-
-            MirrorLeft              = 0x28,
-            MirrorRight             = 0x29,
-
-            WheelRearLeftExtra      = 0x2A,
-            WheelRearRightExtra     = 0x2B,
-
-            TrailerJack             = 0x2D,
-
-            BrakelightLeft          = 0x2E,
-            BrakelightRight         = 0x2F,
-
-            ReverseLightLeft        = 0x30,
-            ReverseLightRight       = 0x31,
-
-            HeadlightLeft           = 0x32,
-            HeadlightRight          = 0x33,
-
-            DoorRearLeftExtra       = 0x34,
-            DoorRearRightExtra      = 0x35,
-
-            DoorRearLeft            = 0x36,
-            DoorRearRight           = 0x37,
-
-            MotorcycleFork          = 0x3A,
-            MotorcycleClutch        = 0x3B,
-            MotorcycleHandlebars    = 0x3C,
-
-            Ramp                    = 0x3D,
-
-            TrailerDoorLeft         = 0x3E,
-            TrailerDoorRight        = 0x3F,
-
-            CargoDoorLeft           = 0x40,
-            CargoDoorRight          = 0x41,
-
-            TrailerUnknown1         = 0x42,
-            TrailerUnknown2         = 0x43,
-            TrailerUnknown3         = 0x44,
-
-            WheelDamaged            = 0x48,
-            WheelDamagedExtra       = 0x4A,
-
-            TailLightLeft           = 0x4E,
-            TailLightRight          = 0x4F,
-
-            SirenLeft               = 0x50,
-            SirenRight              = 0x52,
-
-            TrainAxleFront          = 0x54,
-            TrainAxleRear           = 0x55,
-
-            TrailerContainer        = 0x56,
-
-            ForkliftHoist           = 0x57,
-            ForkliftLoader          = 0x59,
-
-            BoatRotorLeft           = 0x5A,
-            BoatRotorRight          = 0x5B,
-
-            FrontGrille             = 0x70,
-            CornerBumper            = 0x71
-        }
-
-        [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 0x20)]
-        public struct VehiclePartData
-        {
-            public short PartType;
-            public short SlotType;
-
-            // following flag names are only educated guesses
-            public int RenderFlags;
-            public int CullingFlags;
-
-            public short NumChildren;
-
-            public short Unknown; // possibly a parent to rotate around?
-            public short Hinge;
-
-            public byte ModelId;
-
-            public short PhysicsId;
-            public short PositionId;
-
-            public short OffsetId;
-            public short TransformId;
-
-            public short AxisId;
-            public short Reserved; // ;)
-        }
         
-        public class Thing2
+        public class CenterPoint
         {
             public Vector4 Position { get; set; }
             public Vector4 Rotation { get; set; }
         }
 
+        // bounding box? collision plane?
         public class Thing3
         {
-            public Vector4 RotationX { get; set; }
-            public Vector4 RotationY { get; set; }
-            public Vector4 RotationZ { get; set; }
-            public Vector4 Unknown4 { get; set; }
-            public Vector4 Unknown5 { get; set; }
+            public Matrix Transform { get; set; }
+            public Vector4 Unknown { get; set; }
         }
-
-        public class Thing4
-        {
-            public Vector4 Unknown1 { get; set; }
-            public Vector4 Unknown2 { get; set; }
-            public Vector4 Unknown3 { get; set; }
-            public Vector4 Unknown4 { get; set; }
-        }
-
+        
         public class PDLData
         {
             public Vector4 Position { get; set; }
+            public Matrix Transform { get; set; }
+            
+            public int Unknown1 { get; set; }
 
-            public Vector4 Unknown1 { get; set; }
-            public Vector4 Unknown2 { get; set; }
-            public Vector4 Unknown3 { get; set; }
-            public Vector4 Unknown4 { get; set; }
-
-            public int Unknown5 { get; set; }
-
-            public Vector3 Unknown6 { get; set; }
+            public Vector3 Unknown2 { get; set; }
         }
 
         public class PDLEntry
         {
-            public double Unknown { get; set; }
+            public float Unknown { get; set; }
+
             public int Reserved { get; set; }
 
             public List<PDLData> Children { get; set; }
-        }
-
-        public enum BulletMaterialType : int
-        {
-            Metal = 0,
-            Glass = 1,
-        }
-        
-        public struct BulletData
-        {
-            private const int PACKED_SIZE = 0x14;
-            private const int UNPACKED_SIZE = 0x38; // VPK format
-
-            // number of component bits
-            private const int POS_NBITS = 32;
-
-            private const int POS_NBITS_T = 10;
-            private const int POS_NBITS_H = 12;
-
-            // max component values
-            private const float POS_MAX_T = 3.0f;
-            private const float POS_MAX_H = 15.0f;
-
-            // component bit-shifts
-            private const int POS_BITS_T = POS_NBITS - POS_NBITS_T;
-            private const int POS_BITS_H = POS_NBITS - POS_NBITS_H;
-
-            private const int POS_BITS_TX = POS_NBITS - (POS_NBITS_T * 1);
-            private const int POS_BITS_TY = POS_NBITS - (POS_NBITS_T * 2);
-
-            // packing constants
-            private const float POS_PACKING_T = POS_MAX_T / (1 << (POS_NBITS_T - 1));
-            private const float POS_PACKING_H = POS_MAX_H / (1 << (POS_NBITS_H - 1));
-
-            private const float ROT_PACKING = 0.0039215689f; // [+/-](0.0 - 1.0)
-            private const float WGT_PACKING = 0.000015259022f; // [+/-](0.0 - 1.0)
-            
-            public Vector3 Position1 { get; set; }
-            public Vector3 Position2 { get; set; }
-            
-            public Vector3 Rotation1 { get; set; }
-            public Vector3 Rotation2 { get; set; }
-
-            public BulletMaterialType MaterialType { get; set; }
-
-            public float Weight { get; set; }
-            
-            private static float Normalize(float value, float max)
-            {
-                if (value > max)
-                    return max;
-                if (value < -max)
-                    return -max;
-
-                return value;
-            }
-            
-            private static int PackPos(Vector3 value)
-            {
-                var pos = 0;
-
-                pos |= (int)(Normalize(value.X, POS_MAX_T) / POS_PACKING_T) << (POS_NBITS_T * 0);
-                pos |= (int)(Normalize(value.Y, POS_MAX_T) / POS_PACKING_T) << (POS_NBITS_T * 1);
-                pos |= (int)(Normalize(value.Z, POS_MAX_H) / POS_PACKING_H) << (POS_NBITS - POS_NBITS_H);
-
-                return pos;
-            }
-            
-            private static int PackRot(Vector3 value)
-            {
-                var rot = 0;
-
-                rot |= (byte)(((Normalize(value.X, 1.0f) / 2) + 0.5f) / ROT_PACKING) << 0;
-                rot |= (byte)(((Normalize(value.Y, 1.0f) / 2) + 0.5f) / ROT_PACKING) << 8;
-                rot |= (byte)(((Normalize(value.Z, 1.0f) / 2) + 0.5f) / ROT_PACKING) << 16;
-
-                return rot;
-            }
-
-            private static short PackWeight(float value)
-            {
-                return (short)(Normalize(value, 1.0f) / WGT_PACKING);
-            }
-            
-            private static Vector3 UnpackPos(byte[] bytes, int offset)
-            {
-                var pos = BitConverter.ToInt32(bytes, offset);
-
-                return new Vector3() {
-                    X = ((pos << POS_BITS_TX) >> POS_BITS_T) * POS_PACKING_T,
-                    Y = ((pos << POS_BITS_TY) >> POS_BITS_T) * POS_PACKING_T,
-                    Z = (pos >> POS_BITS_H) * POS_PACKING_H,
-                };
-            }
-
-            private static Vector3 UnpackRot(byte[] bytes, int offset)
-            {
-                return new Vector3() {
-                    X = ((bytes[offset + 0] * ROT_PACKING) - 0.5f) * 2,
-                    Y = ((bytes[offset + 1] * ROT_PACKING) - 0.5f) * 2,
-                    Z = ((bytes[offset + 2] * ROT_PACKING) - 0.5f) * 2,
-                };
-            }
-
-            private static float UnpackWeight(byte[] buffer, int offset)
-            {
-                return (BitConverter.ToInt16(buffer, offset) * WGT_PACKING);
-            }
-
-            public byte[] ToBinary(bool packed = false)
-            {
-                var buffer = new byte[(packed) ? PACKED_SIZE : UNPACKED_SIZE];
-
-                using (var ms = new MemoryStream(buffer))
-                {
-                    if (packed)
-                    {
-                        ms.Write(PackPos(Position1));
-                        ms.Write(PackPos(Position2));
-
-                        ms.Write(PackRot(Rotation1));
-                        ms.Write(PackRot(Rotation2));
-
-                        ms.Write(PackWeight(Weight));
-
-                        ms.Write((ushort)MagicNumber.FB); // ;)
-
-                        // set the material type
-                        ms.Position = 11;
-
-                        ms.WriteByte((byte)MaterialType);
-                    }
-                    else
-                    {
-                        ms.Write(Position1);
-                        ms.Write(Position2);
-
-                        ms.Write(Rotation1);
-                        ms.Write(Rotation2);
-
-                        ms.Write(Weight);
-
-                        ms.Write((ushort)MaterialType);
-                        ms.Write((ushort)MagicNumber.FB); // ;)
-                    }
-                }
-                
-                return buffer;
-            }
-
-            public static BulletData Unpack(Stream stream)
-            {
-                var buffer = stream.ReadBytes(PACKED_SIZE);
-
-                return Unpack(buffer);
-            }
-
-            public static BulletData Unpack(byte[] buffer)
-            {
-                return new BulletData() {
-                    Position1 = UnpackPos(buffer, 0),
-                    Position2 = UnpackPos(buffer, 4),
-
-                    Rotation1 = UnpackRot(buffer, 8),
-                    Rotation2 = UnpackRot(buffer, 12),
-
-                    MaterialType = (BulletMaterialType)buffer[11],
-
-                    Weight = UnpackWeight(buffer, 16),
-                };
-            }
-        }
-
-        public class BulletHolder
-        {
-            public List<BulletData> Bullets { get; set; }
-
-            public BulletHolder()
-            {
-                Bullets = new List<BulletData>();
-            }
-
-            public BulletHolder(int numBullets)
-            {
-                Bullets = new List<BulletData>(numBullets);
-            }
         }
         
         public ModelPackage ModelPackage { get; set; }
 
         public List<VehiclePartData> Parts { get; set; }
 
-        public List<Vector4> T1Entries { get; set; }
-        public List<Thing2> T2Entries { get; set; }
+        public List<Vector4> MarkerPoints { get; set; }
+
+        public List<CenterPoint> CenterPoints { get; set; }
         public List<Thing3> T3Entries { get; set; }
-        public List<Thing4> T4Entries { get; set; }
+        public List<Matrix> PivotPoints { get; set; }
 
         public List<PDLEntry> PDLEntries { get; set; }
 
@@ -454,23 +107,23 @@ namespace DSCript.Models
                 // read thing1 data
                 f.Position = (header.ExtraPartsDataOffset + vInfo.T1Offset);
 
-                T1Entries = new List<Vector4>(vInfo.T1Count);
+                MarkerPoints = new List<Vector4>(vInfo.T1Count);
 
                 for (int i = 0; i < vInfo.T1Count; i++)
                 {
                     var v4 = f.Read<Vector4>();
 
-                    T1Entries.Add(v4);
+                    MarkerPoints.Add(v4);
                 }
 
                 // read thing2 data
                 f.Position = (header.ExtraPartsDataOffset + vInfo.T2Offset);
 
-                T2Entries = new List<Thing2>(vInfo.T2Count);
+                CenterPoints = new List<CenterPoint>(vInfo.T2Count);
                 
                 for (int i = 0; i < vInfo.T2Count; i++)
                 {
-                    T2Entries.Add(new Thing2() {
+                    CenterPoints.Add(new CenterPoint() {
                         Position = f.Read<Vector4>(),
                         Rotation = f.Read<Vector4>(),
                     });
@@ -484,27 +137,21 @@ namespace DSCript.Models
                 for (int i = 0; i < vInfo.T3Count; i++)
                 {
                     T3Entries.Add(new Thing3() {
-                        RotationX = f.Read<Vector4>(),
-                        RotationY = f.Read<Vector4>(),
-                        RotationZ = f.Read<Vector4>(),
-                        Unknown4 = f.Read<Vector4>(),
-                        Unknown5 = f.Read<Vector4>(),
+                        Transform = f.Read<Matrix>(),
+                        Unknown = f.Read<Vector4>(),
                     });
                 }
 
                 // read thing4 data
                 f.Position = (header.ExtraPartsDataOffset + vInfo.T4Offset);
 
-                T4Entries = new List<Thing4>(vInfo.T4Count);
+                PivotPoints = new List<Matrix>(vInfo.T4Count);
 
                 for (int i = 0; i < vInfo.T4Count; i++)
                 {
-                    T4Entries.Add(new Thing4() {
-                        Unknown1 = f.Read<Vector4>(),
-                        Unknown2 = f.Read<Vector4>(),
-                        Unknown3 = f.Read<Vector4>(),
-                        Unknown4 = f.Read<Vector4>(),
-                    });
+                    var m44 = f.Read<Matrix>();
+
+                    PivotPoints.Add(m44);
                 }
 
                 // read PDL data
@@ -532,7 +179,7 @@ namespace DSCript.Models
 
                     var count = f.ReadInt32();
                     var offset = f.ReadInt32() + baseOffset;
-                    var unknown = f.ReadFloat();
+                    var unknown = f.ReadSingle();
                     var reserved = f.ReadInt32();
 
                     var dataEntries = new List<PDLData>(count);
@@ -546,12 +193,9 @@ namespace DSCript.Models
 
                         dataEntries.Add(new PDLData() {
                             Position = f.Read<Vector4>(),
-                            Unknown1 = f.Read<Vector4>(),
-                            Unknown2 = f.Read<Vector4>(),
-                            Unknown3 = f.Read<Vector4>(),
-                            Unknown4 = f.Read<Vector4>(),
-                            Unknown5 = f.ReadInt32(),
-                            Unknown6 = f.Read<Vector3>(),
+                            Transform = f.Read<Matrix>(),
+                            Unknown1 = f.ReadInt32(),
+                            Unknown2 = f.Read<Vector3>(),
                         });
                     }
 
@@ -660,8 +304,8 @@ namespace DSCript.Models
                     fs.Write(part.PartType);
                     fs.Write(part.SlotType);
 
-                    fs.Write(part.RenderFlags);
-                    fs.Write(part.CullingFlags);
+                    fs.Write(part.Flags);
+                    fs.Write(part.TypeFlags);
 
                     fs.Write(part.NumChildren);
 
@@ -706,7 +350,7 @@ namespace DSCript.Models
                         var phy = PDLEntries[part.PhysicsId];
 
                         fs.Write(phy.Children.Count);
-                        fs.WriteFloat(phy.Unknown);
+                        fs.Write(phy.Unknown);
                         fs.Write(phy.Reserved);
 
                         if (version == 3)
@@ -718,23 +362,20 @@ namespace DSCript.Models
                         foreach (var pdl in phy.Children)
                         {
                             fs.Write(pdl.Position);
+                            fs.Write(pdl.Transform);
+                            
                             fs.Write(pdl.Unknown1);
+
                             fs.Write(pdl.Unknown2);
-                            fs.Write(pdl.Unknown3);
-                            fs.Write(pdl.Unknown4);
-
-                            fs.Write(pdl.Unknown5);
-
-                            fs.Write(pdl.Unknown6);
                         }
                     }
 
                     if (hasPosition)
-                        fs.Write(T1Entries[part.PositionId]);
+                        fs.Write(MarkerPoints[part.PositionId]);
 
                     if (hasOffset)
                     {
-                        var off = T2Entries[part.OffsetId];
+                        var off = CenterPoints[part.OffsetId];
 
                         fs.Write(off.Position);
                         fs.Write(off.Rotation);
@@ -744,21 +385,15 @@ namespace DSCript.Models
                     {
                         var unk5 = T3Entries[part.TransformId];
 
-                        fs.Write(unk5.RotationX);
-                        fs.Write(unk5.RotationY);
-                        fs.Write(unk5.RotationZ);
-                        fs.Write(unk5.Unknown4);
-                        fs.Write(unk5.Unknown5);
+                        fs.Write(unk5.Transform);
+                        fs.Write(unk5.Unknown);
                     }
 
                     if (hasAxis)
                     {
-                        var axis = T4Entries[part.AxisId];
+                        var axis = PivotPoints[part.AxisId];
 
-                        fs.Write(axis.Unknown1);
-                        fs.Write(axis.Unknown2);
-                        fs.Write(axis.Unknown3);
-                        fs.Write(axis.Unknown4);
+                        fs.Write(axis);
                     }
                 }
 

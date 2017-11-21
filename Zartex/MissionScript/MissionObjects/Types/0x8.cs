@@ -6,13 +6,13 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
-    public class BlockType_0x8 : MissionObject
+    public class MissionObject_8 : MissionObject
     {
         public override int Id
         {
-            get { return 0x8; }
+            get { return 8; }
         }
 
         public override int Size
@@ -27,15 +27,5 @@ namespace Zartex.MissionObjects
         }
 
         public int[] Flags;
-
-        public BlockType_0x8(BinaryReader reader)
-        {
-            Offset = (int)reader.GetPosition();
-
-            Flags = new int[6];
-
-            for (int i = 0; i < Flags.Length; i++)
-                Flags[i] = reader.ReadInt32();
-        }
     }
 }

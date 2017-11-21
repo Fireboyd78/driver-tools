@@ -88,11 +88,11 @@ namespace Antilli
 
         protected virtual void OnMeshChanged()
         {
-            if (!Mesh.VertexBuffer.HasBlendWeights)
+            if (!Mesh.VertexBuffer.HasDamageVertices)
                 UseBlendWeights = false;
             
-            Vertices        = Mesh.GetVertices();
-            TriangleIndices = Mesh.GetTriangleIndices();
+            Vertices        = Mesh.GetVertices(true);
+            TriangleIndices = new Int32Collection(Mesh.GetTriangleIndices(true));
             Material        = Mesh.GetMaterial();
 
             if (Material == null)

@@ -10,22 +10,22 @@ namespace Zartex
 {
     public class ExportedMission : SpoolableResource<SpoolablePackage>
     {
-        public SpoolableBuffer ExportedMissionObjects { get; set; }
-        public SpoolableBuffer ExportedMissionPropHandles { get; set; }
+        public ExportedMissionObjects Objects { get; set; }
+        public SpoolableBuffer PropHandles { get; set; }
 
-        public LogicExportData LogicExportData { get; set; }
+        public LogicExportData LogicData { get; set; }
 
         protected override void Load()
         {
-            ExportedMissionObjects = Spooler.GetFirstChild(ChunkType.ExportedMissionObjects) as SpoolableBuffer;
-            ExportedMissionPropHandles = Spooler.GetFirstChild(ChunkType.ExportedMissionPropHandles) as SpoolableBuffer;
+            Objects = Spooler.GetFirstChild(ChunkType.ExportedMissionObjects).AsResource<ExportedMissionObjects>(true);
+            PropHandles = Spooler.GetFirstChild(ChunkType.ExportedMissionPropHandles) as SpoolableBuffer;
 
-            LogicExportData = Spooler.GetFirstChild(ChunkType.LogicExportData).AsResource<LogicExportData>(true);
+            LogicData = Spooler.GetFirstChild(ChunkType.LogicExportData).AsResource<LogicExportData>(true);
         }
 
         protected override void Save()
         {
-            SpoolableResourceFactory.Save(LogicExportData);
+            SpoolableResourceFactory.Save(LogicData);
         }
     }
 }

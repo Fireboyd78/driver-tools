@@ -249,9 +249,7 @@ namespace Zartex
             PersonalityIndex = reserved;
         }
     }
-
     
-
     public sealed class FlagsProperty : IntegerProperty
     {
         public override int OpCode
@@ -267,6 +265,23 @@ namespace Zartex
         public FlagsProperty(int value) : base(value) { }
     }
 
+    public struct AudioInfo
+    {
+        public int Bank;
+        public int Sample;
+
+        public override string ToString()
+        {
+            return $"({Bank}, {Sample})";
+        }
+
+        public AudioInfo(int bank, int sample)
+        {
+            Bank = bank;
+            Sample = sample;
+        }
+    }
+
     public sealed class AudioProperty : NodeProperty
     {
         public override int OpCode
@@ -276,15 +291,31 @@ namespace Zartex
 
         public override Type Type
         {
-            get { return typeof(long); }
+            get { return typeof(AudioInfo); }
         }
 
         public override string Notes
         {
-            get { return "Research required."; }
+            get { return "Represents an audio bank and sound sample index."; }
+        }
+        
+        public new AudioInfo Value
+        {
+            get { return (AudioInfo)base.Value; }
+            set { base.Value = value; }
         }
 
-        public AudioProperty(long value)
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
+
+        public AudioProperty(int bank, int sample)
+        {
+            Value = new AudioInfo(bank, sample);
+        }
+
+        public AudioProperty(AudioInfo value)
         {
             Value = value;
         }

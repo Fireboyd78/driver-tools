@@ -52,7 +52,6 @@
                     <Setter Property="ViewCubeHorizontalPosition" Value="Left"/>
                     <Setter Property="ViewCubeHeight"           Value="60"/>
                     <Setter Property="ZoomGesture"              Value="Shift+RightClick"/>
-
                     <Style.Triggers>
                         <Trigger Property="InfiniteSpin" Value="True">
                             <Trigger.Setters>

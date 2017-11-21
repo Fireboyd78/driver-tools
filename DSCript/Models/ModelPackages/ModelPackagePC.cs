@@ -382,7 +382,7 @@ namespace DSCript.Models
             }
         }
 
-        public int SubMaterialSize
+        public int SubstanceSize
         {
             get
             {
@@ -440,7 +440,7 @@ namespace DSCript.Models
             SubstanceLookupOffset = MaterialsOffset + (MaterialsCount * MaterialSize);
             SubstancesOffset      = SubstanceLookupOffset + (SubstanceLookupCount * LookupSize);
 
-            TextureLookupOffset     = SubstancesOffset + (SubstancesCount * SubMaterialSize);
+            TextureLookupOffset     = SubstancesOffset + (SubstancesCount * SubstanceSize);
             TexturesOffset          = TextureLookupOffset + (TextureLookupCount * LookupSize);
 
             TextureDataOffset = Memory.Align(TexturesOffset + (TexturesCount * TextureSize), alignment);
@@ -634,7 +634,7 @@ namespace DSCript.Models
 
             var declSize = Header.VertexDeclSize;
 
-            VertexBuffers = new List<VertexData>(vBuffersCount);
+            VertexBuffers = new List<VertexBuffer>(vBuffersCount);
 
             /* ------------------------------
              * Read vertex buffer header(s)
@@ -644,11 +644,9 @@ namespace DSCript.Models
                 stream.Position = vBuffersOffset + (vB * declSize);
 
                 var nVerts = stream.ReadInt32();
-                var vertsSize = stream.ReadUInt32();
-                var vertsOffset = stream.ReadUInt32();
+                var vertsSize = stream.ReadInt32();
+                var vertsOffset = stream.ReadInt32();
                 var vertLength = stream.ReadInt32();
-
-                var vertexBuffer = new VertexData(nVerts, vertLength);
 
                 if (Header.Version == 1 || Header.Version == 9)
                 {
@@ -659,19 +657,20 @@ namespace DSCript.Models
 
                     DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
                 }
-
-                VertexBuffers.Add(vertexBuffer);
-
+                
                 /* ------------------------------
                  * Read vertices in buffer
                  * ------------------------------ */
                 stream.Position = vertsOffset;
 
-                for (int i = 0; i < nVerts; i++)
-                    vertexBuffer.Buffer[i] = new Vertex(stream.ReadBytes(vertLength), vertexBuffer.VertexType);
+                var vbuf = new byte[vertsSize];
+                stream.Read(vbuf, 0, vertsSize);
+
+                var vertexBuffer = VertexBuffer.CreateD3Buffer(vbuf, nVerts, vertsSize, vertLength);
+                VertexBuffers.Add(vertexBuffer);
             }
         }
-
+    
         protected void ReadIndexBuffer(Stream stream)
         {
             var nIndices = Header.IndicesCount;
@@ -1052,15 +1051,13 @@ namespace DSCript.Models
                         var vBuffer = VertexBuffers[vB];
                         var vBSize = vBuffer.Size;
 
-                        f.Write(vBuffer.Buffer.Length);
+                        f.Write(vBuffer.Count);
                         f.Write(vBSize);
                         f.Write(vBufferOffset);
-                        f.Write(vBuffer.Length);
+                        f.Write(vBuffer.Declaration.SizeOf);
                         
                         f.Position = vBufferOffset;
-
-                        foreach (var vert in vBuffer.Buffer)
-                            f.Write(vert.GetBytes());
+                        vBuffer.WriteTo(f);
 
                         vBufferOffset += vBSize;
                     }
@@ -1248,7 +1245,7 @@ namespace DSCript.Models
                 for (int s = 0; s < MaterialsHeader.SubstancesCount; s++)
                 {
                     var substance = Substances[s];
-                    var sOffset = MaterialsHeader.SubstancesOffset + (s * MaterialsHeader.SubMaterialSize);
+                    var sOffset = MaterialsHeader.SubstancesOffset + (s * MaterialsHeader.SubstanceSize);
 
                     sLookup[s] = sOffset;
 

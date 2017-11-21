@@ -34,7 +34,7 @@ namespace DSCript.Models
             get { return ModelPackage.ModelFile; }
         }
 
-        public VertexData VertexBuffer
+        public VertexBuffer VertexBuffer
         {
             get
             {
@@ -114,100 +114,35 @@ namespace DSCript.Models
             return null;
         }
 
-        public List<Vertex> GetVertices()
+        public List<Vertex> GetVertices(bool adjustVertices = false)
         {
-            var vBuffer = VertexBuffer.Buffer;
+            var vBuffer = VertexBuffer;
 
-            List<Vertex> vertices = new List<Vertex>((int)NumVertices);
+            if (!vBuffer.Has3DVertices)
+                return null;
 
-            for (uint v = 0; v <= NumVertices; v++)
+            var vertices = new List<Vertex>((int)NumVertices);
+
+            for (int v = 0; v <= NumVertices; v++)
             {
-                uint vIdx = (uint)BaseVertexIndex + MinIndex + v;
+                var vIdx = (int)(BaseVertexIndex + MinIndex + v);
 
-                if (vIdx >= vBuffer.Length)
+                if (vIdx >= vBuffer.Count)
                     break;
 
-                vertices.Add(vBuffer[vIdx]);
+                var vertex = vBuffer.Vertices[vIdx].ToVertex(adjustVertices);
+                
+                vertices.Add(vertex);
             }
 
             return vertices;
         }
-
-        public void GetVertices(Point3DCollection positions,
-            Vector3DCollection normals,
-            PointCollection coordinates)
-        {
-            int nVerts   = (int)NumVertices;
-
-            if (positions == null)
-                positions = new Point3DCollection(nVerts);
-            if (normals == null)
-                normals = new Vector3DCollection(nVerts);
-            if (coordinates == null)
-                coordinates = new PointCollection(nVerts);
-
-            GetVertices(ref positions, ref normals, ref coordinates);
-        }
-
-        public void GetVertices(Point3DCollection positions,
-            Vector3DCollection normals,
-            PointCollection coordinates,
-            Vector3DCollection blendWeights)
-        {
-            int nVerts   = (int)NumVertices;
-
-            if (positions == null)
-                positions = new Point3DCollection(nVerts);
-            if (normals == null)
-                normals = new Vector3DCollection(nVerts);
-            if (coordinates == null)
-                coordinates = new PointCollection(nVerts);
-            if (blendWeights == null)
-                blendWeights = new Vector3DCollection(nVerts);
-
-            GetVertices(ref positions, ref normals, ref coordinates, ref blendWeights, true);
-        }
-
-        private void GetVertices(ref Point3DCollection positions,
-            ref Vector3DCollection normals,
-            ref PointCollection coordinates)
-        {
-            Vector3DCollection blendWeights = null;
-            GetVertices(ref positions, ref normals, ref coordinates, ref blendWeights);
-        }
-
-        private void GetVertices(ref Point3DCollection positions,
-            ref Vector3DCollection normals,
-            ref PointCollection coordinates,
-            ref Vector3DCollection blendWeights,
-            bool getBlendWeights = false)
-        {
-            var vBuffer = VertexBuffer.Buffer;
-            var nVerts = (int)NumVertices;
-
-            for (uint v = 0; v <= NumVertices; v++)
-            {
-                uint vIdx = (uint)BaseVertexIndex + MinIndex + v;
-
-                if (vIdx >= vBuffer.Length)
-                    break;
-
-                Vertex vertex = vBuffer[vIdx];
-
-                positions.Add(vertex.Position);
-                normals.Add(vertex.Normal);
-                coordinates.Add(vertex.UV);
-
-                if (getBlendWeights)
-                    blendWeights.Add(vertex.BlendWeights);
-            }
-        }
-
-        public Int32Collection GetTriangleIndices()
+        
+        public List<Int32> GetTriangleIndices(bool swapOrder = false)
         {
             var indices = ModelPackage.IndexBuffer.Buffer;
 
-            var tris = new Int32Collection();
+            var tris = new List<Int32>();
 
             for (int i = 0; i < PrimitiveCount; i++)
             {
@@ -230,15 +165,21 @@ namespace DSCript.Models
                         i1 = indices[idx + (i + 1)];
                         i2 = indices[idx + i];
                     }
-
-                    // When reading in the vertices, the YZ-axis was flipped
-                    // Therefore i0 and i2 need to be flipped for proper face orientation
-                    // This was AFTER learning the hard way...
+                    
                     if ((i0 != i1) && (i0 != i2) && (i1 != i2))
                     {
-                        tris.Add((int)(i2 - MinIndex));
-                        tris.Add((int)(i1 - MinIndex));
-                        tris.Add((int)(i0 - MinIndex));
+                        if (swapOrder)
+                        {
+                            tris.Add((int)(i2 - MinIndex));
+                            tris.Add((int)(i1 - MinIndex));
+                            tris.Add((int)(i0 - MinIndex));
+                        }
+                        else
+                        {
+                            tris.Add((int)(i0 - MinIndex));
+                            tris.Add((int)(i1 - MinIndex));
+                            tris.Add((int)(i2 - MinIndex));
+                        }
                     }
                 }
                 else if (PrimitiveType == PrimitiveType.TriangleList)
@@ -249,9 +190,18 @@ namespace DSCript.Models
                     i1 = indices[idx + (i + 1)];
                     i2 = indices[idx + (i + 2)];
 
-                    tris.Add((int)(i2 - MinIndex));
-                    tris.Add((int)(i1 - MinIndex));
-                    tris.Add((int)(i0 - MinIndex));
+                    if (swapOrder)
+                    {
+                        tris.Add((int)(i2 - MinIndex));
+                        tris.Add((int)(i1 - MinIndex));
+                        tris.Add((int)(i0 - MinIndex));
+                    }
+                    else
+                    {
+                        tris.Add((int)(i0 - MinIndex));
+                        tris.Add((int)(i1 - MinIndex));
+                        tris.Add((int)(i2 - MinIndex));
+                    }
                 }
                 else
                 {

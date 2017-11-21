@@ -79,9 +79,13 @@
     <Compile Include="Helpers\Memory.cs" />
     <Compile Include="IO\ModelFile.cs" />
     <Compile Include="IO\ObjFile.cs" />
+    <Compile Include="Matrix.cs" />
     <Compile Include="Models\FVFType.cs" />
-    <Compile Include="Models\Hierarchy\HierarchyData.cs" />
-    <Compile Include="Models\Hierarchy\VehicleHierarchyData.cs" />
+    <Compile Include="Models\Hierarchies\HierarchyData.cs" />
+    <Compile Include="Models\Hierarchies\VehicleHierarchyData.cs" />
+    <Compile Include="Models\Hierarchies\BulletHolder.cs" />
+    <Compile Include="Models\Hierarchies\VehiclePart.cs" />
+    <Compile Include="Models\Hierarchies\VehiclePartTypes.cs" />
     <Compile Include="Models\Materials\MaterialData.cs" />
     <Compile Include="Models\Materials\SubstanceData.cs" />
     <Compile Include="Models\Materials\TextureData.cs" />

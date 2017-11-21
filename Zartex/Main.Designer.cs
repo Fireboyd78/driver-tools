@@ -40,8 +40,6 @@
             this.mnFile_Save = new System.Windows.Forms.ToolStripMenuItem();
             this.mnSep1 = new System.Windows.Forms.ToolStripSeparator();
             this.mnFile_Exit = new System.Windows.Forms.ToolStripMenuItem();
-            this.mnTools = new System.Windows.Forms.ToolStripMenuItem();
-            this.mnTools_LoadLocale = new System.Windows.Forms.ToolStripMenuItem();
             this.Content = new System.Windows.Forms.Panel();
             this.LeftMenu = new System.Windows.Forms.Panel();
             this.lbl__EM = new System.Windows.Forms.Label();
@@ -76,8 +74,7 @@
             // 
             this.MenuBar.Dock = System.Windows.Forms.DockStyle.Fill;
             this.MenuBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mnFile,
-            this.mnTools});
+            this.mnFile});
             this.MenuBar.Location = new System.Drawing.Point(0, 0);
             this.MenuBar.Name = "MenuBar";
             this.MenuBar.Size = new System.Drawing.Size(944, 23);
@@ -155,22 +152,6 @@
             this.mnFile_Exit.Name = "mnFile_Exit";
             this.mnFile_Exit.Size = new System.Drawing.Size(152, 22);
             this.mnFile_Exit.Text = "Exit";
-            // 
-            // mnTools
-            // 
-            this.mnTools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mnTools_LoadLocale});
-            this.mnTools.Enabled = false;
-            this.mnTools.Name = "mnTools";
-            this.mnTools.Size = new System.Drawing.Size(47, 19);
-            this.mnTools.Text = "Tools";
-            // 
-            // mnTools_LoadLocale
-            // 
-            this.mnTools_LoadLocale.Name = "mnTools_LoadLocale";
-            this.mnTools_LoadLocale.Size = new System.Drawing.Size(143, 22);
-            this.mnTools_LoadLocale.Text = "Load locale...";
-            this.mnTools_LoadLocale.Click += new System.EventHandler(this.LoadLocaleTool);
             // 
             // Content
             // 
@@ -415,8 +396,6 @@
         private System.Windows.Forms.ToolStripMenuItem mnMiami;
         private System.Windows.Forms.ToolStripMenuItem mnNice;
         private System.Windows.Forms.ToolStripMenuItem mnIstanbul;
-        private System.Windows.Forms.ToolStripMenuItem mnTools;
-        private System.Windows.Forms.ToolStripMenuItem mnTools_LoadLocale;
 
     }
 }

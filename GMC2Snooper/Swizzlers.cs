@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -25,7 +27,9 @@ namespace GMC2Snooper
             // remember to adjust the mapping coordinates when
             // using a dimension which is not a power of two
 
-            byte[] pSwizTexels = new byte[pInTexels.Length];
+            byte[] pSwizTexels = new byte[width * height / 2];
+
+            Debug.WriteLine("SWIZZLE TIME!");
 
             for (int y = 0; y < height; y++)
             {
@@ -53,17 +57,19 @@ namespace GMC2Snooper
                     int locY = y & 0x7F;
 
                     int blockLocation = ((locX & (~0x1F)) >> 1) * height + (locY & (~0xF)) * 2;
-                    uint swapSelector = (uint)(((y + 2) >> 2) & 0x1) * 4;
+                    int swapSelector = (((y + 2) >> 2) & 0x1) * 4;
                     int posY = (((y & (~3)) >> 1) + (y & 1)) & 0x7;
 
-                    int columnLocation = posY * height * 2 + ((x + (int)swapSelector) & 0x7) * 4;
+                    int columnLocation = posY * height * 2 + ((x + swapSelector) & 0x7) * 4;
 
                     int byteNum = (x >> 3) & 3; // 0, 1, 2, 3
                     int bitsSet = (y >> 1) & 1; // 0, 1
 
-                    byte setPixel = pSwizTexels[pageLocation + blockLocation + columnLocation + byteNum];
+                    int offset = pageLocation + blockLocation + columnLocation + byteNum;
 
-                    pSwizTexels[pageLocation + blockLocation + columnLocation + byteNum] = (byte)((setPixel & (-bitsSet)) | (uPen << (bitsSet * 4)));
+                    byte setPixel = (byte)(pSwizTexels[offset] & -bitsSet);
+                    
+                    pSwizTexels[offset] = (byte)(setPixel | (uPen << (bitsSet * 4)));
                 }
             }
 
@@ -103,82 +109,107 @@ namespace GMC2Snooper
 
             return pSwizTexels;
         }
-
+        
         public static byte[] UnSwizzle4(byte[] buffer, int width, int height, int where)
         {
-            var newBuffer = new byte[width * height];
-            var len16 = (newBuffer.Length / 2);
+            // HUGE THANKS TO:
+            // L33TMasterJacob for finding the information on unswizzling 4-bit textures
+            // Dageron for his 4-bit unswizzling code; he's truly a genius!
+            //
+            // Source: https://gta.nick7.com/ps2/swizzling/unswizzle_delphi.txt
 
-            // don't try unswizzling it
-            if (len16 > (buffer.Length - where))
-                return buffer;
+            byte[] InterlaceMatrix = {
+                0x00, 0x10, 0x02, 0x12,
+                0x11, 0x01, 0x13, 0x03,
+            };
 
-            for (int i = 0; i < len16; i++)
+            int[] Matrix        = { 0, 1, -1, 0 };
+            int[] TileMatrix    = { 4, -4 };
+
+            var pixels = new byte[width * height];
+            var newPixels = new byte[width * height];
+
+            var d = 0;
+            var s = where;
+
+            for (int y = 0; y < height; y++)
             {
-                var b = buffer[i + where];
+                for (int x = 0; x < (width >> 1); x++)
+                {
+                    var p = buffer[s++];
 
-                newBuffer[i + 0] = (byte)((b & 0xF) * 16.999f);
-                newBuffer[i + 1] = (byte)(((b >> 4) & 0xF) * 16.999f);
+                    pixels[d++] = (byte)(p & 0xF);
+                    pixels[d++] = (byte)(p >> 4);
+                }
             }
 
-            return newBuffer;
+            // not sure what this was for, but it actually causes issues
+            // we can just use width directly without issues!
+            //var mw = width;
 
-#if OLD_UNSWIZZLE
-            // Don't swizzle if size if width or height is less than 128
-            if (width < 128 || height < 128)
-                return new byte[] { };
-
-            // Make a copy of the swizzled input and clear buffer
-            byte[] pSwizTexels = new byte[buffer.Length - where];
-            Array.Copy(buffer, where, pSwizTexels, 0, pSwizTexels.Length);
-
-            buffer = new byte[buffer.Length];
+            //if ((mw % 32) > 0)
+            //    mw = ((mw / 32) * 32) + 32;
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    // get the pen
-                    int index = y * width + x;
-                    //byte uPen = (byte)(Swizzled[index >> 1] >> ((index & 1) * 4) & 0xF);
+                    var oddRow = ((y & 1) != 0);
 
-                    // swizzle
-                    int pageX = x & (~0x7F);
-                    int pageY = y & (~0x7F);
+                    var num1 = (byte)((y / 4) & 1);
+                    var num2 = (byte)((x / 4) & 1);
+                    var num3 = (y % 4);
 
-                    int pageH = (width + 127) / 128;
-                    int pageV = (height + 127) / 128;
+                    var num4 = ((x / 4) % 4);
 
-                    int pageNumber = (pageY / 128) * pageH + (pageX / 128);
+                    if (oddRow)
+                        num4 += 4;
 
-                    int page32Y = (pageNumber / pageV) * 32;
-                    int page32X = (pageNumber % pageV) * 64;
+                    var num5 = ((x * 4) % 16);
+                    var num6 = ((x / 16) * 32);
+                    
+                    var num7 = (oddRow) ? ((y - 1) * width) : (y * width);
 
-                    int pageLocation = page32Y * height * 2 + page32X * 4;
+                    var xx = x + num1 * TileMatrix[num2];
+                    var yy = y + Matrix[num3];
 
-                    int locX = x & 0x7F;
-                    int locY = y & 0x7F;
+                    var i = InterlaceMatrix[num4] + num5 + num6 + num7;
+                    var j = yy * width + xx;
 
-                    int blockLocation = ((locX & (~0x1F)) >> 1) * height + (locY & (~0xF)) * 2;
-                    uint swapSelector = (uint)(((y + 2) >> 2) & 0x1) * 4;
-                    int posY = (((y & (~3)) >> 1) + (y & 1)) & 0x7;
-
-                    int columnLocation = posY * height * 2 + ((x + (int)swapSelector) & 0x7) * 4;
-
-                    int byteNum = (x >> 3) & 3;     // 0,1,2,3
-                    int bitsSet = (y >> 1) & 1;     // 0,1            (lower/upper 4 bits)
-
-                    byte setPixel = (byte)((buffer[(index >> 1)] >> ((index & 1) * 4)) & 0xF);
-
-                    byte uPen = (byte)(pSwizTexels[pageLocation + blockLocation + columnLocation + byteNum]);
-
-                    buffer[(index >> 1)] = (byte)((setPixel & -bitsSet) | (uPen << (bitsSet * 4)));
+                    newPixels[j] = pixels[i];
                 }
             }
-            return buffer;
+
+#if UNSWIZZLE_TO_4BIT
+            var result = new byte[width * height];
+
+            s = 0;
+            d = 0;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < (width >> 1); x++)
+                    result[d++] = (byte)((newPixels[s++] & 0xF) | (newPixels[s++] << 4));
+            }
+
+# if DUMP_UNSWIZZLED_DATA
+            var dumpName = "dump";
+            var dumpIdx = 0;
+
+            var dumpFile = dumpName;
+
+            while (File.Exists(Path.Combine(Environment.CurrentDirectory, $"{dumpFile}_{dumpIdx}.dat")))
+                ++dumpIdx;
+
+            File.WriteAllBytes(Path.Combine(Environment.CurrentDirectory, $"{dumpFile}_{dumpIdx}.dat"), result);
+# endif
+            return result;
+#else
+            // return an 8-bit texture
+            return newPixels;
 #endif
         }
-        
+
         public static byte[] UnSwizzle8(byte[] buffer, int width, int height, int where)
         {
             byte[] pSwizTexels = new byte[buffer.Length - where];
@@ -209,6 +240,53 @@ namespace GMC2Snooper
             }
 
             return buffer;
+        }
+
+        private static int[] MakeTwiddleMap(int size)
+        {
+            var twiddleMap = new int[size];
+
+            for (int i = 0; i < size; i++)
+            {
+                for (int j = 0, k = 1; k <= i; j++, k <<= 1)
+                    twiddleMap[i] |= (i & k) << j;
+            }
+
+            return twiddleMap;
+        }
+
+        public static byte[] UnSwizzleVQ2(byte[] buffer, int width, int height, int where)
+        {
+            var result = new byte[width * height];
+            int destinationIndex;
+
+            // Get the size of each block to process.
+            int size = Math.Min(width, height);
+
+            // Twiddle map
+            int[] twiddleMap = MakeTwiddleMap(size);
+
+            // Decode texture data
+            for (int y = 0; y < height; y += size)
+            {
+                for (int x = 0; x < width; x += size)
+                {
+                    for (int y2 = 0; y2 < size; y2++)
+                    {
+                        for (int x2 = 0; x2 < size; x2++)
+                        {
+                            byte index = (byte)((buffer[where + (((twiddleMap[x2] << 1) | twiddleMap[y2]) >> 1)] >> ((y2 & 0x1))) & 0xF);
+                            destinationIndex = ((((y + y2) * width) + (x + x2)));
+
+                            result[destinationIndex] = index;
+                        }
+                    }
+
+                    where += size;
+                }
+            }
+
+            return result;
         }
     }
 }

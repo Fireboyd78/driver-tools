@@ -6,12 +6,10 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
     public abstract class MissionObject
     {
-        public int Offset { get; set; }
-
         public abstract int Id { get; }
         public abstract int Size { get; }
     }

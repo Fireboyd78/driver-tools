@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -11,7 +13,7 @@ namespace GMC2Snooper
 {
     public partial class BMPViewer : Form
     {
-        public Dictionary<int, Image> Images { get; set; }
+        public Dictionary<int, Bitmap> Images { get; set; }
 
         private int __i = 0;
 
@@ -26,8 +28,34 @@ namespace GMC2Snooper
         {
             InitializeComponent();
             
-            Images = new Dictionary<int, Image>();
+            Images = new Dictionary<int, Bitmap>();
             pictureBox1.BackgroundImageLayout = ImageLayout.Center;
+
+            listBox1.Focus();
+            listBox1.KeyDown += (o, e) => {
+                switch (e.KeyCode)
+                {
+                case Keys.F9:
+                    {
+                        var outDir = Path.Combine(Environment.CurrentDirectory, "textures");
+
+                        if (!Directory.Exists(outDir))
+                            Directory.CreateDirectory(outDir);
+
+                        foreach (var image in Images)
+                        {
+                            var bmap = image.Value;
+                            
+                            var pixels = bmap.ToByteArray(PixelFormat.Format8bppIndexed);
+                            var name = $"{Memory.GetCRC32(pixels):X8}.bmp";
+
+                            bmap.Save(Path.Combine(outDir, name), ImageFormat.Bmp);
+                        }
+
+                        MessageBox.Show($"Textures dumped to {outDir}.", "GMC2Snooper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    } break;
+                }
+            };
         }
 
         public void AddImageByName(BitmapHelper helper, string name)
@@ -46,7 +74,7 @@ namespace GMC2Snooper
 
         public void AddImage(Bitmap bitmap)
         {
-            Bitmap bmap = new Bitmap(bitmap);
+            var bmap = new Bitmap(bitmap);
 
             Images.Add(__i, bmap);
 

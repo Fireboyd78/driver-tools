@@ -155,7 +155,7 @@ namespace Antilli
                         (float)vt.Z);
                 }
 
-                spooler.VertexBuffers = new List<VertexData>();
+                //spooler.VertexBuffers = new List<VertexData>();
 
                 /*
                     This is where I realized this won't work!

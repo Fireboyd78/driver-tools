@@ -14,151 +14,372 @@ using System.Windows.Media.Media3D;
 
 namespace DSCript.Models
 {
-    public class Vertex
+    public enum VertexDataType : byte
     {
-        public FVFType VertexType { get; set; }
+        None = 0,
+
+        Float,
+
+        Vector2,
+        Vector3,
+        Vector4,
+
+        Color,
+    }
+
+    public enum VertexUsageType : byte
+    {
+        Unused = 0,
+
+        Position,
+        Normal,
+        TextureCoordinate,
+
+        BlendWeight,
+        Tangent,
+
+        Color,
+    }
+
+    public struct VertexDeclInfo
+    {
+        public static readonly VertexDeclInfo Empty = new VertexDeclInfo();
+
+        public VertexDataType DataType;
+        public VertexUsageType UsageType;
         
-        /// <summary>Gets or sets the position of the vertex.</summary>
-        public Vector3 Position { get; set; }
-
-        /// <summary>Gets or sets the normals of the vertex.</summary>
-        public Vector3 Normal { get; set; }
-
-        /// <summary>Gets or sets the UV mapping of the vertex.</summary>
-        public Vector2 UV { get; set; }
-
-        /// <summary>Gets or sets the RGBA diffuse color of the vertex.</summary>
-        public Color Diffuse { get; set; }
-
-        /// <summary>Gets or sets the blending weights of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
-        public Vector3 BlendWeights { get; set; }
-
-        /// <summary>Gets or sets the unknown value of the vertex. This field is only used with certain VertexType's, and is ignored otherwise.</summary>
-        public float Unknown { get; set; }
+        public short UsageIndex;
         
-        /// <summary>
-        /// Returns the byte-array representing this <see cref="Vertex"/> in its compiled form.
-        /// </summary>
-        /// <returns></returns>
-        public byte[] GetBytes()
+        public override int GetHashCode()
         {
-            using (var ms = new MemoryStream((int)VertexType))
+            return DataType.GetHashCode() * 131
+                ^ UsageType.GetHashCode() * 223
+                ^ UsageIndex.GetHashCode() * 95;
+        }
+
+        public bool Equals(VertexDeclInfo decl)
+        {
+            return decl.DataType == DataType
+                && decl.UsageType == UsageType
+                && decl.UsageIndex == UsageIndex;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is VertexDeclInfo)
+                return Equals((VertexDeclInfo)obj);
+
+            return false;
+        }
+
+        public int SizeOf
+        {
+            get { return GetDataSize(DataType); }
+        }
+
+        public Type TypeOf
+        {
+            get { return GetDataType(DataType); }
+        }
+        
+        public static int GetDataSize(VertexDataType type)
+        {
+            switch (type)
             {
-                ms.WriteFloat(-Position.X);
-                ms.WriteFloat(Position.Z);
-                ms.WriteFloat(Position.Y);
+            case VertexDataType.None:       return 0;
 
-                ms.WriteFloat(-Normal.X);
-                ms.WriteFloat(Normal.Z);
-                ms.WriteFloat(Normal.Y);
+            case VertexDataType.Float:
+            case VertexDataType.Color:      return 4;
 
-                ms.WriteFloat(UV.X);
-                ms.WriteFloat(UV.Y);
+            case VertexDataType.Vector2:    return 8;
+            case VertexDataType.Vector3:    return 12;
+            case VertexDataType.Vector4:    return 16;
+            }
 
-                if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
-                {
-                    ms.WriteFloat(-BlendWeights.X);
-                    ms.WriteFloat(BlendWeights.Z);
-                    ms.WriteFloat(BlendWeights.Y);
-                }
+            throw new InvalidEnumArgumentException("Invalid vertex data type.", (int)type, typeof(VertexUsageType));
+        }
 
-                if (VertexType == FVFType.Vertex16)
-                    ms.WriteFloat(Unknown);
+        public static Type GetDataType(VertexDataType type)
+        {
+            switch (type)
+            {
+            case VertexDataType.None:       return null;
+            case VertexDataType.Float:      return typeof(float);
+            case VertexDataType.Color:      return typeof(ColorRGBA);
+            case VertexDataType.Vector2:    return typeof(Vector2);
+            case VertexDataType.Vector3:    return typeof(Vector3);
+            case VertexDataType.Vector4:    return typeof(Vector4);
+            }
 
-                ms.Write(Diffuse.ScR);
-                ms.Write(Diffuse.ScG);
-                ms.Write(Diffuse.ScB);
-                ms.Write(Diffuse.ScA);
+            throw new InvalidEnumArgumentException("Invalid vertex data type.", (int)type, typeof(VertexUsageType));
+        }
+        
+        public VertexDeclInfo(VertexDataType dataType, VertexUsageType usageType, short usageIndex = 0)
+        {
+            DataType = dataType;
+            UsageType = usageType;
+            UsageIndex = usageIndex;
+        }
+    }
+    
+    public struct VertexDeclaration
+    {
+        public static readonly VertexDeclaration Empty = new VertexDeclaration(VertexDeclInfo.Empty);
 
-                return ms.ToArray();
+        VertexDeclInfo[] m_entries;
+
+        public VertexDeclInfo[] Entries
+        {
+            get { return m_entries; }
+        }
+        
+        public int SizeOf
+        {
+            get
+            {
+                var size = 0;
+
+                foreach (var entry in m_entries)
+                    size += entry.SizeOf;
+
+                return size;
             }
         }
 
-        protected Vertex()
+        public VertexDataType GetType(VertexUsageType usageType, short usageIndex)
+        {
+            foreach (var entry in m_entries)
+            {
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                    return entry.DataType;
+            }
+
+            return VertexDataType.None;
+        }
+
+        public bool HasType(VertexUsageType usageType, short usageIndex)
+        {
+            foreach (var entry in m_entries)
+            {
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                    return true;
+            }
+
+            return false;
+        }
+
+        public bool HasType<T>(VertexUsageType usageType, short usageIndex)
+            where T : struct
+        {
+            foreach (var entry in m_entries)
+            {
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                    return (entry.TypeOf == typeof(T));
+            }
+
+            return false;
+        }
+        
+        public int GetOffset(VertexUsageType usageType, short usageIndex)
+        {
+            var offset = 0;
+            
+            foreach (var entry in m_entries)
+            {
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                    return offset;
+
+                offset += entry.SizeOf;
+            }
+
+            return -1;
+        }
+        
+        public byte[] GetData(VertexUsageType usageType, short usageIndex, byte[] buffer, int startIndex, out VertexDataType dataType)
+        {
+            var offset = (startIndex * SizeOf);
+            var size = 0;
+
+            if ((buffer == null) || (buffer.Length == 0))
+                throw new ArgumentException("Buffer cannot be null or empty.", nameof(buffer));
+            
+            // setup incase we don't find anything
+            dataType = VertexDataType.None;
+
+            foreach (var entry in m_entries)
+            {
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                {
+                    dataType = entry.DataType;
+                    size = entry.SizeOf;
+                    
+                    break;
+                }
+
+                offset += entry.SizeOf;
+            }
+
+            // nothing to return?
+            if (size == 0)
+                return new byte[0];
+
+            if ((offset + size) > buffer.Length)
+                throw new ArgumentException("Buffer is not large enough to retrieve vertex data.", nameof(buffer));
+
+            var buf = new byte[size];
+            Array.Copy(buffer, offset, buf, 0, size);
+
+            return buf;
+        }
+
+        public T GetData<T>(VertexUsageType usageType, short usageIndex, byte[] buffer)
+            where T : struct
+        {
+            var offset = 0;
+
+            foreach (var entry in m_entries)
+            {
+                var size = entry.SizeOf;
+
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                {
+                    if (entry.TypeOf != typeof(T))
+                        throw new InvalidCastException("Vertex data cannot be cast to the specified type.");
+                    
+                    var ptr = Marshal.AllocHGlobal(size);
+
+                    Marshal.Copy(buffer, offset, ptr, size);
+
+                    var result = (T)Marshal.PtrToStructure(ptr, typeof(T));
+
+                    Marshal.FreeHGlobal(ptr);
+                    return result;
+                }
+
+                offset += size;
+            }
+
+            return default(T);
+        }
+
+        public bool SetData<T>(VertexUsageType usageType, short usageIndex, byte[] buffer, T data)
+        {
+            var offset = 0;
+
+            foreach (var entry in m_entries)
+            {
+                var size = entry.SizeOf;
+
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                {
+                    if (entry.TypeOf != typeof(T))
+                        throw new InvalidCastException("Vertex data cannot be cast to the specified type.");
+
+                    var pData = Marshal.UnsafeAddrOfPinnedArrayElement(buffer, offset);
+
+                    Marshal.StructureToPtr(data, pData, false);
+                    return true;
+                }
+
+                offset += size;
+            }
+
+            return false;
+        }
+
+        public static implicit operator VertexDeclaration(VertexDeclInfo[] entries)
+        {
+            return new VertexDeclaration(entries);
+        }
+
+        public void WriteTo(Stream stream)
+        {
+            stream.Write((short)SizeOf);
+            stream.Write((short)0);
+
+            stream.Write(m_entries.Length);
+            stream.Write(m_entries.Length * 4);
+
+            foreach (var info in m_entries)
+            {
+                stream.Write((byte)info.DataType);
+                stream.Write((byte)info.UsageType);
+
+                stream.Write(info.UsageIndex);
+            }
+        }
+
+        public VertexDeclaration(params VertexDeclInfo[] entries)
+        {
+            m_entries = entries;
+        }
+    }
+    
+    public struct ColorRGBA
+    {
+        byte R;
+        byte G;
+        byte B;
+        byte A;
+
+        public static implicit operator Color(ColorRGBA color)
+        {
+            return Color.FromArgb(color.A, color.R, color.G, color.B);
+        }
+
+        public ColorRGBA(byte r, byte g, byte b, byte a)
+        {
+            R = r;
+            G = g;
+            B = b;
+            A = a;
+        }
+    }
+    
+    public class Vertex
+    {
+        /// <summary>Gets or sets the position of the vertex.</summary>
+        public Vector3 Position;
+
+        /// <summary>Gets or sets the normals of the vertex.</summary>
+        public Vector3 Normal;
+
+        /// <summary>Gets or sets the UV mapping of the vertex.</summary>
+        public Vector2 UV;
+
+        /// <summary>Gets or sets the RGBA diffuse color of the vertex.</summary>
+        public Color Color;
+
+        /// <summary>Gets or sets the blending weights of the vertex.</summary>
+        public Vector4 BlendWeight;
+
+        /// <summary>Gets or sets the tangent of the vertex.</summary>
+        public float Tangent;
+
+        public Vector4 TangentVector;
+
+        public Vector3 PositionW;
+        public Vector3 NormalW;
+
+        public void FixDirection()
+        {
+            Position = new Vector3(-Position.X, Position.Z, Position.Y);
+            Normal = new Vector3(-Normal.X, Normal.Z, Normal.Y);
+
+            PositionW = new Vector3(-PositionW.X, PositionW.Z, PositionW.Y);
+            NormalW = new Vector3(-NormalW.X, NormalW.Z, NormalW.Y);
+        }
+        
+        public Vertex()
         {
             Position = new Vector3();
             Normal = new Vector3();
             UV = new Vector2();
-            Diffuse = Color.FromArgb(255, 0, 0, 0);
+            Color = Color.FromArgb(255, 0, 0, 0);
 
-            BlendWeights = new Vector3();
+            BlendWeight = new Vector4();
 
-            Unknown = 1.0f;
-        }
-
-        /// <summary>Creates a new <see cref="Vertex"/>.</summary>
-        /// <param name="vertexType">The <see cref="FVFType"/> this <see cref="Vertex"/> will be based on.</param>
-        public Vertex(FVFType vertexType)
-            : this()
-        {
-            if (vertexType == FVFType.Unknown)
-                throw new InvalidEnumArgumentException("vertexType", -1, typeof(FVFType));
-
-            VertexType = vertexType;   
-        }
-        
-        /// <summary>
-        /// Creates a new <see cref="Vertex"/> based on a buffer.
-        /// </summary>
-        /// <param name="vertexBuffer">The bytes from a vertex buffer</param>
-        /// <param name="vertexType">The vertex format used to read the buffer.</param>
-        public Vertex(byte[] vertexBuffer, FVFType vertexType)
-        {
-            if (VertexType == FVFType.Unknown)
-                throw new InvalidEnumArgumentException("vertexType", -1, typeof(FVFType));
-
-            VertexType = vertexType;
-
-            using (MemoryStream f = new MemoryStream(vertexBuffer))
-            {
-                // IMPORTANT NOTE: The Y & Z Axes are flipped and the X axis is negated!
-
-                Position = new Vector3() {
-                    X = -f.ReadSingle(),
-                    Z = f.ReadSingle(),
-                    Y = f.ReadSingle()
-                };
-
-                Normal = new Vector3() {
-                    X = -f.ReadSingle(),
-                    Z = f.ReadSingle(),
-                    Y = f.ReadSingle()
-                };
-
-                UV = f.Read<Vector2>();
-
-                if (VertexType == FVFType.Vertex15 || VertexType == FVFType.Vertex16)
-                {
-                    BlendWeights = new Vector3() {
-                        X = -f.ReadSingle(),
-                        Z = f.ReadSingle(),
-                        Y = f.ReadSingle()
-                    };
-                }
-
-                if (VertexType == FVFType.Vertex16)
-                    Unknown = f.ReadSingle();
-
-                var r = f.ReadSingle();
-                var g = f.ReadSingle();
-                var b = f.ReadSingle();
-                var a = f.ReadSingle();
-
-                Diffuse = Color.FromScRgb(a, r, g, b);
-            }
-        }
-
-        public Vertex(Vector3 position, Vector3 normal, Vector2 uv)
-        {
-            VertexType = FVFType.Vertex15;
-
-            Position    = position;
-            Normal      = normal;
-            UV          = uv;
-
-            Diffuse     = Color.FromArgb(255, 0, 0, 0);
-
-            BlendWeights = new Vector3();
+            Tangent = 1.0f;
         }
     }
 }

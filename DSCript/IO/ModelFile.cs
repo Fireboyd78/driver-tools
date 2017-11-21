@@ -154,12 +154,12 @@ namespace DSCript.Models
 
         public override bool CanSave
         {
-            get { return (base.CanSave && (Hierarchies != null && Hierarchies.Count > 0)); }
+            get { return (HasModels && HasHierarchies); }
         }
 
         public bool HasHierarchies
         {
-            get { return (Hierarchies != null && Hierarchies.Count > 0); }
+            get { return (Hierarchies?.Count > 0); }
         }
 
         public bool HasVehicleGlobals
@@ -169,28 +169,15 @@ namespace DSCript.Models
 
         public bool HasIndividualModels
         {
-            get { return (HasModels && HasHierarchies) ? (Models.Count == Hierarchies.Count) : false; }
+            get { return (Models?.Count == Hierarchies?.Count); }
         }
-
-        /// <summary>
-        /// Returns the vehicle container chunk for the specified vehicle id, if applicable.
-        /// </summary>
-        /// <param name="vehicleId">The vehicle id.</param>
-        /// <returns>A vehicle container chunk corresponding to the vehicle id; if nothing is found, null.</returns>
-        public SpoolablePackage GetVehicleContainerChunk(int vehicleId)
-        {
-            // vehicle container chunks are in the root chunk
-            // if they're not there, then they don't exist
-            var spooler = Content.Children.FirstOrDefault((s) => s.Context == vehicleId) as SpoolablePackage;
-            return spooler;
-        }
-
+        
         /// <summary>
         /// Returns whether or not this is a VVV file.
         /// </summary>
         public bool IsMissionVehicleFile
         {
-            get { return (Hierarchies.Count > Models.Count); }
+            get { return (Hierarchies?.Count > Models?.Count); }
         }
 
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
@@ -210,6 +197,37 @@ namespace DSCript.Models
             Hierarchies = new List<VehicleHierarchyData>();
 
             base.OnFileLoadBegin();
+        }
+
+        public ModelPackagePC GetModelContainer(VehicleHierarchyData hierarchy)
+        {
+            if (HasIndividualModels)
+            {
+                var idx = Hierarchies.IndexOf(hierarchy);
+                return Models[idx];
+            }
+            else
+            {
+                return Models[0];
+            }
+        }
+
+        public List<PartsGroup> GetVehicleParts(VehicleHierarchyData hierarchy)
+        {
+            var parts = new List<PartsGroup>();
+            var mpak = GetModelContainer(hierarchy);
+
+            foreach (var part in hierarchy.Parts)
+            {
+                if (part.ModelId == 255)
+                    continue;
+                
+                var model = mpak.Parts[part.ModelId];
+
+                parts.Add(model);
+            }
+
+            return parts;
         }
         
         public Driv3rVehiclesFile() { }

@@ -6,13 +6,13 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
-    public class BlockType_0x3 : MissionObject
+    public class MissionObject_3 : MissionObject
     {
         public override int Id
         {
-            get { return 0x3; }
+            get { return 3; }
         }
 
         public override int Size
@@ -22,17 +22,5 @@ namespace Zartex.MissionObjects
 
         [TypeConverter(typeof(CollectionConverter))]
         public List<double> Floats { get; set; }
-
-        public BlockType_0x3(BinaryReader reader)
-        {
-            Offset = (int)reader.GetPosition();
-            Floats = new List<double>(3);
-
-            // skip padding
-            reader.Seek(4, SeekOrigin.Current);
-
-            for (int i = 0; i < Floats.Capacity; i++)
-                Floats.Add((double)reader.ReadSingle());
-        }
     }
 }

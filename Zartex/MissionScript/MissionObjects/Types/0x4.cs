@@ -6,15 +6,13 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
-    public class BlockType_0x4 : ContainerBlock
+    public class MissionObject_4 : ContainerBlock
     {
         public override int Id
         {
-            get { return 0x4; }
+            get { return 4; }
         }
-
-        public BlockType_0x4(BinaryReader reader) : base(reader) { }
     }
 }

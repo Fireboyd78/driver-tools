@@ -8,13 +8,13 @@ using System.Text;
 
 using Zartex.Converters;
 
-namespace Zartex.MissionObjects
+namespace Zartex
 {
-    public class BlockType_0x6 : MissionObject
+    public class MissionObject_6 : MissionObject
     {
         public override int Id
         {
-            get { return 0x6; }
+            get { return 6; }
         }
 
         public override int Size
@@ -29,21 +29,5 @@ namespace Zartex.MissionObjects
 
         [TypeConverter(typeof(HexStringConverter))]
         public int UnkID { get; set; }
-
-        public BlockType_0x6(BinaryReader reader)
-        {
-            Offset = (int)reader.GetPosition();
-
-            Floats = new List<double>(3);
-
-            for (int i = 0; i < Floats.Capacity; i++)
-                Floats.Add((double)reader.ReadSingle());
-
-            reader.BaseStream.Seek(4, SeekOrigin.Current);
-
-            UnkFloat = (double)reader.ReadSingle();
-
-            UnkID = reader.ReadInt32();
-        }
     }
 }
