@@ -1162,7 +1162,7 @@ namespace Audiose
             var sp1 = (soundParameter >> 0) & 0xF;
             var sp2 = (soundParameter >> 4) & 0xF;
 
-            var dTmp1 = soundData * Math.Pow(2, (12 - sp1));
+            var dTmp1 = soundData * Math.Pow(2.0, (12.0 - sp1));
 
             var dTmp2 = vagPrev1 * K0[sp2];
             var dTmp3 = vagPrev2 * K1[sp2];
@@ -1170,9 +1170,9 @@ namespace Audiose
             vagPrev2 = vagPrev1;
             vagPrev1 = dTmp1 + dTmp2 + dTmp3;
 
-            var result = (int)Math.Round(vagPrev1) & 0xFFFF;
+            var result = (int)Math.Round(vagPrev1);
             
-            return (short)result;
+            return (short)Math.Min(32767, Math.Max(-32768, result));
         }
 
         private static unsafe byte[] DecodeSound(byte[] buffer)
