@@ -16,6 +16,9 @@ namespace Audiose
 
         BinaryData,
         Xml,
+
+        Blk, // PS1 block data
+        Sbk, // PS1 soundbank data
     }
 
     static class Config
@@ -120,6 +123,12 @@ namespace Audiose
                 return FileType.BinaryData;
             case ".xml":
                 return FileType.Xml;
+
+            // PS1 sounds
+            case ".blk":
+                return FileType.Blk;
+            case ".sbk":
+                return FileType.Sbk;
             }
 
             return FileType.Other;

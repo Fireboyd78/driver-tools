@@ -562,6 +562,8 @@ namespace Audiose
 
         public byte[] Buffer { get; set; }
 
+        public bool IsPS1Format { get; set; }
+
         public static explicit operator AudioFormatChunk(SoundSample sample)
         {
             return new AudioFormatChunk(sample.NumChannels, sample.SampleRate);
@@ -573,9 +575,16 @@ namespace Audiose
             var elem = xmlDoc.CreateElement("Sample");
 
             elem.SetAttribute("File", FileName);
-            elem.SetAttribute("Flags", $"{Flags:D}");
-            elem.SetAttribute("Unk1", $"{Unknown1:D}");
-            elem.SetAttribute("Unk2", $"{Unknown2:D}");
+
+            elem.SetAttribute("NumChannels", $"{NumChannels:D}");
+            elem.SetAttribute("SampleRate", $"{SampleRate:D}");
+
+            if (!IsPS1Format)
+            {
+                elem.SetAttribute("Flags", $"{Flags:D}");
+                elem.SetAttribute("Unk1", $"{Unknown1:D}");
+                elem.SetAttribute("Unk2", $"{Unknown2:D}");
+            }
 
             xml.AppendChild(elem);
         }
@@ -593,6 +602,12 @@ namespace Audiose
                 {
                 case "File":
                     FileName = value;
+                    break;
+                case "NumChannels":
+                    NumChannels = int.Parse(value);
+                    break;
+                case "SampleRate":
+                    SampleRate = int.Parse(value);
                     break;
                 case "Flags":
                     Flags = int.Parse(value);
@@ -1006,6 +1021,363 @@ namespace Audiose
                 fs.Position = header.FileSizeOffset;
                 fs.Write(dataSize);
             }
+        }
+    }
+
+    public struct PS1SoundSampleInfo
+    {
+        public static readonly int SizeOf = Marshal.SizeOf(typeof(PS1SoundSampleInfo));
+
+        public int Offset;
+        public int Size;
+
+        public int Loop;
+
+        public int SampleRate;
+    }
+
+    public enum PS1BankType
+    {
+        Invalid = -1,
+
+        Single,     // SBK
+        Multiple,   // BLK
+    }
+    
+    [StructLayout(LayoutKind.Sequential, Size = 0x18)]
+    public struct SampleInfoData
+    {
+        public static readonly int SizeOf = Marshal.SizeOf(typeof(SampleInfoData));
+
+        public int Manufacturer;
+        public int Product;
+
+        public int SamplePeriod;
+
+        public int MIDI_UnityNote;
+        public int MIDI_PitchFraction;
+
+        public int SMPTE_Format;
+        public int SMPTE_Offset;
+
+        public int NumSampleLoops;
+
+        public int SamplerData;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Size = 0x24)]
+    public struct SampleLoopData
+    {
+        public static readonly int SizeOf = Marshal.SizeOf(typeof(SampleLoopData));
+
+        public int CuePointID;
+
+        public int Type;
+
+        public int Start;
+        public int End;
+
+        public int Fraction;
+
+        public int PlayCount;
+    }
+
+    public class SamplerData
+    {
+        public SampleInfoData Info;
+        public SampleLoopData Loop;
+        
+        public byte[] Buffer { get; set; }
+
+        public int Size
+        {
+            get { return SampleInfoData.SizeOf + ((Info.NumSampleLoops * SampleLoopData.SizeOf) + Info.SamplerData); }
+        }
+
+        public void SetSampleRate(int sampleRate)
+        {
+            Info.SamplePeriod = (int)((1.0 / sampleRate) * 1000000000);
+        }
+
+        private void WriteChunk(Stream stream)
+        {
+            using (var ms = new MemoryStream(Size))
+            {
+                ms.Write(Info);
+                ms.Write(Loop);
+
+                stream.WriteChunk("smpl", ms.ToArray());
+            }
+        }
+
+        public byte[] Compile()
+        {
+            using (var ms = new MemoryStream(Buffer.Length + Size + 8))
+            {
+                // data buffer
+                ms.Write(Buffer, 0, Buffer.Length);
+
+                WriteChunk(ms);
+
+                return ms.ToArray();
+            }
+        }
+        
+        public SamplerData()
+        {
+            Info.NumSampleLoops = 1;
+            Info.MIDI_UnityNote = 60; // middle-c
+        }
+    }
+
+    // HUGE thank you to TecFox for supplying the PS1 audio decoding stuff!
+    // Without him, this wouldn't have been possible! :)
+    public class PS1BankFile
+    {
+        public List<SoundBank> Banks { get; set; }
+
+        public PS1BankType Type { get; set; }
+        
+        // PSX ADPCM coefficients
+        private static readonly double[] K0 = { 0, 0.9375, 1.796875, 1.53125, 1.90625 };
+        private static readonly double[] K1 = { 0, 0, -0.8125, -0.859375, -0.9375 };
+        
+        // PSX ADPCM decoding routine - decodes a single sample
+        private static short VagToPCM(byte soundParameter, int soundData, ref double vagPrev1, ref double vagPrev2)
+        {
+            if (soundData > 7)
+                soundData -= 16;
+
+            var sp1 = (soundParameter >> 0) & 0xF;
+            var sp2 = (soundParameter >> 4) & 0xF;
+
+            var dTmp1 = soundData * Math.Pow(2, (12 - sp1));
+
+            var dTmp2 = vagPrev1 * K0[sp2];
+            var dTmp3 = vagPrev2 * K1[sp2];
+
+            vagPrev2 = vagPrev1;
+            vagPrev1 = dTmp1 + dTmp2 + dTmp3;
+
+            var result = (int)Math.Round(vagPrev1) & 0xFFFF;
+            
+            return (short)result;
+        }
+
+        private static unsafe byte[] DecodeSound(byte[] buffer)
+        {
+            int numSamples = (buffer.Length >> 4) * 28; // PSX ADPCM data is stored in blocks of 16 bytes each containing 28 samples.
+
+            int loopStart = 0;
+            int loopLength = 0;
+
+            var result = new byte[numSamples * 2];
+
+            byte sp = 0;
+            
+            double vagPrev1 = 0.0;
+            double vagPrev2 = 0.0;
+
+            int k = 0;
+
+            fixed (byte* r = result)
+            {
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    if (i % 16 == 0)
+                    {
+                        var ld1 = buffer[i];
+                        var ld2 = buffer[i + 1];
+
+                        sp = ld1;
+
+                        if ((ld2 & 0xE) == 6)
+                            loopStart = k;
+
+                        if ((ld2 & 0xF) == 3 || (ld2 & 0xF) == 7)
+                            loopLength = (k + 28) - loopStart;
+
+                        i += 2;
+                    }
+
+                    for (int s = 0; s < 2; s++)
+                    {
+                        var sd = (buffer[i] >> (s * 4)) & 0xF;
+                        ((short *)r)[k++] = VagToPCM(sp, sd, ref vagPrev1, ref vagPrev2);
+                    }
+                }
+            }
+
+            var sampler = new SamplerData() {
+                Buffer = result
+            };
+            
+            if (loopLength > 0)
+            {
+                sampler.Loop.Start = loopStart;
+                sampler.Loop.End = (loopStart + loopLength);
+            }
+
+            return sampler.Compile();
+        }
+
+        private SoundBank ReadSoundBank(Stream stream, int index)
+        {
+            // read from a list of sound bank offsets
+            var offset = stream.ReadInt32();
+            stream.Position = offset;
+
+            return ReadSoundBank(stream, index, offset);
+        }
+
+        private SoundBank ReadSoundBank(Stream stream, int index, int baseOffset)
+        {
+            var bank = new SoundBank() {
+                Index = index,
+            };
+            
+            var numSamples = stream.ReadInt32();
+            var dataOffset = baseOffset + (numSamples * PS1SoundSampleInfo.SizeOf) + 4;
+
+            var listOffset = (int)stream.Position;
+
+            bank.Samples = new List<SoundSample>(numSamples);
+
+            for (int i = 0; i < numSamples; i++)
+            {
+                stream.Position = listOffset + (i * PS1SoundSampleInfo.SizeOf);
+
+                var sampleInfo = stream.Read<PS1SoundSampleInfo>();
+
+                if ((i == 0) && (sampleInfo.Offset != 0))
+                    throw new InvalidOperationException("Probably not sound data!");
+
+                sampleInfo.Offset += dataOffset;
+
+                if (sampleInfo.Loop == 0)
+                    sampleInfo.Size -= 16;  // One-shot sounds have a "silent"  loop block at the end which should be discarded.
+                                            // (By definition PSX ADPCM encoded data should also have a 16-byte zero padding at the beginning
+                                            //  which doesn't exist in some cases)
+
+                var sample = new SoundSample() {
+                    FileName = $"{i:D2}.wav",
+
+                    NumChannels = 1,
+                    SampleRate = sampleInfo.SampleRate,
+
+                    IsPS1Format = true,
+                };
+
+                bank.Samples.Add(sample);
+
+                // retrieve the buffer
+                var buffer = new byte[sampleInfo.Size];
+
+                stream.Position = sampleInfo.Offset;
+                stream.Read(buffer, 0, buffer.Length);
+
+                sample.Buffer = DecodeSound(buffer);
+            }
+
+            return bank;
+        }
+
+        public void LoadBinary(Stream stream)
+        {
+            if (Type == PS1BankType.Invalid)
+                throw new InvalidOperationException("Bank type must be specified before loading binary data.");
+
+            Banks = new List<SoundBank>();
+
+            switch (Type)
+            {
+            case PS1BankType.Single:
+                {
+                    var bank = ReadSoundBank(stream, 0, 0);
+                    Banks.Add(bank);
+                } break;
+            case PS1BankType.Multiple:
+                {
+                    // get number of banks
+                    var numBanks = (stream.ReadInt32() >> 2) - 1;
+
+                    // last entry = buffer size
+                    stream.Position = (numBanks * 4);
+                    var size = stream.ReadInt32();
+
+                    if (size > stream.Length)
+                        throw new OverflowException("Probably not sound data!");
+
+                    Banks = new List<SoundBank>(numBanks);
+
+                    // read banks list
+                    for (int i = 0; i < numBanks; i++)
+                    {
+                        stream.Position = (i * 4);
+
+                        var bank = ReadSoundBank(stream, i);
+                        Banks.Add(bank);
+                    }
+                } break;
+            }
+        }
+
+        public void DumpAllBanks(string outDir)
+        {
+            var xml = new XmlDocument();
+
+            var cmt = xml.CreateComment("For reference purposes only");
+            xml.AppendChild(cmt);
+
+            var root = xml.CreateElement("PS1Banks");
+
+            root.SetAttribute("Type", $"{Type:D}");
+
+            for (int i = 0; i < Banks.Count; i++)
+            {
+                var bank = Banks[i];
+                var bankName = $"{i:D2}";
+                var bankPath = Path.Combine("Banks", bankName);
+
+                var bankDir = Path.Combine(outDir, bankPath);
+
+                if (!Directory.Exists(bankDir))
+                    Directory.CreateDirectory(bankDir);
+
+                var xmlFile = Path.Combine(bankDir, "bank.xml");
+
+                // write bank xml
+                var bankXml = new XmlDocument();
+                bank.Serialize(bankXml);
+
+                bankXml.Save(xmlFile);
+
+                if (!bank.IsNull)
+                {
+                    for (int s = 0; s < bank.Samples.Count; s++)
+                    {
+                        var sample = bank.Samples[s];
+                        var sampleFile = Path.Combine(bankDir, sample.FileName);
+
+                        using (var fs = File.Open(sampleFile, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            var fmtChunk = (AudioFormatChunk)sample;
+
+                            RIFF.WriteRIFF(fs, sample.Buffer, fmtChunk);
+                        }
+                    }
+                }
+
+                var bankElem = xml.CreateElement("SoundBank");
+
+                bankElem.SetAttribute("Index", $"{i:D}");
+                bankElem.SetAttribute("File", Path.Combine(bankPath, "bank.xml"));
+
+                root.AppendChild(bankElem);
+            }
+            
+            xml.AppendChild(root);
+            xml.Save(Path.Combine(outDir, "config.xml"));
         }
     }
 }

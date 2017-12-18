@@ -14,16 +14,27 @@ using DSCript.Spooling;
 
 namespace Audiose
 {
+    enum ParseResult
+    {
+        Success,
+        Failure,
+    }
+
     class Program
     {
         static readonly string DefaultOutput = "SoundData";
         static readonly string GSDName = "SOUND.GSD";
+
+        static void Abort(int exitCode)
+        {
+            Console.WriteLine(">> Aborting...");
+            Environment.Exit(exitCode);
+        }
         
-        static void Run()
+        static ParseResult ParseData()
         {
             var gsdFile = new GSDFile();
-            var error = false;
-
+            
             if (Config.Extract)
             {
                 var chunkFile = new FileChunker();
@@ -237,8 +248,7 @@ namespace Audiose
                         if (Config.Extract)
                         {
                             Console.WriteLine($"ERROR: Invalid usage of 'extract' parameter, cannot use an XML file!");
-                            error = true;
-                            break;
+                            return ParseResult.Failure;
                         }
 
                         gsdFile.LoadXml(Config.Input);
@@ -252,20 +262,67 @@ namespace Audiose
                 default:
                     {
                         Console.WriteLine($"Couldn't determine the input file type of '{Config.Input}'!");
-                        error = true;
+                        return ParseResult.Failure;
                     }
-                    break;
                 }
             }
 
-            if (error)
+            return ParseResult.Success;
+        }
+
+        static ParseResult ParseDataPS1()
+        {
+            var ps1 = new PS1BankFile();
+
+            if (Config.Extract)
             {
-                Console.WriteLine("Aborting...");
-                Environment.Exit(2);
+                Console.WriteLine("'Extract' argument is invalid for PS1 sound data.");
+                return ParseResult.Failure;
             }
-            else
+
+            if (Config.Compile)
             {
+                Console.WriteLine("Cannot compile PS1 sound data, operation unsupported.");
+                return ParseResult.Failure;
+            }
+
+            ps1.Type = (Config.InputType == FileType.Sbk) ? PS1BankType.Single : PS1BankType.Multiple;
+
+            using (var fs = File.Open(Config.Input, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                ps1.LoadBinary(fs);
+
+                if (String.IsNullOrEmpty(Config.OutDir))
+                    Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), $"{Path.GetFileNameWithoutExtension(Config.Input)}_Data");
+
+                ps1.DumpAllBanks(Config.OutDir);
+            }
+
+            return ParseResult.Success;
+        }
+
+        static ParseResult Parse()
+        {
+            switch (Config.InputType)
+            {
+            case FileType.Blk:
+            case FileType.Sbk:
+                return ParseDataPS1();
+            }
+
+            return ParseData();
+        }
+
+        static void Run()
+        {
+            switch (Parse())
+            {
+            case ParseResult.Success:
                 Console.WriteLine(Config.GetSuccessMessage());
+                break;
+            case ParseResult.Failure:
+                Abort(2);
+                break;
             }
         }
 
@@ -299,8 +356,7 @@ namespace Audiose
                         }
                         else
                         {
-                            Console.Error.WriteLine(">> Aborting...");
-                            Environment.Exit(1);
+                            Abort(1);
                         }
                     }
                     else
