@@ -197,8 +197,13 @@ namespace Audiose
         {
             return stream.ReadChunk(DATAIdentifier);
         }
-        
+
         public static void WriteRIFF(this Stream stream, byte[] dataBuffer, params IRIFFChunkData[] chunks)
+        {
+            stream.WriteRIFF(dataBuffer, false, chunks);
+        }
+
+        public static void WriteRIFF(this Stream stream, byte[] dataBuffer, bool writeRawData, params IRIFFChunkData[] chunks)
         {
             var dataSize = dataBuffer.Length;
             var riffSize = (dataSize + ChunkHeaderSize + 0x4 /* + WAVE */);
@@ -224,7 +229,14 @@ namespace Audiose
                 stream.Write(data);
             }
 
-            stream.WriteChunk(DATAIdentifier, dataBuffer);
+            if (writeRawData)
+            {
+                stream.Write(dataBuffer, 0, dataSize);
+            }
+            else
+            {
+                stream.WriteChunk(DATAIdentifier, dataBuffer);
+            }
         }
         
         public static void WriteChunk(this Stream stream, Identifier id, int chunkSize)
@@ -1099,7 +1111,7 @@ namespace Audiose
             Info.SamplePeriod = (int)((1.0 / sampleRate) * 1000000000);
         }
 
-        private void WriteChunk(Stream stream)
+        private void WriteSamplerChunk(Stream stream)
         {
             using (var ms = new MemoryStream(Size))
             {
@@ -1112,12 +1124,11 @@ namespace Audiose
 
         public byte[] Compile()
         {
-            using (var ms = new MemoryStream(Buffer.Length + Size + 8))
+            using (var ms = new MemoryStream(Buffer.Length + Size + 16))
             {
-                // data buffer
-                ms.Write(Buffer, 0, Buffer.Length);
+                ms.WriteChunk("data", Buffer);
 
-                WriteChunk(ms);
+                WriteSamplerChunk(ms);
 
                 return ms.ToArray();
             }
@@ -1363,7 +1374,7 @@ namespace Audiose
                         {
                             var fmtChunk = (AudioFormatChunk)sample;
 
-                            RIFF.WriteRIFF(fs, sample.Buffer, fmtChunk);
+                            RIFF.WriteRIFF(fs, sample.Buffer, true, fmtChunk);
                         }
                     }
                 }
