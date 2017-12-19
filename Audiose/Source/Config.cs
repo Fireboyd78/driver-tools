@@ -23,6 +23,8 @@ namespace Audiose
 
     static class Config
     {
+        private static IEnumerable<ArgInfo> m_args;
+
         public static string Input { get; set; }
         public static FileType InputType { get; set; }
 
@@ -31,6 +33,24 @@ namespace Audiose
         public static bool Compile { get; set; }
         public static bool Extract { get; set; }
 
+        public static bool VAG { get; set; }
+
+        public static IEnumerable<ArgInfo> Args
+        {
+            get { return m_args; }
+        }
+
+        public static bool HasArg(string name)
+        {
+            foreach (var arg in m_args)
+            {
+                if (arg.HasName && (arg.Name == name))
+                    return true;
+            }
+
+            return false;
+        }
+        
         static readonly string[] m_format = {
             "Usage: {0}",
             "",
@@ -41,15 +61,29 @@ namespace Audiose
         static readonly string[] m_usage = {
             "[:-options] <input> <:output>",
             "  If no output folder is specified, the input's directory is used.",
+            "",
+            "  Additional information:",
+            "    *.BLK and *.SBK files are assumed to be PS1 audio files, and cannot be recompiled.",
+            "    These formats are not easily identifiable, so use caution when loading BLK/SBK files of unknown origins.",
+            "",
+            "    You MUST specify the '-stuntman' option when attempting to extract audio from Stuntman!",
         };
 
         static readonly string[] m_options = {
             "  -[c]ompile       Compiles all sound data into a binary format.",
             "                   Use this if you wish to /re/compile binary data instead of dumping it.",
             "                   This will be ignored if you pass in an XML file!",
-
+            "",
             "  -e[x]tract       Extracts all sound data from a packaged format and splits them into their own files.",
             "                   Only use this if you know what you're doing!",
+            "",
+            "  -stuntman        Specifies the audio format specific to the original Stuntman.",
+            "                   The extracted audio will be decoded using VAG decoding.",
+            "                   Supported file format(s): *.BLK",
+            "",
+            "  -vag             Attempt to decode the audio using VAG decoding (PSX/PS2 audio)",
+            "                   This MUST be specified if the file you're passing is NOT a BLK/SBK file!",
+            "                   If '-stuntman' is already specified, this is not required.",
         };
 
         static readonly string[] m_complete_msg = {
@@ -139,6 +173,8 @@ namespace Audiose
             // current index for non-option arguments
             var argIdx = 0;
 
+            var _args = new List<ArgInfo>();
+
             foreach (ArgInfo arg in args)
             {
                 if (arg.IsSwitch)
@@ -153,8 +189,11 @@ namespace Audiose
                     case "extract":
                         Extract = true;
                         continue;
+                    case "vag":
+                        VAG = true;
+                        continue;
                     default:
-                        Console.WriteLine($"WARNING: Unknown argument '{arg.ToString()}', skipping...");
+                        _args.Add(arg);
                         break;
                     }
                 }
@@ -176,6 +215,8 @@ namespace Audiose
                 }
             }
 
+            m_args = _args.AsEnumerable();
+            
             // initialize paths
             if (!String.IsNullOrEmpty(Input))
             {

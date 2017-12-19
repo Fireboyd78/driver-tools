@@ -9,6 +9,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+using System.Xml;
+using System.Xml.Linq;
+
 using DSCript;
 using DSCript.Spooling;
 
@@ -301,15 +304,188 @@ namespace Audiose
             return ParseResult.Success;
         }
 
+        static ParseResult ParseStuntman()
+        {
+            if (Config.Extract)
+            {
+                Console.WriteLine("'Extract' argument is invalid for Stuntman sound data.");
+                return ParseResult.Failure;
+            }
+
+            if (Config.Compile)
+            {
+                Console.WriteLine("Cannot compile Stuntman sound data, operation unsupported.");
+                return ParseResult.Failure;
+            }
+
+            if (String.IsNullOrEmpty(Config.OutDir))
+                Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), $"{Path.GetFileNameWithoutExtension(Config.Input)}_Data");
+
+            var xmlVerbose = false;
+
+            using (var fs = File.Open(Config.Input, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                switch (Config.InputType)
+                {
+                case FileType.Blk:
+                    {
+                        int blockOffset = -1;
+                        int blockIndex = -1;
+
+                        int numBlocks = 0;
+                        
+                        var nextBlock = new Func<Stream, bool>((stream) => {
+                            if ((blockOffset == -1) && (blockIndex == -1))
+                            {
+                                blockOffset = (int)stream.Position;
+                                numBlocks = (stream.ReadInt32() >> 2) - 1;
+
+                                // no blocks!
+                                if (numBlocks == 0)
+                                    return false;
+                            }
+                            
+                            if (++blockIndex < numBlocks)
+                            {
+                                stream.Position = blockOffset + (blockIndex * 4);
+                                stream.Position = (stream.ReadInt32() + blockOffset);
+                                return true;
+                            }
+
+                            blockIndex = -1;
+                            return false;
+                        });
+                        
+                        var blkXml = new XmlDocument();
+                        var blkRoot = blkXml.CreateElement("StuntmanSoundDatabase");
+
+                        blkRoot.SetAttribute("Name", Path.GetFileNameWithoutExtension(Config.Input));
+
+                        while (nextBlock(fs))
+                        {
+                            var bankOffset = (int)fs.Position;
+
+                            var bankCmt = blkXml.CreateComment($"offset: {bankOffset:X}");
+                            blkRoot.AppendChild(bankCmt);
+
+                            var bankXml = blkXml.CreateElement("Bank");
+
+                            bankXml.SetAttribute("Index", $"{blockIndex}");
+
+                            var bankSize = fs.ReadInt32();
+
+                            var extraDataOffset = fs.ReadInt32() + bankOffset;
+                            var extraDataSize = (bankSize - extraDataOffset);
+
+                            if (extraDataSize > 0)
+                            {
+                                var bankCmt2 = blkXml.CreateComment($"extra data @ {extraDataOffset:X} (size: {extraDataSize:X})");
+                                blkRoot.AppendChild(bankCmt2);
+                            }
+
+                            // this was VERY sneaky -- it definitely threw me off!
+                            var numSounds = (int)fs.ReadUInt16();
+
+                            var listOffset = (int)fs.Position;
+
+                            var dataOffset = listOffset + (numSounds * 0xC);
+                            var dataSize = (extraDataOffset - dataOffset);
+
+                            var dataSizeAlign = Memory.Align(dataSize, 4);
+                            
+                            var bufSize = 0;
+                            
+                            for (int i = 0; i < numSounds; i++)
+                            {
+                                fs.Position = listOffset + (i * 0xC);
+
+                                var offset = (int)fs.ReadUInt16();
+                                var oPage = (int)fs.ReadUInt16(); // which page (per 65535 byte-boundary)
+                                var size = (int)fs.ReadUInt16();
+                                var sPage = (int)fs.ReadUInt16();
+                                var flags = (int)fs.ReadUInt16();
+                                var freq = (int)fs.ReadUInt16();
+
+                                // this was a pretty smart way to throw people off...lol
+                                offset += (oPage * 65536);
+                                size += (sPage * 65536);
+
+                                // verify the BLK stuff
+                                bufSize += size;
+                                
+                                // retrieve the buffer
+                                var buffer = new byte[size];
+
+                                fs.Position = (dataOffset + offset);
+                                fs.Read(buffer, 0, buffer.Length);
+
+                                var soundData = VAG.DecodeSound(buffer);
+
+                                // export the data
+                                var soundName = $"{blockIndex:D2}_{i:D2}.wav";
+                                var soundPath = Path.Combine("Sounds", soundName);
+                                
+                                var outFile = Path.Combine(Config.OutDir, soundPath);
+
+                                // setup the directory structure
+                                var soundDir = Path.GetDirectoryName(outFile);
+
+                                if (!Directory.Exists(soundDir))
+                                    Directory.CreateDirectory(soundDir);
+
+                                // build XML
+                                if (xmlVerbose)
+                                {
+                                    var soundCmt = blkXml.CreateComment($"offset: {offset:X}({oPage}), size: {size:X}({sPage})");
+                                    bankXml.AppendChild(soundCmt);
+                                }
+
+                                var soundXml = blkXml.CreateElement("Sample");
+                                
+                                soundXml.SetAttribute("Index", $"{i}");
+                                soundXml.SetAttribute("Flags", $"{flags:X}");
+                                soundXml.SetAttribute("Freq", $"{freq}");
+                                soundXml.SetAttribute("File", soundPath);
+                                
+                                bankXml.AppendChild(soundXml);
+                                
+                                using (var soundFile = File.Open(outFile, FileMode.Create, FileAccess.Write, FileShare.Read))
+                                {
+                                    var chunk = new AudioFormatChunk(1, freq);
+                                    soundFile.WriteRIFF(soundData, chunk);
+                                }
+                            }
+                            
+                            if (bufSize != dataSizeAlign)
+                                throw new InvalidOperationException($"BUFFER SIZE MISMATCH! ({bufSize:X} != {dataSizeAlign:X})");
+                            
+                            blkRoot.AppendChild(bankXml);
+                        }
+                        
+                        blkXml.AppendChild(blkRoot);
+                        blkXml.Save(Path.Combine(Config.OutDir, "config.xml"));
+                    } break;
+                default:
+                    Console.WriteLine("Sorry, that format is not supported.");
+                    return ParseResult.Failure;
+                }
+            }
+
+            return ParseResult.Success;
+        }
+
         static ParseResult Parse()
         {
+            if (Config.HasArg("stuntman"))
+                return ParseStuntman();
+
             switch (Config.InputType)
             {
             case FileType.Blk:
             case FileType.Sbk:
                 return ParseDataPS1();
             }
-
+            
             return ParseData();
         }
 
