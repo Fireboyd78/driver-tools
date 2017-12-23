@@ -868,6 +868,7 @@ namespace Audiose
                 var numTracks = 0;
                 var numChannels = 0;
                 var frequency = 0;
+                var compressed = false;
 
                 if (version == 1)
                     numTracks = 2;
@@ -891,14 +892,15 @@ namespace Audiose
                     {
                         numChannels = 2;
                         frequency = fs.ReadInt32();
+                        compressed = (fs.ReadInt32() == 1);
                     }
                     break;
                 }
 
                 // DPL PC music
-                if ((version == 2) && (platform == 2))
+                if (compressed)
                 {
-                    Console.WriteLine("Sorry, that music format is currently not supported due to unknown encryption.");
+                    Console.WriteLine("Sorry, compressed audio files are currently unsupported.");
                     return ParseResult.Failure;
                 }
 
