@@ -497,6 +497,12 @@ namespace Audiose
                         Console.WriteLine($"  v_chsz: {v_chsz}");
                         Console.WriteLine($"  a_chsz: {a_chsz}");
 
+                        if (Config.HasArg("info"))
+                        {
+                            Console.WriteLine("> Information dumped successfully.");
+                            return ParseResult.Success;
+                        }
+
                         if (audstr == 0)
                         {
                             Console.WriteLine($"WARNING: XAV doesn't contain any audio data!");
