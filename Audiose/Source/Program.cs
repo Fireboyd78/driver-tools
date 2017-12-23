@@ -303,8 +303,8 @@ namespace Audiose
 
             return ParseResult.Success;
         }
-
-        static ParseResult ParseStuntman()
+        
+        static unsafe ParseResult ParseStuntman()
         {
             if (Config.Extract)
             {
@@ -464,6 +464,289 @@ namespace Audiose
                         
                         blkXml.AppendChild(blkRoot);
                         blkXml.Save(Path.Combine(Config.OutDir, "config.xml"));
+                    } break;
+                case FileType.Xav:
+                    {
+                        fs.Seek(0, SeekOrigin.End);
+                        var length = (int)fs.Position;
+
+                        fs.Seek(0, SeekOrigin.Begin);
+
+                        MagicNumber XAVHeader = "XAVS";
+
+                        var magic = fs.ReadInt32();
+
+                        if (magic != XAVHeader)
+                        {
+                            Console.WriteLine("I don't know what to do with this XAV file!");
+                            return ParseResult.Failure;
+                        }
+
+                        var width = (int)fs.ReadInt16();
+                        var height = (int)fs.ReadInt16();
+
+                        var frames = fs.ReadInt32();
+                        var audstr = (int)fs.ReadInt16();
+                        var type = (int)fs.ReadInt16();
+                        var v_chsz = fs.ReadInt32();
+                        var a_chsz = fs.ReadInt32();
+
+                        Console.WriteLine($" XAV file: {width}x{height}, {frames} frames");
+                        Console.WriteLine($"  audstr: {audstr}");
+                        Console.WriteLine($"  type: {type}");
+                        Console.WriteLine($"  v_chsz: {v_chsz}");
+                        Console.WriteLine($"  a_chsz: {a_chsz}");
+
+                        if (audstr == 0)
+                        {
+                            Console.WriteLine($"WARNING: XAV doesn't contain any audio data!");
+                            return ParseResult.Failure;
+                        }
+
+                        var audsrc = 0;
+                        
+                        // check if user specified an audio source that exists
+                        if (Config.GetArg("audsrc", ref audsrc) || Config.GetArg("aud", ref audsrc))
+                        {
+                            if (audsrc > audstr)
+                            {
+                                Console.WriteLine($"WARNING: XAV only contains {audstr} audio streams -- stream {audsrc} does not exist.");
+                                return ParseResult.Failure;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("> No audio stream index provided, using default");
+                        }
+                        
+                        Console.WriteLine($"> Loading data from audio stream {audsrc}...");
+                        
+                        byte cmd = 0;
+                        int chunk = 0;
+
+                        var read_chunk = new Func<bool>(() => {
+                            MagicNumber EOSIdent = "_EOS";
+
+                            var value = fs.ReadUInt32();
+
+                            if (value == EOSIdent)
+                                return false;
+
+                            cmd = (byte)(value & 0xFF);
+                            chunk = (int)((value >> 8) & 0xFFFFFF);
+
+                            return true;
+                        });
+
+                        var get_byte = new Func<int, int>((idx) => {
+                            return ((chunk >> (idx * 8)) & 0xFF);
+                        });
+
+                        var chunks = new int[32767];
+                        var numChunks = 0;
+
+                        var curBlk = 0;
+
+                        var blockPtrs = new int[65535];
+                        var numBlocks = 0;
+
+                        var advance_buffer = new Action<int>((count) => {
+                            fs.Position += count;
+                        });
+
+                        var read_buffer = new Action<int>((count) => {
+                            if (curBlk > 1)
+                                curBlk = 0;
+                            
+                            blockPtrs[numBlocks++] = (int)fs.Position;
+                            advance_buffer(count);
+                        });
+
+                        var store_chunk = new Action(() => {
+                            chunks[numChunks++] = (int)fs.Position;
+                            advance_buffer(4);
+                        });
+
+                        var skip_chunk = new Action(() => {
+                            ++numChunks;
+                            advance_buffer(4);
+                        });
+                        
+                        while (read_chunk())
+                        {
+                            if (cmd == 0x21)
+                            {
+                                var v0 = get_byte(0);
+
+                                if (v0 == 0x5F)
+                                {
+                                    v0 = get_byte(1);
+
+                                    if (v0 == (audsrc + 0x41)
+                                        || v0 == (audsrc + 0x61))
+                                    {
+                                        v0 = get_byte(2);
+
+                                        if (v0 == 0x30)
+                                        {
+                                            Console.WriteLine($">> EOS @ {fs.Position:X8}");
+                                            return ParseResult.Success;
+                                        }
+
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    if (v0 > 0x60)
+                                    {
+                                        if (v0 == 0x75)
+                                        {
+                                            store_chunk();
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            skip_chunk();
+                                            continue;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (v0 == 0x24)
+                                        {
+                                            if (get_byte(1) == 0x56)
+                                            {
+                                                store_chunk();
+                                                continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            skip_chunk();
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (cmd == 0x56
+                                || cmd == (audsrc + 0x41)
+                                || cmd == (audsrc + 0x61))
+                            {
+                                read_buffer(chunk);
+                            }
+                            else
+                            {
+                                advance_buffer(chunk);
+                            }
+                        }
+                        
+                        var buffer = new byte[numBlocks * a_chsz]; // ¯\_(ツ)_/¯
+                        var bufPtr = 0;
+
+                        var blockSize = (a_chsz >> 1);
+                        var channelSize = (blockSize >> 1);
+
+                        var readBlock = new Action<byte[], int, int>((buf, offset, ch) => {
+                            fs.Position = offset;
+                            fs.Read(buf, 0, blockSize);
+                        });
+                        
+                        var midpointInterp = new Func<int, int, int>((a, b) => {
+                            var result = b;
+
+                            if (b > (a - 1))
+                                result = (b - ((b - a) / 2));
+                            if (a > (b - 1))
+                                result = (a - ((a - b) / 2));
+
+                            return result;
+                        });
+
+                        var clampIt = new Func<int, int, int, int>((v, min, max) => {
+                            if (v > max)
+                                return max;
+                            if (v < min)
+                                return min;
+
+                            return v;
+                        });
+
+                        var interpolateSamples = new Func<int, int, int>((s1, s2) => {
+                            var sampleMask = 0xFFFF;
+
+                            // split into 2 shorts
+                            var s1L = (short)(s1 & sampleMask);
+                            var s1R = (short)((s1 >> 16) & sampleMask);
+
+                            var s2L = (short)(s2 & sampleMask);
+                            var s2R = (short)((s2 >> 16) & sampleMask);
+
+                            var sIL = midpointInterp(s1L, s2L);
+                            var sIR = midpointInterp(s1R, s2R);
+
+                            return (sIL + (sIR << 16));
+                        });
+
+                        Console.WriteLine("> Processing audio data...");
+
+                        for (int i = 0; i < numBlocks; i++)
+                        {
+                            var block = new byte[blockSize];
+                            readBlock(block, blockPtrs[i], 0);
+                            
+                            fixed (byte *b = block)
+                            fixed (byte* r = buffer)
+                            {
+                                var idx = 0;
+                            
+                                for (int k = 0; k < (channelSize >> 1); k += 2)
+                                {
+                                    var offset = bufPtr + (idx * 2);
+                            
+                                    var ch_l = *(short*)(b + k);
+                                    var ch_r = *(short*)(b + k + channelSize);
+                            
+                                    *(short*)(r + offset) = ch_l;
+                                    *(short*)(r + offset + 2) = ch_l;
+                                    *(short*)(r + offset + 4) = ch_l;
+                                    *(short*)(r + offset + 6) = ch_l;
+                                    
+                                    idx += 4;
+                                }
+
+                                idx = 0;
+
+                                for (int k = 0; k < (channelSize >> 1); k += 2)
+                                {
+                                    var offset = bufPtr + (idx * 2) + blockSize;
+
+                                    var ch_l = *(short*)(b + k);
+                                    var ch_r = *(short*)(b + k + channelSize);
+
+                                    *(short*)(r + offset) = ch_r;
+                                    *(short*)(r + offset + 2) = ch_r;
+                                    *(short*)(r + offset + 4) = ch_r;
+                                    *(short*)(r + offset + 6) = ch_r;
+
+                                    idx += 4;
+                                }
+                            }
+                            
+                            bufPtr += a_chsz;
+                        }
+
+                        var dumpName = $"{Path.GetFileNameWithoutExtension(Config.Input)}_{audsrc:D2}.wav";
+                        var dumpPath = Path.Combine(Path.GetDirectoryName(Config.Input), dumpName);
+
+                        Console.WriteLine($"> Saving to '{dumpPath}'...");
+
+                        using (var f = File.Open(dumpPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            var fmtChunk = new AudioFormatChunk(2, 48000);
+                            f.WriteRIFF(buffer, fmtChunk);
+                        }
                     } break;
                 default:
                     Console.WriteLine("Sorry, that format is not supported.");

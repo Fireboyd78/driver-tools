@@ -19,6 +19,8 @@ namespace Audiose
 
         Blk, // PS1 block data
         Sbk, // PS1 soundbank data
+
+        Xav, // audio/video stream
     }
 
     static class Config
@@ -46,6 +48,25 @@ namespace Audiose
             {
                 if (arg.HasName && (arg.Name == name))
                     return true;
+            }
+
+            return false;
+        }
+
+        public static bool GetArg(string name, ref int value)
+        {
+            int result = 0;
+
+            foreach (var arg in m_args)
+            {
+                if (arg.HasName && (arg.Name == name))
+                {
+                    if (int.TryParse(arg.Value, out result))
+                    {
+                        value = result;
+                        return true;
+                    }
+                }
             }
 
             return false;
@@ -163,6 +184,9 @@ namespace Audiose
                 return FileType.Blk;
             case ".sbk":
                 return FileType.Sbk;
+
+            case ".xav":
+                return FileType.Xav;
             }
 
             return FileType.Other;
@@ -177,6 +201,25 @@ namespace Audiose
 
             foreach (ArgInfo arg in args)
             {
+                if (arg.IsExplicit)
+                {
+                    switch (argIdx++)
+                    {
+                    case 0:
+                        Input = arg.Value;
+                        InputType = GetFileType(Input);
+                        continue;
+                    case 1:
+                        OutDir = arg.Value;
+                        continue;
+                    }
+
+                    Console.WriteLine($"WARNING: Too many arguments found ('{arg}'), ignoring further arguments.");
+                    break;
+                }
+
+                _args.Add(arg);
+                
                 if (arg.IsSwitch)
                 {
                     switch (arg.Name)
@@ -192,26 +235,7 @@ namespace Audiose
                     case "vag":
                         VAG = true;
                         continue;
-                    default:
-                        _args.Add(arg);
-                        break;
                     }
-                }
-                else
-                {
-                    switch (argIdx++)
-                    {
-                    case 0:
-                        Input = arg.Value;
-                        InputType = GetFileType(Input);
-                        continue;
-                    case 1:
-                        OutDir = arg.Value;
-                        continue;
-                    }
-
-                    Console.WriteLine($"WARNING: Too many arguments found ('{arg}'), ignoring further arguments.");
-                    break;
                 }
             }
 

@@ -76,7 +76,7 @@ namespace Audiose
                 {
                     // set variable to value
                     Name = _arg.Substring(0, splitIdx).ToLower();
-                    Value = _arg.Substring(splitIdx);
+                    Value = _arg.Substring(splitIdx + 1);
                 }
                 else
                 {
