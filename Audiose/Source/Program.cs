@@ -492,7 +492,7 @@ namespace Audiose
                         var a_chsz = fs.ReadInt32();
 
                         Console.WriteLine($" XAV file: {width}x{height}, {frames} frames");
-                        Console.WriteLine($"  audstr: {audstr}");
+                        Console.WriteLine($"  audio streams: {audstr}");
                         Console.WriteLine($"  type: {type}");
                         Console.WriteLine($"  v_chsz: {v_chsz}");
                         Console.WriteLine($"  a_chsz: {a_chsz}");
@@ -504,22 +504,33 @@ namespace Audiose
                         }
 
                         var audsrc = 0;
-                        
+
                         // check if user specified an audio source that exists
                         if (Config.GetArg("audsrc", ref audsrc) || Config.GetArg("aud", ref audsrc))
                         {
-                            if (audsrc > audstr)
+                            if (audsrc == 0)
                             {
-                                Console.WriteLine($"WARNING: XAV only contains {audstr} audio streams -- stream {audsrc} does not exist.");
-                                return ParseResult.Failure;
+                                Console.WriteLine("WARNING: Audio stream index is not zero-based, but I'll assume you meant '1' ;)");
+                            }
+                            else
+                            {
+                                audsrc -= 1;
                             }
                         }
                         else
                         {
                             Console.WriteLine("> No audio stream index provided, using default");
                         }
+
+                        var audidx = (audsrc + 1);
+
+                        if (audsrc > audstr)
+                        {
+                            Console.WriteLine($"WARNING: XAV only contains {audstr} audio streams -- stream {audidx} does not exist.");
+                            return ParseResult.Failure;
+                        }
                         
-                        Console.WriteLine($"> Loading data from audio stream {audsrc}...");
+                        Console.WriteLine($"> Loading data from audio stream {audidx}...");
                         
                         byte cmd = 0;
                         int chunk = 0;
@@ -737,7 +748,7 @@ namespace Audiose
                             bufPtr += a_chsz;
                         }
 
-                        var dumpName = $"{Path.GetFileNameWithoutExtension(Config.Input)}_{audsrc:D2}.wav";
+                        var dumpName = $"{Path.GetFileNameWithoutExtension(Config.Input)}_{audidx:D2}.wav";
                         var dumpPath = Path.Combine(Path.GetDirectoryName(Config.Input), dumpName);
 
                         Console.WriteLine($"> Saving to '{dumpPath}'...");
