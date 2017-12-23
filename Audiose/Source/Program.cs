@@ -774,6 +774,161 @@ namespace Audiose
             return ParseResult.Success;
         }
 
+        static ParseResult ParseXA()
+        {
+            if (Config.Extract)
+            {
+                Console.WriteLine("'Extract' argument is invalid for XA audio data.");
+                return ParseResult.Failure;
+            }
+
+            if (Config.Compile)
+            {
+                Console.WriteLine("Cannot compile XA audio data, operation unsupported.");
+                return ParseResult.Failure;
+            }
+
+            var xaName = Path.GetFileNameWithoutExtension(Config.Input);
+
+            using (var fs = File.Open(Config.Input, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                MagicNumber XAHeader_v1 = 0x92783465; // ' e4x’ '
+                MagicNumber XAHeader_v2 = "XA30";
+
+                var magic = fs.ReadInt32();
+                var version = 0;
+
+                if (magic == XAHeader_v1)
+                    version = 1;
+                if (magic == XAHeader_v2)
+                    version = 2;
+                
+                var listOffset = 0;
+                var platform = -1; // PS2 = 0, Xbox = 1, PC = 2
+                
+                var offsets = new int[2];
+                var sizes = new int[2];
+
+                var readList = new Action<Stream>((s) => {
+                    fs.Position = listOffset;
+
+                    for (int i = 0; i < 2; i++)
+                        offsets[i] = fs.ReadInt32();
+                    for (int i = 0; i < 2; i++)
+                        sizes[i] = fs.ReadInt32();
+                });
+
+                var readData = new Func<Stream, int, byte[]>((s, index) => {
+                    var result = new byte[sizes[index]];
+
+                    fs.Position = offsets[index];
+                    fs.Read(result, 0, result.Length);
+
+                    return result;
+                });
+
+                if (version == 0)
+                {
+                    Console.WriteLine("Sorry, cannot process this file.");
+                    return ParseResult.Failure;
+                }
+
+                var check = fs.ReadInt32();
+
+                // PS2
+                if (check == 22050)
+                {
+                    listOffset = 12;
+                    platform = 0;
+                }
+                // Xbox
+                else if (check == 2048)
+                {
+                    listOffset = 4;
+                    platform = 1;
+                }
+                // PC
+                else if (check == 2)
+                {
+                    listOffset = 16;
+                    platform = 2;
+                }
+                else
+                {
+                    Console.WriteLine("WARNING: Unknown XA audio file format, please report this!");
+                    return ParseResult.Failure;
+                }
+
+                if (platform == 1)
+                {
+                    Console.WriteLine("Sorry, Xbox audio is currently not supported.");
+                    return ParseResult.Failure;
+                }
+
+                var numTracks = 0;
+                var numChannels = 0;
+                var frequency = 0;
+
+                if (version == 1)
+                    numTracks = 2;
+                if (version == 2)
+                    numTracks = 1;
+
+                switch (platform)
+                {
+                case 0:
+                    {
+                        numChannels = 1;
+                        frequency = check;
+                    }
+                    break;
+                case 1:
+                    {
+                        // TODO
+                    }
+                    break;
+                case 2:
+                    {
+                        numChannels = 2;
+                        frequency = fs.ReadInt32();
+                    }
+                    break;
+                }
+
+                // DPL PC music
+                if ((version == 2) && (platform == 2))
+                {
+                    Console.WriteLine("Sorry, that music format is currently not supported due to unknown encryption.");
+                    return ParseResult.Failure;
+                }
+
+                readList(fs);
+
+                for (int i = 0; i < numTracks; i++)
+                {
+                    Console.WriteLine($"Processing audio track {i + 1} / {numTracks}...");
+
+                    var buffer = readData(fs, i);
+
+                    var audName = $"{xaName}_{(i + 1):D2}.wav";
+                    var audPath = Path.Combine(Path.GetDirectoryName(Config.Input), audName);
+
+                    if (platform == 0)
+                        buffer = VAG.DecodeSound(buffer);
+
+                    Console.WriteLine($"> Saving to '{audPath}'...");
+
+                    using (var f = File.Open(audPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        var fmtChunk = new AudioFormatChunk(numChannels, frequency);
+                        f.WriteRIFF(buffer, fmtChunk);
+                    }
+                }
+            }
+
+            return ParseResult.Success;
+        }
+
         static ParseResult Parse()
         {
             if (Config.HasArg("stuntman"))
@@ -784,6 +939,8 @@ namespace Audiose
             case FileType.Blk:
             case FileType.Sbk:
                 return ParseDataPS1();
+            case FileType.Xa:
+                return ParseXA();
             }
             
             return ParseData();
