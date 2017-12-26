@@ -569,7 +569,7 @@ namespace Audiose
                         var blockCounts = new int[2];
                         
                         for (int i = 0; i < 2; i++)
-                            blockPtrs[i] = new int[32767];
+                            blockPtrs[i] = new int[0x23FFF];
                         
                         var store_block = new Action<int, int>((index, count) => {
                             var block = blockCounts[index]++;
