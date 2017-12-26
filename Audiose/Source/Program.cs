@@ -543,14 +543,14 @@ namespace Audiose
 
                         var read_chunk = new Func<bool>(() => {
                             MagicNumber EOSIdent = "_EOS";
-
-                            var value = fs.ReadUInt32();
+                            
+                            var value = fs.ReadInt32();
 
                             if (value == EOSIdent)
                                 return false;
 
                             cmd = (byte)(value & 0xFF);
-                            chunk = (int)((value >> 8) & 0xFFFFFF);
+                            chunk = ((value >> 8) & 0xFFFFFF);
 
                             return true;
                         });
@@ -559,210 +559,237 @@ namespace Audiose
                             return ((chunk >> (idx * 8)) & 0xFF);
                         });
 
-                        var chunks = new int[32767];
-                        var numChunks = 0;
+                        var chunks = new int[32][];
+                        var nChunks = 0;
 
-                        var curBlk = 0;
+                        for (int i = 0; i < 32; i++)
+                            chunks[i] = new int[2] { -1, -1 };
+                        
+                        var blockPtrs = new int[2][];
+                        var blockCounts = new int[2];
+                        
+                        for (int i = 0; i < 2; i++)
+                            blockPtrs[i] = new int[32767];
+                        
+                        var store_block = new Action<int, int>((index, count) => {
+                            var block = blockCounts[index]++;
 
-                        var blockPtrs = new int[65535];
-                        var numBlocks = 0;
-
-                        var advance_buffer = new Action<int>((count) => {
+                            blockPtrs[index][block] = (int)fs.Position;
                             fs.Position += count;
                         });
 
-                        var read_buffer = new Action<int>((count) => {
-                            if (curBlk > 1)
-                                curBlk = 0;
-                            
-                            blockPtrs[numBlocks++] = (int)fs.Position;
-                            advance_buffer(count);
+                        var skip_block = new Action<int>((count) => {
+                            fs.Position += count;
                         });
 
                         var store_chunk = new Action(() => {
-                            chunks[numChunks++] = (int)fs.Position;
-                            advance_buffer(4);
+                            chunks[nChunks++] = new[] { blockCounts[0], blockCounts[1] };
                         });
 
                         var skip_chunk = new Action(() => {
-                            ++numChunks;
-                            advance_buffer(4);
+                            ++nChunks;
                         });
                         
                         while (read_chunk())
                         {
-                            if (cmd == 0x21)
+                            if (cmd == '!')
                             {
                                 var v0 = get_byte(0);
 
-                                if (v0 == 0x5F)
+                                if (v0 == '_')
                                 {
                                     v0 = get_byte(1);
 
-                                    if (v0 == (audsrc + 0x41)
-                                        || v0 == (audsrc + 0x61))
+                                    if (v0 == (audsrc + 'A') || v0 == (audsrc + 'a'))
                                     {
                                         v0 = get_byte(2);
 
-                                        if (v0 == 0x30)
+                                        if (v0 == '0')
                                         {
                                             Console.WriteLine($">> EOS @ {fs.Position:X8}");
-                                            return ParseResult.Success;
+                                            break;
                                         }
-
-                                        continue;
+                                    }
+                                }
+                                // ???
+                                else if (v0 == 'u')
+                                {
+                                    store_chunk();
+                                }
+                                else if (v0 == '$')
+                                {
+                                    // video-related?
+                                    if (get_byte(1) == 'V')
+                                    {
+                                        store_chunk();
                                     }
                                 }
                                 else
                                 {
-                                    if (v0 > 0x60)
-                                    {
-                                        if (v0 == 0x75)
-                                        {
-                                            store_chunk();
-                                            continue;
-                                        }
-                                        else
-                                        {
-                                            skip_chunk();
-                                            continue;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (v0 == 0x24)
-                                        {
-                                            if (get_byte(1) == 0x56)
-                                            {
-                                                store_chunk();
-                                                continue;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            skip_chunk();
-                                            continue;
-                                        }
-                                    }
+                                    skip_chunk();
                                 }
                             }
-
-                            if (cmd == 0x56
-                                || cmd == (audsrc + 0x41)
-                                || cmd == (audsrc + 0x61))
+                            // audio track
+                            else if(cmd == (audsrc + 'A') || cmd == (audsrc + 'a'))
                             {
-                                read_buffer(chunk);
+                                store_block(0, chunk);
+                            }
+                            // video track
+                            else if (cmd == 'V')
+                            {
+                                store_block(1, chunk);
                             }
                             else
                             {
-                                advance_buffer(chunk);
+                                skip_block(chunk);
                             }
                         }
                         
-                        var buffer = new byte[numBlocks * a_chsz]; // ¯\_(ツ)_/¯
-                        var bufPtr = 0;
-
-                        var blockSize = (a_chsz >> 1);
-                        var channelSize = (blockSize >> 1);
-
-                        var readBlock = new Action<byte[], int, int>((buf, offset, ch) => {
-                            fs.Position = offset;
-                            fs.Read(buf, 0, blockSize);
-                        });
+                        var nBlocksAudio = blockCounts[0];
+                        var nBlocksVideo = blockCounts[1];
                         
-                        var midpointInterp = new Func<int, int, int>((a, b) => {
-                            var result = b;
-
-                            if (b > (a - 1))
-                                result = (b - ((b - a) / 2));
-                            if (a > (b - 1))
-                                result = (a - ((a - b) / 2));
-
-                            return result;
-                        });
-
-                        var clampIt = new Func<int, int, int, int>((v, min, max) => {
-                            if (v > max)
-                                return max;
-                            if (v < min)
-                                return min;
-
-                            return v;
-                        });
-
-                        var interpolateSamples = new Func<int, int, int>((s1, s2) => {
-                            var sampleMask = 0xFFFF;
-
-                            // split into 2 shorts
-                            var s1L = (short)(s1 & sampleMask);
-                            var s1R = (short)((s1 >> 16) & sampleMask);
-
-                            var s2L = (short)(s2 & sampleMask);
-                            var s2R = (short)((s2 >> 16) & sampleMask);
-
-                            var sIL = midpointInterp(s1L, s2L);
-                            var sIR = midpointInterp(s1R, s2R);
-
-                            return (sIL + (sIR << 16));
-                        });
-
-                        Console.WriteLine("> Processing audio data...");
-
-                        for (int i = 0; i < numBlocks; i++)
+                        if (nBlocksAudio > 0)
                         {
-                            var block = new byte[blockSize];
-                            readBlock(block, blockPtrs[i], 0);
-                            
-                            fixed (byte *b = block)
-                            fixed (byte* r = buffer)
+                            Console.WriteLine("> Processing audio data...");
+
+                            var buffer = new byte[nBlocksAudio * a_chsz];
+                            var bufPtr = 0;
+
+                            var blockSize = (a_chsz >> 1);
+                            var channelSize = (blockSize >> 1);
+
+                            for (int i = 0; i < nBlocksAudio; i++)
                             {
-                                var idx = 0;
-                            
-                                for (int k = 0; k < (channelSize >> 1); k += 2)
+                                var block = new byte[blockSize];
+
+                                fs.Position = blockPtrs[0][i];
+                                fs.Read(block, 0, blockSize);
+
+                                fixed (byte* b = block)
+                                fixed (byte* r = buffer)
                                 {
-                                    var offset = bufPtr + (idx * 2);
-                            
-                                    var ch_l = *(short*)(b + k);
-                                    var ch_r = *(short*)(b + k + channelSize);
-                            
-                                    *(short*)(r + offset) = ch_l;
-                                    *(short*)(r + offset + 2) = ch_l;
-                                    *(short*)(r + offset + 4) = ch_l;
-                                    *(short*)(r + offset + 6) = ch_l;
-                                    
-                                    idx += 4;
+                                    var idx = 0;
+
+                                    for (int k = 0; k < (channelSize >> 1); k += 2)
+                                    {
+                                        var offset = bufPtr + (idx * 2);
+
+                                        var ch_l = *(short*)(b + k);
+                                        var ch_r = *(short*)(b + k + channelSize);
+
+                                        *(short*)(r + offset) = ch_l;
+                                        *(short*)(r + offset + 2) = ch_l;
+                                        *(short*)(r + offset + 4) = ch_l;
+                                        *(short*)(r + offset + 6) = ch_l;
+
+                                        idx += 4;
+                                    }
+
+                                    idx = 0;
+
+                                    for (int k = 0; k < (channelSize >> 1); k += 2)
+                                    {
+                                        var offset = bufPtr + (idx * 2) + blockSize;
+
+                                        var ch_l = *(short*)(b + k);
+                                        var ch_r = *(short*)(b + k + channelSize);
+
+                                        *(short*)(r + offset) = ch_r;
+                                        *(short*)(r + offset + 2) = ch_r;
+                                        *(short*)(r + offset + 4) = ch_r;
+                                        *(short*)(r + offset + 6) = ch_r;
+
+                                        idx += 4;
+                                    }
                                 }
 
-                                idx = 0;
-
-                                for (int k = 0; k < (channelSize >> 1); k += 2)
-                                {
-                                    var offset = bufPtr + (idx * 2) + blockSize;
-
-                                    var ch_l = *(short*)(b + k);
-                                    var ch_r = *(short*)(b + k + channelSize);
-
-                                    *(short*)(r + offset) = ch_r;
-                                    *(short*)(r + offset + 2) = ch_r;
-                                    *(short*)(r + offset + 4) = ch_r;
-                                    *(short*)(r + offset + 6) = ch_r;
-
-                                    idx += 4;
-                                }
+                                bufPtr += a_chsz;
                             }
-                            
-                            bufPtr += a_chsz;
+
+                            var dumpName = $"{Path.GetFileNameWithoutExtension(Config.Input)}_{audidx:D2}.wav";
+                            var dumpPath = Path.Combine(Path.GetDirectoryName(Config.Input), dumpName);
+
+                            Console.WriteLine($">> Saving to '{dumpPath}'...");
+
+                            using (var f = File.Open(dumpPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                            {
+                                var fmtChunk = new AudioFormatChunk(2, 48000);
+                                f.WriteRIFF(buffer, fmtChunk);
+                            }
                         }
 
-                        var dumpName = $"{Path.GetFileNameWithoutExtension(Config.Input)}_{audidx:D2}.wav";
-                        var dumpPath = Path.Combine(Path.GetDirectoryName(Config.Input), dumpName);
-
-                        Console.WriteLine($"> Saving to '{dumpPath}'...");
-
-                        using (var f = File.Open(dumpPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        if ((nBlocksVideo > 0) && Config.HasArg("woah"))
                         {
-                            var fmtChunk = new AudioFormatChunk(2, 48000);
-                            f.WriteRIFF(buffer, fmtChunk);
+                            Console.WriteLine($"> WOAH!!! {nBlocksAudio} audio / {nBlocksVideo} video blocks and {nChunks} chunks.");
+                            Console.WriteLine("> Dumping video data...");
+
+                            var dumpName = $"{Path.GetFileNameWithoutExtension(Config.Input)}_dump.bin";
+                            var dumpPath = Path.Combine(Path.GetDirectoryName(Config.Input), dumpName);
+
+                            using (var f = File.Open(dumpPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                            {
+                                f.Write((int)((MagicNumber)"WOAH"));
+
+                                f.Write((short)width);
+                                f.Write((short)height);
+
+                                f.Write(frames);
+
+                                f.Write((short)audstr);
+                                f.Write((short)type);
+
+                                f.Write(v_chsz);
+                                f.Write(a_chsz);
+
+                                f.Write(nBlocksAudio);
+                                f.Write(nBlocksVideo);
+
+                                var tA = 0;
+                                var tV = 0;
+
+                                for (int i = 0; i < chunks.Length; i++)
+                                {
+                                    var chk = chunks[i];
+
+                                    if (chk == null)
+                                        break;
+                                    if ((chk[0] == -1) && (chk[1] == -1))
+                                        continue;
+
+                                    var nA = chk[0];
+                                    var nV = chk[1];
+
+                                    f.Write(i);
+                                    f.Write(nA - tA);
+                                    f.Write(nV - tV);
+                                    
+                                    tA = nA;
+                                    tV = nV;
+                                }
+
+                                f.Write((int)MagicNumber.FIREBIRD);
+                                
+                                var buffer = new byte[nBlocksVideo * v_chsz];
+                                var bufPtr = 0;
+
+                                for (int i = 0; i < nBlocksVideo; i++)
+                                {
+                                    fs.Position = (blockPtrs[1][i] - 4);
+                                    var size = ((fs.ReadInt32() >> 8) & 0xFFFFFF);
+
+                                    var block = new byte[size];
+                                    fs.Read(block, 0, size);
+
+                                    Buffer.BlockCopy(block, 0, buffer, bufPtr, size);
+                                    bufPtr += v_chsz;
+                                }
+
+                                f.Write((int)((MagicNumber)"vvvv"));
+                                f.Write(buffer.Length);
+                                f.Write(buffer, 0, buffer.Length);
+
+                                f.Write((int)((MagicNumber)"xxxx"));
+                            }
                         }
                     } break;
                 default:
