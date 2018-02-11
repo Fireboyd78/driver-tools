@@ -17,6 +17,8 @@ namespace Audiose
         BinaryData,
         Xml,
 
+        Bin, // D2 music
+
         Blk, // PS1 block data
         Sbk, // PS1 soundbank data
 
@@ -181,6 +183,8 @@ namespace Audiose
                 return FileType.Xml;
 
             // PS1 sounds
+            case ".bin":
+                return FileType.Bin;
             case ".blk":
                 return FileType.Blk;
             case ".sbk":

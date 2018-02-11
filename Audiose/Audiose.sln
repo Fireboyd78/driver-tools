@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Audiose", "Audiose.csproj", "{5E52B58E-EF54-4DB6-8A4B-F7B5779AEA9F}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -20,12 +20,15 @@ Global
 		{5E52B58E-EF54-4DB6-8A4B-F7B5779AEA9F}.Debug|Any CPU.Build.0 = Debug|x86
 		{5E52B58E-EF54-4DB6-8A4B-F7B5779AEA9F}.Release|Any CPU.ActiveCfg = Release|x86
 		{5E52B58E-EF54-4DB6-8A4B-F7B5779AEA9F}.Release|Any CPU.Build.0 = Release|x86
-		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.ActiveCfg = Release|x86
-		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.Build.0 = Release|x86
+		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Debug|Any CPU.Build.0 = Debug|x86
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Release|Any CPU.ActiveCfg = Release|x86
 		{09C8AA4A-AFB8-4BDB-866B-B8C88D48D9EB}.Release|Any CPU.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B6D21B7C-E4A3-4224-9886-348C4C860577}
 	EndGlobalSection
 EndGlobal

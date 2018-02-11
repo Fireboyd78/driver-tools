@@ -298,7 +298,399 @@ namespace Audiose
                 if (String.IsNullOrEmpty(Config.OutDir))
                     Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), $"{Path.GetFileNameWithoutExtension(Config.Input)}_Data");
 
-                ps1.DumpAllBanks(Config.OutDir);
+                ps1.DumpBanks(Config.OutDir);
+            }
+
+            return ParseResult.Success;
+        }
+
+        static unsafe ParseResult ParseDriver2Music()
+        {
+            if (Config.Extract)
+            {
+                Console.WriteLine("'Extract' argument is invalid for Driver 2 music data.");
+                return ParseResult.Failure;
+            }
+
+            if (Config.Compile)
+            {
+                Console.WriteLine("Cannot compile Driver 2 music data, operation unsupported.");
+                return ParseResult.Failure;
+            }
+            
+            using (var fs = File.Open(Config.Input, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                // since there's no magic numbers,
+                // we gotta make absolutely sure this is data we can parse!
+                var check = fs.ReadInt32();
+                var count = (check >> 3);
+
+                fs.Seek(0, SeekOrigin.End);
+
+                var size = (int)fs.Position;
+
+                if (((count * 8) + 4) != check)
+                {
+                    Console.WriteLine("Sorry, this doesn't seem to be a valid Driver 2 music file.");
+                    return ParseResult.Failure;
+                }
+
+                // validate file size (after offset list)
+                fs.Position = (count * 8);
+
+                if (fs.ReadInt32() > size)
+                {
+                    Console.WriteLine("Possibly corrupt Driver 2 music data (file size mismatch).");
+                    return ParseResult.Failure;
+                }
+
+                if (String.IsNullOrEmpty(Config.OutDir))
+                    Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), $"{Path.GetFileNameWithoutExtension(Config.Input)}_Data");
+
+                if (!Directory.Exists(Config.OutDir))
+                    Directory.CreateDirectory(Config.OutDir);
+
+                var bankFile = new PS1BankFile();
+
+                bankFile.Type = PS1BankType.Single;
+                bankFile.Banks = new List<SoundBank>(count);
+                
+                // if all's checked out so far, now we can load the data safely :)
+                for (int i = 0; i < count; i++)
+                {
+                    // offset into the list
+                    fs.Position = (i * 8);
+                    
+                    var moduleOffset = fs.ReadInt32();
+                    var moduleSize = 0;
+
+                    var bankOffset = fs.ReadInt32();
+                    var bankSize = 0;
+
+                    // use the next entry to calculate the bank size
+                    // on the last entry, this will be the file size
+                    var nextOffset = fs.ReadInt32();
+
+                    moduleSize = (bankOffset - moduleOffset);
+                    bankSize = (nextOffset - bankOffset);
+
+                    // dump module
+                    var moduleBuffer = new byte[moduleSize];
+                    
+                    var moduleFile = Path.Combine("Modules", $"{i:D2}", "mod.xm");
+                    var moduleDir = Path.Combine(Config.OutDir, Path.GetDirectoryName(moduleFile));
+                    var modulePath = Path.Combine(Config.OutDir, moduleFile);
+
+                    if (!Directory.Exists(moduleDir))
+                        Directory.CreateDirectory(moduleDir);
+
+                    // read bank
+                    fs.Position = bankOffset;
+
+                    bankFile.LoadBinary(fs, i);
+
+                    var bank = bankFile.Banks[i];
+
+                    // read module
+                    fs.Position = moduleOffset;
+                    fs.Read(moduleBuffer, 0, moduleSize);
+                    
+                    var newBuffer = new byte[moduleSize * 2];
+                    var jpOffset = 0x150;
+
+                    Buffer.BlockCopy(moduleBuffer, 0, newBuffer, 0, 0x150);
+
+                    fixed (byte *pBuffer = newBuffer)
+                    fixed (byte* m = moduleBuffer)
+                    {
+                        Console.WriteLine($"Parsing module {i + 1} / {count}...");
+                        if (*(ushort*)(m + 0x3A) == 0xDDBA)
+                            *(ushort*)(m + 0x3A) = 0x104;
+                        
+                        var offset = (m + 0x3C);
+
+                        var numChannels = *(short*)(m + 0x44);
+                        var numPatterns = *(short*)(m + 0x46);
+                        var numInstruments = *(short*)(m + 0x48);
+
+                        offset += *(int*)(offset);
+                        
+                        for (int p = 0; p < numPatterns; p++)
+                        {
+                            var dataOffset = *(int*)(offset);
+                            var dataSize = *(short*)(offset + 7);
+
+                            var numRows = *(short*)(offset + 5);
+
+                            var dataPtr = offset + dataOffset;
+                            var dataNext = (dataOffset + dataSize);
+                            
+                            var rowPtrs = new short[numRows][];
+
+                            for (int r = 0; r < numRows; r++)
+                                rowPtrs[r] = new short[numChannels];
+
+                            var ptr = 0;
+                            var row = 0;
+
+                            var bufSize = 0; // accumlative size of all data
+
+                            while (row < numRows)
+                            {
+                                do
+                                {
+                                    var ch = *(dataPtr + ptr++); // + increment pointer past channel byte
+                                    var cs = 1;
+
+                                    if (ch != 0xFF)
+                                    {
+                                        if (ch > numChannels)
+                                        {
+                                            Console.WriteLine($"> [{(dataPtr + ptr) - m:X8}] pattern {p}, row {row} tried accessing channel {ch} -- SKIPPING...");
+                                        }
+                                        else
+                                        {
+                                            rowPtrs[row][ch] = (short)ptr;
+                                        }
+
+                                        var cur = *(dataPtr + ptr);
+
+                                        if ((cur & 0x80) != 0)
+                                        {
+                                            for (int k = 0; k < 5; k++)
+                                            {
+                                                if ((cur & (1 << k)) != 0)
+                                                    cs += 1;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // full note
+                                            cs = 5;
+                                        }
+
+                                        ptr += cs;
+                                    }
+
+                                    bufSize += cs;
+                                } while (*(dataPtr + ptr) != 0xFF);
+
+                                // next row
+                                ++row;
+                            }
+
+                            var buffer = new byte[bufSize * 4];
+                            var bufPtr = 0;
+
+                            fixed (byte* b = buffer)
+                            {
+                                for (int r = 0; r < numRows; r++)
+                                {
+                                    for (int ch = 0; ch < numChannels; ch++)
+                                    {
+                                        var pO = rowPtrs[r][ch];
+                                        
+                                        if (pO != 0)
+                                        {
+                                            var pCur = (dataPtr + pO);
+                                            
+                                            if ((*pCur & 0x80) != 0)
+                                            {
+                                                *(b + bufPtr++) = *pCur; // copy first byte
+
+                                                var cur = *pCur++;
+                                                
+                                                // packed parameter(s)
+                                                for (int k = 0; k < 5; k++)
+                                                {
+                                                    if ((cur & (1 << k)) != 0)
+                                                        *(b + bufPtr++) = *pCur++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // full pattern
+                                                for (int k = 0; k < 5; k++)
+                                                    *(b + bufPtr++) = *pCur++;
+                                            }
+                                        }
+                                        // this channel is empty
+                                        else
+                                        {
+                                            *(b + bufPtr++) = 0x80;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // copy pattern header
+                            Buffer.BlockCopy(moduleBuffer, (int)(offset - m), newBuffer, jpOffset, dataOffset);
+
+                            // adjust size in header
+                            *(short*)(pBuffer + jpOffset + 7) = (short)bufPtr;
+                            
+                            jpOffset += dataOffset;
+
+                            // copy pattern bytes
+                            Buffer.BlockCopy(buffer, 0, newBuffer, jpOffset, bufPtr);
+                            jpOffset += bufPtr;
+                            
+                            offset += dataNext;
+                        }
+
+                        // fix version
+                        *(ushort*)(pBuffer + 0x3A) = 0x104;
+
+                        // append the rest of the data
+                        var curOffset = (int)(offset - m);
+                        var curSize = (moduleSize - curOffset);
+
+                        var instBuffer = new byte[curSize];
+                        var instSize = 0; // new size
+
+                        Buffer.BlockCopy(moduleBuffer, curOffset, instBuffer, 0, curSize);
+
+                        // calculate size of sample buffers
+                        foreach (var sample in bank.Samples)
+                            instSize += (sample.Buffer.Length + 0x12F);
+
+                        var result = new byte[moduleSize + instSize];
+
+                        Buffer.BlockCopy(newBuffer, 0, result, 0, jpOffset);
+                        
+                        fixed (byte* pI = instBuffer)
+                        {
+                            var iP = 0;
+
+                            for (int n = 0; n < numInstruments; n++)
+                            {
+                                var iS = *(int*)(pI + iP);
+                                var iN = (sbyte*)(pI + (iP + 4));
+
+                                var instName = new string(iN, 0, 22).TrimEnd('\0');
+                                var numSamples = *(short*)(pI + (iP + 0x1B));
+
+                                // copy instrument
+                                Buffer.BlockCopy(instBuffer, iP, result, jpOffset, iS);
+                                jpOffset += iS;
+                                
+                                if (numSamples > 0)
+                                {
+                                    var sO = (iP + iS);
+                                    var sS = *(int*)(pI + (iP + 0x1D));
+                                    var sN = (sbyte*)(pI + (sO + 0x11));
+
+                                    var sampleName = new string((sN + 1), 0, *sN).TrimEnd(' ');
+
+                                    if (!String.IsNullOrEmpty(sampleName))
+                                    {
+                                        var sample = bank.Samples[n];
+                                        var sampleBuf = SampleLoader.LoadSample16Bit(sample.Buffer);
+                                        var sampleLen = sampleBuf.Length;
+
+                                        // adjust sample length
+                                        *(int*)(pI + sO) = sampleLen;
+
+                                        // copy sample header
+                                        Buffer.BlockCopy(instBuffer, (iP + iS), result, jpOffset, sS);
+                                        jpOffset += sS;
+
+                                        // copy sample buffer
+                                        Buffer.BlockCopy(sampleBuf, 0, result, jpOffset, sampleLen);
+                                        jpOffset += sampleLen;
+                                    }
+                                    else
+                                    {
+                                        // sample header only
+                                        Buffer.BlockCopy(instBuffer, (iP + iS), result, jpOffset, sS);
+                                        jpOffset += sS;
+                                    }
+
+                                    // advance to next instrument
+                                    iP += (iS + sS);
+                                }
+                                else
+                                {
+                                    // no samples to copy
+                                    iP += iS;
+                                }
+                            }
+                        }
+                        
+                        File.WriteAllBytes(modulePath, result);
+                    }
+                }
+
+                var xmlDoc = new XmlDocument();
+                var xmlRoot = xmlDoc.CreateElement("PS1MusicDatabase");
+
+                xmlRoot.SetAttribute("Version", "2"); // Driver 2
+
+                for (int i = 0; i < count; i++)
+                {
+                    var moduleXml = xmlDoc.CreateElement("MusicModule");
+
+                    var moduleFile = Path.Combine("Modules", $"{i:D2}", "mod.xm");
+                    var moduleDir = Path.GetDirectoryName(moduleFile);
+                    var modulePath = Path.Combine(Config.OutDir, moduleFile);
+
+                    moduleXml.SetAttribute("Index", $"{i:D}");
+                    moduleXml.SetAttribute("File", moduleFile);
+
+                    var bank = bankFile.Banks[i];
+
+                    // load the module ;)
+                    var module = new XMFile();
+                    module.LoadBinary(modulePath);
+
+                    for (int k = 0; k < bank.Samples.Count; k++)
+                    {
+                        var sample = bank.Samples[k];
+                        var instrument = module.Detail.Instruments[k];
+
+                        var smpXml = xmlDoc.CreateElement("Instrument");
+                        var smpName = instrument.Name.TrimEnd(' ');
+
+                        if (!String.IsNullOrEmpty(smpName))
+                            smpXml.SetAttribute("Name", smpName);
+
+                        if (instrument.NumSamples > 0)
+                        {
+                            var instSample = instrument.Samples[0];
+                            var sampleFile = instSample.SampleName.TrimEnd(' ');
+
+                            // make a quick adjustment to the name
+                            if (!String.IsNullOrEmpty(sampleFile))
+                            {
+                                var sampleName = Path.GetFileNameWithoutExtension(sampleFile);
+
+                                sample.FileName = $"{sampleName}.wav";
+                            }
+
+                            smpXml.AddAttribute("File", sample.FileName);
+                        }
+                        else
+                        {
+                            var sampleDir = Path.GetDirectoryName(sample.FileName);
+                            var sampleName = Path.GetFileNameWithoutExtension(sample.FileName);
+
+                            sample.FileName = $"{sampleName}(null).wav";
+                        }
+
+                        sample.FileName = Path.Combine(moduleDir, "Samples", Path.GetFileName(sample.FileName));
+
+                        sample.Serialize(smpXml);
+
+                        moduleXml.AppendChild(smpXml);
+                    }
+
+                    xmlRoot.AppendChild(moduleXml);
+                }
+
+                xmlDoc.AppendChild(xmlRoot);
+                xmlDoc.Save(Path.Combine(Config.OutDir, "config.xml"));
+
+                bankFile.SaveSounds(Config.OutDir);
             }
 
             return ParseResult.Success;
@@ -968,6 +1360,8 @@ namespace Audiose
             case FileType.Blk:
             case FileType.Sbk:
                 return ParseDataPS1();
+            case FileType.Bin:
+                return ParseDriver2Music();
             case FileType.Xa:
                 return ParseXA();
             }

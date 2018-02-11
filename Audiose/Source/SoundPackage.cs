@@ -598,8 +598,10 @@ namespace Audiose
         void Deserialize(T output);
     }
 
-    public class SoundBank : ISerializer<XmlDocument>
+    public class SoundBank : ISerializer<XmlNode>
     {
+        public string SubDirectory { get; set; }
+
         public int Index { get; set; }
 
         public bool IsNull
@@ -609,40 +611,56 @@ namespace Audiose
         
         public List<SoundSample> Samples { get; set; }
 
-        public void Serialize(XmlDocument xml)
+        public void Serialize(XmlNode xml)
         {
-            var bank = xml.CreateElement("SoundBank");
-            bank.SetAttribute("Index", $"{Index:D}");
+            var xmlDoc = (xml as XmlDocument) ?? xml.OwnerDocument;
+            var elem = (xml as XmlElement);
 
-            if (!IsNull)
+            if (elem == null)
+            {
+                var bankXml = xmlDoc.CreateElement("SoundBank");
+
+                bankXml.SetAttribute("Index", $"{Index:D}");
+
+                Serialize(bankXml);
+                xml.AppendChild(bankXml);
+            }
+            else if (!IsNull)
             {
                 foreach (var sample in Samples)
-                    sample.Serialize(bank);
+                {
+                    var smpXml = xmlDoc.CreateElement("Sample");
+                    var smpFile = sample.FileName;
+                    
+                    smpXml.SetAttribute("File", smpFile);
+
+                    sample.Serialize(smpXml);
+                    elem.AppendChild(smpXml);
+                }
             }
-            
-            xml.AppendChild(bank);
         }
 
-        public void Deserialize(XmlDocument xml)
+        public void Deserialize(XmlNode xml)
         {
-            var elem = xml.DocumentElement;
+            foreach (XmlAttribute attr in xml.Attributes)
+            {
+                var value = attr.Value;
 
-            if ((elem == null) || (elem.Name != "SoundBank"))
-                throw new InvalidOperationException("Not a SoundBank node!");
-
-            var index = elem.GetAttribute("Index");
-
-            if (String.IsNullOrEmpty(index))
-                throw new XmlException("Malformed SoundBank XML data, cannot determine the index!");
-
-            Index = int.Parse(index);
+                switch (attr.Name)
+                {
+                case "Index":
+                    Index = int.Parse(value);
+                    break;
+                }
+            }
+            
             Samples = new List<SoundSample>();
 
-            foreach (var node in elem.ChildNodes.OfType<XmlElement>())
+            foreach (var node in xml.ChildNodes.OfType<XmlElement>())
             {
                 var sample = new SoundSample();
                 sample.Deserialize(node);
-
+                
                 Samples.Add(sample);
             }
         }
@@ -673,28 +691,32 @@ namespace Audiose
         public void Serialize(XmlNode xml)
         {
             var xmlDoc = (xml as XmlDocument) ?? xml.OwnerDocument;
-            var elem = xmlDoc.CreateElement("Sample");
+            var elem = (xml as XmlElement);
 
-            elem.SetAttribute("File", FileName);
-
-            elem.SetAttribute("NumChannels", $"{NumChannels:D}");
-            elem.SetAttribute("SampleRate", $"{SampleRate:D}");
-
-            if (!IsPS1Format)
+            if (elem == null)
             {
-                elem.SetAttribute("Flags", $"{Flags:D}");
-                elem.SetAttribute("Unk1", $"{Unknown1:D}");
-                elem.SetAttribute("Unk2", $"{Unknown2:D}");
-            }
+                elem = xmlDoc.CreateElement("Sample");
+                elem.SetAttribute("File", FileName);
 
-            xml.AppendChild(elem);
+                Serialize(elem);
+                xml.AppendChild(elem);
+            }
+            else
+            {
+                elem.SetAttribute("NumChannels", $"{NumChannels:D}");
+                elem.SetAttribute("SampleRate", $"{SampleRate:D}");
+
+                if (!IsPS1Format)
+                {
+                    elem.SetAttribute("Flags", $"{Flags:D}");
+                    elem.SetAttribute("Unk1", $"{Unknown1:D}");
+                    elem.SetAttribute("Unk2", $"{Unknown2:D}");
+                }
+            }
         }
 
         public void Deserialize(XmlNode xml)
         {
-            if (xml.Name != "Sample")
-                throw new InvalidOperationException("Not a Sample node!");
-
             foreach (XmlAttribute attr in xml.Attributes)
             {
                 var value = attr.Value;
@@ -718,9 +740,6 @@ namespace Audiose
                     break;
                 case "Unk2":
                     Unknown2 = int.Parse(value);
-                    break;
-                default:
-                    Console.WriteLine($">> Unknown attribute '{attr.Name}', skipping...");
                     break;
                 }
             }
@@ -746,10 +765,7 @@ namespace Audiose
             for (int i = 0; i < Banks.Count; i++)
             {
                 var bank = Banks[i];
-                var bankName = $"{i:D2}";
-                var bankPath = Path.Combine("Banks", bankName);
-
-                var bankDir = Path.Combine(outDir, bankPath);
+                var bankDir = Path.Combine(outDir, bank.SubDirectory);
                 
                 if (!Directory.Exists(bankDir))
                     Directory.CreateDirectory(bankDir);
@@ -769,6 +785,11 @@ namespace Audiose
                         var sample = bank.Samples[s];
                         var sampleFile = Path.Combine(bankDir, sample.FileName);
 
+                        var sampleDir = Path.GetDirectoryName(sampleFile);
+
+                        if (!Directory.Exists(sampleDir))
+                            Directory.CreateDirectory(sampleDir);
+
                         using (var fs = File.Open(sampleFile, FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             var fmtChunk = (AudioFormatChunk)sample;
@@ -782,7 +803,7 @@ namespace Audiose
                 var bankElem = gsdXml.CreateElement("SoundBank");
                 
                 bankElem.SetAttribute("Index", $"{i:D}");
-                bankElem.SetAttribute("File", Path.Combine(bankPath, "bank.xml"));
+                bankElem.SetAttribute("File", Path.Combine(bank.SubDirectory, "bank.xml"));
 
                 gsdElem.AppendChild(bankElem);
             }
@@ -815,30 +836,44 @@ namespace Audiose
             
             foreach (var node in gsdElem.ChildNodes.OfType<XmlElement>())
             {
+                var bank = new SoundBank();
+                
                 if (node.Name != "SoundBank")
                     throw new InvalidOperationException($"What the hell do I do with a '{node.Name}' element?!");
-                
+
                 var index = node.GetAttribute("Index");
                 var file = node.GetAttribute("File");
 
-                if (String.IsNullOrEmpty(file))
-                    throw new InvalidOperationException("Cannot parse embedded or empty SoundBank nodes!");
-
-                var bankDir = Path.GetDirectoryName(file);
-                var bankFile = Path.Combine(root, file);
+                if (String.IsNullOrEmpty(index))
+                    throw new InvalidOperationException("Cannot process a SoundBank node without an index!");
 
                 var bankIdx = int.Parse(index);
-                
-                if (!File.Exists(bankFile))
-                    throw new InvalidOperationException($"SoundBank file '{bankFile}' is missing!");
+                var isRef = false;
 
-                var bankXml = new XmlDocument();
-                bankXml.Load(bankFile);
+                if (!String.IsNullOrEmpty(file))
+                {
+                    var bankDir = Path.GetDirectoryName(file);
+                    var bankFile = Path.Combine(root, file);
 
-                var bank = new SoundBank();
-                bank.Deserialize(bankXml);
+                    if (!File.Exists(bankFile))
+                        throw new InvalidOperationException($"SoundBank file '{bankFile}' is missing!");
 
-                if (bank.Index != bankIdx)
+                    var bankXml = new XmlDocument();
+                    bankXml.Load(bankFile);
+
+                    bank.SubDirectory = bankDir;
+                    bank.Deserialize(bankXml);
+
+                    if (bank.Index != bankIdx)
+                        isRef = true;
+                }
+                else
+                {
+                    bank.Index = bankIdx;
+                    bank.Deserialize(node);
+                }
+
+                if (isRef)
                 {
                     if (!bank.IsNull)
                     {
@@ -852,7 +887,7 @@ namespace Audiose
                     // fill sample buffers
                     foreach (var sample in bank.Samples)
                     {
-                        var sampleFile = Path.Combine(root, bankDir, sample.FileName);
+                        var sampleFile = Path.Combine(root, bank.SubDirectory, sample.FileName);
 
                         using (var fs = File.Open(sampleFile, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
@@ -875,7 +910,7 @@ namespace Audiose
                             else
                             {
                                 throw new InvalidOperationException("Holy shit, what have you done to this WAV file?!");
-                            }           
+                            }
                         }
                     }
                 }
@@ -957,9 +992,10 @@ namespace Audiose
                         bankDetail = info3;
                         break;
                     }
-                    
+
                     var bank = new SoundBank() {
                         Index = i, // may be overridden by copy
+                        SubDirectory = Path.Combine("Banks", $"{i:D2}"),
                     };
 
                     bankDetail.CopyTo(bank);
@@ -1280,7 +1316,7 @@ namespace Audiose
                                             //  which doesn't exist in some cases)
 
                 var sample = new SoundSample() {
-                    FileName = $"{i:D2}.wav",
+                    FileName = Path.Combine("Sounds", $"{index:D2}_{i:D2}.wav"),
 
                     NumChannels = 1,
                     SampleRate = sampleInfo.SampleRate,
@@ -1296,12 +1332,25 @@ namespace Audiose
                 stream.Position = sampleInfo.Offset;
                 stream.Read(buffer, 0, buffer.Length);
 
-                var sampler = new SamplerData();
-
-                sample.Buffer = VAG.DecodeSound(buffer, sampler);
+                sample.Buffer = VAG.DecodeSound(buffer);
             }
 
             return bank;
+        }
+
+        public void LoadBinary(Stream stream, int bankIndex)
+        {
+            if (Type == PS1BankType.Invalid)
+                throw new InvalidOperationException("Bank type must be specified before loading binary data.");
+            if (Type == PS1BankType.Multiple)
+                throw new InvalidOperationException("What are you doing?!");
+            if ((Banks == null) || (bankIndex > Banks.Count))
+                throw new ArgumentOutOfRangeException("Not enough space to load a new bank!");
+
+            var baseOffset = (int)stream.Position;
+            
+            var bank = ReadSoundBank(stream, bankIndex, baseOffset);
+            Banks.Insert(bankIndex, bank);
         }
 
         public void LoadBinary(Stream stream)
@@ -1309,13 +1358,15 @@ namespace Audiose
             if (Type == PS1BankType.Invalid)
                 throw new InvalidOperationException("Bank type must be specified before loading binary data.");
 
+            var baseOffset = (int)stream.Position;
+
             Banks = new List<SoundBank>();
 
             switch (Type)
             {
             case PS1BankType.Single:
                 {
-                    var bank = ReadSoundBank(stream, 0, 0);
+                    var bank = ReadSoundBank(stream, 0, baseOffset);
                     Banks.Add(bank);
                 } break;
             case PS1BankType.Multiple:
@@ -1344,62 +1395,76 @@ namespace Audiose
             }
         }
 
-        public void DumpAllBanks(string outDir)
+        public void SaveXml(XmlNode xml)
         {
-            var xml = new XmlDocument();
+            var xmlDoc = (xml as XmlDocument) ?? xml.OwnerDocument;
+            var elem = (xml as XmlElement);
 
-            var cmt = xml.CreateComment("For reference purposes only");
-            xml.AppendChild(cmt);
+            if (elem == null)
+            {
+                var xmlRoot = xmlDoc.CreateElement("GameSoundDatabase_PS1");
 
-            var root = xml.CreateElement("PS1Banks");
+                xmlRoot.SetAttribute("Type", $"{(int)Type}");
+                SaveXml(xmlRoot);
 
-            root.SetAttribute("Type", $"{Type:D}");
+                xmlDoc.AppendChild(xmlRoot);
+            }
+            else
+            {
+                for (int i = 0; i < Banks.Count; i++)
+                {
+                    var bank = Banks[i];
+                    var bankXml = xmlDoc.CreateElement("SoundBank");
+
+                    bankXml.SetAttribute("Index", $"{i:D}");
+
+                    bank.Serialize(bankXml);
+
+                    xml.AppendChild(bankXml);
+                }
+            }
+        }
+
+        public void SaveSounds(string outDir)
+        {
+            if (!Directory.Exists(outDir))
+                Directory.CreateDirectory(outDir);
 
             for (int i = 0; i < Banks.Count; i++)
             {
                 var bank = Banks[i];
-                var bankName = $"{i:D2}";
-                var bankPath = Path.Combine("Banks", bankName);
-
-                var bankDir = Path.Combine(outDir, bankPath);
-
-                if (!Directory.Exists(bankDir))
-                    Directory.CreateDirectory(bankDir);
-
-                var xmlFile = Path.Combine(bankDir, "bank.xml");
-
-                // write bank xml
-                var bankXml = new XmlDocument();
-                bank.Serialize(bankXml);
-
-                bankXml.Save(xmlFile);
 
                 if (!bank.IsNull)
                 {
                     for (int s = 0; s < bank.Samples.Count; s++)
                     {
                         var sample = bank.Samples[s];
-                        var sampleFile = Path.Combine(bankDir, sample.FileName);
+                        var sampleFile = Path.Combine(outDir, sample.FileName);
+
+                        var sampleDir = Path.GetDirectoryName(sampleFile);
+
+                        if (!Directory.Exists(sampleDir))
+                            Directory.CreateDirectory(sampleDir);
 
                         using (var fs = File.Open(sampleFile, FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
                             var fmtChunk = (AudioFormatChunk)sample;
 
-                            RIFF.WriteRIFF(fs, sample.Buffer, true, fmtChunk);
+                            RIFF.WriteRIFF(fs, sample.Buffer, false, fmtChunk);
                         }
                     }
                 }
-
-                var bankElem = xml.CreateElement("SoundBank");
-
-                bankElem.SetAttribute("Index", $"{i:D}");
-                bankElem.SetAttribute("File", Path.Combine(bankPath, "bank.xml"));
-
-                root.AppendChild(bankElem);
             }
+        }
+
+        public void DumpBanks(string outDir)
+        {
+            var xml = new XmlDocument();
             
-            xml.AppendChild(root);
+            SaveXml(xml);
             xml.Save(Path.Combine(outDir, "config.xml"));
+
+            SaveSounds(outDir);
         }
     }
 }
