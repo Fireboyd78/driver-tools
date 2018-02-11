@@ -755,8 +755,10 @@ namespace DSCript.Models
 
                     var gCount = stream.ReadInt32();
 
-                    stream.Position += 0x8;
+                    stream.Position += 0x4;
 
+                    var unkCount = stream.ReadInt32();
+                    
                     partEntry.Type = stream.ReadInt32();
                     
                     // the rest is padding, but we calculate the position
@@ -765,6 +767,10 @@ namespace DSCript.Models
                     // nothing to see here, move along
                     if (gCount == 0)
                         continue;
+
+                    // TODO: figure out what this does (it's pretty important)
+                    //if (unkCount > 0)
+                    //    Console.WriteLine($"lod[{k}] unkCount: {unkCount}");
 
                     /* ------------------------------
                      * Read mesh groups
@@ -798,7 +804,8 @@ namespace DSCript.Models
 
                         var unk2 = stream.ReadInt32();
 
-                        //Console.WriteLine($"mGroup[{g}] unknown data: {unk1}, {unk2}");
+                        //if (unk1 > 0)
+                        //    Console.WriteLine($"> mGroup[{g}] unknown data: ({unk1}, {unk2})");
                         
                         partEntry.Groups.Add(mGroup);
                         MeshGroups.Add(mGroup);
