@@ -239,13 +239,17 @@ namespace DSCript.Models
             vBuffer.CreateVertices(buffer, count, length);
             return vBuffer;
         }
-
-        public void WriteTo(Stream stream)
+        
+        public void WriteTo(Stream stream, bool writeDeclInfo = false)
         {
-            stream.Write(Count);
-            stream.Write(Count * Declaration.SizeOf);
+            // not meant to be used in model package's
+            if (writeDeclInfo)
+            {
+                stream.Write(Count);
+                stream.Write(Count * Declaration.SizeOf);
 
-            Declaration.WriteTo(stream);
+                Declaration.WriteTo(stream);
+            }
 
             foreach (var vertex in Vertices)
                 stream.Write(vertex.Buffer);

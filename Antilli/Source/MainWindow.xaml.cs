@@ -614,7 +614,7 @@ namespace Antilli
 
                 // vertex buffers
                 foreach (var vBuf in vBuffers)
-                    vBuf.WriteTo(ms);
+                    vBuf.WriteTo(ms, true);
 
                 var texLookup = new Dictionary<int, int>();
                 var texLookupCount = 0;
