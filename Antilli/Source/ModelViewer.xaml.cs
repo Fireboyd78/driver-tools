@@ -57,6 +57,7 @@ namespace Antilli
         private ModelVisual3DGroup _selectedModel;
         private List<ModelVisual3DGroup> _visuals;
 
+        private bool _applyTransforms;
         private bool _useBlendWeights;
         private int m_lod;
         
@@ -69,6 +70,16 @@ namespace Antilli
                 m_lod = value;
 
                 OnLevelOfDetailChanged(oldLod);
+            }
+        }
+
+        public bool ApplyTransforms
+        {
+            get { return _applyTransforms; }
+            set
+            {
+                _applyTransforms = value;
+                UpdateActiveModel();
             }
         }
 
@@ -299,8 +310,43 @@ namespace Antilli
 
                 foreach (var group in partDef.Groups)
                 {
+                    var m1 = group.Transform[0];
+                    var m2 = group.Transform[1];
+                    var m3 = group.Transform[2];
+                    var m4 = group.Unknown;
+
+                    var mtx = new Matrix3D() {
+                        M11 = m1.X,
+                        M12 = m1.Y,
+                        M13 = m1.Z,
+                        M14 = m1.W,
+
+                        M21 = m2.X,
+                        M22 = m2.Y,
+                        M23 = m2.Z,
+                        M24 = m2.W,
+
+                        M31 = m3.X,
+                        M32 = m3.Y,
+                        M33 = m3.Z,
+                        M34 = m3.W,
+
+                        OffsetX = m4.X,
+                        OffsetY = m4.Y,
+                        OffsetZ = m4.Z,
+
+                        M44 = m4.W,
+                    };
+
                     foreach (var mesh in group.Meshes)
-                        meshes.Children.Add(new DriverModelVisual3D(mesh, UseBlendWeights));
+                    {
+                        var vis3d = new DriverModelVisual3D(mesh, UseBlendWeights);
+
+                        if (ApplyTransforms)
+                            vis3d.Transform = new MatrixTransform3D(mtx);
+
+                        meshes.Children.Add(vis3d);
+                    }
                 }
 
                 if (meshes.Children.Count > 0)
@@ -337,6 +383,11 @@ namespace Antilli
         {
             m_partsGroups = partsGroups;
             return UpdateActiveModel();
+        }
+
+        public void ToggleTransforms()
+        {
+            ApplyTransforms = !ApplyTransforms;
         }
         
         public void ToggleBlendWeights()

@@ -1,4 +1,4 @@
-﻿<at:AntilliWindow x:Class="Antilli.MainWindow" Title="Antilli" Width="925" MinWidth="925" Height="600" MinHeight="475"
+﻿<at:AntilliWindow x:Class="Antilli.MainWindow" Title="Antilli" Width="925" MinWidth="925" Height="720" MinHeight="475"
         Icon="pack://application:,,,/Antilli;component/Resources/Icons/Antilli.ico"
         
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -97,7 +97,7 @@
                     <Grid Grid.Column="0" Margin="5">
                         <Grid.RowDefinitions>
                             <RowDefinition/>
-                            <RowDefinition Height="90" MinHeight="90"/>
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.Resources>
                             <DataTemplate DataType="{x:Type dscm:ModelPackage}">
@@ -136,8 +136,10 @@
                                         <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"/>
                                     </StackPanel>
                                 </StackPanel>
+                                <CheckBox x:Name="ApplyTransform" Content="Apply Transforms" ToolTip="Enable/Disable the use of transforms being applied to models (if applicable). This will only affect models in the model viewer, not exported models."
+                                          Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                                 <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
-                                  Visibility="{Binding CanShowBlendWeights}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
+                                          Visibility="{Binding CanShowBlendWeights}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                             </StackPanel>
                         </GroupBox>
                     </Grid>

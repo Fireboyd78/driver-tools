@@ -1026,6 +1026,9 @@ namespace Antilli
             
             BlendWeights.Checked += (o, e) => Viewer.ToggleBlendWeights();
             BlendWeights.Unchecked += (o, e) => Viewer.ToggleBlendWeights();
+
+            ApplyTransform.Checked += (o, e) => Viewer.ToggleTransforms();
+            ApplyTransform.Unchecked += (o, e) => Viewer.ToggleTransforms();
             
             fileOpen.Click += (o, e) => OnFileOpenClick();
             
