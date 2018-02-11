@@ -1,0 +1,25 @@
+version: 1.8.4.{build}-{branch}
+image: Visual Studio 2017
+clone_folder: C:\Dev\Code\Projects\Driver Tools
+environment:
+  BUILD_LOGGER: '"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"'
+build_script:
+  - msbuild "Antilli\Antilli.sln" /logger:%BUILD_LOGGER%
+  - msbuild "DSCript\DScript.sln" /logger:%BUILD_LOGGER%
+  - msbuild "GMC2Snooper\GMC2Snooper.sln" /logger:%BUILD_LOGGER%
+  - msbuild "IMGRipper\IMGRipper.sln" /logger:%BUILD_LOGGER%
+  - msbuild "Zartex\Zartex.sln" /logger:%BUILD_LOGGER%
+  - msbuild "Audiose\Audiose.sln" /logger:%BUILD_LOGGER%
+artifacts:
+- path: Antilli\bin
+  name: Antilli
+- path: DScript\bin
+  name: libDSC
+- path: GMC2Snooper\bin
+  name: GMC2Snooper
+- path: IMGRipper\bin
+  name: IMGRipper
+- path: Zartex\bin
+  name: Zartex
+- path: Audiose\bin
+  name: Audiose
