@@ -752,13 +752,18 @@ namespace Antilli
             OnPropertyChanged("PartsGroups");
             m_deferSelectionChange = false;
 
-            if (CurrentModelPackage != null && CurrentModelFile.HasModels)
+            if (CurrentModelPackage != null && CurrentModelPackage.HasModels)
             {
                 Groups.SelectedIndex = 0;
             }
             else
             {
                 Groups.SelectedIndex = -1;
+
+                // make sure we completely reset...
+                // the whole UI system is a joke!
+                Viewer.RemoveActiveModel();
+                ResetLODButtons();
             }
         }
 
@@ -791,7 +796,9 @@ namespace Antilli
                     Groups.SelectedIndex = 0;
                 }
 
-                Viewer.SetActiveModel(SelectedPartsGroup.Parts);
+                if (SelectedPartsGroup != null)
+                    Viewer.SetActiveModel(SelectedPartsGroup.Parts);
+
                 UpdateRenderingOptions();
             }));
 

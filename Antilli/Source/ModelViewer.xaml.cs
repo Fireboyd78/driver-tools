@@ -272,11 +272,10 @@ namespace Antilli
 
         public void RemoveActiveModel()
         {
+            ClearModels();
+
             if (m_partsGroups != null)
-            {
-                ClearModels();
                 m_partsGroups = null;
-            }
         }
 
         public bool UpdateActiveModel()
