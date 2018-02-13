@@ -50,6 +50,9 @@
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="mainBorder" Property="Background" Value="{StaticResource atDark_bgDarkActive}"/>
                         </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.475"/>
+                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -150,6 +153,9 @@
                         <Trigger Property="IsFocused" Value="True">
                             <Setter Property="Background" Value="{StaticResource atDark_bgLightActive}"/>
                             <!--<Setter Property="BorderBrush" Value="{StaticResource atDark_borderHighlight}"/>-->
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.475"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
