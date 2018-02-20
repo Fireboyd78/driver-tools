@@ -18,6 +18,7 @@ namespace DSCript.Models
         public PartsGroup Parent { get; set; }
         public List<MeshGroup> Groups { get; set; }
 
+        public int Unknown { get; set; }
         public int Type { get; set; }
         
         public PartDefinition(int id)

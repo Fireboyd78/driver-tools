@@ -697,6 +697,9 @@ namespace DSCript.Models
             // Driv3r on Xbox has a special mesh type, so we'll figure it out now
             var verifyMeshSize = true;
 
+            var meshGroupIdx = 0;
+            var meshIdx = 0;
+
             /* ------------------------------
              * Read parts groups
              * ------------------------------ */
@@ -758,7 +761,8 @@ namespace DSCript.Models
                     stream.Position += 0x4;
 
                     var unkCount = stream.ReadInt32();
-                    
+
+                    partEntry.Unknown = unkCount;
                     partEntry.Type = stream.ReadInt32();
                     
                     // the rest is padding, but we calculate the position
@@ -779,6 +783,14 @@ namespace DSCript.Models
                     {
                         stream.Position = gOffset + (g * groupSize);
 
+                        var curGroupIdx = ((int)stream.Position - Header.MeshGroupsOffset) / Header.MeshGroupSize;
+
+                        if (curGroupIdx != meshGroupIdx)
+                        {
+                            Debug.WriteLine($"WARNING: expected mesh group {meshGroupIdx} / {Header.MeshGroupsCount} but got {curGroupIdx}!");
+                            meshGroupIdx = curGroupIdx;
+                        }
+                        
                         MeshGroup mGroup = new MeshGroup() {
                             Parent = partEntry
                         };
@@ -788,13 +800,11 @@ namespace DSCript.Models
                         if (Header.Version == 6)
                             stream.Position += 4;
 
-                        for (int i = 0; i < 3; i++)
+                        for (int i = 0; i < 4; i++)
                         {
                             mGroup.Transform[i] = stream.Read<Vector4>();
                         }
-
-                        mGroup.Unknown = stream.Read<Vector4>();
-
+                        
                         var mCount = stream.ReadInt16();
 
                         var unk1 = stream.ReadInt16();
@@ -816,6 +826,14 @@ namespace DSCript.Models
                         for (int m = 0; m < mCount; m++)
                         {
                             stream.Position = mOffset + (m * meshSize);
+
+                            var curMeshIdx = ((int)stream.Position - Header.MeshesOffset) / Header.MeshSize;
+
+                            if (curMeshIdx != meshIdx)
+                            {
+                                Debug.WriteLine($"WARNING: expected mesh {meshIdx} / {Header.MeshesCount} but got {curMeshIdx}!");
+                                meshIdx = curMeshIdx;
+                            }
 
                             var primType = stream.ReadInt32();
 
@@ -853,7 +871,11 @@ namespace DSCript.Models
 
                             mGroup.Meshes.Add(mesh);
                             Meshes.Add(mesh);
+
+                            ++meshIdx;
                         }
+
+                        ++meshGroupIdx;
                     }
                 }
             }
@@ -1120,8 +1142,6 @@ namespace DSCript.Models
 
                         foreach (var transform in group.Transform)
                             f.Write(transform);
-                        
-                        f.Write(group.Unknown);
                         
                         var mCount = group.Meshes.Count;
 

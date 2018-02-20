@@ -313,7 +313,7 @@ namespace Antilli
                     var m1 = group.Transform[0];
                     var m2 = group.Transform[1];
                     var m3 = group.Transform[2];
-                    var m4 = group.Unknown;
+                    var m4 = group.Transform[3];
 
                     var mtx = new Matrix3D() {
                         M11 = m1.X,
