@@ -74,10 +74,14 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Source\ExportModelDialog.xaml.cs">
+      <DependentUpon>ExportModelDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Source\Antilli.cs" />
     <Compile Include="Source\ImageWidget.xaml.cs">
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Source\ModelInterface.cs" />
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
     <Compile Include="Source\WPF\TextureTreeItem.cs" />
@@ -162,6 +166,10 @@
       <DependentUpon>TextureViewer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </None>
+    <Page Include="Source\ExportModelDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Source\ImageWidget.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

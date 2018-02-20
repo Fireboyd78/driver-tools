@@ -1,0 +1,68 @@
+﻿<at:ObservableWindow x:Class="Antilli.ExportModelDialog" DataContext="{Binding RelativeSource={RelativeSource Self}}"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:at="clr-namespace:Antilli"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export Model"
+        Width="300"
+        ResizeMode="NoResize"
+        SizeToContent="Height"
+        Background="#181818">
+    <at:ObservableWindow.Resources>
+        <at:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </at:ObservableWindow.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Vertical">
+            <Label Content="Folder name:" Padding="6,4"/>
+            <TextBox Name="tbFolderName" Text="Hello world!" Padding="2" Margin="5,4" MaxLength="127" MaxLines="1"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Vertical">
+                <!--
+                    Select model format
+                -->
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="Format:" Padding="6,4"/>
+                    <ComboBox Name="cmbFormat" Width="120" Padding="4,2" Height="20" SelectedIndex="0" VerticalAlignment="Center">
+                        <ComboBoxItem Content="Wavefront OBJ"/>
+                        <ComboBoxItem Content="Model Package" IsEnabled="False"/>
+                    </ComboBox>
+                </StackPanel>
+                <!--
+                    Export options
+                -->
+                <StackPanel Orientation="Vertical" Visibility="Visible">
+                    <CheckBox Name="chkBakeTransforms" Content="Bake Transforms" Margin="5" Foreground="{StaticResource atDark_fg}"
+                          ToolTip="Bakes the transform data of each object into the vertex positions."/>
+                    <CheckBox Name="chkSplitMeshes" Content="Split by Material" Margin="5" Foreground="{StaticResource atDark_fg}"
+                          ToolTip="Splits each model by material instead of by group."/>
+                    <CheckBox Name="chkExportAll" Content="Export all models" Margin="5" Foreground="{StaticResource atDark_fg}"
+                              ToolTip="Exports the entire model package instead of the selected group."/>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Margin="0,0,2,0" Grid.Row="1">
+                <StackPanel.Resources>
+                    <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="Margin" Value="4"/>
+                        <Setter Property="Padding" Value="10,0"/>
+                    </Style>
+                </StackPanel.Resources>
+
+                <Button Name="btnOk" Content="OK" IsEnabled="{Binding IsValid}" IsDefault="True"/>
+                <Button Name="btnCancel" Content="Cancel" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</at:ObservableWindow>

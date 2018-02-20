@@ -68,9 +68,10 @@
                 <MenuItem x:Name="fileExit" Header="Exit"/>
             </MenuItem>
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
+                <MenuItem x:Name="exportSel" Header="Export..."/>
+                <Separator/>
                 <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
                 <MenuItem x:Name="exportVPK" Header="Export .VPK"/>
-                <MenuItem x:Name="exportObj" Header="Export .OBJ"/>
                 <MenuItem x:Name="exportAIModel" Header="Export .AIModel"/>
                 <Separator/>
                 <MenuItem x:Name="chunkViewer" Header="Chunk Editor"/>

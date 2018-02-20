@@ -71,7 +71,7 @@ Kd 1.0000 0.2500 0.5000
 Ks 0.0000 0.0000 0.0000
 Ke 0.0000 0.0000 0.0000" + "\r\n";
 
-        public static ExportResult Export(string path, string filename, ModelPackagePC modelPackage, long uid, bool splitMeshByMaterial = false)
+        public static ExportResult Export(string path, string filename, ModelPackagePC modelPackage, long uid, bool splitMeshByMaterial = false, bool bakeTransforms = false)
         {
             if (modelPackage.Meshes.Count < 1)
             {
@@ -129,6 +129,11 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                         var minIndex = 0;
                         var nVerts = 0;
 
+                        var m1 = group.Transform[0];
+                        var m2 = group.Transform[1];
+                        var m3 = group.Transform[2];
+                        var m4 = group.Transform[3];
+
                         for (int m = 0; m < group.Meshes.Count; m++)
                         {
                             var mesh = group.Meshes[m];
@@ -156,7 +161,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
                                     for (int s = 1, texIdx = 1; s <= material.Substances.Count; s++)
                                     {
-                                        DSC.Log("material {0} - submaterial {1} - has {2} textures", mtlIdx, s, material.Substances.Count);
+                                        //DSC.Log("material {0} - submaterial {1} - has {2} textures", mtlIdx, s, material.Substances.Count);
 
                                         foreach (var texture in material.Substances[s - 1].Textures)
                                         {
@@ -187,9 +192,22 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             // add vertices
                             foreach (var vertex in model.Vertices)
                             {
-                                vPos.AppendLine("v {0:F4} {1:F4} {2:F4}", vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
-                                vNor.AppendLine("vn {0:F4} {1:F4} {2:F4}", vertex.Normal.X, vertex.Normal.Y, vertex.Normal.Z);
-                                vTex.AppendLine("vt {0:F4} {1:F4} 0.0000", vertex.UV.X, -vertex.UV.Y);
+                                Vector3 pos = vertex.Position;
+                                Vector3 normal = vertex.Normal;
+                                Vector2 uv = vertex.UV;
+
+                                if (bakeTransforms)
+                                {
+                                    pos = new Vector3() {
+                                        X = (pos.X * m1.X) + (pos.Y * m2.X) + (pos.Z * m3.X) + m4.X,
+                                        Y = (pos.X * m1.Y) + (pos.Y * m2.Y) + (pos.Z * m3.Y) + m4.Y,
+                                        Z = (pos.X * m1.Z) + (pos.Y * m2.Z) + (pos.Z * m3.Z) + m4.Z,
+                                    };
+                                }
+                                
+                                vPos.AppendLine("v {0:F4} {1:F4} {2:F4}", pos.X, pos.Y, pos.Z);
+                                vNor.AppendLine("vn {0:F4} {1:F4} {2:F4}", normal.X, normal.Y, normal.Z);
+                                vTex.AppendLine("vt {0:F4} {1:F4} 0.0000", uv.X, -uv.Y);
 
                                 nVerts++;
                             }

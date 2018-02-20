@@ -201,6 +201,11 @@ namespace Antilli
                 return null;
             }
         }
+        
+        public bool ShowWaitCursor
+        {
+            set { Mouse.OverrideCursor = (value) ? Cursors.Wait : null; }
+        }
 
         public bool IsViewWidgetVisible
         {
@@ -490,42 +495,95 @@ namespace Antilli
             m_lodBtnRefs[Viewer.LevelOfDetail].IsChecked = true;
         }
         
-        private void ExportObjFile()
+        private void ExportModelFile()
         {
             if (CurrentModelPackage == null)
                 MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
             else
             {
-                // TODO: Implement OBJ exporter
-                if (SelectedPartsGroup != null)
+                var prompt = new ExportModelDialog() {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                };
+
+                if (!SelectedPartsGroup.IsNull)
+                    prompt.FolderName = SelectedPartsGroup.Text.Replace(':', '-');
+
+                if (prompt.ShowDialog() ?? false)
                 {
-                    var prompt = new MKInputBox("OBJ Exporter", "Please enter a name for the model:", SelectedPartsGroup.UID.ToString("D10")) {
-                        Owner = this,
-                        ShowCancelButton = false,
-                        ShowOptionCheckbox = true,
-                        OptionName = "Split Meshes by Material",
-                        WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
-                    };
+                    var flags = prompt.Flags;
+                    var name = prompt.FolderName;
 
-                    if (prompt.ShowDialog() ?? false)
+                    var path = Path.Combine(Settings.ModelsDirectory, name);
+
+                    switch (prompt.Format)
                     {
-                        var path = Path.Combine(Settings.ModelsDirectory, prompt.InputValue);
+                    case ExportModelFormat.WavefrontObj:
+                        {
+                            ShowWaitCursor = true;
 
-                        if (OBJFile.Export(path, prompt.InputValue, CurrentModelPackage, SelectedPartsGroup.UID, prompt.IsOptionChecked) == ExportResult.Success)
-                        {
-                            var msg = String.Format("Successfully exported to '{0}'!", path);
-                            MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-                        }
-                        else
-                        {
-                            var msg = String.Format("Failed to export the file '{0}'!", path);
-                            MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Error);
-                        }
+                            if (prompt.ExportAll)
+                            {
+                                int partIdx = 0;
+                                PartsGroup curPart = null;
+
+                                foreach (var part in CurrentModelPackage.Parts)
+                                {
+                                    if (curPart == null || curPart.UID != part.UID)
+                                    {
+                                        var id1 = (part.Handle >> 8) & 0xFFFFFF;
+                                        var id2 = part.Handle & 0xFF;
+
+                                        var id3 = (part.UID & 0xFFFF);
+                                        var id4 = (part.UID >> 16) & 0xFFFF;
+                                        
+                                        var filename = $"{partIdx:D4}_{id1:X6}{id2:X2}{id3:X4}{id4:X4}";
+                                        
+                                        OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms);
+                                        
+                                        curPart = part;
+                                        partIdx++;
+                                    }
+                                }
+
+                                var modelCountStr = String.Format($"{partIdx} {{0}}", (partIdx > 1) ? "models" : "model");
+                                
+                                MessageBox.Show($"Successfully exported {modelCountStr} to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                            }
+                            else
+                            {
+                                var part = SelectedPartsGroup;
+                                
+                                var id1 = (part.Handle >> 8) & 0xFFFFFF;
+                                var id2 = part.Handle & 0xFF;
+
+                                var id3 = (part.UID & 0xFFFF);
+                                var id4 = (part.UID >> 16) & 0xFFFF;
+
+                                var filename = $"{id1:X6}{id2:X2}{id3:X4}{id4:X4}";
+
+                                if (OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms) == ExportResult.Success)
+                                {
+                                    var msg = String.Format("Successfully exported to '{0}'!", path);
+                                    MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+                                }
+                                else
+                                {
+                                    var msg = String.Format("Failed to export the file '{0}'!", path);
+                                    MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Error);
+                                }
+                            }
+
+                            ShowWaitCursor = false;
+                        } break;
+                    default:
+                        MessageBox.Show("Unsupported format!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                        break;
                     }
                 }
             }
         }
-
+        
         private void ExportModelPackage()
         {
             if (CurrentModelPackage == null)
@@ -1038,10 +1096,10 @@ namespace Antilli
             fileOpen.Click += (o, e) => OnFileOpenClick();
             
             fileExit.Click += (o, e) => Environment.Exit(0);
-            
+
+            exportSel.Click += (o, e) => ExportModelFile();
             exportMDPC.Click += (o, e) => ExportModelPackage();
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
-            exportObj.Click += (o, e) => ExportObjFile();
             exportAIModel.Click += (o, e) => ExportAntilliModelFile();
 
             chunkViewer.Click += (o, e) => {
