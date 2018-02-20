@@ -2,7 +2,7 @@ version: 1.8.4.{build}-{branch}
 image: Visual Studio 2017
 clone_folder: C:\Dev\Code\Projects\Driver Tools
 environment:
-  BUILD_LOGGER: '"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"'
+  IS_APPVEYOR: 'true'
 build_script:
   - ci_build "Antilli\Antilli.sln"
   - ci_build "DSCript\DScript.sln"

@@ -8,9 +8,10 @@ if "%1"=="" (
 set PCFG=Release
 set PPLT=x86
 
-if "%BUILD_LOGGER%"=="" (
+if "%IS_APPVEYOR%"=="" (
     msbuild %1 /p:Configuration=%PCFG% /p:Platform=%PPLT%
 ) else (
+    set BUILD_LOGGER="C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
     msbuild %1 /p:Configuration=%PCFG% /p:Platform=%PPLT% /logger:%BUILD_LOGGER%
 )
 
