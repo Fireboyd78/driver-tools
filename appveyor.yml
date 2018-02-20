@@ -4,12 +4,12 @@ clone_folder: C:\Dev\Code\Projects\Driver Tools
 environment:
   BUILD_LOGGER: '"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"'
 build_script:
-  - msbuild "Antilli\Antilli.sln" /logger:%BUILD_LOGGER%
-  - msbuild "DSCript\DScript.sln" /logger:%BUILD_LOGGER%
-  - msbuild "GMC2Snooper\GMC2Snooper.sln" /logger:%BUILD_LOGGER%
-  - msbuild "IMGRipper\IMGRipper.sln" /logger:%BUILD_LOGGER%
-  - msbuild "Zartex\Zartex.sln" /logger:%BUILD_LOGGER%
-  - msbuild "Audiose\Audiose.sln" /logger:%BUILD_LOGGER%
+  - ci_build "Antilli\Antilli.sln"
+  - ci_build "DSCript\DScript.sln"
+  - ci_build "GMC2Snooper\GMC2Snooper.sln"
+  - ci_build "IMGRipper\IMGRipper.sln"
+  - ci_build "Zartex\Zartex.sln"
+  - ci_build "Audiose\Audiose.sln"
 artifacts:
 - path: Antilli\bin
   name: Antilli
