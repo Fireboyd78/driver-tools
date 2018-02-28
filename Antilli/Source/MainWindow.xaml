@@ -77,6 +77,9 @@
                 <MenuItem x:Name="chunkViewer" Header="Chunk Editor"/>
                 <MenuItem x:Name="modelTool" Header="Model Tool"/>
             </MenuItem>
+            <MenuItem Header="Debug" Style="{DynamicResource atDark_menuItem}" Visibility="{Binding CanShowDebugMenu}">
+                <MenuItem x:Name="modelPackageDbg" Header="Fixup Models File..."/>
+            </MenuItem>
         </Menu>
 
         <TabControl Grid.Row="1" Style="{StaticResource atTabControlStyle}" SelectedIndex="{Binding CurrentTab, Mode=TwoWay}">

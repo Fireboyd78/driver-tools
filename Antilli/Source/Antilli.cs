@@ -145,6 +145,18 @@ namespace Antilli
             Log(String.Format(message, args));
         }
 
+        public static bool IsDevBuild
+        {
+            get
+            {
+            #if DEBUG
+                return true;
+            #else
+                return false;
+            #endif
+            }
+        }
+
         public struct StateData : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler PropertyChanged;
