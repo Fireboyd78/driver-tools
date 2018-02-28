@@ -203,6 +203,8 @@ namespace DSCript.Models
 
         public void WriteHeader(Stream stream)
         {
+            const int revision = 1;
+
             stream.Write(Version);
 
             stream.Write(UID);
@@ -215,19 +217,10 @@ namespace DSCript.Models
 
             stream.Write(MeshesCount);
             stream.Write(MeshesOffset);
-
-            if (Version == 6)
-            {
-                // legacy support (not actually used in-game)
-                stream.Write((UID & 0xFFFF) | (0x4B4D << 16));
-                stream.Write(0);
-            }
-            else
-            {
-                // quick way to write 8-bytes
-                stream.Write((long)0);
-            }
-
+            
+            stream.Write(((Version == 6) ? UID : -1) & 0xFFFF | (MagicNumber.FB << 16));
+            stream.Write(revision | (0x9999 << 16)); // reserve other part
+            
             stream.Write(TextureDataOffset);
             stream.Write(MaterialDataOffset);
 
@@ -758,24 +751,15 @@ namespace DSCript.Models
 
                     var gCount = stream.ReadInt32();
 
-                    stream.Position += 0x4;
-
-                    var unkCount = stream.ReadInt32();
-
-                    partEntry.Unknown = unkCount;
+                    // skip irrelevant data
+                    stream.Position += 0x8;
+                    
                     partEntry.Type = stream.ReadInt32();
                     
-                    // the rest is padding, but we calculate the position
-                    // at the beginning of each iteration...
-
                     // nothing to see here, move along
                     if (gCount == 0)
                         continue;
-
-                    // TODO: figure out what this does (it's pretty important)
-                    //if (unkCount > 0)
-                    //    Console.WriteLine($"lod[{k}] unkCount: {unkCount}");
-
+                    
                     /* ------------------------------
                      * Read mesh groups
                      * ------------------------------ */
@@ -791,7 +775,7 @@ namespace DSCript.Models
                             meshGroupIdx = curGroupIdx;
                         }
                         
-                        MeshGroup mGroup = new MeshGroup() {
+                        var mGroup = new MeshGroup() {
                             Parent = partEntry
                         };
 
@@ -807,15 +791,12 @@ namespace DSCript.Models
                         
                         var mCount = stream.ReadInt16();
 
-                        var unk1 = stream.ReadInt16();
+                        mGroup.UseTransform = (stream.ReadInt16() != 0);
 
                         if (Header.Version == 6)
                             stream.Position += 4;
 
-                        var unk2 = stream.ReadInt32();
-
-                        //if (unk1 > 0)
-                        //    Console.WriteLine($"> mGroup[{g}] unknown data: ({unk1}, {unk2})");
+                        mGroup.Reserved = stream.ReadInt32();
                         
                         partEntry.Groups.Add(mGroup);
                         MeshGroups.Add(mGroup);
@@ -1063,9 +1044,15 @@ namespace DSCript.Models
 
             // Now that we have our initialized buffer size, write ALL the data!
             var buffer = new byte[bufferSize];
-
+            
             using (var f = new MemoryStream(buffer))
             {
+                const short revHeader = 0x78FB;
+
+                var writeRevision = new Action<int>((revision) => {
+                    f.Write(revHeader | (revision << 16));
+                });
+
                 Header.WriteHeader(f);
 
                 if (Parts?.Count > 0)
@@ -1143,9 +1130,16 @@ namespace DSCript.Models
                         foreach (var transform in group.Transform)
                             f.Write(transform);
                         
-                        var mCount = group.Meshes.Count;
+                        var mCount = (short)group.Meshes.Count;
+                        var useTransform = (short)(group.UseTransform ? 1 : 0);
 
                         f.Write(mCount);
+                        f.Write(useTransform);
+                        
+                        f.Write((int)MagicNumber.FIREBIRD); // ;)
+                        f.Write(group.Reserved);
+
+                        writeRevision(2);
 
                         mIdx += mCount;
                     }
@@ -1198,7 +1192,10 @@ namespace DSCript.Models
                                 f.Position += 0x4;
                                 f.Write(count);
 
-                                f.Position += 0x8;
+                                f.Write((int)MagicNumber.FIREBIRD); // ;)
+
+                                writeRevision(3);
+
                                 f.Write(lod.Type);
 
                                 gIdx += count;

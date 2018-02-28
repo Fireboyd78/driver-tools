@@ -464,13 +464,8 @@ namespace Antilli
                             continue;
 
                         if (partDef.Groups.Count > 0)
-                        {
-                            Debug.WriteLine($"lod[{i}] : ({partDef.Unknown}, {partDef.Type:X2})");
                             lodCount[i] += 1;
-                        }
                     }
-
-                    Debug.WriteLine("----");
                 }
 
                 // enable LODs if more than one model present

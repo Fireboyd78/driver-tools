@@ -20,6 +20,11 @@ namespace DSCript.Models
 
         public Vector4[] Transform { get; set; }
 
+        public bool UseTransform { get; set; }
+
+        // likely unused, but I'm tired of chasing after bugs
+        public int Reserved { get; set; }
+
         public MeshGroup()
         {
             Meshes = new List<MeshDefinition>();
