@@ -82,7 +82,6 @@
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
     <Compile Include="Source\ModelInterface.cs" />
-    <Compile Include="Source\ModelDebug.cs" />
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
     <Compile Include="Source\WPF\TextureTreeItem.cs" />

@@ -64,12 +64,7 @@ namespace Antilli
         {
             get { return AT.CurrentState.CanShowGlobals; }
         }
-
-        public Visibility CanShowDebugMenu
-        {
-            get { return AT.IsDevBuild ? Visibility.Visible : Visibility.Collapsed; }
-        }
-
+        
         public Driv3rModelFile CurrentModelFile
         {
             get { return AT.CurrentState.ModelFile; }
@@ -1118,62 +1113,7 @@ namespace Antilli
 
                 mTool.Show();
             };
-
-            modelPackageDbg.Click += (o, e) => {
-                var dialog = FileManager.Driv3rOpenDialog;
-
-                if (dialog.ShowDialog() ?? false)
-                {
-                    var fileName = dialog.FileName;
-
-                    var extension = Path.GetExtension(fileName).ToLower();
-                    var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
-
-                    if (filter.Flags == GameFileFlags.None)
-                    {
-                        MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-
-                    using (var debugModels = new DebugModelFile())
-                    {
-                        if (debugModels.Load(fileName))
-                        {
-                            Debug.WriteLine("Saving fixups...");
-
-                            if (MessageBox.Show($"Overwrite existing file '{fileName}'?", "Antilli", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
-                            {
-                                if (debugModels.Save())
-                                {
-                                    MessageBox.Show($"Successfully saved '{fileName}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-                                }
-                                else
-                                {
-                                    MessageBox.Show($"Failed to save '{fileName}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                                }
-                            }
-                            else
-                            {
-                                var outDir = Path.Combine(Settings.ExportDirectory, "Fixups");
-                                var path = Path.Combine(outDir, Path.GetFileName(fileName));
-
-                                if (!Directory.Exists(outDir))
-                                    Directory.CreateDirectory(outDir);
-                                
-                                if (debugModels.Save(path))
-                                {
-                                    MessageBox.Show($"Successfully exported to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-                                }
-                                else
-                                {
-                                    MessageBox.Show($"Failed to export to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                                }
-                            }   
-                        }
-                    }
-                }
-            };
-
+        
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);
             });
