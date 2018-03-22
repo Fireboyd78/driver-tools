@@ -44,6 +44,7 @@
 
 # Misc.
 [8BPS]="psd"
+[xof ]="x"
 
 # --------------- Driv3r --------------- #
 # Animations

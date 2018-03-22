@@ -15,10 +15,8 @@ namespace IMGRipper
         public static bool NoFMV = false;
         public static bool ListOnly = false;
         public static bool Overwrite = false;
-
-        public static bool EncryptHeader = false;
-
-        static readonly string DefaultOutput = @".\Unpack\";
+        
+        static readonly string DefaultOutput = @".\Data\";
         static readonly string LookupTable = @".\magicnums.txt";
         
         static string InputFile { get; set; }
@@ -40,7 +38,7 @@ namespace IMGRipper
 
         static void Main(string[] args)
         {
-            Console.WriteLine("IMGRipper V1.2b by CarLuver69\r\n");
+            Console.WriteLine("IMGRipper V2.0 by Fireboyd78\r\n");
 
             if (args.Length > 0)
             {
@@ -56,10 +54,6 @@ namespace IMGRipper
                         case "build":
                             WriteVerbose("BuildArchive flag enabled.");
                             BuildArchive = true;
-                            continue;
-                        case "encrypt":
-                            WriteVerbose("Encrypt flag enabled.");
-                            EncryptHeader = true;
                             continue;
                         case "l":
                         case "listonly":
@@ -110,112 +104,26 @@ namespace IMGRipper
                 {
                     if (File.Exists(InputFile))
                     {
-                        if (String.IsNullOrEmpty(OutputDir))
-                            OutputDir = Path.Combine(Path.GetFullPath(DefaultOutput), Path.GetFileNameWithoutExtension(InputFile));
-
-                        // lol hack
-                        if (EncryptHeader)
-                        {
-                            Console.WriteLine("Encrypting header...");
-
-                            /*
-                            byte decKey = 27;
-
-                            if (version > 2)
-                            {
-                                byte key = 21;
-
-                                for (int i = 0, offset = 1; i < length; i++, offset++)
-                                {
-                                    buffer[i] -= decKey;
-                                    decKey += key;
-                                    
-                                    if (offset > 6 && key == 21)
-                                    {
-                                        offset = 0;
-                                        key = 11;
-                                    }
-                                    if (key == 11 && offset > 24)
-                                    {
-                                        offset = 0;
-                                        key = 21;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                for (int i = 0; i < length; i++)
-                                {
-                                    buffer[i] -= decKey;
-                                    decKey += 11;
-                                }
-                            }
-                            */
-
-                            using (var fs = File.Open(InputFile, FileMode.Open, FileAccess.Read))
-                            {
-                                if (fs.ReadInt32() == (int)IMGType.IMG4)
-                                {
-                                    var count = fs.ReadInt32();
-                                    var reserved = fs.ReadInt32();
-                                    var size = fs.ReadInt32();
-
-                                    var buffer = new byte[size];
-
-                                    byte decKey = 27;
-                                    byte key = 21;
-
-                                    for (int i = 0, offset = 1; i < size; i++, offset++)
-                                    {
-                                        buffer[i] = (byte)fs.ReadByte();
-                                        buffer[i] += decKey;
-
-                                        decKey += key;
-
-                                        if (offset > 6 && key == 21)
-                                        {
-                                            offset = 0;
-                                            key = 11;
-                                        }
-                                        if (key == 11 && offset > 24)
-                                        {
-                                            offset = 0;
-                                            key = 21;
-                                        }
-                                    }
-
-                                    using (var wfs = File.Create(Path.ChangeExtension(InputFile, ".out.dir"), size + 0xC, FileOptions.WriteThrough))
-                                    {
-                                        wfs.Write((int)IMGType.IMG4);
-                                        wfs.Write(count);
-                                        wfs.Write(reserved);
-                                        wfs.Write(size);
-                                        wfs.Write(buffer);
-                                    }
-                                }
-                            }
-
-                            return;
-                        }
-
                         if (BuildArchive)
                         {
+                            if (String.IsNullOrEmpty(OutputDir))
+                                OutputDir = Path.GetDirectoryName(InputFile);
+
                             IMGArchive.BuildArchive(InputFile, OutputDir);
                         }
                         else
                         {
+                            if (String.IsNullOrEmpty(OutputDir))
+                            {
+                                var outDir = Path.Combine(Path.GetDirectoryName(InputFile), DefaultOutput);
+                                OutputDir = Path.GetFullPath(outDir);
+                            }
+
                             if (IMGArchive.LoadLookupTable(LookupTable))
                             {
                                 Console.WriteLine("Successfully loaded lookup table.");
                                 IMGArchive.Unpack(InputFile, OutputDir);
                             }
-
-                            // Load the lookup table
-                            //if (IMGFile.LoadLookupTable(LookupTable))
-                            //{
-                            //    Console.WriteLine("Successfully loaded lookup table.");
-                            //    IMGFile.Unpack(InputFile, OutputDir);
-                            //}
                         }
                     }
                     else
@@ -234,7 +142,8 @@ namespace IMGRipper
 @"Usage: imgripper --[options] [input file] [:output folder]
 
 If no output folder is specified, a default folder is used.
-This folder is usually located where IMGRipper resides.
+This folder will be relative to the input file directory.
+    NOTE: Files are no longer placed relative to IMGRipper's directory.
 
 Extracted files will be extracted to [Output]\Files\.
 An archive configuration file will be created in [Output].
