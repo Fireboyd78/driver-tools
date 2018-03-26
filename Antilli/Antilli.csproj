@@ -74,6 +74,19 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Source\COLLADA\COLLADA-DataFlow.cs" />
+    <Compile Include="Source\COLLADA\FX\COLLADA-Effects.cs" />
+    <Compile Include="Source\COLLADA\COLLADA-Extensibility.cs" />
+    <Compile Include="Source\COLLADA\COLLADA-Geometry.cs" />
+    <Compile Include="Source\COLLADA\COLLADA-Metadata.cs" />
+    <Compile Include="Source\COLLADA\COLLADA-Scene.cs" />
+    <Compile Include="Source\COLLADA\COLLADA-Transform.cs" />
+    <Compile Include="Source\COLLADA\FX\COLLADA-Materials.cs" />
+    <Compile Include="Source\COLLADA\FX\COLLADA-Profiles.cs" />
+    <Compile Include="Source\COLLADA\FX\COLLADA-Shaders.cs" />
+    <Compile Include="Source\COLLADA\FX\COLLADA-Texturing.cs" />
+    <Compile Include="Source\ModelConverter.cs" />
+    <Compile Include="Source\COLLADA\COLLADA.cs" />
     <Compile Include="Source\ExportModelDialog.xaml.cs">
       <DependentUpon>ExportModelDialog.xaml</DependentUpon>
     </Compile>
