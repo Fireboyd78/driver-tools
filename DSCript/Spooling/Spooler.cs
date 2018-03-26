@@ -355,6 +355,11 @@ namespace DSCript.Spooling
             IsModified = false;
         }
 
+        public virtual void NotifyChanges()
+        {
+            IsModified = true;
+        }
+        
         /// <summary>
         /// Gets the <see cref="SpoolablePackage"/> containing this spooler. If no parent is attached, the value is null.
         /// </summary>

@@ -57,6 +57,25 @@ namespace DSCript.Spooling
             return (ISpoolableResource)this;
         }
 
+        public virtual bool AreChangesPending
+        {
+            get { return Spooler.AreChangesPending; }
+        }
+
+        public virtual void CommitChanges()
+        {
+            if (Spooler.AreChangesPending)
+            {
+                Save();
+                Spooler.CommitChanges();
+            }
+        }
+
+        public virtual void NotifyChanges()
+        {
+            Spooler.NotifyChanges();
+        }
+
         protected internal SpoolableResource() { }
     }
 }
