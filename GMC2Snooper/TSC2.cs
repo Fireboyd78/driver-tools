@@ -127,21 +127,20 @@ namespace GMC2Snooper
             public TextureDataPS2 Copy()
             {
                 return new TextureDataPS2() {
-                    GUID        = GUID,
+                    GUID = GUID,
 
-                    CompType    = (TextureCompType)CompType,
-                    MipMaps     = MipMaps,
-                    Regs        = Regs,
+                    CompType = (TextureCompType)CompType,
+                    MipMaps = MipMaps,
+                    Regs = Regs,
 
-                    Width       = Width,
-                    Height      = Height,
+                    Width = Width,
+                    Height = Height,
 
-                    K           = K,
+                    K = K,
 
-                    DataOffset  = DataOffset,
-                    Unknown     = Unk_18,
-
-                    CLUTs       = new List<int>(Pixmaps),
+                    DataOffset = DataOffset,
+                    
+                    CLUTs = new List<int>(Pixmaps),
                 };
             }
 
@@ -162,7 +161,7 @@ namespace GMC2Snooper
 
             public int DataOffset;
 
-            public int Unk_18;
+            public int Reserved;
 
             /* list of pixmaps follow */   
         }
@@ -180,9 +179,7 @@ namespace GMC2Snooper
         public int K { get; set; }
 
         public int DataOffset { get; set; }
-
-        public int Unknown { get; set; }
-
+        
         public List<int> CLUTs { get; set; }
         
         public TextureDataPS2()

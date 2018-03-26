@@ -715,8 +715,7 @@ namespace GMC2Snooper
                         sb.AppendLine($"          height = {tex.Height};");
                         sb.AppendLine($"          k = {tex.K:X4};");
                         sb.AppendLine($"          dataoffset = {tex.DataOffset:X};");
-                        sb.AppendLine($"          unknown = {tex.Unknown:X};");
-
+                        
                         sb.AppendLine($"          pixmaps[{tex.CLUTs.Count}] = [");
 
                         foreach (var clut in tex.CLUTs)
@@ -970,7 +969,7 @@ namespace GMC2Snooper
                     var substance = material.Substances[s];
                     var processAll = true;
 
-                    var texName = $"{m:D4}_{s:D2}";
+                    var texName = $"{m + 1:D4}_{s + 1:D2}";
 
                     var addToViewer = new Action<BitmapHelper, string>((bmap, name) => {
                         if (bmap == null)
