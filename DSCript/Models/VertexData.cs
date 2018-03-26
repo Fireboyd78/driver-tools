@@ -26,6 +26,29 @@ namespace DSCript.Models
         {
             get { return m_buffer; }
         }
+
+        // this is some of the dirtiest code I've ever written...
+        public unsafe bool PossiblyEqual(ref VertexData other)
+        {
+            try
+            {
+                fixed (byte* pBuf1 = Buffer)
+                fixed (byte* pBuf2 = other.Buffer)
+                {
+                    for (int i = 0; i < Buffer.Length; i += 4)
+                    {
+                        if (*(float*)(pBuf1 + i) != *(float*)(pBuf2 + i))
+                            return false;
+                    }
+
+                    return true;
+                }
+            }
+            catch (AccessViolationException)
+            {
+                return false;
+            }
+        }
         
         public T GetData<T>(VertexUsageType usageType, short usageIndex)
             where T : struct
@@ -120,7 +143,7 @@ namespace DSCript.Models
             } /* size = 0x30 */,
             new[] {
                 new VertexDeclInfo(VertexDataType.Vector2,  VertexUsageType.Position,               0),
-                new VertexDeclInfo(VertexDataType.Color,    VertexUsageType.Normal,                 0),
+                new VertexDeclInfo(VertexDataType.Color,    VertexUsageType.Color,                  0),
                 new VertexDeclInfo(VertexDataType.Vector2,  VertexUsageType.TextureCoordinate,      0),
             } /* size = 0x14 */,
             new[] {
@@ -166,6 +189,25 @@ namespace DSCript.Models
             case 0x3C: return 4;
             case 0x40: return 5;
             case 0x50: return 6;
+            }
+
+            return 0;
+        }
+
+        static int GetD3VertexDeclIndexByType(int type)
+        {
+            switch (type)
+            {
+            case 2:
+            case 3:
+            case 4:
+                return 1;
+            case 5:
+                return 4;
+            case 6:
+                return 5;
+            case 8:
+                return 6;
             }
 
             return 0;
@@ -238,6 +280,18 @@ namespace DSCript.Models
 
             vBuffer.CreateVertices(buffer, count, length);
             return vBuffer;
+        }
+
+        public static VertexBuffer CreateD3Buffer(int vertexType)
+        {
+            var index = GetD3VertexDeclIndexByType(vertexType);
+
+            return new VertexBuffer(D3VertexDecls[index]);
+        }
+
+        public VertexData CreateVertex()
+        {
+            return new VertexData(Declaration);
         }
         
         public void WriteTo(Stream stream, bool writeDeclInfo = false)

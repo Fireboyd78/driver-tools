@@ -275,9 +275,19 @@ namespace DSCript.Models
                     if (entry.TypeOf != typeof(T))
                         throw new InvalidCastException("Vertex data cannot be cast to the specified type.");
 
-                    var pData = Marshal.UnsafeAddrOfPinnedArrayElement(buffer, offset);
+                    var gc = GCHandle.Alloc(buffer, GCHandleType.Pinned);
 
-                    Marshal.StructureToPtr(data, pData, false);
+                    try
+                    {
+                        var pData = Marshal.UnsafeAddrOfPinnedArrayElement(buffer, 0) + offset;
+
+                        Marshal.StructureToPtr(data, pData, false);
+                    }
+                    finally
+                    {
+                        gc.Free();
+                    }
+                    
                     return true;
                 }
 
