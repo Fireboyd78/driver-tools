@@ -120,7 +120,7 @@ namespace DSCript.Models
 
         public override bool CanSave
         {
-            get { return HasModels; }
+            get { return HasModels && base.CanSave; }
         }
 
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
@@ -143,6 +143,17 @@ namespace DSCript.Models
             base.OnFileLoadBegin();
         }
 
+        protected override void OnFileSaveBegin()
+        {
+            if (HasModels)
+            {
+                foreach (var model in Models)
+                    model.CommitChanges();
+            }
+
+            base.OnFileSaveBegin();
+        }
+
         public Driv3rModelFile() { }
         public Driv3rModelFile(string filename) : base(filename) { }
     }
@@ -154,7 +165,7 @@ namespace DSCript.Models
 
         public override bool CanSave
         {
-            get { return (HasModels && HasHierarchies); }
+            get { return (HasModels || HasHierarchies); }
         }
 
         public bool HasHierarchies
