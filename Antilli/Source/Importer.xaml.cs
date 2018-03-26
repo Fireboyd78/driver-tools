@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
@@ -9,13 +11,17 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+
+using System.Xml;
+using System.Xml.Linq;
 
 using Microsoft.Win32;
 
 using DSCript;
 using DSCript.Models;
 using DSCript.Spooling;
+
+using COLLADA;
 
 namespace Antilli
 {
@@ -24,12 +30,23 @@ namespace Antilli
     /// </summary>
     public partial class Importer : ObservableWindow
     {
-        static readonly OpenFileDialog OpenObj = new OpenFileDialog() {
-            CheckFileExists = true,
-            CheckPathExists = true,
-            Filter          = "Wavefront OBJ|*.obj",
-            ValidateNames   = true,
-        };
+        static readonly OpenFileDialog OpenDialog;
+
+        static Importer()
+        {
+            var filters = new[] {
+                "All supported files|*.dae;*.obj",
+                "COLLADA|*.dae",
+                "Wavefront OBJ|*.obj",
+            };
+            
+            OpenDialog = new OpenFileDialog() {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Filter = String.Join("|", filters),
+                ValidateNames = true,
+            };
+        }
 
         protected ObjFile ObjFile { get; set; }
         
@@ -87,12 +104,15 @@ namespace Antilli
             }
         }
 
+        // need to come up with a better system...
+        private ModelConverter m_converter;
+        private ModelPackagePC m_modelPackage;
+
         public bool CanSave
         {
             get
             {
-                //return (ObjFile != null) && (Models != null);
-                return false;
+                return (m_converter != null);
             }
         }
 
@@ -100,13 +120,40 @@ namespace Antilli
         {
             OnPropertyChanged("ModelProperties");
         }
+        
+        private void LoadCOLLADA(string filename)
+        {
+            var colladaDoc = new COLLADADocument(filename);
+
+            m_converter = new ModelConverter();
+            m_converter.LoadCOLLADA(colladaDoc);
+
+            // HACK HACK HACK
+            m_converter.EffectType = EffectType.Vehicle;
+
+            // compile model package
+            m_modelPackage = m_converter.ToModelPackage();
+        }
 
         private void OpenFileClick(object sender, RoutedEventArgs e)
         {
-            if (OpenObj.ShowDialog(Owner) ?? false)
+            if (OpenDialog.ShowDialog(Owner) ?? false)
             {
-                ObjFile = new ObjFile(OpenObj.FileName);
-                OnPropertyChanged("Models");
+                var fileName = OpenDialog.FileName;
+
+                var ext = Path.GetExtension(OpenDialog.FileName).ToLower();
+
+                switch (ext)
+                {
+                case ".obj":
+                    ObjFile = new ObjFile(OpenDialog.FileName);
+                    OnPropertyChanged("Models");
+                    break;
+                case ".dae":
+                    LoadCOLLADA(fileName);
+                    OnPropertyChanged("CanSave");
+                    break;
+                }
             }
         }
 
@@ -121,6 +168,7 @@ namespace Antilli
 
             if (saveModel.ShowDialog(Owner) ?? false)
             {
+#if USE_OLD_SAVE_CODE
                 var spooler = SpoolableResourceFactory.Create<ModelPackagePC>();
                 
                 var nVertices = ObjFile.Positions.Count;
@@ -161,6 +209,24 @@ namespace Antilli
                     This is where I realized this won't work!
                     The OBJ format just isn't made for this kind of stuff :(
                 */
+#else
+                var chunker = new FileChunker();
+
+                // if we sent it to the viewport, the default package gets nuked
+                ISpoolableResource resource = m_modelPackage ?? AT.CurrentState.SelectedModelPackage;
+
+                resource.Save();
+
+                // definitely flawed
+                chunker.Content.Children.Add(resource.Spooler);
+                
+                var outDir = Path.GetDirectoryName(saveModel.FileName);
+
+                if (!Directory.Exists(outDir))
+                    Directory.CreateDirectory(outDir);
+
+                chunker.Save(saveModel.FileName);
+#endif
             }
         }
 
@@ -172,6 +238,12 @@ namespace Antilli
         private void BTConvert_Click(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private void BTLoad3D_Click(object sender, RoutedEventArgs e)
+        {
+            AT.CurrentState.SelectedModelPackage = m_modelPackage;
+            m_modelPackage = null; // use model in viewer instead
         }
     }
 }

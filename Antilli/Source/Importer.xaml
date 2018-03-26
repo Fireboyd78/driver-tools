@@ -47,6 +47,8 @@
             
                 <Button x:Name="BTOpen" Content="Open..." Click="OpenFileClick"/>
                 <Button x:Name="BTSave" Content="Save..." Click="SaveFileClick" IsEnabled="{Binding CanSave}"/>
+                
+                <Button x:Name="BTLoad3D" Margin="0,5" Content="Show in Viewport" Click="BTLoad3D_Click" IsEnabled="{Binding CanSave}"/>
             </StackPanel>
 
             <ItemsControl Grid.Row="1" Margin="4" ItemsSource="{Binding ModelProperties}">
