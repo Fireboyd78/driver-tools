@@ -5,7 +5,7 @@
         xmlns:dsc="clr-namespace:DSCript;assembly=libDSC"
         xmlns:sp="clr-namespace:DSCript.Spooling;assembly=libDSC"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
-        Title="{Binding WindowTitle, FallbackValue='Chunk Editor'}" Height="620" Width="760">
+        Title="{Binding WindowTitle, FallbackValue='Chunk Editor'}" Height="525" Width="600" MinWidth="550">
     <at:ObservableWindow.Resources>
         <dsc:SpoolerMagicConverter x:Key="MagicConverter"/>
         <CompositeCollection x:Key="CMenu" x:Shared="False">
@@ -57,7 +57,7 @@
         </HierarchicalDataTemplate>
         -->
     </at:ObservableWindow.Resources>
-    
+
     <at:ObservableWindow.Background>
         <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
             <GradientStop Color="#FF282828" Offset="0.75" />
@@ -82,20 +82,20 @@
                 <MenuItem x:Name="fileOpen" Header="_Open"/>
                 <Separator/>
                 <MenuItem x:Name="fileSave" Header="_Save" IsEnabled="{Binding CanSaveChunkFile}"/>
-                
+
                 <!-- Too early. Come back later. -->
                 <!-- <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsChunkFileOpen}"/> -->
-                
+
                 <Separator/>
                 <MenuItem x:Name="fileClose" Header="_Close" IsEnabled="{Binding IsChunkFileOpen}" ToolTip="Closes the current chunk file."/>
                 <MenuItem x:Name="fileExit" Header="_Exit"/>
             </MenuItem>
             <MenuItem Header="Edit" Style="{DynamicResource atDark_menuItem}">
                 <MenuItem x:Name="editCut" Header="_Cut" Click="CutSpooler" IsEnabled="{Binding CanModifySpooler}"/>
-                
+
                 <!-- Too early. Come back later. -->
                 <!-- <MenuItem x:Name="editCopy" Header="Copy" IsEnabled="{Binding CanModifySpooler}"/> -->
-                
+
                 <MenuItem x:Name="editPaste" Header="_Paste" Click="PasteSpooler" IsEnabled="{Binding CanPasteSpooler}"/>
                 <MenuItem x:Name="editRemove" Header="Remove" Click="RemoveSpooler" IsEnabled="{Binding CanModifySpooler}"/>
                 <Separator/>
@@ -109,9 +109,9 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="2*" MinWidth="175"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="2*" MinWidth="325"/>
+                <ColumnDefinition Width="1*" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
             <GroupBox Header="Chunks" Margin="5,5,2,5">
@@ -123,7 +123,39 @@
                     </Style>
                 </GroupBox.Resources>
 
-                <TreeView Name="ChunkList" SelectedItemChanged="SpoolerSelected"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="1*"/>
+                        <RowDefinition Height="50"/>
+                    </Grid.RowDefinitions>
+                    <TreeView Name="ChunkList" SelectedItemChanged="SpoolerSelected"/>
+                    <Grid Grid.Row="1">
+                        <Grid.Background>
+                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                <GradientStop Color="#FF404040" Offset="0"/>
+                                <GradientStop Color="#FF2C2C2C" Offset="0.0375"/>
+                                <GradientStop Color="#FF101010" Offset="0.725"/>
+                            </LinearGradientBrush>
+                        </Grid.Background>
+                        <Grid Margin="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Label Style="{StaticResource {x:Type Label}}" Content="Filter:" VerticalAlignment="Center"/>
+                            <TextBox Style="{StaticResource {x:Type TextBox}}" Name="tbSearchFilter" Text="" ToolTip="Filters the list of spoolers by their context, e.g. 'DXTC' to load spoolers matching [DXTC] as their context. Supports wild-cards (*)."
+                                 Padding="2" Margin="5,4" MaxLength="4" MaxLines="1" Grid.Column="1">
+                                <TextBox.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FF101010" Offset="0"/>
+                                        <GradientStop Color="#FF1C1C1C" Offset="0.625"/>
+                                    </LinearGradientBrush>
+                                </TextBox.Background>
+                            </TextBox>
+                        </Grid>
+                    </Grid>
+                </Grid>
             </GroupBox>
 
             <GridSplitter Grid.Column="1"

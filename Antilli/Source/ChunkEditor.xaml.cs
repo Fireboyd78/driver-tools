@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,6 +16,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 using Microsoft.Win32;
 
@@ -119,29 +122,108 @@ namespace Antilli
             get { return (ChunkFile != null) ? ChunkFile.Content : null; }
         }
 
-        public IList<Spooler> Spoolers
+        private Thread m_filterThread = null;
+        private volatile string m_filterString = "";
+        private volatile int m_filterTimeout = 750;
+        
+        private bool IsFilterApproved(Spooler spooler)
         {
-            get
-            {
-                if (LoadedChunk == null)
-                    return null;
+            return String.IsNullOrEmpty(SearchFilter) || ((SpoolerContext)spooler.Context).CompareTo(SearchFilter) != -1;
+        }
 
-                //var dxtc = (int)ChunkType.ResourceTextureDDS;
-                //var spoolers = (inTextureMode) ? AllSpoolers.Where((s) => s.Magic == dxtc) : LoadedChunk.Children;
-                //
-                //if (inTextureMode && spoolers.Count() == 0)
-                //{
-                //    MessageBox.Show("There are no textures available to load!", "Chunk Viewer", MessageBoxButton.OK, MessageBoxImage.Information);
-                //
-                //    inTextureMode = false;
-                //
-                //    spoolers = LoadedChunk.Spoolers;
-                //}
-                
-                return new List<Spooler>(LoadedChunk.Children);
+        private IEnumerable<Spooler> EnumerateFilteredSpoolers(SpoolablePackage root)
+        {
+            foreach (var c in root.Children)
+            {
+                if (c is SpoolablePackage)
+                {
+                    var pkg = (SpoolablePackage)c;
+
+                    if (IsFilterApproved(pkg))
+                    {
+                        yield return pkg;
+                    }
+                    else
+                    {
+                        foreach (var cc in EnumerateFilteredSpoolers(pkg))
+                            yield return cc;
+                    }
+                }
+                else
+                {
+                    if (IsFilterApproved(c))
+                        yield return c;
+                }
+            }
+
+            yield break;
+        }
+
+        private void AddSpoolersDeadlyRecurse(SpoolablePackage s, ItemsControl t)
+        {
+            foreach (var c in EnumerateFilteredSpoolers(s))
+            {
+                if (c is SpoolablePackage)
+                {
+                    var package = (SpoolablePackage)c;
+                    var pNode = new SpoolerListItem(package);
+
+                    t.Items.Add(pNode);
+
+                    AddSpoolersDeadlyRecurse(package, pNode);
+                }
+                else
+                {
+                    t.Items.Add(new SpoolerListItem(c));
+                }
             }
         }
 
+        private void UpdateSpoolers()
+        {
+            Dispatcher.VerifyAccess();
+
+            Debug.WriteLine($"Updating spoolers using search filter '{m_filterString}'...");
+
+            ChunkList.Items.Clear();
+            ChunkList.UpdateLayout();
+
+            AddSpoolersDeadlyRecurse(LoadedChunk, ChunkList);
+        }
+        
+        private void UpdateSearchFilter(string filter)
+        {
+            if ((m_filterThread != null) && m_filterThread.IsAlive)
+            {
+                m_filterString = filter;
+                m_filterTimeout = 750;
+            }
+            else
+            {
+                m_filterThread = new Thread(new ThreadStart(() => {
+                    m_filterString = filter;
+                    m_filterTimeout = 750;
+
+                    while (m_filterTimeout-- > 0)
+                        Thread.Sleep(1);
+
+                    Dispatcher.Invoke(new Action(UpdateSpoolers));
+                })) { IsBackground = true };
+                
+                m_filterThread.Start();
+            }
+        }
+
+        public string SearchFilter
+        {
+            get { return m_filterString; }
+            set
+            {
+                m_filterString = value;
+                UpdateSpoolers();
+            }
+        }
+        
         public Visibility CanReplaceSpooler
         {
             get
@@ -248,15 +330,15 @@ namespace Antilli
                 InitialDirectory = Driv3r.RootDirectory,
                 ValidateNames = true,
             };
-
-            // don't do anything until the existing chunk file is closed
-            if (!CloseChunkFile())
-                return;
             
             if (openFile.ShowDialog() ?? false)
             {
                 try
                 {
+                    // ask user if we can open the file, losing any changes made
+                    if (!CloseChunkFile())
+                        return;
+
                     Mouse.OverrideCursor = Cursors.Wait;
 
                     var stopwatch = new Stopwatch();
@@ -290,38 +372,16 @@ namespace Antilli
                     stopwatch.Start();
 
                     ChunkFile.Load(openFile.FileName);
-                    //OnPropertyChanged("Spoolers");
-
-                    Action<SpoolablePackage, ItemsControl> deadlyRecurse = null;
-
-                    deadlyRecurse = new Action<SpoolablePackage, ItemsControl>((s, t) => {
-                        foreach (var c in s.Children)
-                        {
-                            if (c is SpoolablePackage)
-                            {
-                                var package = (SpoolablePackage)c;
-                                var pNode = new SpoolerListItem(package);
-
-                                t.Items.Add(pNode);
-
-                                deadlyRecurse(package, pNode);
-                            }
-                            else
-                            {
-                                t.Items.Add(new SpoolerListItem(c));
-                            }
-                        }
-                    });
-
-                    deadlyRecurse(LoadedChunk, ChunkList);
+                    
+                    UpdateSpoolers();
 
                     IsDirty = false;
                     OnPropertyChanged("WindowTitle");
 
                     stopwatch.Stop();
                     
-                    DSC.Log("Loaded {0} chunks in {1}s.", LoadedChunk.Children.Count, stopwatch.Elapsed.TotalSeconds);
-                    DSC.Log("Temp directory size: {0:N0} KB", DSCTempFileManager.GetTempDirectorySize() / 1024.0);
+                    AT.Log("Loaded {0} chunks in {1}s.", LoadedChunk.Children.Count, stopwatch.Elapsed.TotalSeconds);
+                    AT.Log("Temp directory size: {0:N0} KB", DSCTempFileManager.GetTempDirectorySize() / 1024.0);
                 }
                 catch (FileFormatException e)
                 {
@@ -388,6 +448,14 @@ namespace Antilli
         
         private void LoadDDS()
         {
+            if (CurrentImage != null)
+            {
+                CurrentImage = null;
+
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+
             var fibitmap = BitmapHelper.GetFIBITMAP(((SpoolableBuffer)CurrentSpooler).GetBuffer());
             var fibitmap24 = FreeImage.ConvertTo24Bits(fibitmap);
 
@@ -707,7 +775,7 @@ namespace Antilli
                 e.Handled = true;
             }
         }
-
+        
         protected override void OnClosing(CancelEventArgs e)
         {
             if (!CloseChunkFile())
@@ -722,7 +790,7 @@ namespace Antilli
         public ChunkViewer()
         {
             InitializeComponent();
-
+            
             fileOpen.Click += (o, e) => {
                 OpenChunkFile();
             };
@@ -754,6 +822,8 @@ namespace Antilli
                     } break;
                 }
             };
+
+            tbSearchFilter.TextChanged += (o, e) => UpdateSearchFilter(tbSearchFilter.Text);
         }
     }
 
