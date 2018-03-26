@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace DSCript.Spooling
 {
-    public struct SpoolerContext
+    public struct SpoolerContext : IEquatable<int>, IEquatable<string>, IEquatable<ChunkType>, IEquatable<SpoolerContext>, IComparable<string>
     {
         private int m_value;
 
@@ -42,16 +43,87 @@ namespace DSCript.Spooling
             return new SpoolerContext((c4 << 24) | (c3 << 16) | (c2 << 8) | (c1 << 0));
         }
 
+        private unsafe int FastCompare(string value)
+        {
+            fixed (int* pValue = &m_value)
+            fixed (char* pOther = value)
+            {
+                var ptr = pOther;
+
+                var len = value.Length;
+                var idx = 0;
+                
+                for (idx = 0; idx < len; idx++)
+                {
+                    var a = *((byte*)pValue + idx);
+                    var b = *(ptr++);
+
+                    if ((a != b) && (b != '*'))
+                        return -1;
+                }
+
+                return ((idx + 1) == len) ? 0 : idx;
+            }
+        }
+
+        public override int GetHashCode()
+        {
+            return m_value;
+        }
+
+        public int CompareTo(string value)
+        {
+            if (String.IsNullOrEmpty(value) || value.Length > 4)
+                return -1;
+
+            return FastCompare(value);
+        }
+        
+        public bool Equals(int value)
+        {
+            return m_value == value;
+        }
+
+        public bool Equals(string value)
+        {
+            return CompareTo(value) == 0;
+        }
+
+        public bool Equals(ChunkType chunkType)
+        {
+            return m_value == (int)chunkType;
+        }
+
+        public bool Equals(SpoolerContext other)
+        {
+            return m_value == other.m_value;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is int)
+                return m_value == (int)obj;
+            if (obj is string)
+                return Equals((string)obj);
+            if (obj is SpoolerContext)
+                return Equals((SpoolerContext)obj);
+            if (obj is ChunkType)
+                return Equals((ChunkType)obj);
+
+            return false;
+        }
+
         public override string ToString()
         {
             var str = "";
 
             if (m_value > 0)
             {
-                for (int b = 3; b >= 0; b--)
+                for (int b = 0; b < 4; b++)
                 {
-                    var c = (m_value >> (b * 8)) & 0xFF;
-                    if (c != 0)
+                    var c = (char)((m_value >> (b * 8)) & 0xFF);
+
+                    if (c != '\0')
                         str += c;
                 }
             }
