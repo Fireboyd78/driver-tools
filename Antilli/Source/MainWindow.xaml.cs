@@ -216,6 +216,79 @@ namespace Antilli
         {
             get { return (AT.CurrentState.CanUseGlobals) ? 1 : 2; }
         }
+        
+        public bool IsFileOpened
+        {
+            get { return CurrentModelFile != null; }
+        }
+
+        private bool m_isFileDirty;
+
+        public bool IsFileDirty
+        {
+            get { return m_isFileDirty; }
+            set
+            {
+                if (m_isFileDirty != value)
+                {
+                    m_isFileDirty = value;
+
+                    if (IsFileOpened)
+                    {
+                        var filename = CurrentModelFile.FileName;
+
+                        SubTitle = (m_isFileDirty) ? $"{filename} *" : filename;
+                    }
+
+                    UpdateFileStatus();
+                }
+            }
+        }
+
+        public bool AreChangesPending
+        {
+            get { return IsFileOpened && (IsFileDirty || CurrentModelFile.AreChangesPending); }
+        }
+
+        public bool CanSaveFile
+        {
+            get { return IsFileOpened && AreChangesPending; }
+        }
+        
+        private void UpdateFileStatus()
+        {
+            OnPropertyChanged("IsFileOpened");
+            OnPropertyChanged("CanSaveFile");
+        }
+
+        private void ReleaseModels()
+        {
+            if (AT.CurrentState.ModelFile != null)
+            {
+                AT.CurrentState.SelectedModelPackage = null;
+                AT.CurrentState.CanUseGlobals = false;
+                AT.CurrentState.CanUseBlendWeights = false;
+
+                AT.CurrentState.ModelFile.Dispose();
+                AT.CurrentState.ModelFile = null;
+
+                Viewer.ClearModels();
+            }
+        }
+
+        private void CloseFile(bool exiting)
+        {
+            ReleaseModels();
+
+            IsFileDirty = false;
+            SetCurrentFile(null);
+        }
+
+        private void SetCurrentFile(string filename)
+        {
+            SubTitle = filename;
+            UpdateFileStatus();
+        }
 
         private void MoveToTab(int index)
         {
@@ -391,7 +464,7 @@ namespace Antilli
                 AT.CurrentState.CanUseGlobals = false;
             }
 
-            SubTitle = filename;
+            SetCurrentFile(filename);
 
             if (CurrentModelFile.HasModels)
             {
@@ -410,6 +483,89 @@ namespace Antilli
 
             if (dialog.ShowDialog() ?? false)
                 OnFileOpened(dialog.FileName);
+        }
+
+        private bool AskUserPrompt(string message)
+        {
+            return MessageBox.Show(message, "Antilli", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        }
+
+        private void OnFileSaveClick(bool saveAs)
+        {
+            var filename = CurrentModelFile.FileName;
+
+            if (saveAs)
+            {
+                var name = Path.GetFileName(filename);
+                var ext = Path.GetExtension(filename);
+
+                var saveDlg = new SaveFileDialog() {
+                    AddExtension = true,
+                    DefaultExt = ext,
+                    FileName = name,
+                    InitialDirectory = Settings.ExportDirectory,
+                    Title = "Please enter a filename",
+                    ValidateNames = true,
+                    OverwritePrompt = true,
+                };
+
+                if (saveDlg.ShowDialog() ?? false)
+                {
+                    filename = saveDlg.FileName;
+
+                    if (CurrentModelFile.Save(filename))
+                    {
+                        IsFileDirty = false;
+                        SetCurrentFile(filename);
+
+                        MessageBox.Show($"Successfully saved to '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Failed to save '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+            else
+            {
+                if (AskUserPrompt($"All pending changes will be saved to '{CurrentModelFile.FileName}'. Do you wish to OVERWRITE the original file? (NO BACKUPS WILL BE CREATED)"))
+                {
+                    if (CurrentModelFile.Save())
+                    {
+                        IsFileDirty = false;
+                        MessageBox.Show($"Successfully saved changes to '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Failed to save '{filename}'! No changes were made.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+        }
+
+        private void OnFileCloseClick()
+        {
+            bool actuallyClose = true;
+
+            if (IsFileDirty && !AskUserPrompt("All pending changes will be lost. Are you sure?"))
+                actuallyClose = false;
+
+            if (actuallyClose)
+                CloseFile(false);
+        }
+
+        private void OnFileExitClick()
+        {
+            bool actuallyExit = true;
+
+            if (IsFileDirty && !AskUserPrompt("You still have unsaved changes made to the file. Are you sure you want to exit?"))
+                actuallyExit = false;
+
+            if (actuallyExit)
+            {
+                CloseFile(true);
+                Environment.Exit(0);
+            }
         }
 
         private RadioButton[] m_lodBtnRefs = new RadioButton[7];
@@ -496,10 +652,7 @@ namespace Antilli
                 MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
             else
             {
-                var prompt = new ExportModelDialog() {
-                    Owner = this,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                };
+                var prompt = CreateDialog<ExportModelDialog>(true, false);
 
                 if (!SelectedPartsGroup.IsNull)
                     prompt.FolderName = SelectedPartsGroup.Text.Replace(':', '-');
@@ -593,9 +746,9 @@ namespace Antilli
                 AT.Log("Exporting ModelPackage...");
                 CurrentModelPackage.ModelFile.Save(path, false);
                 AT.Log("Done!");
-                
-                string msg = String.Format("Successfully exported to '{0}'!", path);
-                MessageBox.Show(msg, "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                IsFileDirty = false;
+                MessageBox.Show($"Successfully exported to '{path}'!", "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -768,12 +921,20 @@ namespace Antilli
 
                 var texRef = TextureCache.GetTexture(texture);
                 texRef.SetBuffer(ddsBuffer);
+
+                // fill in a null texture's UID
+                // otherwise, leave it alone (bad idea?)
+                if (texRef.Data.UID == 0)
+                    texRef.Data.UID = (int)Memory.GetCRC32(ddsBuffer);
                 
                 Viewer.UpdateActiveModel();
 
                 // reload the active texture if necessary
                 if (IsViewWidgetVisible)
                     CurrentViewWidget.SetTexture(texture);
+
+                IsFileDirty = true;
+                CurrentModelPackage.NotifyChanges();
             }
         }
 
@@ -786,6 +947,8 @@ namespace Antilli
                 var tex = item.Texture;
                 ReplaceTexture(tex);
 
+                item.UpdateName();
+                
                 UpdateViewWidgets();
             }
         }
@@ -981,6 +1144,45 @@ namespace Antilli
             // no material!
             return false;
         }
+
+        private Dictionary<Type, Window> m_dialogs = new Dictionary<Type, Window>();
+        
+        private T CreateDialog<T>(bool modal, bool show = true)
+            where T : Window, new()
+        {
+            var wndType = typeof(T);
+
+            T dialog = null;
+
+            if (modal && m_dialogs.ContainsKey(wndType))
+            {
+                dialog = (T)m_dialogs[wndType];
+
+                if (show)
+                    dialog.Activate();
+            }
+            else
+            {
+                dialog = new T() {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                };
+
+                if (modal)
+                {
+                    dialog.Closed += (o, e) => {
+                        m_dialogs.Remove(wndType);
+                    };
+
+                    m_dialogs.Add(wndType, dialog);
+                }
+
+                if (show)
+                    dialog.Show();
+            }
+            
+            return dialog;
+        }
         
         private void Initialize()
         {
@@ -1056,6 +1258,24 @@ namespace Antilli
                     break;
                 case 1:
                     MaterialViewWidget.OnKeyPressed(o, e);
+
+                    switch (e.Key)
+                    {
+                    case Key.X:
+                        var xmlDoc = new XmlDocument();
+
+                        var matPkg = xmlDoc.CreateElement("MaterialPackage");
+                        var outPath = Path.Combine(Settings.ExportDirectory, "MaterialPackage.xml");
+                        matPkg.SetAttribute("Version", "6");
+
+                        CurrentModelPackage.SaveMaterials(matPkg);
+
+                        xmlDoc.AppendChild(matPkg);
+                        xmlDoc.Save(outPath);
+
+                        Debug.WriteLine($"Saved material package to '{outPath}'.");
+                        break;
+                    }
                     break;
                 case 2:
                     TextureViewWidget.OnKeyPressed(o, e);
@@ -1089,25 +1309,20 @@ namespace Antilli
             ApplyTransform.Unchecked += (o, e) => Viewer.ToggleTransforms();
             
             fileOpen.Click += (o, e) => OnFileOpenClick();
-            
-            fileExit.Click += (o, e) => Environment.Exit(0);
+            fileClose.Click += (o, e) => OnFileCloseClick();
+
+            fileSave.Click += (o, e) => OnFileSaveClick(false);
+            fileSaveAs.Click += (o, e) => OnFileSaveClick(true);
+
+            fileExit.Click += (o, e) => OnFileExitClick();
 
             exportSel.Click += (o, e) => ExportModelFile();
             exportMDPC.Click += (o, e) => ExportModelPackage();
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
             exportAIModel.Click += (o, e) => ExportAntilliModelFile();
 
-            chunkViewer.Click += (o, e) => {
-                var cViewer = new ChunkViewer();
-            
-                cViewer.Show();
-            };
-
-            modelTool.Click += (o, e) => {
-                var mTool = new Importer();
-
-                mTool.Show();
-            };
+            chunkViewer.Click += (o, e) => CreateDialog<ChunkViewer>(true);
+            modelTool.Click += (o, e) => CreateDialog<Importer>(true);
         
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);

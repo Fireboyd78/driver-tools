@@ -457,11 +457,11 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" MinWidth="24" SharedSizeGroup="MenuItemIconColumnGroup"/>
-                    <ColumnDefinition Width="4"/>
+                    <ColumnDefinition Width="8"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="37"/>
+                    <ColumnDefinition Width="32"/>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="MenuItemIGTColumnGroup"/>
-                    <ColumnDefinition Width="17"/>
+                    <ColumnDefinition Width="12"/>
                 </Grid.ColumnDefinitions>
 
                 <ContentPresenter x:Name="Icon" Content="{TemplateBinding Icon}" ContentSource="Icon" Margin="1"
@@ -474,7 +474,7 @@
                 </Border>
 
                 <ContentPresenter Content="{TemplateBinding Header}" ContentSource="Header" ContentStringFormat="{TemplateBinding HeaderStringFormat}"
-                                  ContentTemplate="{TemplateBinding HeaderTemplate}" Grid.Column="2"
+                                  ContentTemplate="{TemplateBinding HeaderTemplate}" Grid.Column="2" VerticalAlignment="Center"
                                   Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 

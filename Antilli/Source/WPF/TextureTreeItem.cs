@@ -9,14 +9,23 @@ namespace Antilli
 {
     public class TextureTreeItem
     {
-        public string Name { get; }
+        protected string BaseName { get; }
+        
+        public string Name { get; protected set; }
 
         public ITextureData Texture { get; }
+
+        public void UpdateName()
+        {
+            Name = $"{BaseName} : {Texture.UID:X8}";
+        }
         
         public TextureTreeItem(int id, ITextureData texture)
         {
             Texture = texture;
-            Name = $"Texture {id + 1} : {texture.UID:X8}";
+            BaseName = $"Texture {id + 1}";
+
+            UpdateName();
         }
     }
 }

@@ -65,6 +65,11 @@
             <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
                 <MenuItem x:Name="fileOpen" Header="Open"/>
                 <Separator/>
+                <MenuItem x:Name="fileClose" Header="Close" IsEnabled="{Binding IsFileOpened}"/>
+                <Separator/>
+                <MenuItem x:Name="fileSave" Header="Save" IsEnabled="{Binding CanSaveFile}"/>
+                <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsFileOpened}"/>
+                <Separator/>
                 <MenuItem x:Name="fileExit" Header="Exit"/>
             </MenuItem>
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
