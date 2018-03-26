@@ -30,7 +30,7 @@ namespace DSCript.Models
         // resolves to a vertex declaration
         public short VertexType { get; set; }
 
-        public int Unknown2 { get; set; }
+        public int Flags { get; set; }
 
         // something shadow related?
         public int Unknown3 { get; set; }

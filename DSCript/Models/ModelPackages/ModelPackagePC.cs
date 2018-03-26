@@ -10,6 +10,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Media.Media3D;
 
+using System.Xml;
+using System.Xml.Linq;
+
 namespace DSCript.Models
 {
     public enum MeshType
@@ -716,9 +719,12 @@ namespace DSCript.Models
 
                     VertexType = stream.ReadInt16(),
                     
-                    Unknown2 = stream.ReadInt32(),
-                    Unknown3 = stream.ReadInt32()
+                    Flags = stream.ReadInt32(),
                 };
+
+                // reserved space for effect index
+                // sadly can't be used to force a specific effect cause game overwrites it :(
+                stream.Position += 4;
 
                 Parts.Add(pGroup);
 
@@ -834,11 +840,11 @@ namespace DSCript.Models
 
                             var mesh = new MeshDefinition(this) {
                                 PrimitiveType = (PrimitiveType)primType,
-                                BaseVertexIndex = stream.ReadInt32(),
-                                MinIndex = stream.ReadUInt32(),
-                                NumVertices = stream.ReadUInt32(),
-                                StartIndex = stream.ReadUInt32(),
-                                PrimitiveCount = stream.ReadUInt32(),
+                                VertexBaseOffset = stream.ReadInt32(),
+                                VertexOffset = stream.ReadInt32(),
+                                VertexCount = stream.ReadInt32(),
+                                IndexOffset = stream.ReadInt32(),
+                                IndexCount = stream.ReadInt32(),
 
                                 MeshGroup = mGroup,
                                 PartsGroup = pGroup
@@ -1098,12 +1104,12 @@ namespace DSCript.Models
                         f.Position = mOffset;
 
                         f.Write((int)mesh.PrimitiveType);
-                        f.Write(mesh.BaseVertexIndex);
-                        f.Write(mesh.MinIndex);
-                        f.Write(mesh.NumVertices);
+                        f.Write(mesh.VertexBaseOffset);
+                        f.Write(mesh.VertexOffset);
+                        f.Write(mesh.VertexCount);
 
-                        f.Write(mesh.StartIndex);
-                        f.Write(mesh.PrimitiveCount);
+                        f.Write(mesh.IndexOffset);
+                        f.Write(mesh.IndexCount);
                         
                         f.Position += 0x18;
 
@@ -1167,10 +1173,11 @@ namespace DSCript.Models
 
                         f.Write(part.VertexType);
 
-                        f.Write(part.Unknown2);
-                        f.Write(part.Unknown3);
+                        f.Write(part.Flags);
 
                         f.Position += 0x4;
+
+                        f.Write((int)MagicNumber.FIREBIRD); // ;)
 
                         foreach (var transform in part.Transform)
                             f.Write(transform);
@@ -1320,6 +1327,52 @@ namespace DSCript.Models
             }
 
             Spooler.SetBuffer(buffer);
+        }
+
+        public void LoadMaterials(XmlElement elem)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SaveMaterials(XmlElement parent)
+        {
+            var xmlDoc = parent.OwnerDocument;
+            
+            foreach (var material in Materials)
+            {
+                var mat = xmlDoc.CreateElement("Material");
+
+                if (material.IsAnimated)
+                    mat.SetAttribute("AnimationSpeed", material.AnimationSpeed.ToString());
+                
+                foreach (var substance in material.Substances)
+                {
+                    var sub = xmlDoc.CreateElement("Substance");
+
+                    sub.SetAttribute("Flags", substance.Flags.ToString("X8"));
+
+                    sub.SetAttribute("Mode", substance.Mode.ToString("X4"));
+                    sub.SetAttribute("Type", substance.Type.ToString("X4"));
+                    
+                    foreach (var texture in substance.Textures)
+                    {
+                        var tex = xmlDoc.CreateElement("Texture");
+
+                        tex.SetAttribute("Reserved", texture.Reserved.ToString("X8"));
+                        tex.SetAttribute("UID", texture.CRC32.ToString("X8"));
+                        tex.SetAttribute("Type", texture.Type.ToString());
+                        tex.SetAttribute("Width", texture.Width.ToString());
+                        tex.SetAttribute("Height", texture.Height.ToString());
+                        tex.SetAttribute("Unknown", texture.Unknown.ToString());
+
+                        sub.AppendChild(tex);
+                    }
+
+                    mat.AppendChild(sub);
+                }
+
+                parent.AppendChild(mat);
+            }
         }
     }
 }
