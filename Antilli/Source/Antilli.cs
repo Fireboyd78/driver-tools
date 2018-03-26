@@ -321,7 +321,7 @@ namespace Antilli
     public static class FileManager
     {
         public static readonly GameFileFilter[] D3Filters = new GameFileFilter[] {
-            new GameFileFilter("City|*.d3c",                GameFileFlags.Cities),
+            new GameFileFilter("City|*.d3c",                GameFileFlags.Cities | GameFileFlags.Models | GameFileFlags.Textures),
             new GameFileFilter("City models|*.pcs",         GameFileFlags.Cities | GameFileFlags.Models | GameFileFlags.Textures),
                                                             
             new GameFileFilter("Font|*.bnk",                GameFileFlags.Textures),
