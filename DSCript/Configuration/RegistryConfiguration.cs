@@ -23,7 +23,7 @@ namespace DSCript
         bool IDSCConfiguration.HasKey(string key)
         {
             VerifyAccess();
-            return Key.GetValueNames().Contains(key);
+            return Key.GetValue(key) != null;
         }
 
         string IDSCConfiguration.GetDirectory(string key)

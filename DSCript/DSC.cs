@@ -151,46 +151,62 @@ namespace DSCript
             return Environment.GetFolderPath(progFiles);
         }
 
+        private static string m_progDir;
+        private static string m_steamDir;
+        private static string m_atariDir;
+        private static string m_ubiDir;
+        
+        private static bool m_gameLookupReady = false;
+
+        private static void InitGameLookup()
+        {
+            if (m_gameLookupReady)
+                return;
+
+            m_progDir = GetProgramFilesDirectory();
+            m_steamDir = GetSteamAppsDirectory();
+            m_atariDir = Path.Combine(m_progDir, "Atari");
+            m_ubiDir = Path.Combine(m_progDir, "Ubisoft");
+
+            m_gameLookupReady = true;
+        }
+
+        private static string GetDefaultGameDirectory(string game)
+        {
+            InitGameLookup();
+
+            string[] dirs1 = { m_atariDir, m_ubiDir };
+            string[] dirs2 = { m_ubiDir, m_steamDir };
+
+            switch (game)
+            {
+            case "Driv3r":
+                return GetFirstValidDirectory(game, dirs1);
+            case "DriverPL":
+                return GetFirstValidDirectory(game, dirs2);
+            case "DriverSF":
+                return GetFirstValidDirectory(game, dirs2);
+            }
+
+            return String.Empty;
+        }
+
         private static void SetupRegistryConfig()
         {
             // setup the registry configuration if necessary
             var config = (IDSCConfiguration)Configuration.RegistryConfiguration;
-            var keys = config.GetKeys();
 
-            var needsUpdate = false;
+            string[] keys = {
+                "Driv3r",
+                "DriverPL",
+                "DriverSF",
+            };
 
-            if (keys.Length > 0)
+            // this will only update values if they do not already exist
+            foreach (var key in keys)
             {
-                foreach (var key in keys)
-                {
-                    var dir = config.GetDirectory(key);
-
-                    if (String.IsNullOrEmpty(dir) || !Directory.Exists(dir))
-                    {
-                        needsUpdate = true;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                needsUpdate = true;
-            }
-
-            if (needsUpdate)
-            {
-                var progDir = GetProgramFilesDirectory();
-
-                var atariDir = Path.Combine(progDir, "Atari");
-                var ubiDir   = Path.Combine(progDir, "Ubisoft");
-                var steamDir = GetSteamAppsDirectory();
-                
-                string[] dirs1 = { atariDir, ubiDir, steamDir };
-                string[] dirs2 = { ubiDir, steamDir };
-                
-                config.SetDirectory("Driv3r", GetFirstValidDirectory("Driv3r", dirs1));
-                config.SetDirectory("DriverPL", GetFirstValidDirectory("Driver Parallel Lines", dirs2));
-                config.SetDirectory("DriverSF", GetFirstValidDirectory("Driver San Francisco", dirs2));
+                if (!config.HasKey(key))
+                    config.SetDirectory(key, GetDefaultGameDirectory(key));
             }
         }
 
