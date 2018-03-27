@@ -81,6 +81,8 @@
                 <Separator/>
                 <MenuItem x:Name="chunkViewer" Header="Chunk Editor"/>
                 <MenuItem x:Name="modelTool" Header="Model Tool"/>
+                <Separator />
+                <MenuItem x:Name="optionsDlg" Header="Options..."/>
             </MenuItem>
         </Menu>
 

@@ -1,0 +1,66 @@
+﻿<at:ObservableWindow x:Class="Antilli.OptionsDialog" DataContext="{Binding RelativeSource={RelativeSource Self}}"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:at="clr-namespace:Antilli"
+        mc:Ignorable="d"
+        Title="Options" Width="425" Height="270" Background="#181818">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="4*"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Vertical" Margin="2,5">
+            <Label Content="Driv3r directory:" Padding="6,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="35" />
+                </Grid.ColumnDefinitions>
+                <TextBox Name="txtDirDriv3r" Padding="2" Margin="4" MaxLength="260" MaxLines="1"/>
+                <Button Grid.Column="1" Name="btnDirDriv3r" Content="..." Height="26" Margin="4,0" Padding="6,0" HorizontalAlignment="Stretch" />
+            </Grid>
+
+            <Label Content="Driver Parallel Lines directory:" Padding="6,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="35" />
+                </Grid.ColumnDefinitions>
+                <TextBox Name="txtDirDriverPL" Padding="2" Margin="4" MaxLength="260" MaxLines="1"/>
+                <Button Grid.Column="1" Name="btnDirDriverPL" Content="..." Height="26" Margin="4,0" Padding="6,0" HorizontalAlignment="Stretch" />
+            </Grid>
+
+            <Label Content="Driver San Francisco directory:" Padding="6,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="35" />
+                </Grid.ColumnDefinitions>
+                <TextBox Name="txtDirDriverSF" Padding="2" Margin="4" MaxLength="260" MaxLines="1"/>
+                <Button Grid.Column="1" Name="btnDirDriverSF" Content="..." Height="26" Margin="4,0" Padding="6,0" HorizontalAlignment="Stretch" />
+            </Grid>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,2,0" Grid.Column="1">
+                <StackPanel.Resources>
+                    <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="Margin" Value="4"/>
+                        <Setter Property="Padding" Value="10,0"/>
+                    </Style>
+                </StackPanel.Resources>
+
+                <Button Name="btnOk" Content="OK" IsDefault="True"/>
+                <Button Name="btnCancel" Content="Cancel" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</at:ObservableWindow>

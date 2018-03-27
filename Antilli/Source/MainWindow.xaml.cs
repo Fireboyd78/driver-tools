@@ -1180,6 +1180,11 @@ namespace Antilli
                 if (show)
                     dialog.Show();
             }
+
+            dialog.Closed += (o, e) => {
+                // focus main window so everything doesn't disappear
+                Focus();
+            };
             
             return dialog;
         }
@@ -1323,6 +1328,8 @@ namespace Antilli
 
             chunkViewer.Click += (o, e) => CreateDialog<ChunkViewer>(true);
             modelTool.Click += (o, e) => CreateDialog<Importer>(true);
+
+            optionsDlg.Click += (o, e) => CreateDialog<OptionsDialog>(true);
         
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);

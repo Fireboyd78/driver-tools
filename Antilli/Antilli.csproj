@@ -94,6 +94,9 @@
     <Compile Include="Source\ImageWidget.xaml.cs">
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Source\OptionsDialog.xaml.cs">
+      <DependentUpon>OptionsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
     <Compile Include="Source\WPF\TextureTreeItem.cs" />
@@ -183,6 +186,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Source\ImageWidget.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Source\OptionsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
