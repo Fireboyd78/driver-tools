@@ -1350,6 +1350,121 @@ namespace Audiose
             return ParseResult.Success;
         }
 
+        static ParseResult ParseRSBData()
+        {
+            if (Config.Extract)
+            {
+                Console.WriteLine("'Extract' argument is invalid for RSB audio data.");
+                return ParseResult.Failure;
+            }
+
+            if (Config.Compile)
+            {
+                Console.WriteLine("Cannot compile RSB audio data, operation unsupported.");
+                return ParseResult.Failure;
+            }
+
+            // DSS file
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"; Source file: {Config.Input}");
+            sb.AppendLine();
+
+            var bankName = Path.GetFileNameWithoutExtension(Config.Input);
+
+            var srcDir = Path.GetDirectoryName(Config.Input);
+            var audDir = Path.Combine("Audio", bankName);
+
+            var outDir = Path.Combine(srcDir, audDir);
+
+            if (!Directory.Exists(outDir))
+                Directory.CreateDirectory(outDir);
+            
+            using (var fs = File.Open(Config.Input, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                var sndCount = fs.ReadInt32();
+                var sndOffset = (int)fs.Position;
+                
+                for (int i = 0; i < sndCount; i++)
+                {
+                    fs.Position = sndOffset + (i * 0x10);
+
+                    var offset = fs.ReadInt32();
+
+                    var frequency = fs.ReadInt16();
+                    var volume = fs.ReadInt16();
+
+                    var info = fs.ReadInt32();
+                    var reserved = fs.ReadInt32();
+
+                    var priority = (info & 0xFF);
+                    var flags = (info >> 8);
+                    
+                    var flg2D = (flags & 0x40) != 0;
+                    var flgLoop = (flags & 0x80) != 0;
+
+                    var hasFlags = (flags != 0);
+                    var hasPriority = (priority != 16);
+                    var hasVolume = (volume != 0);
+
+                    // parse data
+                    fs.Position = offset;
+
+                    var magic = fs.ReadInt32();
+
+                    if (magic != RIFF.RIFFIdentifier)
+                        throw new InvalidDataException("Malformed RSB sample data -- where's the RIFF data?!");
+
+                    // include RIFF header + size field
+                    var size = fs.ReadInt32() + 8;
+
+                    if (fs.ReadInt32() != RIFF.WAVEIdentifier)
+                        throw new InvalidDataException("What did you do to this RSB file?!");
+
+                    // read in the sample data
+                    var sndData = new byte[size];
+
+                    fs.Position = offset;
+                    fs.Read(sndData, 0, size);
+
+                    var sndName = $"{i:D2}.wav";
+                    var sndPath = Path.Combine(audDir, sndName);
+
+                    // write out the sample data
+                    File.WriteAllBytes(Path.Combine(outDir, sndName), sndData);
+
+                    // append to dss data
+                    if (hasFlags || hasVolume || hasPriority)
+                    {
+                        sb.Append($"{sndPath.ToLower(),-34}");
+
+                        if (flg2D)
+                            sb.Append(" /2D");
+                        if (flgLoop)
+                            sb.Append(" /LOOP");
+                        
+                        sb.Append($" /FREQ={frequency}");
+
+                        if (hasVolume)
+                            sb.Append($" /VOL={volume}");
+                        if (hasPriority)
+                            sb.Append($" /PRI={priority}");
+
+                        // next line
+                        sb.AppendLine();
+                    }
+                    else
+                    {
+                        sb.AppendLine(sndPath.ToLower());
+                    }
+                }
+            }
+            
+            File.WriteAllText(Path.Combine(srcDir, $"{bankName}.dss"), sb.ToString());
+
+            return ParseResult.Success;
+        }
+
         static ParseResult Parse()
         {
             if (Config.HasArg("stuntman"))
@@ -1360,6 +1475,8 @@ namespace Audiose
             case FileType.Blk:
             case FileType.Sbk:
                 return ParseDataPS1();
+            case FileType.Rsb:
+                return ParseRSBData();
             case FileType.Bin:
                 return ParseDriver2Music();
             case FileType.Xa:

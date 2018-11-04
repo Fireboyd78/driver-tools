@@ -22,6 +22,8 @@ namespace Audiose
         Blk, // PS1 block data
         Sbk, // PS1 soundbank data
 
+        Rsb, // PC sound data
+
         Xa, // PS2 music
         Xav, // audio/video stream
     }
@@ -189,6 +191,9 @@ namespace Audiose
                 return FileType.Blk;
             case ".sbk":
                 return FileType.Sbk;
+
+            case ".rsb":
+                return FileType.Rsb;
 
             case ".xa":
                 return FileType.Xa;
