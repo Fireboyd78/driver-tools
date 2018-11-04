@@ -63,7 +63,7 @@
                 </LinearGradientBrush>
             </Menu.Background>
             <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="fileOpen" Header="Open"/>
+                <MenuItem x:Name="fileOpen" Header="Open" Template="{DynamicResource atDark_subMenuItem}"/>
                 <Separator/>
                 <MenuItem x:Name="fileClose" Header="Close" IsEnabled="{Binding IsFileOpened}"/>
                 <Separator/>
@@ -97,12 +97,13 @@
             <TabItem Header="Viewport">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="300"/>
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="1.5*" MinWidth="300" MaxWidth="375"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="4.5*" />
                     </Grid.ColumnDefinitions>
 
                     <!-- Left column -->
-                    <Grid Grid.Column="0" Margin="5">
+                    <Grid Grid.Column="0" Margin="5,5,0,5">
                         <Grid.RowDefinitions>
                             <RowDefinition/>
                             <RowDefinition Height="Auto" />
@@ -117,15 +118,23 @@
                         </Grid.Resources>
 
                         <!-- Lists -->
-                        <GroupBox Header="Model Packages" Width="125" HorizontalAlignment="Left">
-                            <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
-                        </GroupBox>
-                        <GroupBox Header="Parts Groups"  Width="160" HorizontalAlignment="Right">
-                            <ListBox x:Name="Groups" ItemsSource="{Binding PartsGroups}"
+                        <Grid Grid.Column="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.25*" MinWidth="120"/>
+                                <ColumnDefinition Width="Auto" MinWidth="5"/>
+                                <ColumnDefinition Width="1.75*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <GroupBox Grid.Column="0" Header="Model Packages" HorizontalAlignment="Stretch">
+                                <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
+                            </GroupBox>
+                            <GroupBox Grid.Column="2" Header="Model Containers" HorizontalAlignment="Stretch">
+                                <ListBox x:Name="Groups" ItemsSource="{Binding PartsGroups}"
                              FontFamily="Consolas"
                              FontStretch="UltraCondensed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
-                        </GroupBox>
-
+                            </GroupBox>
+                        </Grid>
+                        
                         <!-- Rendering options -->
                         <GroupBox Grid.Row="1" Margin="0,5,0,0" Header="Rendering Options">
                             <StackPanel Orientation="Vertical" x:Name="RenderingOptionsGrid" Style="{StaticResource LODBox}">
@@ -152,8 +161,15 @@
                         </GroupBox>
                     </Grid>
 
+                    <GridSplitter Grid.Column="1"
+                          Background="Transparent"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Width="5" />
+
                     <!-- Viewer -->
-                    <Grid Grid.Column="1" Grid.Row="1" Margin="0,5,5,5">
+                    <Grid Grid.Column="2" Grid.Row="1" Margin="0,5,5,5">
                         <at:ModelViewer x:Name="Viewer"/>
                     </Grid>
                 </Grid>
@@ -162,8 +178,9 @@
             <TabItem Header="Materials">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="175"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1.25*" MinWidth="190" MaxWidth="280"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="4.75*"/>
                     </Grid.ColumnDefinitions>
 
                     <Grid>
@@ -175,24 +192,9 @@
                         <GroupBox x:Name="MaterialsBox" Header="Materials" Grid.Column="0" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
                             <TreeView x:Name="MaterialsList" ItemsSource="{Binding Materials}" SelectedItemChanged="OnMaterialListSelectionChanged">
                                 <TreeView.ContextMenu>
-                                    <ContextMenu Visibility="Hidden">
-                                        <MenuItem x:Name="addMtlMenu" Header="New...">
-                                            <MenuItem Header="Standard Material" Tag="STANDARD" ToolTip="A standard material with one (1) texture state for an object."/>
-                                            <Separator/>
-                                            <MenuItem Header="Vehicle Material">
-                                                <MenuItem Header="Body">
-                                                    <MenuItem Header="Color Mask, Damages" Tag="VBD1" ToolTip="A material with clean/damaged textures and a color mask."/>
-                                                    <MenuItem Header="No Mask, Damages" Tag="VBD2" ToolTip="A material with clean/damaged textures, but no color mask."/>
-                                                    <Separator/>
-                                                    <MenuItem Header="Color Mask, No Damage" Tag="VB1" ToolTip="A material with clean textures and a color mask."/>
-                                                    <MenuItem Header="No Mask, No Damage" Tag="VB2" ToolTip="A material with clean/damaged textures, but no color mask."/>
-                                                </MenuItem>
-                                                <MenuItem Header="Wheel">
-                                                    <MenuItem Header="1-State" Tag="WH1" ToolTip="A material with one (1) texture state for a wheel."/>
-                                                    <MenuItem Header="4-State" Tag="WH4" ToolTip="A material with four (4) texture states for a wheel."/>
-                                                </MenuItem>
-                                            </MenuItem>
-                                        </MenuItem>
+                                    <ContextMenu>
+                                        <MenuItem x:Name="mtlListExpandAll" Header="Expand All"/>
+                                        <MenuItem x:Name="mtlListCollapseAll" Header="Collapse All"/>
                                     </ContextMenu>
                                 </TreeView.ContextMenu>
                             </TreeView>
@@ -202,7 +204,14 @@
                         </GroupBox>
                     </Grid>
 
-                    <Grid Grid.Column="1" Margin="5,0,0,0">
+                    <GridSplitter Grid.Column="1"
+                          Background="Transparent"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Width="5" />
+
+                    <Grid Grid.Column="2">
                         <at:ImageWidget x:Name="MaterialViewWidget" />
                     </Grid>
                 </Grid>
@@ -211,8 +220,9 @@
             <TabItem Header="Textures">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="175"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1.25*" MinWidth="190" MaxWidth="280"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="4.75*"/>
                     </Grid.ColumnDefinitions>
                     
                     <Grid>
@@ -231,7 +241,14 @@
                         </GroupBox>
                     </Grid>
 
-                    <Grid Grid.Column="1" Margin="5,0,0,0">
+                    <GridSplitter Grid.Column="1"
+                          Background="Transparent"
+                          ResizeDirection="Columns"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Width="5" />
+
+                    <Grid Grid.Column="2">
                         <at:ImageWidget x:Name="TextureViewWidget" />
                     </Grid>
                 </Grid>

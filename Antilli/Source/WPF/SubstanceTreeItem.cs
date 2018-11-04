@@ -31,7 +31,23 @@ namespace Antilli
         public SubstanceTreeItem(int id, ISubstanceData subMaterial)
         {
             Substance = subMaterial;
-            Name = $"Substance {id}";
+
+            var name = (subMaterial is ISubstanceDataPC) ? subMaterial.RenderBin : "Substance";
+
+            Name = $"[{id}]: {name}";
+
+            if (subMaterial is ISubstanceDataPC)
+            {
+                var sPC = (subMaterial as ISubstanceDataPC);
+
+                int[] regs = {
+                    (subMaterial.Mode & 0xFF),
+                    (subMaterial.Mode >> 8),
+                    (subMaterial.Type & 0xFF),
+                };
+
+                Name = $"{Name} : 0x{subMaterial.Flags:X} {regs[0]} {regs[1]} {regs[2]} 0x{(int)sPC.ExtraFlags:X}";
+            }
         }
     }
 }

@@ -17,13 +17,13 @@ namespace Antilli
 
         public void UpdateName()
         {
-            Name = $"{BaseName} : {Texture.UID:X8}";
+            Name = $"{BaseName} : {Texture.UID:X8} : {Texture.Width}x{Texture.Height}";
         }
         
         public TextureTreeItem(int id, ITextureData texture)
         {
             Texture = texture;
-            BaseName = $"Texture {id + 1}";
+            BaseName = $"[{id + 1}]: Texture";
 
             UpdateName();
         }

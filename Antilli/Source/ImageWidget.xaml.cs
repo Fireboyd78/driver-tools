@@ -48,6 +48,63 @@ namespace Antilli
         }
         #endregion
 
+        delegate void PropertyUpdateCallback(string updatedValue);
+
+        class PropertyItem
+        {
+            private string m_value;
+
+            public string Name { get; set; }
+
+            public string Value
+            {
+                get { return m_value; }
+            }
+
+            PropertyUpdateCallback Callback { get; set; }
+
+            public void AddToPanel(StackPanel panel)
+            {
+                var label = new Label() {
+                    Content = $"{Name}:"
+                };
+                
+                var txtBox = new TextBox() {
+                    Text = Value
+                };
+
+                txtBox.KeyDown += (o, e) => {
+                    if (e.Key == Key.Enter)
+                    {
+                        if (!String.Equals(m_value, txtBox.Text))
+                        {
+                            Callback(txtBox.Text);
+                            m_value = txtBox.Text;
+                        }
+                    }
+                };
+
+                var grid = new Grid() {
+                    Margin = new Thickness(4)
+                };
+
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(50) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+
+                Grid.SetColumn(txtBox, 1);
+
+                panel.Children.Add(grid);
+            }
+
+            public PropertyItem(string name, PropertyUpdateCallback callback, string initialValue = "")
+            {
+                Name = name;
+                Callback = callback;
+
+                m_value = initialValue;
+            }
+        }
+
         string m_contentInfo;
         BitmapReference m_bitmap;
         int m_imageLoadFlags;
@@ -82,7 +139,7 @@ namespace Antilli
 
             sb.AppendLine("== Material Information ==");
 
-            sb.AppendColumn("Animated", col, true).AppendLine("{0}", material.IsAnimated);
+            sb.AppendColumn("Type", col, true).AppendLine("{0}", material.Type);
             sb.AppendColumn("AnimSpeed", col, true).AppendLine("{0}", material.AnimationSpeed);
 
             m_contentInfo = sb.ToString();
@@ -100,23 +157,88 @@ namespace Antilli
 
             sb.AppendLine("== Substance Information ==");
 
-            sb.AppendColumn("Flags", col, true).AppendLine("0x{0:X8}", substance.Flags);
+            sb.AppendColumn("Bin", col, true).AppendLine($"{substance.Bin} ({substance.RenderBin})");
+            sb.AppendColumn("Flags", col, true).AppendFormat("0x{0:X}", substance.Flags);
 
-            sb.AppendColumn("Mode", col, true).AppendLine("0x{0:X4}", substance.Mode);
-            sb.AppendColumn("Type", col, true).AppendLine("0x{0:X4}", substance.Type);
+            if (substance.Flags != 0)
+            {
+                sb.Append(" (");
+
+                for (int i = 0, ii = 0; i < 24; i++)
+                {
+                    var nFlg = (substance.Flags & (1 << i));
+
+                    if (nFlg == 0)
+                        continue;
+
+                    var sFlg = $"FLAG_{nFlg}";
+
+                    if (nFlg == 4)
+                        sFlg = "Alpha";
+
+                    if (ii != 0)
+                        sb.Append(" | ");
+
+                    sb.Append(sFlg);
+                    ii++;
+                }
+
+                sb.Append(")");
+            }
+
+            sb.AppendLine();
+
+            int[] regs = {
+                (substance.Mode & 0xFF),
+                (substance.Mode >> 8),
+                (substance.Type & 0xFF),
+            };
+
+            var slotFlags = (substance.Type >> 8);
+
+            //sb.AppendColumn("K1", col, true).AppendLine("{0} {1}", (substance.Mode & 0xFF), (substance.Mode >> 8));
+            //sb.AppendColumn("K2", col, true).AppendLine("{0}", (substance.Type & 0xFF));
+            //sb.AppendColumn("K3", col, true).AppendLine("0x{0:X}", (substance.Type >> 8));
+
+            sb.AppendColumn("Registers", col, true).AppendLine($"{regs[0]} {regs[1]} {regs[2]}");
+            sb.AppendColumn("SlotFlags", col, true).AppendLine($"0x{slotFlags:X}");
 
             if (substance is ISubstanceDataPC)
             {
                 var substance_pc = (substance as ISubstanceDataPC);
 
+                // flags?
+                var k3 = (substance.Type >> 8);
+
+                if (k3 != 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("==== Extra Flags ====");
+
+                    if ((k3 & 0x1) != 0)
+                        sb.AppendLine("+FLAG_1");
+                    if ((k3 & 0x2) != 0)
+                        sb.AppendLine("+FLAG_2");
+                    if ((k3 & 0x4) != 0)
+                        sb.AppendLine("+ColorMask");
+                    if ((k3 & 0x8) != 0)
+                        sb.AppendLine("+Damage");
+                    if ((k3 & 0x10) != 0)
+                        sb.AppendLine("+DamageWithColorMask");
+                    if ((k3 & 0x20) != 0)
+                        sb.AppendLine("+FLAG_32");
+                    if ((k3 & 0x40) != 0)
+                        sb.AppendLine("+FLAG_64");
+                    if ((k3 & 0x80) != 0)
+                        sb.AppendLine("+FLAG_128");
+                }
+
                 sb.AppendLine();
                 sb.AppendLine("==== Flags ====");
 
-                sb.AppendColumn("Transparent", col, true).AppendLine(substance_pc.Transparency);
-                sb.AppendColumn("Damage", col, true).AppendLine(substance_pc.Damage);
-                sb.AppendColumn("Mask", col, true).AppendLine(substance_pc.AlphaMask);
-                sb.AppendColumn("Specular", col, true).AppendLine(substance_pc.Specular);
-                sb.AppendColumn("Emissive", col, true).AppendLine(substance_pc.Emissive);
+                sb.AppendColumn("Alpha", col, true).AppendLine(substance_pc.HasAlpha);
+                sb.AppendColumn("Specular", col, true).AppendLine(substance_pc.IsSpecular);
+                sb.AppendColumn("Emissive", col, true).AppendLine(substance_pc.IsEmissive);
 
                 sb.AppendLine();
                 sb.AppendLine("==== Debug Information ====");
@@ -152,10 +274,30 @@ namespace Antilli
             var textureRef = TextureCache.GetTexture(texture);
 
             m_bitmap = textureRef.Bitmap;
-            m_contentInfo = "";
+
+            var tex = textureRef.Data;
+
+            var sb = new StringBuilder();
+            var col = 12;
+
+            sb.AppendLine("== Texture Information ==");
+
+            sb.AppendColumn("UID", col, true).AppendLine($"{tex.UID:X8}");
+            sb.AppendColumn("Type", col, true).AppendLine($"{tex.Type}");
+            sb.AppendColumn("Flags", col, true).AppendLine($"0x{tex.Flags:X8}");
+
+            sb.AppendColumn("Width", col, true).AppendLine($"{tex.Width}");
+            sb.AppendColumn("Height", col, true).AppendLine($"{tex.Height}");
+            
+            m_contentInfo = sb.ToString();
 
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
+        }
+
+        private void ClearProperties()
+        {
+            propPanel.Children.Clear();
         }
 
         public void Clear()

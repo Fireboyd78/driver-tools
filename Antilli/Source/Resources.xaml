@@ -385,8 +385,8 @@
                    PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}"
                    Placement="Bottom" VerticalOffset="-1">
                 <Themes:SystemDropShadowChrome x:Name="Shdw" Color="Transparent">
-                    <Border x:Name="SubMenuBorder" BorderBrush="#353535" BorderThickness="1" Background="#FF252525">
-                        <ScrollViewer x:Name="SubMenuScrollViewer" Margin="1,0"
+                    <Border x:Name="SubMenuBorder" BorderBrush="#353535" BorderThickness="1" Background="#FF252525" Margin="1,0">
+                        <ScrollViewer x:Name="SubMenuScrollViewer"
                                       Style="{DynamicResource {ComponentResourceKey ResourceId=MenuScrollViewer, TypeInTargetAssembly={x:Type FrameworkElement}}}">
                             <Grid RenderOptions.ClearTypeHint="Enabled">
                                 <Canvas HorizontalAlignment="Left" Height="0" VerticalAlignment="Top" Width="0">
@@ -395,9 +395,9 @@
                                                Width="{Binding ActualWidth, ElementName=SubMenuBorder}"/>
                                 </Canvas>
 
-                                <Rectangle Fill="#FF1D1D1D" HorizontalAlignment="Left" Margin="1,0" Width="28"/>
-                                <Rectangle Fill="#FF353535" HorizontalAlignment="Left" Margin="29,0,0,0" Width="1"/>
-                                <Rectangle Fill="#FF202020" HorizontalAlignment="Left" Margin="30,0,0,0" Width="1"/>
+                                <Rectangle Fill="#FF1D1D1D" HorizontalAlignment="Left" Width="29"/>
+                                <Rectangle Fill="#FF1A1A1A" HorizontalAlignment="Left" Margin="29,0,0,0" Width="1"/>
+                                <Rectangle Fill="#FF353535" HorizontalAlignment="Left" Margin="30,0,0,0" Width="1"/>
 
                                 <ItemsPresenter x:Name="ItemsPresenter" Margin="4,2,2,2" Grid.IsSharedSizeScope="True"
                                                 KeyboardNavigation.DirectionalNavigation="Cycle"
@@ -459,9 +459,9 @@
                     <ColumnDefinition Width="Auto" MinWidth="24" SharedSizeGroup="MenuItemIconColumnGroup"/>
                     <ColumnDefinition Width="8"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="32"/>
+                    <ColumnDefinition Width="30"/>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="MenuItemIGTColumnGroup"/>
-                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="14"/>
                 </Grid.ColumnDefinitions>
 
                 <ContentPresenter x:Name="Icon" Content="{TemplateBinding Icon}" ContentSource="Icon" Margin="1"
@@ -479,15 +479,63 @@
                                   SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
 
                 <TextBlock Grid.Column="4" Margin="{TemplateBinding Padding}" Text="{TemplateBinding InputGestureText}"/>
+    
+                <!-- broken?!
+                <Path x:Name="RightArrow"
+                      Grid.Column="5"
+                      Data="M0,0L4,3.5 0,7z"
+                      Fill="#FF212121"
+                      HorizontalAlignment="Left"
+                      Margin="8,0,0,0"
+                      VerticalAlignment="Center"/>
+                -->
+                <Popup x:Name="PART_Popup"
+                       AllowsTransparency="True"
+                       Focusable="False"
+                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                       PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}"
+                       Placement="Right"
+                       HorizontalOffset="-2">
+                    <Themes:SystemDropShadowChrome x:Name="Shdw" Color="Transparent">
+                        <Border x:Name="SubMenuBorder" BorderBrush="#353535" BorderThickness="1" Background="#FF252525" Margin="1,0">
+                            <ScrollViewer x:Name="SubMenuScrollViewer"
+                                      Style="{DynamicResource {ComponentResourceKey ResourceId=MenuScrollViewer, TypeInTargetAssembly={x:Type FrameworkElement}}}">
+                                <Grid RenderOptions.ClearTypeHint="Enabled">
+                                    <Canvas HorizontalAlignment="Left" Height="0" VerticalAlignment="Top" Width="0">
+                                        <Rectangle x:Name="OpaqueRect" Fill="{Binding ElementName=SubMenuBorder, Path=Background}"
+                                               Height="{Binding ActualHeight, ElementName=SubMenuBorder}"
+                                               Width="{Binding ActualWidth, ElementName=SubMenuBorder}"/>
+                                    </Canvas>
+
+                                    <Rectangle Fill="#FF1D1D1D" HorizontalAlignment="Left" Width="29"/>
+                                    <Rectangle Fill="#FF1A1A1A" HorizontalAlignment="Left" Margin="29,0,0,0" Width="1"/>
+                                    <Rectangle Fill="#FF353535" HorizontalAlignment="Left" Margin="30,0,0,0" Width="1"/>
+
+                                    <ItemsPresenter x:Name="ItemsPresenter" Margin="4,2,2,2" Grid.IsSharedSizeScope="True"
+                                                KeyboardNavigation.DirectionalNavigation="Cycle"
+                                                KeyboardNavigation.TabNavigation="Cycle"
+                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                </Grid>
+                            </ScrollViewer>
+                        </Border>
+                    </Themes:SystemDropShadowChrome>
+                </Popup>
             </Grid>
         </Grid>
         <ControlTemplate.Triggers>
+            <Trigger Property="IsSuspendingPopupAnimation" Value="True">
+                <Setter Property="PopupAnimation" TargetName="PART_Popup" Value="None"/>
+            </Trigger>
             <Trigger Property="Icon" Value="{x:Null}">
                 <Setter Property="Visibility" TargetName="Icon" Value="Collapsed"/>
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
                 <Setter Property="Visibility" TargetName="GlyphPanel" Value="Visible"/>
                 <Setter Property="Visibility" TargetName="Icon" Value="Collapsed"/>
+            </Trigger>
+            <Trigger Property="HasDropShadow" SourceName="PART_Popup" Value="True">
+                <Setter Property="Margin" TargetName="Shdw" Value="0,0,5,5"/>
+                <Setter Property="Color" TargetName="Shdw" Value="#71000000"/>
             </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter Property="Fill" TargetName="Bg" Value="#FF121212"/>
@@ -498,6 +546,10 @@
                 <Setter Property="Background" TargetName="GlyphPanel" Value="#FFEEE9E9"/>
                 <Setter Property="BorderBrush" TargetName="GlyphPanel" Value="#FFDBD6D6"/>
                 <Setter Property="Fill" TargetName="Glyph" Value="#FF848589"/>
+            </Trigger>
+            <Trigger Property="CanContentScroll" SourceName="SubMenuScrollViewer" Value="False">
+                <Setter Property="Canvas.Top" TargetName="OpaqueRect" Value="{Binding VerticalOffset, ElementName=SubMenuScrollViewer}"/>
+                <Setter Property="Canvas.Left" TargetName="OpaqueRect" Value="{Binding HorizontalOffset, ElementName=SubMenuScrollViewer}"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>

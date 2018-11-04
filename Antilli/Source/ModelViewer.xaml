@@ -13,7 +13,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="10*" MinWidth="375"/>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="1*" MinWidth="130" MaxWidth="475"/>
+            <ColumnDefinition Width="2*" MinWidth="150" MaxWidth="350"/>
         </Grid.ColumnDefinitions>
         
         <at:AntilliViewport3D Grid.Column="0" x:Name="Viewport"

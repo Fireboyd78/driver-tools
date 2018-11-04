@@ -5,14 +5,22 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Antilli"
              mc:Ignorable="d"
-             d:DesignHeight="256" d:DesignWidth="256">
+             d:DesignHeight="384" d:DesignWidth="256">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition MinHeight="256" Height="4*"/>
+            <RowDefinition MinHeight="72" Height="1*"/>
+        </Grid.RowDefinitions>
         <Border BorderThickness="1">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="5">
-                <Grid>
-                    <Image Source="{Binding CurrentImage}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ContentInfo}" FontFamily="Consolas" Panel.ZIndex="1"/>
-                </Grid>
+                <Image Source="{Binding CurrentImage}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </ScrollViewer>
+        </Border>
+        <Border BorderThickness="1" Margin="0,4,0,0" Grid.Row="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="5">
+                <StackPanel Name="propPanel" Orientation="Vertical">
+                    <TextBlock Text="{Binding ContentInfo}" FontFamily="Consolas"/>
+                </StackPanel>
             </ScrollViewer>
         </Border>
     </Grid>

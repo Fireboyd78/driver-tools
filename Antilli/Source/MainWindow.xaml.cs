@@ -778,35 +778,39 @@ namespace Antilli
 
         private void ExportAntilliModelFile()
         {
-            var modelFile = CurrentModelFile as Driv3rVehiclesFile;
-
             if (CurrentModelPackage == null || CurrentModelFile == null)
             {
                 MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
+            var modelFile = CurrentModelFile as Driv3rVehiclesFile;
+
             var idx = (!modelFile.IsMissionVehicleFile) ? modelFile.Models.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
 
             var hierarchy = modelFile.Hierarchies[idx];
 
             var dir = Settings.ExportDirectory;
-            var path = String.Format("{0}\\{1}_{2}.aimodel", dir, Path.GetFileName(CurrentModelFile.FileName).Replace('.', '_'), hierarchy.UID);
+            var path = String.Format("{0}\\{1}_{2}.mod.xml", dir, Path.GetFileName(CurrentModelFile.FileName).Replace('.', '_'), hierarchy.UID);
 
+            var m = AntilliModel.Create(CurrentModelPackage);
+            m.SaveXML(path);
+
+#if false
             var header = Encoding.UTF8.GetBytes("ANTILLI!");
 
             var version = 1;
             var flags = 0; // reserved for future use
-            
+
             using (var ms = new MemoryStream())
             {
                 ms.Write(header);
                 ms.Write((short)((flags << 8) | version));
                 ms.Write((short)MagicNumber.FB); // ;)
-                
+
                 // size of model data
                 ms.Position += 4;
-                
+
                 var parts = CurrentModelPackage.Parts;
                 var vBuffers = CurrentModelPackage.VertexBuffers;
                 var materials = CurrentModelPackage.Materials;
@@ -852,8 +856,8 @@ namespace Antilli
                 // materials
                 foreach (var mat in materials)
                 {
-                    ms.Write((short)(mat.Substances.Count));
-                    ms.Write((short)(mat.IsAnimated ? 1 : 0));
+                    ms.Write((short)mat.Substances.Count);
+                    ms.Write((short)mat.Type);
 
                     ms.Write(mat.AnimationSpeed);
 
@@ -891,7 +895,7 @@ namespace Antilli
 
                 File.WriteAllBytes(path, ms.ToArray());
             }
-
+#endif
             MessageBox.Show($"Successfully exported AIModel file to '{path}'!", "Antilli Model Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         
@@ -1043,8 +1047,8 @@ namespace Antilli
                         : (obj is TextureTreeItem) ? 2
                         : -1;
 
-            // unhandled type?!
-            if (objId == -1)
+            // unhandled type or null view widget?!
+            if (objId == -1 || (CurrentViewWidget == null))
                 return;
 
             switch (objId)
@@ -1330,6 +1334,9 @@ namespace Antilli
             modelTool.Click += (o, e) => CreateDialog<Importer>(true);
 
             optionsDlg.Click += (o, e) => CreateDialog<OptionsDialog>(true);
+
+            mtlListExpandAll.Click += (o, e) => MaterialsList.ExpandAll(true);
+            mtlListCollapseAll.Click += (o, e) => MaterialsList.ExpandAll(false);
         
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);

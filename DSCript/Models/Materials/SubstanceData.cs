@@ -19,30 +19,19 @@ namespace DSCript.Models
 {
     public interface ISubstanceData
     {
+        int Bin { get; set; }
         int Flags { get; set; }
-
+        
         int Mode { get; set; }
         int Type { get; set; }
 
         IEnumerable<ITextureData> Textures { get; }
 
         ITextureData GetTexture(int index);
+
+        string RenderBin { get; }
     }
-
-    public interface ISubstanceDataPC
-    {
-        bool AlphaMask { get; }
-
-        bool Damage { get; }
-
-        bool Specular { get; }
-        bool Emissive { get; }
-        bool Transparency { get; }
-
-        int GetCompiledFlags(int resolved);
-        int GetResolvedData();
-    }
-
+    
     public abstract class SubstanceDataWrapper<TTextureData> : ISubstanceData
         where TTextureData : ITextureData
     {
@@ -56,10 +45,102 @@ namespace DSCript.Models
             return Textures[index];
         }
 
+        public int Bin { get; set; }
         public int Flags { get; set; }
 
         public int Mode { get; set; }
         public int Type { get; set; }
+
+        public string RenderBin
+        {
+            get
+            {
+                // what the fuck, guys
+                var lookup = new Dictionary<int, string>() {
+                    { 0, "ReflectedSky" },                              //  0
+                    { 1, "Portal" },                                    //  1
+                    
+                    { 4, "Building" },                                  // -1
+                    { 5, "Clutter" },                                   // -1
+
+                    { 3, "Road" },                                      //  6
+                    { 35, "PostRoad" },                                 //  7
+                    
+                    { 39, "PreWater" },                                 //  9
+                    { 21, "FarWater" },                                 // 10
+                    { 23, "CarInterior" },                              // 11
+                    { 6, "Car" },                                       // 12
+                    
+                    { 26, "FarWater_2" },                               // 14
+                    { 27, "FarWater_3" },                               // 15
+                    { 20, "NearWater" },                                // 16
+                    
+                    { 25, "CarOverlay" },                               // 17
+                    { 22, "GrimeOverlay" },                             // 19
+
+                    { 2, "Sky" },                                       // 21
+                    { 24, "LowPoly" },                                  // 22
+
+                    { 34, "GlowingLight" },                             // 25
+                    
+                    { 37, "DrawAlphaLast" },                            // 28
+                    { 30, "FullBrightOverlay" },                        // 29
+                    { 7, "Particle" },                                  // 30
+
+                    { 33, "ShadowedParticle" },                         // -1
+                    
+                    { 8, "MissionIcon" },                               // 32
+
+                    { 12, "OverheadMap_1" },                            // 33
+                    { 13, "OverheadMap_2" },                            // 34
+                    { 14, "OverheadMap_3" },                            // 35
+                    { 15, "OverheadMap_4" },                            // 36
+                    { 16, "OverheadMap_5" },                            // 37
+                    { 17, "OverheadMap_6" },                            // 38
+                    { 18, "OverheadMap_7" },                            // 39
+                    { 19, "OverheadMap_8" },                            // 40
+                    { 28, "OverheadMap_9" },                            // 41
+                    { 29, "OverheadMap_10" },                           // 42
+                    { 31, "OverheadMap_11" },                           // 43
+                    { 32, "OverheadMap_12" },                           // 44
+                    
+                    { 40, "Overlay_0_25" },                             // 46
+                    { 10, "Overlay_0_5" },                              // 47
+                    { 9, "Overlay_1_0" },                               // 48
+                    { 11, "Overlay_1_5" },                              // 49
+                    { 36, "Overlay_2_0" },                              // -1
+
+                    { 38, "UntexturedSemiTransparent" },                // 51
+                    
+                    // not used in Driv3r?
+                    { 48, "Trees" },
+
+                    { 49, "Menus_0_25" },
+                    { 50, "Menus_0_5" },
+                    { 51, "Menus_0_75" },
+                    { 52, "Menus_1_0" },
+                    { 53, "Menus_1_25" },
+                    { 54, "Menus_1_5" },
+                    { 55, "Menus_1_75" },
+                    { 56, "Menus_2_0" },
+
+                    { 57, "Clouds" },
+                    { 58, "Hyperlow" },
+                    { 59, "LightFlare" },
+
+                    { 60, "OverlayMask_1" },
+                    { 61, "OverlayMask_2" },
+
+                    { 62, "TreeWall" },
+                    { 63, "BridgeWires" },
+                };
+
+                if (lookup.ContainsKey(Bin))
+                    return lookup[Bin];
+
+                return "???";
+            }
+        }
 
         public List<TTextureData> Textures { get; set; }
         
@@ -69,31 +150,56 @@ namespace DSCript.Models
         }
     }
 
+    [Flags]
+    public enum SubstanceExtraFlags : int
+    {
+        flag_1              = (1 << 0),
+        flag_2              = (1 << 1),
+
+        ColorMask           = (1 << 2),
+        Damage              = (1 << 3),
+        DamageWithColorMask = (1 << 4),
+
+        flag_32             = (1 << 5),
+        flag_64             = (1 << 6),
+        flag_128            = (1 << 7),
+
+        ValidMaskBits       = (ColorMask | Damage | DamageWithColorMask),
+    }
+
+    public interface ISubstanceDataPC
+    {
+        bool HasAlpha { get; }
+
+        bool IsEmissive { get; }
+        bool IsSpecular { get; }
+
+        SubstanceExtraFlags ExtraFlags { get; }
+        
+        int GetCompiledFlags(int resolved);
+        int GetResolvedData();
+    }
+
     public class SubstanceDataPC : SubstanceDataWrapper<TextureDataPC>, ISubstanceDataPC
     {
-        public virtual bool AlphaMask
+        public virtual bool HasAlpha
         {
-            get { return (Type == 0x400 || Type == 0x1000); }
+            get { return (Flags & 0x4) != 0; }
+        }
+        
+        public virtual bool IsEmissive
+        {
+            get { return ((Flags & 0x180) != 0 || (Bin == 30)); }
         }
 
-        public virtual bool Damage
-        {
-            get { return (Type == 0x800 || Type == 0x1000); }
-        }
-
-        public virtual bool Specular
+        public virtual bool IsSpecular
         {
             get { return (Mode == 0x201 || Mode == 0x102); }
         }
 
-        public virtual bool Emissive
+        public virtual SubstanceExtraFlags ExtraFlags
         {
-            get { return ((Flags & 0x18000) != 0 || (Flags & 0x7F) == 0x1E); }
-        }
-
-        public virtual bool Transparency
-        {
-            get { return ((Flags & 0x400) != 0) && !Specular; }
+            get { return (SubstanceExtraFlags)(Type >> 8); }
         }
 
         static int[,] m_BinLookup = {
@@ -198,8 +304,6 @@ namespace DSCript.Models
 
         public int GetResolvedData()
         {
-            var bin = (Flags & 0xFF);
-
             var v1 = (Mode & 0xFF);
             var v2 = 0;
 
@@ -211,7 +315,7 @@ namespace DSCript.Models
                     v2 = 1;
             }
             
-            var rst = m_BinLookup[bin, 1];
+            var rst = m_BinLookup[Bin, 1];
 
             if (rst == -1)
             {
@@ -220,7 +324,7 @@ namespace DSCript.Models
                 if ((Flags & 0x4000) != 0)
                 {
                     if (v2 == 0)
-                        rst = (bin == 5) ? 20 : 18;
+                        rst = (Bin == 5) ? 20 : 18;
                 }
             }
 
@@ -228,19 +332,19 @@ namespace DSCript.Models
             var flags = 0;
             var stage = 0;
 
-            if ((Flags & 0x100) != 0)
+            if ((Flags & 0x1) != 0)
                 flags |= 0x40;
-            if ((Flags & 0x200) != 0)
+            if ((Flags & 0x2) != 0)
                 flags |= 0x20;
-            if ((Flags & 0x400) != 0)
+            if ((Flags & 0x4) != 0)
                 alpha = 1;
-            if ((Flags & 0x8000) != 0)
+            if ((Flags & 0x80) != 0)
                 flags |= 2;
-            if ((Flags & 0x10000) != 0)
+            if ((Flags & 0x100) != 0)
                 flags |= 8;
-            if ((Flags & 0x20000) != 0)
+            if ((Flags & 0x200) != 0)
                 flags |= 0x80;
-            if ((Flags & 0x40000) != 0)
+            if ((Flags & 0x400) != 0)
                 flags |= 1;
 
             if (flags != 0)

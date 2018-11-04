@@ -630,40 +630,47 @@ namespace DSCript.Models
 
             var declSize = Header.VertexDeclSize;
 
-            VertexBuffers = new List<VertexBuffer>(vBuffersCount);
-
-            /* ------------------------------
-             * Read vertex buffer header(s)
-             * ------------------------------ */
-            for (int vB = 0; vB < vBuffersCount; vB++)
+            if (vBuffersCount != 0)
             {
-                stream.Position = vBuffersOffset + (vB * declSize);
+                VertexBuffers = new List<VertexBuffer>(vBuffersCount);
 
-                var nVerts = stream.ReadInt32();
-                var vertsSize = stream.ReadInt32();
-                var vertsOffset = stream.ReadInt32();
-                var vertLength = stream.ReadInt32();
-
-                if (Header.Version == 1 || Header.Version == 9)
-                {
-                    var unk1 = stream.ReadInt32();
-                    var unk2 = stream.ReadInt32();
-                    var unk3 = stream.ReadInt32();
-                    var unk4 = stream.ReadInt32();
-
-                    DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
-                }
-                
                 /* ------------------------------
-                 * Read vertices in buffer
+                 * Read vertex buffer header(s)
                  * ------------------------------ */
-                stream.Position = vertsOffset;
+                for (int vB = 0; vB < vBuffersCount; vB++)
+                {
+                    stream.Position = vBuffersOffset + (vB * declSize);
 
-                var vbuf = new byte[vertsSize];
-                stream.Read(vbuf, 0, vertsSize);
+                    var nVerts = stream.ReadInt32();
+                    var vertsSize = stream.ReadInt32();
+                    var vertsOffset = stream.ReadInt32();
+                    var vertLength = stream.ReadInt32();
 
-                var vertexBuffer = VertexBuffer.CreateD3Buffer(vbuf, nVerts, vertsSize, vertLength);
-                VertexBuffers.Add(vertexBuffer);
+                    if (Header.Version == 1 || Header.Version == 9)
+                    {
+                        var unk1 = stream.ReadInt32();
+                        var unk2 = stream.ReadInt32();
+                        var unk3 = stream.ReadInt32();
+                        var unk4 = stream.ReadInt32();
+
+                        DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
+                    }
+
+                    /* ------------------------------
+                     * Read vertices in buffer
+                     * ------------------------------ */
+                    stream.Position = vertsOffset;
+
+                    var vbuf = new byte[vertsSize];
+                    stream.Read(vbuf, 0, vertsSize);
+
+                    var vertexBuffer = VertexBuffer.CreateD3Buffer(vbuf, nVerts, vertsSize, vertLength);
+                    VertexBuffers.Add(vertexBuffer);
+                }
+            }
+            else
+            {
+                VertexBuffers = null;
             }
         }
     
@@ -671,15 +678,19 @@ namespace DSCript.Models
         {
             var nIndices = Header.IndicesCount;
 
-            /* ------------------------------
-             * Read index buffer
-             * ------------------------------ */
-            stream.Position = Header.IndicesOffset;
+            if (nIndices != 0)
+            {
+                stream.Position = Header.IndicesOffset;
 
-            IndexBuffer = new IndexData(nIndices);
+                IndexBuffer = new IndexData(nIndices);
 
-            for (int i = 0; i < nIndices; i++)
-                IndexBuffer.Buffer[i] = stream.ReadInt16();
+                for (int i = 0; i < nIndices; i++)
+                    IndexBuffer.Buffer[i] = stream.ReadInt16();
+            }
+            else
+            {
+                IndexBuffer = null;
+            }
         }
         
         protected void ReadModels(Stream stream)
@@ -703,39 +714,48 @@ namespace DSCript.Models
             {
                 stream.Position = Header.PartsOffset + (p * partSize);
 
-                var pGroup = new PartsGroup() {
-                    UID = stream.ReadInt32(),
-                    Handle = stream.ReadInt32(),
+                var uid = stream.ReadInt32();
+                var handle = stream.ReadInt32();
 
-                    Unknown = stream.Read<Vector4>(),
+                var unknown = stream.Read<Vector4>();
 
-                    // INCOMING TRANSMISSION...
-                    // RE: OPERATION S.T.E.R.N....
-                    // ...
-                    // YOUR ASSISTANCE HAS BEEN NOTED...
-                    // ...
-                    // <END OF TRANSMISSION>...
-                    VertexBuffer = VertexBuffers[stream.ReadInt16()],
+                // INCOMING TRANSMISSION...
+                // RE: OPERATION S.T.E.R.N....
+                // ...
+                // YOUR ASSISTANCE HAS BEEN NOTED...
+                // ...
+                // <END OF TRANSMISSION>...
+                var vBufIdx = stream.ReadInt16();
+                var vBufType = stream.ReadInt16();
 
-                    VertexType = stream.ReadInt16(),
-                    
-                    Flags = stream.ReadInt32(),
-                };
+                var flags = stream.ReadInt32();
 
                 // reserved space for effect index
                 // sadly can't be used to force a specific effect cause game overwrites it :(
-                stream.Position += 4;
+                var reserved = stream.ReadInt32();
 
+                var pGroup = new PartsGroup() {
+                    UID = uid,
+                    Handle = handle,
+
+                    Unknown = unknown,
+                    
+                    VertexType = vBufType,
+                    
+                    Flags = flags,
+                };
+
+                if (VertexBuffers != null)
+                    pGroup.VertexBuffer = VertexBuffers[vBufIdx];
+                
                 Parts.Add(pGroup);
 
                 if (Header.Version == 6)
                     stream.Position += 4;
                 
-                // read unknown list of 8 Point4Ds
+                // culling transforms
                 for (int t = 0; t < 8; t++)
-                {
                     pGroup.Transform[t] = stream.Read<Vector4>();
-                }
 
                 var lodStart = stream.Position;
                 
@@ -917,12 +937,12 @@ namespace DSCript.Models
                     var mOffset = f.ReadInt32() + pcmpOffset;
                     var mCount  = f.ReadInt32();
 
-                    var mAnimToggle = (f.ReadInt32() == 1);
+                    var mAnimType = f.ReadInt32();
                     var mAnimSpeed = f.ReadSingle();
                     
                     var material = new MaterialDataPC() {
-                        IsAnimated        = mAnimToggle,
-                        AnimationSpeed  = mAnimSpeed
+                        Type            = (MaterialType)mAnimType,
+                        AnimationSpeed  = mAnimSpeed,
                     };
 
                     Materials.Add(material);
@@ -936,10 +956,15 @@ namespace DSCript.Models
 
                         f.Position  = sOffset;
 
+                        var sFlg = f.ReadInt32();
+                        var sMode = f.ReadUInt16();
+                        var sType = f.ReadUInt16();
+
                         var substance = new SubstanceDataPC() {
-                            Flags   = f.ReadInt32(),
-                            Mode    = f.ReadUInt16(),
-                            Type    = f.ReadUInt16()
+                            Bin     = (sFlg & 0xFF),
+                            Flags   = (sFlg >> 8),
+                            Mode    = sMode,
+                            Type    = sType,
                         };
 
                         material.Substances.Add(substance);
@@ -1282,7 +1307,7 @@ namespace DSCript.Models
 
                     f.Position = pcmpOffset + sOffset;
 
-                    f.Write(substance.Flags);
+                    f.Write((substance.Flags << 8) | substance.Bin);
 
                     f.Write((short)substance.Mode);
                     f.Write((short)substance.Type);
@@ -1319,7 +1344,7 @@ namespace DSCript.Models
                     f.Write(sLookup[sIdx]);
                     f.Write(material.Substances.Count);
 
-                    f.Write(material.IsAnimated ? 1 : 0);
+                    f.Write((int)material.Type);
                     f.Write(material.AnimationSpeed);
 
                     sIdx += material.Substances.Count;
@@ -1342,7 +1367,7 @@ namespace DSCript.Models
             {
                 var mat = xmlDoc.CreateElement("Material");
 
-                if (material.IsAnimated)
+                if (material.Type == MaterialType.Animated)
                     mat.SetAttribute("AnimationSpeed", material.AnimationSpeed.ToString());
                 
                 foreach (var substance in material.Substances)

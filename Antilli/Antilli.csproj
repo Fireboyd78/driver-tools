@@ -94,9 +94,14 @@
     <Compile Include="Source\ImageWidget.xaml.cs">
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Source\Models\AntilliModel.cs" />
     <Compile Include="Source\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Source\Parser\CharUtils.cs" />
+    <Compile Include="Source\Parser\StringExtensions.cs" />
+    <Compile Include="Source\Parser\TokenReader.cs" />
+    <Compile Include="Source\Parser\TokenWriter.cs" />
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
     <Compile Include="Source\WPF\TextureTreeItem.cs" />
@@ -220,5 +225,6 @@
   <ItemGroup>
     <Resource Include="$(ApplicationIcon)" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

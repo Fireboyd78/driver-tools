@@ -40,6 +40,6 @@ namespace DSCript.Models
         public List<TextureDataPC> Textures { get; set; }
 
         public bool HasMaterials    => Materials?.Count > 0;
-        public bool HasModels       => Parts?.Count > 0;
+        public bool HasModels       => Parts?.Count > 0 && (VertexBuffers != null && IndexBuffer != null);
     }
 }

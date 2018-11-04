@@ -116,20 +116,31 @@ namespace Antilli
 
             if (Material != null)
             {
-                var subMaterial = Material.Substances[0];
+                var substance = Material.Substances[0];
 
-                var damage = subMaterial.Damage;
-                var mask = subMaterial.AlphaMask;
-                var transparency = subMaterial.Transparency;
-                var emissive = subMaterial.Emissive;
-                var specular = subMaterial.Specular;
+                var eFlags = substance.ExtraFlags;
+                
+                var alpha = substance.HasAlpha;
+                var emissive = substance.IsEmissive;
+                var specular = substance.IsSpecular;
 
-                var texInfo = (UseBlendWeights && damage) ? (mask) ? subMaterial.Textures[2] : subMaterial.Textures[1] : subMaterial.Textures[0];
+                var texIdx = 0;
 
+                if (UseBlendWeights)
+                {
+                    // ColorMask = 0
+                    // Damage = 1
+                    // DamageWithColorMask = 2
+                    texIdx = (((int)substance.ExtraFlags >> 3) & 3);
+                }
+
+                var texInfo = substance.Textures[texIdx];
+                
                 var cTex = TextureCache.GetTexture(texInfo);
                 var texMap = cTex.Bitmap;
 
-                var loadFlags = (transparency || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
+                var transparent = (alpha && !specular);
+                var loadFlags = (transparent || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
 
                 var bmap = texMap.ToBitmapSource(loadFlags);
 
@@ -167,7 +178,7 @@ namespace Antilli
                 }
 
                 IsEmissive = emissive;
-                HasTransparency = transparency;
+                HasTransparency = alpha;
             }
             else
             {

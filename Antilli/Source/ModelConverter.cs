@@ -785,9 +785,9 @@ namespace Antilli
 
                 // find texture...
                 // (did I mention COLLADA is a pain in the ass?)
-                if (!String.IsNullOrEmpty(shader.Diffuse.Texture))
+                if (!String.IsNullOrEmpty(shader.Diffuse.Value.Texture))
                 {
-                    var sm = profile.Params.Find((p) => p.SubId == shader.Diffuse.Texture)?.Param as COLLADASampler2DParamValue;
+                    var sm = profile.Params.Find((p) => p.SubId == shader.Diffuse.Value.Texture)?.Param as COLLADASampler2DParamValue;
 
                     if (sm != null)
                     {
@@ -810,7 +810,7 @@ namespace Antilli
                 else
                 {
                     // try making a texture based on the color ;)
-                    mtl.Color = shader.Diffuse.Color;
+                    mtl.Color = shader.Diffuse.Value.Color;
                 }
 
                 Materials.Add(mtl);

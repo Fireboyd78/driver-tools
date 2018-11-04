@@ -17,9 +17,16 @@ using FreeImageAPI;
 
 namespace DSCript.Models
 {
+    public enum MaterialType
+    {
+        Group,
+        Animated,
+    }
+
     public interface IMaterialData
     {
-        bool IsAnimated { get; set; }
+        MaterialType Type { get; set; }
+
         float AnimationSpeed { get; set; }
 
         IEnumerable<ISubstanceData> Substances { get; }
@@ -40,7 +47,8 @@ namespace DSCript.Models
             return Substances[index];
         }
 
-        public bool IsAnimated { get; set; }
+        public MaterialType Type { get; set; }
+
         public float AnimationSpeed { get; set; }
 
         public List<TSubstanceData> Substances { get; set; }
