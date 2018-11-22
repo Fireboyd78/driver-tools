@@ -18,153 +18,7 @@ using COLLADA;
 
 namespace Antilli
 {
-    /*
-        TODO: move these elsewhere
-    */
-
-    [StructLayout(LayoutKind.Sequential, Size = 0x20)]
-    public struct DDSPixelFormat
-    {
-        public int Size;
-        public int Flags;
-        public int FourCC;
-        public int RGBBitCount;
-        public int RBitMask;
-        public int GBitMask;
-        public int BBitMask;
-        public int ABitMask;
-    }
-
-    [StructLayout(LayoutKind.Sequential, Size = 0x7C)]
-    public unsafe struct DDSHeader
-    {
-        public static readonly int SizeOf = Marshal.SizeOf(typeof(DDSHeader));
-
-        public int Size;
-        public int Flags;
-        public int Height;
-        public int Width;
-        public int PitchOrLinearSize;
-        public int Depth;
-        public int MipMapCount;
-
-        private fixed int Reserved1[11];
-
-        public DDSPixelFormat PixelFormat;
-
-        public int Caps;
-        public int Caps2;
-        public int Caps3;
-        public int Caps4;
-
-        private int Reserved2;
-    }
-
-    public static class DDSUtils
-    {
-        // ugly pink 8x8 texture (DXT1)
-        private static readonly byte[] NullTex = {
-            0x44, 0x44, 0x53, 0x20, 0x7C, 0x00, 0x00, 0x00, 0x07, 0x10, 0x08, 0x00,
-            0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
-            0x44, 0x58, 0x54, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0xF8, 0x17, 0xF8,
-            0xFF, 0xFF, 0xFF, 0xFF, 0x18, 0xF8, 0x17, 0xF8, 0xFF, 0xFF, 0xFF, 0xFF,
-            0x18, 0xF8, 0x17, 0xF8, 0xFF, 0xFF, 0xFF, 0xFF, 0x18, 0xF8, 0x17, 0xF8,
-            0xFF, 0xFF, 0xFF, 0xFF
-        };
-
-        private static readonly byte[] RGBHeader = {
-            0x44, 0x44, 0x53, 0x20, 0x7C, 0x00, 0x00, 0x00, 0x07, 0x10, 0x08, 0x00,
-            0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x41, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00,
-            0x00, 0xFF, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF,
-            0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-        };
-        
-        public static byte[] GetNullTex()
-        {
-            var result = new byte[NullTex.Length];
-            Buffer.BlockCopy(NullTex, 0, result, 0, result.Length);
-
-            return result;
-        }
-
-        public static byte[] MakeRGBATexture(Vector4 color)
-        {
-            var pixels = new byte[0x100];
-
-            var r = (byte)(color.X * 255.999f);
-            var g = (byte)(color.Y * 255.999f);
-            var b = (byte)(color.Z * 255.999f);
-            var a = (byte)(color.W * 255.999f);
-
-            for (int i = 0; i < pixels.Length; i += 4)
-            {
-                pixels[i + 0] = b;
-                pixels[i + 1] = g;
-                pixels[i + 2] = r;
-                pixels[i + 3] = a;
-            }
-
-            var result = new byte[RGBHeader.Length + pixels.Length];
-
-            Buffer.BlockCopy(RGBHeader, 0, result, 0, RGBHeader.Length);
-            Buffer.BlockCopy(pixels, 0, result, RGBHeader.Length, pixels.Length);
-
-            return result;
-        }
-
-        public static bool GetHeaderInfo(byte[] buffer, ref DDSHeader header)
-        {
-            using (var ms = new MemoryStream(buffer))
-            {
-                if (ms.ReadInt32() == 0x20534444)
-                {
-                    var length = DDSHeader.SizeOf;
-
-                    var data = new byte[length];
-                    var ptr = GCHandle.Alloc(header, GCHandleType.Pinned);
-
-                    ms.Read(data, 0, length);
-                    Marshal.Copy(data, 0, ptr.AddrOfPinnedObject(), length);
-
-                    return true;
-                }
-            }
-
-            // not a valid DDS texture
-            return false;
-        }
-
-        public static int GetTextureType(int fourCC)
-        {
-            switch (fourCC)
-            {
-            case 0x31545844: return 1;
-            case 0x32545844: return 2;
-            case 0x33545844: return 3;
-            case 0x35545844: return 5;
-            // RGB[:A] (non-spec)
-            case 0:
-                return 128;
-            default:
-                return 0;
-            }
-        }
-    }
+    
 
     public enum EffectType
     {
@@ -400,7 +254,7 @@ namespace Antilli
 
             public List<PolyMesh> Meshes;
 
-            public MeshGroup SubModel;
+            public LodInstance SubModel;
 
             public void LoadMesh(COLLADAMesh colladaMesh, COLLADAMaterialLibrary mtlLib)
             {
@@ -425,9 +279,9 @@ namespace Antilli
                 }
             }
 
-            public List<MeshDefinition> CompileMeshes(VertexBuffer vertexBuffer, IndicesHolder indexBuffer, bool shadowModelHack)
+            public List<SubModel> CompileMeshes(VertexBuffer vertexBuffer, IndicesHolder indexBuffer, bool shadowModelHack)
             {
-                var meshes = new List<MeshDefinition>();
+                var meshes = new List<SubModel>();
 
                 var vertices = vertexBuffer.Vertices;
                 var indices = indexBuffer.Indices;
@@ -436,7 +290,7 @@ namespace Antilli
                 var model = lodInstance.Parent;
 
                 // reset the old meshes (causes crash if we don't do this)
-                SubModel.Meshes = new List<MeshDefinition>();
+                SubModel.SubModels = new List<SubModel>();
                 
                 foreach (var polyMesh in Meshes)
                 {
@@ -483,9 +337,9 @@ namespace Antilli
                         indices.Add(tmp[2]);
                     }
 
-                    var mesh = new MeshDefinition() {
-                        PartsGroup = model,
-                        MeshGroup = SubModel,
+                    var mesh = new SubModel() {
+                        Model = model,
+                        LodInstance = SubModel,
 
                         PrimitiveType = PrimitiveType.TriangleList,
 
@@ -523,7 +377,7 @@ namespace Antilli
                     meshes.Add(mesh);
                 }
 
-                SubModel.Meshes.AddRange(meshes);
+                SubModel.SubModels.AddRange(meshes);
 
                 return meshes;
             }
@@ -533,7 +387,7 @@ namespace Antilli
                 Meshes = new List<PolyMesh>();
             }
 
-            public GeometryHolder(MeshGroup subModel)
+            public GeometryHolder(LodInstance subModel)
                 : base()
             {
                 SubModel = subModel;
@@ -560,8 +414,8 @@ namespace Antilli
 
         public EffectType EffectType { get; set; }
 
-        public List<PartsGroup> Models { get; set; }
-        public List<MeshGroup> SubModels { get; set; }
+        public List<Model> Models { get; set; }
+        public List<LodInstance> SubModels { get; set; }
 
         public List<GeometryHolder> Geometries { get; set; }
         public List<MaterialHolder> Materials { get; set; }
@@ -673,11 +527,11 @@ namespace Antilli
                 if (childPart.GeometryInstances.Count != 0)
                     throw new InvalidOperationException($"Child {partIdx} ('{childPart.Info.Id}') in root node is malformed.");
 
-                var partsGroup = new PartsGroup() {
+                var partsGroup = new Model() {
                     VertexType = -1
                 };
 
-                var parts = partsGroup.Parts;
+                var parts = partsGroup.Lods;
 
                 Models.Add(partsGroup);
 
@@ -704,18 +558,18 @@ namespace Antilli
                     // so we'll process them after we get the basic layout setup
                     geomQueue[slotIdx] = lodInstance.GeometryInstances[0];
 
-                    var partDef = new PartDefinition(slotIdx) {
+                    var partDef = new Lod(slotIdx) {
                         Parent = partsGroup,
                         Type = GetPartSlotType(slotType),
                     };
 
                     parts[slotIdx] = partDef;
 
-                    var subModel = new MeshGroup() {
+                    var subModel = new LodInstance() {
                         Parent = partDef
                     };
 
-                    partDef.Groups.Add(subModel);
+                    partDef.Instances.Add(subModel);
                     
                     var transform = lodInstance.Matrix.Values;
 
@@ -731,13 +585,13 @@ namespace Antilli
 
                 for (int p = 0; p < 7; p++)
                 {
-                    var part = partsGroup.Parts[p];
+                    var part = partsGroup.Lods[p];
 
                     // nothing to see here
                     if (part == null)
                         continue;
 
-                    var subModel = part.Groups[0];
+                    var subModel = part.Instances[0];
 
                     // correct order
                     SubModels.Add(subModel);
@@ -819,16 +673,17 @@ namespace Antilli
             return true;
         }
         
-        public ModelPackagePC ToModelPackage()
+        public ModelPackage ToModelPackage()
         {
-            var modelPackage = SpoolableResourceFactory.Create<ModelPackagePC>();
+            var modelPackage = SpoolableResourceFactory.Create<ModelPackage>();
             
             var vDeclType = GetVertexDeclType(EffectType);
 
-            var vertexBuffer = VertexBuffer.CreateD3Buffer(vDeclType);
+            // HACK: assume Driv3r format!
+            var vertexBuffer = VertexBuffer.Create(0, vDeclType);
             var indexBuffer = new IndicesHolder();
 
-            var meshList = new List<MeshDefinition>();
+            var meshList = new List<SubModel>();
 
             var vertexBaseOffset = vertexBuffer.Count;
             
@@ -863,9 +718,9 @@ namespace Antilli
             }
             
             // finally...compile the model package
-            modelPackage.Parts = Models;
-            modelPackage.MeshGroups = SubModels;
-            modelPackage.Meshes = meshList;
+            modelPackage.Models = Models;
+            modelPackage.LodInstances = SubModels;
+            modelPackage.SubModels = meshList;
 
             modelPackage.VertexBuffers = new List<VertexBuffer>() {
                 vertexBuffer
@@ -885,8 +740,7 @@ namespace Antilli
             // fixup models
             foreach (var model in Models)
             {
-                model.UID = uid;
-                model.Handle = handle;
+                model.UID = new UID(uid, handle);
 
                 // no fucking clue what this is
                 // with my luck, it's just padding :/
@@ -917,7 +771,7 @@ namespace Antilli
             foreach (var material in Materials)
             {
                 var tex = new TextureDataPC() {
-                    Reserved = 0x01010101
+                    UID = 0x01010101
                 };
 
                 tex.Buffer = File.Exists(material.TextureFile)
@@ -939,7 +793,7 @@ namespace Antilli
                     Debug.WriteLine("**** UNKNOWN TEXTURE FORMAT ****");
                 }
 
-                tex.CRC32 = (int)Memory.GetCRC32(tex.Buffer);
+                tex.Hash = (int)Memory.GetCRC32(tex.Buffer);
 
                 var sub = new SubstanceDataPC() {
                     Flags = 0x406, // HACK: generic vehicle texture
@@ -973,8 +827,8 @@ namespace Antilli
 
         public ModelConverter()
         {
-            Models = new List<PartsGroup>();
-            SubModels = new List<MeshGroup>();
+            Models = new List<Model>();
+            SubModels = new List<LodInstance>();
             Geometries = new List<GeometryHolder>();
         }
     }

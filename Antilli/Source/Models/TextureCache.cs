@@ -15,9 +15,12 @@ using System.Windows.Media.Media3D;
 
 using Interop = System.Windows.Interop;
 
+using DSCript;
+using DSCript.Models;
+
 using FreeImageAPI;
 
-namespace DSCript.Models
+namespace Antilli
 {
     public static class TextureCache
     {
@@ -85,6 +88,7 @@ namespace DSCript.Models
     public class BitmapReference
     {
         private IntPtr[] m_hbitmaps = new IntPtr[3];
+        private BitmapSource[] m_bitmaps = new BitmapSource[3];
 
         private FIBITMAP m_bitmap;
         private FREE_IMAGE_FORMAT m_format;
@@ -111,7 +115,7 @@ namespace DSCript.Models
         {
             get { return m_format; }
         }
-
+        
         public void Free()
         {
             for (int i = 0; i < 3; i++)
@@ -119,9 +123,10 @@ namespace DSCript.Models
                 IntPtr hBitmap = m_hbitmaps[i];
 
                 if (hBitmap != IntPtr.Zero)
-                    NativeMethods.DeleteObject(hBitmap);
+                    FreeImage.FreeHbitmap(hBitmap);
 
                 m_hbitmaps[i] = IntPtr.Zero;
+                m_bitmaps[i] = null;
             }
 
             m_bitmap.Unload();
@@ -132,43 +137,77 @@ namespace DSCript.Models
             if (m_bitmap.IsNull)
                 return false;
 
-            var bmap_a = FreeImage.GetChannel(m_bitmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
-
-            for (int i = 0; i < 3; i++)
-            {
-                IntPtr hBitmap = m_hbitmaps[i];
-
-                if (hBitmap != IntPtr.Zero)
-                    NativeMethods.DeleteObject(hBitmap);
-
-                var b = (i > 1) ? bmap_a : m_bitmap;
-                var bmap = ((i & 1) != 0) ? FreeImage.ConvertTo32Bits(b) : FreeImage.ConvertTo24Bits(b);
-                
-                m_hbitmaps[i] = FreeImage.GetHbitmap(bmap, IntPtr.Zero, false);
-                bmap.Unload();
-            }
-
+            //--var bmap_a = FreeImage.GetChannel(m_bitmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+            //--
+            //--for (int i = 0; i < 3; i++)
+            //--{
+            //--    IntPtr hBitmap = m_hbitmaps[i];
+            //--
+            //--    if (hBitmap != IntPtr.Zero)
+            //--        FreeImage.FreeHbitmap(hBitmap);
+            //--
+            //--    var b = (i > 1) ? bmap_a : m_bitmap;
+            //--    var bmap = ((i & 1) != 0) ? FreeImage.ConvertTo32Bits(b) : FreeImage.ConvertTo24Bits(b);
+            //--    
+            //--    m_hbitmaps[i] = FreeImage.GetHbitmap(bmap, IntPtr.Zero, false);
+            //--    bmap.Unload();
+            //--}
+            //--
+            //--bmap_a.Unload();
             return true;
         }
+
+        public IntPtr GetHBitmap(BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
+        {
+            var index = (int)flags;
+            var hBitmap = m_hbitmaps[index];
+
+            if (hBitmap == IntPtr.Zero)
+            {
+                var bmap_a = FreeImage.GetChannel(m_bitmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+
+                var b = flags.HasFlag(BitmapSourceLoadFlags.AlphaMask)
+                    ? bmap_a
+                    : m_bitmap;
+
+                var bmap = flags.HasFlag(BitmapSourceLoadFlags.Transparency)
+                    ? FreeImage.ConvertTo32Bits(b)
+                    : FreeImage.ConvertTo24Bits(b);
+
+                hBitmap = FreeImage.GetHbitmap(bmap, IntPtr.Zero, false);
+                m_hbitmaps[index] = hBitmap;
+
+                bmap_a.Unload();
+            }
+
+            return hBitmap;
+        }
         
-        public BitmapSource ToBitmapSource(BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
+        public BitmapSource GetBitmapSource(BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
         {
             if (m_bitmap.IsNull)
                 return null;
-            
-            BitmapSource result;
-            
-            try
+
+            var result = m_bitmaps[(int)flags];
+
+            if (result == null)
             {
-                result = Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                    m_hbitmaps[(int)flags],
-                    IntPtr.Zero,
-                    Int32Rect.Empty,
-                    BitmapSizeOptions.FromEmptyOptions());
-            }
-            catch (Win32Exception)
-            {
-                result = null;
+                try
+                {
+                    result = Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                        GetHBitmap(flags),
+                        IntPtr.Zero,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+
+                    result.Freeze();
+
+                    m_bitmaps[(int)flags] = result;
+                }
+                catch (Win32Exception)
+                {
+                    result = null;
+                }
             }
 
             return result;
@@ -216,8 +255,8 @@ namespace DSCript.Models
     
     public class TextureReference
     {
-        BitmapReference m_bitmap;
-        ITextureData m_textureData;
+        BitmapReference m_bitmap = null;
+        ITextureData m_textureData = null;
         
         public ITextureData Data
         {
@@ -226,7 +265,13 @@ namespace DSCript.Models
 
         public BitmapReference Bitmap
         {
-            get { return m_bitmap; }
+            get
+            {
+                if (m_bitmap == null)
+                    m_bitmap = BitmapReference.Create(m_textureData.Buffer);
+
+                return m_bitmap;
+            }
         }
         
         public void SetBuffer(byte[] buffer)
@@ -247,13 +292,14 @@ namespace DSCript.Models
         
         public void Free()
         {
-            m_bitmap.Free();
+            if (m_bitmap != null)
+                m_bitmap.Free();
         }
 
         internal TextureReference(ITextureData texture)
         {
             m_textureData = texture;
-            m_bitmap = BitmapReference.Create(texture.Buffer);
+            m_bitmap = null;
         }
     }
 }

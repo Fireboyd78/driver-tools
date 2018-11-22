@@ -54,22 +54,10 @@ namespace Antilli
 
             return -1;
         }
-
-        public struct GUID
-        {
-            public int Low;
-            public int High;
-
-            public GUID(int low, int high)
-            {
-                Low = low;
-                High = high;
-            }
-        }
         
         public class Model
         {
-            public GUID UID;
+            public UID UID;
 
             public Vector4 V1;
 
@@ -141,7 +129,7 @@ namespace Antilli
                     var textures = new List<String>();
 
                     foreach (var t in s.Textures)
-                        textures.Add($"{t.CRC32:X8}.dds");
+                        textures.Add($"{t.Hash:X8}.dds");
 
                     substance.Textures = textures;
                 }
@@ -178,7 +166,7 @@ namespace Antilli
         public List<Model> Models;
         public List<Material> Materials;
 
-        public static AntilliModel Create(ModelPackagePC modelPackage)
+        public static AntilliModel Create(ModelPackage modelPackage)
         {
             var modelFile = modelPackage.ModelFile as Driv3rVehiclesFile;
 
@@ -208,7 +196,7 @@ namespace Antilli
             
             var models = new List<Model>();
             
-            foreach (var mdl in modelPackage.Parts)
+            foreach (var mdl in modelPackage.Models)
             {
                 var t11 = mdl.Transform[0];
                 var t12 = mdl.Transform[1];
@@ -221,7 +209,7 @@ namespace Antilli
                 var t24 = mdl.Transform[7];
 
                 var model = new Model() {
-                    UID = new GUID(mdl.UID, mdl.Handle),
+                    UID = mdl.UID,
 
                     V1 = mdl.Unknown,
 
@@ -243,7 +231,7 @@ namespace Antilli
 
                 var lods = new List<LodInstance>();
 
-                foreach (var p in mdl.Parts)
+                foreach (var p in mdl.Lods)
                 {
                     if (p == null)
                         continue;
@@ -256,7 +244,7 @@ namespace Antilli
 
                     var subModels = new List<SubModel>();
                     
-                    foreach (var g in p.Groups)
+                    foreach (var g in p.Instances)
                     {
                         var t1 = g.Transform[0];
                         var t2 = g.Transform[1];
@@ -276,7 +264,7 @@ namespace Antilli
                         
                         var meshes = new List<Mesh>();
 
-                        foreach (var msh in g.Meshes)
+                        foreach (var msh in g.SubModels)
                         {
                             Material material = null;
 
@@ -289,12 +277,16 @@ namespace Antilli
 
                                 materials.Add(material);
                             }
+
+                            // don't adjust vertices
+                            var indices = new List<int>();
+                            var vertices = msh.GetVertices(false, ref indices);
                             
                             var mesh = new Mesh() {
                                 Material = material,
 
-                                Vertices = msh.GetVertices(),
-                                Indices = msh.GetTriangleIndices(),
+                                Vertices = vertices,
+                                Indices = indices,
                             };
 
                             meshes.Add(mesh);

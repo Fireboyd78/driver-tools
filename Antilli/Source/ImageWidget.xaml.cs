@@ -48,7 +48,7 @@ namespace Antilli
         }
         #endregion
 
-        delegate void PropertyUpdateCallback(string updatedValue);
+        delegate bool PropertyUpdateCallback(string updatedValue);
 
         class PropertyItem
         {
@@ -63,6 +63,54 @@ namespace Antilli
 
             PropertyUpdateCallback Callback { get; set; }
 
+            public void AddToPanel(StackPanel panel, string[] items)
+            {
+                var label = new Label() {
+                    Content = $"{Name}:"
+                };
+
+                var chooser = new ComboBox() {
+                    IsReadOnly = true,
+                };
+
+                foreach (var item in items)
+                    chooser.Items.Add(item);
+
+                chooser.SelectedItem = Value;
+                
+                chooser.SelectionChanged += (o, e) => {
+                    var values = e.AddedItems;
+                    var value = values[0] as string;
+
+                    if (!String.Equals(m_value, value))
+                    {
+                        if (Callback(value))
+                        {
+                            m_value = value;
+                        }
+                        else
+                        {
+                            MessageBox.Show("What the fuck did you do?!", "Dude...", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                };
+
+                var grid = new Grid() {
+                    Margin = new Thickness(4)
+                };
+
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(50) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+
+                grid.Children.Add(label);
+                grid.Children.Add(chooser);
+
+                Grid.SetColumn(chooser, 1);
+
+                panel.Children.Add(grid);
+            }
+
             public void AddToPanel(StackPanel panel)
             {
                 var label = new Label() {
@@ -73,13 +121,22 @@ namespace Antilli
                     Text = Value
                 };
 
+                var oldBrush = txtBox.BorderBrush;
+
                 txtBox.KeyDown += (o, e) => {
                     if (e.Key == Key.Enter)
                     {
                         if (!String.Equals(m_value, txtBox.Text))
                         {
-                            Callback(txtBox.Text);
-                            m_value = txtBox.Text;
+                            if (Callback(txtBox.Text))
+                            {
+                                m_value = txtBox.Text;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Invalid value, please try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                txtBox.Text = m_value;
+                            }
                         }
                     }
                 };
@@ -89,7 +146,11 @@ namespace Antilli
                 };
 
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(50) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(75) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
+                
+                grid.Children.Add(label);
+                grid.Children.Add(txtBox);
 
                 Grid.SetColumn(txtBox, 1);
 
@@ -119,7 +180,7 @@ namespace Antilli
             get
             {
                 if (m_bitmap != null)
-                    return m_bitmap.ToBitmapSource((BitmapSourceLoadFlags)m_imageLoadFlags);
+                    return m_bitmap.GetBitmapSource((BitmapSourceLoadFlags)m_imageLoadFlags);
 
                 return null;
             }
@@ -147,46 +208,158 @@ namespace Antilli
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
         }
-
+        
         public void SetSubstance(ISubstanceData substance)
         {
             m_bitmap = null;
 
-            var sb = new StringBuilder();
-            var col = 12;
+            var lookup = new Dictionary<int, string>() {
+                    { 0, "ReflectedSky" },                              //  0
+                    { 1, "Portal" },                                    //  1
+                    
+                    { 4, "Building" },                                  // -1
+                    { 5, "Clutter" },                                   // -1
 
-            sb.AppendLine("== Substance Information ==");
+                    { 3, "Road" },                                      //  6
+                    { 35, "PostRoad" },                                 //  7
+                    
+                    { 39, "PreWater" },                                 //  9
+                    { 21, "FarWater" },                                 // 10
+                    { 23, "CarInterior" },                              // 11
+                    { 6, "Car" },                                       // 12
+                    
+                    { 26, "FarWater_2" },                               // 14
+                    { 27, "FarWater_3" },                               // 15
+                    { 20, "NearWater" },                                // 16
+                    
+                    { 25, "CarOverlay" },                               // 17
+                    { 22, "GrimeOverlay" },                             // 19
 
-            sb.AppendColumn("Bin", col, true).AppendLine($"{substance.Bin} ({substance.RenderBin})");
-            sb.AppendColumn("Flags", col, true).AppendFormat("0x{0:X}", substance.Flags);
+                    { 2, "Sky" },                                       // 21
+                    { 24, "LowPoly" },                                  // 22
 
-            if (substance.Flags != 0)
-            {
-                sb.Append(" (");
+                    { 34, "GlowingLight" },                             // 25
+                    
+                    { 37, "DrawAlphaLast" },                            // 28
+                    { 30, "FullBrightOverlay" },                        // 29
+                    { 7, "Particle" },                                  // 30
 
-                for (int i = 0, ii = 0; i < 24; i++)
+                    { 33, "ShadowedParticle" },                         // -1
+                    
+                    { 8, "MissionIcon" },                               // 32
+
+                    { 12, "OverheadMap_1" },                            // 33
+                    { 13, "OverheadMap_2" },                            // 34
+                    { 14, "OverheadMap_3" },                            // 35
+                    { 15, "OverheadMap_4" },                            // 36
+                    { 16, "OverheadMap_5" },                            // 37
+                    { 17, "OverheadMap_6" },                            // 38
+                    { 18, "OverheadMap_7" },                            // 39
+                    { 19, "OverheadMap_8" },                            // 40
+                    { 28, "OverheadMap_9" },                            // 41
+                    { 29, "OverheadMap_10" },                           // 42
+                    { 31, "OverheadMap_11" },                           // 43
+                    { 32, "OverheadMap_12" },                           // 44
+                    
+                    { 40, "Overlay_0_25" },                             // 46
+                    { 10, "Overlay_0_5" },                              // 47
+                    { 9, "Overlay_1_0" },                               // 48
+                    { 11, "Overlay_1_5" },                              // 49
+                    { 36, "Overlay_2_0" },                              // -1
+
+                    { 38, "UntexturedSemiTransparent" },                // 51
+
+                    { 48, "Trees" },
+
+                    { 49, "Menus_0_25" },
+                    { 50, "Menus_0_5" },
+                    { 51, "Menus_0_75" },
+                    { 52, "Menus_1_0" },
+                    { 53, "Menus_1_25" },
+                    { 54, "Menus_1_5" },
+                    { 55, "Menus_1_75" },
+                    { 56, "Menus_2_0" },
+
+                    { 57, "Clouds" },
+                    { 58, "Hyperlow" },
+                    { 59, "LightFlare" },
+
+                    { 60, "OverlayMask_1" },
+                    { 61, "OverlayMask_2" },
+
+                    { 62, "TreeWall" },
+                    { 63, "BridgeWires" },
+                };
+
+            var piBin = new PropertyItem("Bin", delegate (string bin) {
+                foreach (var kv in lookup)
                 {
-                    var nFlg = (substance.Flags & (1 << i));
+                    if (String.Equals(kv.Value, bin))
+                    {
+                        substance.Bin = kv.Key;
+                        AT.CurrentState.NotifyFileChange(substance);
 
-                    if (nFlg == 0)
-                        continue;
-
-                    var sFlg = $"FLAG_{nFlg}";
-
-                    if (nFlg == 4)
-                        sFlg = "Alpha";
-
-                    if (ii != 0)
-                        sb.Append(" | ");
-
-                    sb.Append(sFlg);
-                    ii++;
+                        return true;
+                    }
                 }
 
-                sb.Append(")");
-            }
+                return false;
+            }, lookup[substance.Bin]);
 
-            sb.AppendLine();
+            var piFlags = new PropertyItem("Flags", delegate (string flags) {
+                int value = 0;
+
+                if (Utils.TryParseNumber(flags, out value))
+                {
+                    substance.Flags = value;
+                    AT.CurrentState.NotifyFileChange(substance);
+
+                    return true;
+                }
+
+                return false;
+            }, $"0x{substance.Flags:X2}");
+
+            propPanelItems.Children.Clear();
+
+            piBin.AddToPanel(propPanelItems, lookup.Select((kv) => kv.Value).ToArray());
+            piFlags.AddToPanel(propPanelItems);
+
+            var sb = new StringBuilder();
+            var col = 12;
+            
+            sb.AppendLine("== Substance Information ==");
+
+            //--sb.AppendColumn("Bin", col, true).AppendLine($"{substance.Bin} ({substance.RenderBin})");
+            //--sb.AppendColumn("Flags", col, true).AppendFormat("0x{0:X}", substance.Flags);
+            
+            //--if (substance.Flags != 0)
+            //--{
+            //--    sb.Append(" (");
+            //--
+            //--    for (int i = 0, ii = 0; i < 24; i++)
+            //--    {
+            //--        var nFlg = (substance.Flags & (1 << i));
+            //--
+            //--        if (nFlg == 0)
+            //--            continue;
+            //--
+            //--        var sFlg = $"FLAG_{nFlg}";
+            //--
+            //--        if (nFlg == 4)
+            //--            sFlg = "Alpha";
+            //--
+            //--        if (ii != 0)
+            //--            sb.Append(" | ");
+            //--
+            //--        sb.Append(sFlg);
+            //--        ii++;
+            //--    }
+            //--
+            //--    sb.Append(")");
+            //--}
+
+            //--sb.AppendLine();
 
             int[] regs = {
                 (substance.Mode & 0xFF),
@@ -240,24 +413,22 @@ namespace Antilli
                 sb.AppendColumn("Specular", col, true).AppendLine(substance_pc.IsSpecular);
                 sb.AppendColumn("Emissive", col, true).AppendLine(substance_pc.IsEmissive);
 
-                sb.AppendLine();
-                sb.AppendLine("==== Debug Information ====");
+                //--sb.AppendLine();
+                //--sb.AppendLine("==== Debug Information ====");
                 
-                var resolved = substance_pc.GetResolvedData();
-
-                var rst = (resolved >> 0) & 0xFF;
-                var stage = (resolved >> 8) & 0xFFFF;
-                var flags = (resolved >> 16) & 0xFFFF;
-
-                sb.AppendColumn("Resolved", col, true).AppendLine("0x{0:X6} ; Resolved value by Driv3r", resolved);
-                sb.AppendColumn(".rst", col, true).AppendLine("0x{0:X2}", rst);
-                sb.AppendColumn(".stage", col, true).AppendLine("0x{0:X2}", stage);
-                sb.AppendColumn(".flags", col, true).AppendLine("0x{0:X2}", flags);
-
-                sb.AppendLine();
-                sb.AppendColumn("FlagsTest", col, true).AppendLine("0x{0:X6} ; Flags from resolved data", substance_pc.GetCompiledFlags(resolved));
-
-                
+                //--var resolved = substance_pc.GetResolvedData();
+                //--
+                //--var rst = (resolved >> 0) & 0xFF;
+                //--var stage = (resolved >> 8) & 0xFFFF;
+                //--var flags = (resolved >> 16) & 0xFFFF;
+                //--
+                //--sb.AppendColumn("Resolved", col, true).AppendLine("0x{0:X6} ; Resolved value by Driv3r", resolved);
+                //--sb.AppendColumn(".rst", col, true).AppendLine("0x{0:X2}", rst);
+                //--sb.AppendColumn(".stage", col, true).AppendLine("0x{0:X2}", stage);
+                //--sb.AppendColumn(".flags", col, true).AppendLine("0x{0:X2}", flags);
+                //--
+                //--sb.AppendLine();
+                //--sb.AppendColumn("FlagsTest", col, true).AppendLine("0x{0:X6} ; Flags from resolved data", substance_pc.GetCompiledFlags(resolved));    
             }
 
             m_contentInfo = sb.ToString();
@@ -294,12 +465,7 @@ namespace Antilli
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
         }
-
-        private void ClearProperties()
-        {
-            propPanel.Children.Clear();
-        }
-
+        
         public void Clear()
         {
             m_bitmap = null;
@@ -307,6 +473,8 @@ namespace Antilli
 
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
+
+            propPanelItems.Children.Clear();
         }
 
         public void Update()

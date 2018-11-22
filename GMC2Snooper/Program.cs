@@ -49,7 +49,9 @@ namespace GMC2Snooper
 
         static bool Interactive = false;
         static bool BatchRunner = false;
-        static bool ViewImages = true;
+        static bool ViewImages = false;
+
+        static bool RawData = false;
 
         static bool bDumpTextures = false;
         static bool bDumpMaterials = false;
@@ -106,6 +108,12 @@ namespace GMC2Snooper
                         case "texdump":
                             bDumpTextures = true;
                             continue;
+                        case "viewer":
+                            ViewImages = true;
+                            continue;
+                        case "raw":
+                            RawData = true;
+                            continue;
                         default:
                             Console.WriteLine($"Unknown argument '{arg}'!");
                             continue;
@@ -130,411 +138,738 @@ namespace GMC2Snooper
                 return;
             }
 
-            if (StartIdx <= 0)
+            if (RawData)
             {
-                Console.WriteLine("ERROR: Index cannot be zero or negative.");
-                return;
+                DumpRawData();
             }
-
-            var chunker = new FileChunker();
-            var modPacks = new List<SpoolableBuffer>();
-
-            chunker.SpoolerLoaded += (s, e) => {
-                if (s.Context == 0x32434D47)
-                    modPacks.Add((SpoolableBuffer)s);
-            };
-
-            chunker.Load(Filename);
-
-            if (modPacks.Count == 0)
+            else
             {
-                Console.WriteLine($"ERROR: No model packages were found.");
-                return;
-            }
-
-            var idx = (StartIdx - 1);
-
-            if (idx >= modPacks.Count)
-            {
-                Console.WriteLine($"ERROR: Index was larger than the actual number of models available.");
-                return;
-            }
-
-            if (BatchRunner && Interactive)
-            {
-                Console.WriteLine("WARNING: Interactive mode disabled due to batch mode being specified.");
-                Interactive = false;
-            }
-
-            // disable image viewer for batched runs
-            if (BatchRunner)
-                ViewImages = false;
-            
-            while (idx < modPacks.Count)
-            {
-                var gmc2 = new ModelPackagePS2();
-                var spooler = modPacks[idx];
-
-                var parent = spooler.Parent;
-
-                Console.WriteLine($">> ModelPackage index: {StartIdx}");
-                Console.WriteLine($">> ModelPackage offset: 0x{spooler.BaseOffset:X}");
-
-                if (parent != null)
-                    Console.WriteLine($">> ModelPackage parent: 0x{parent.Context:X8}");
-
-                using (var ms = spooler.GetMemoryStream())
+                if (StartIdx <= 0)
                 {
-                    gmc2.LoadBinary(ms);
-                    Console.WriteLine($">> Processed {gmc2.Models.Count} models / {gmc2.Materials.Count} materials.");
+                    Console.WriteLine("ERROR: Index cannot be zero or negative.");
+                    return;
                 }
 
-                VIF = new VifParser();
+                var chunker = new FileChunker();
+                var modPacks = new List<SpoolableBuffer>();
 
-                _buffer1 = new VBuffer();
-                _buffer2 = new VBuffer();
+                chunker.SpoolerLoaded += (s, e) => {
+                    if (s.Context == 0x32434D47)
+                        modPacks.Add((SpoolableBuffer)s);
+                };
 
-                if (bDumpModels)
+                chunker.Load(Filename);
+
+                if (modPacks.Count == 0)
                 {
-                    Console.WriteLine(">> Dumping model info...");
-                    DumpModelInfo(gmc2);
+                    Console.WriteLine($"ERROR: No model packages were found.");
+                    return;
                 }
 
-                if (bDumpMaterials)
+                var idx = (StartIdx - 1);
+
+                if (idx >= modPacks.Count)
                 {
-                    Console.WriteLine(">> Dumping material info...");
-                    DumpMaterials(gmc2);
+                    Console.WriteLine($"ERROR: Index was larger than the actual number of models available.");
+                    return;
                 }
 
-                ProcessTextures(gmc2, idx);
-
-                if (Interactive)
+                if (BatchRunner && Interactive)
                 {
-                    if ((idx + 1) < modPacks.Count)
+                    Console.WriteLine("WARNING: Interactive mode disabled due to batch mode being specified.");
+                    Interactive = false;
+                }
+
+                // disable image viewer for batched runs
+                if (BatchRunner)
+                    ViewImages = false;
+
+                while (idx < modPacks.Count)
+                {
+                    var gmc2 = new ModelPackagePS2();
+                    var spooler = modPacks[idx];
+
+                    var parent = spooler.Parent;
+
+                    Console.WriteLine($">> ModelPackage index: {StartIdx}");
+                    Console.WriteLine($">> ModelPackage offset: 0x{spooler.BaseOffset:X}");
+
+                    if (parent != null)
+                        Console.WriteLine($">> ModelPackage parent: 0x{parent.Context:X8}");
+
+                    using (var ms = spooler.GetMemoryStream())
                     {
-                        Console.WriteLine("Press 'SPACE' to load the next model, or press any key to exit.");
+                        gmc2.LoadBinary(ms);
+                        Console.WriteLine($">> Processed {gmc2.Models.Count} models / {gmc2.Materials.Count} materials.");
+                    }
 
-                        if (Console.ReadKey().Key == ConsoleKey.Spacebar)
+                    VIF = new VifParser();
+                    
+                    if (bDumpModels)
+                    {
+                        Console.WriteLine(">> Dumping model info...");
+                        DumpModelInfo(gmc2);
+                    }
+
+                    if (bDumpMaterials)
+                    {
+                        Console.WriteLine(">> Dumping material info...");
+                        DumpMaterials(gmc2);
+                    }
+
+                    if (ViewImages)
+                        ProcessTextures(gmc2, idx);
+
+                    if (Interactive)
+                    {
+                        if ((idx + 1) < modPacks.Count)
+                        {
+                            Console.WriteLine("Press 'SPACE' to load the next model, or press any key to exit.");
+
+                            if (Console.ReadKey().Key == ConsoleKey.Spacebar)
+                            {
+                                ++idx;
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Operation completed -- no more models left to process.");
+                            Console.WriteLine("Press any key to exit.");
+                            Console.ReadKey();
+                        }
+                    }
+
+                    if (BatchRunner)
+                    {
+                        if ((idx + 1) < modPacks.Count)
                         {
                             ++idx;
                             continue;
                         }
+                        else
+                        {
+                            Console.WriteLine("Operation completed successfully.");
+                        }
                     }
-                    else
-                    {
-                        Console.WriteLine("Operation completed -- no more models left to process.");
-                        Console.WriteLine("Press any key to exit.");
-                        Console.ReadKey();
-                    }
-                }
 
-                if (BatchRunner)
+                    // that's all, folks!
+                    break;
+                }
+            }
+        }
+
+        public static void DumpRawData()
+        {
+            var buffer = File.ReadAllBytes(Filename);
+
+            VIF = new VifParser();
+
+            using (var ms = new MemoryStream(buffer))
+            {
+                while (ms.Position < ms.Length)
                 {
-                    if ((idx + 1) < modPacks.Count)
+                    // check alignment
+                    if ((ms.Position & 0x3) != 0)
+                        ms.Align(4);
+                    
+                    try
                     {
-                        ++idx;
-                        continue;
+                        VIF.ReadTag(ms, UnpackValues);
                     }
-                    else
+                    catch (Exception e)
                     {
-                        Console.WriteLine("Operation completed successfully.");
+                        Console.WriteLine($">> VIFcode read error: '{e.Message}', terminating...");
+                        Environment.Exit(1);
                     }
-                }
 
-                // that's all, folks!
-                break;
+                    DumpVIFTag();
+
+                    //--switch ((VifCommandType)VIF.Code.CMD)
+                    //--{
+                    //--case VifCommandType.ITop:
+                    //--    vBuf.Top = VIF.ITops;
+                    //--    break;
+                    //--
+                    //--case VifCommandType.MsCal:
+                    //--case VifCommandType.MsCalf:
+                    //--case VifCommandType.MsCnt:
+                    //--    // swap buffers
+                    //--    vBuf = GetBuffer(VIF);
+                    //--    break;
+                    //--}
+                }
             }
         }
 
         public class Vertex
         {
-            public float X { get; set; }
-            public float Y { get; set; }
-            public float Z { get; set; }
-        }
+            public Vector4 Position;
+            public Vector4 Normal;
+            public Vector4 Color;
 
-        public class VertexStrip : Vertex
-        {
-            public int Flags { get; set; }
-        }
+            public Vector3 BlendWeight;
+            public Vector2 UV;
 
+            public bool Skip;
+
+            public void ApplyScale(Vector4 positionScale)
+            {
+                //--Position.X *= (100.0f * positionScale.X);
+                //--Position.Y *= (100.0f * positionScale.Y);
+                //--Position.Z *= (100.0f * positionScale.Z);
+                //--Position.W *= (100.0f * positionScale.W);
+
+                Position.X += positionScale.X;
+                Position.Y += positionScale.Y;
+                Position.Z += positionScale.Z;
+            }
+
+            public void SetData(Vector4 vtx, int type, int col)
+            {
+                switch (type)
+                {
+                case 0:
+                    {
+                        switch (col)
+                        {
+                        case 0:
+                            Position = vtx;
+                            break;
+                        case 1:
+                            Normal = vtx;
+                            
+                            Position.W = Normal.W;
+                            break;
+                        case 2:
+                            UV.X = vtx.X;
+                            UV.Y = vtx.Y;
+                            UV.Scale(32.0f);
+                            break;
+                        }
+                    } break;
+                case 1:
+                    {
+                        switch (col)
+                        {
+                        case 0:
+                            Position = vtx;
+                            break;
+                        case 1:
+                            Color = vtx;
+                            break;
+                        case 2:
+                            Normal = vtx;
+                            
+                            UV.X = Normal.W;
+                            Normal.W = Position.W;
+                            break;
+                        case 3:
+                            BlendWeight.X = vtx.X;
+                            BlendWeight.Y = vtx.Y;
+                            BlendWeight.Z = vtx.Z;
+
+                            // finish up the UV's
+                            UV.Y = vtx.W;
+                            UV.Scale(32.0f);
+                            break;
+                        }
+                    } break;
+                default:
+                    throw new InvalidOperationException($"Unsupported vertex type '{type}'");
+                }
+            }
+        }
+        
         public class MeshStrip
         {
-            public int BaseVertexIndex { get; set; }
-            public int MinIndex { get; set; }
+            public int Type;
 
-            public int NumVertices { get; set; }
-        }
+            public int MinIndex;
+            public int StartIndex;
+            
+            public int MaterialId;
+            public int MaterialSource;
 
-        public class VBuffer
-        {
-            public int Top { get; set; }
-
-            public List<VertexStrip> Vertices { get; set; }
-
-            public List<Vertex> Normals { get; set; }
-
-            public List<Vertex> UV1s { get; set; }
-            public List<Vertex> UV2s { get; set; }
-
-            public VBuffer()
+            public List<Vertex> Vertices;
+            
+            public MeshStrip(int type, int minIndex, int startIndex)
             {
-                Vertices = new List<VertexStrip>();
-                Normals = new List<Vertex>();
-                UV1s = new List<Vertex>();
-                UV2s = new List<Vertex>();
+                Type = type;
+
+                MinIndex = minIndex;
+                StartIndex = startIndex;
             }
         }
-
-        private static VBuffer _buffer1 = new VBuffer();
-        private static VBuffer _buffer2 = new VBuffer();
-
-        public static VBuffer GetBuffer(VifParser parser)
+        
+        [StructLayout(LayoutKind.Sequential, Pack = 1, Size = 16)]
+        public struct VifBuffer
         {
-            return (parser.DoubleBuffered) ? _buffer2 : _buffer1;
+            public float V1;
+            public float V2;
+            public float V3;
+            public float V4;
         }
-
-        public static void CollectVertices(VBuffer vBuf, ref int top, List<VertexStrip> vertices)
-        {
-            var numVertices = (vBuf.Vertices.Count - top);
-
-            for (int v = 0; v < numVertices; v++)
-            {
-                var vert = vBuf.Vertices[top + v];
-                vertices.Add(vert);
-            }
-
-            top += (numVertices - vBuf.Top);
-        }
-
+        
         public static StringBuilder SBU = new StringBuilder();
+        
+        public static VifBuffer[] VxBuffer = null;
+        public static int VxIndex = 0;
+        public static int VxCount = 0;
 
-        public static void UnpackValues(VifParser parser, VifUnpackType packType, bool flag, bool masked, long[][] values)
+        public static List<MeshStrip> Strips = new List<MeshStrip>();
+        
+        public static unsafe VifBuffer* GetVertexPtr(int index)
         {
-            var nextPack = (values.Length / parser.Cycle.WriteLength);
-            var doublePacked = (nextPack != values.Length);
+            var addrIdx = (index % VIF.Cycle.WriteLength);
+            var addr = VIF.Addr + addrIdx;
 
-            var buffer = GetBuffer(parser);
+            var offset = (VxIndex + (index - addrIdx)) * VIF.Cycle.Length;
+            
+            var rV = __makeref(VxBuffer[offset + addr]);
+            var pV = *(IntPtr*)&rV;
 
-            // shit
+            return (VifBuffer*)pV;
+        }
+
+        public static unsafe void SetVertex(int index, int slot, bool masked, float value)
+        {
+            var vtx = GetVertexPtr(index);
+
+            var ptr = &(&vtx->V1)[slot];
+            var canWrite = (masked) ? (VIF.Mask[slot] == VifWriteMaskType.Data) : true;
+
+            if (canWrite)
+                *ptr = value;
+        }
+
+        public static List<Vertex> ReadVertices(int index, int count, SubModel subModel, Vector4 scale)
+        {
+            var stride = VIF.Cycle.Length;
+            var vertices = new List<Vertex>(count);
+
+            for (int v = 0; v < count; v++)
+            {
+                var vIdx = (index + v) * stride;
+                var vertex = new Vertex();
+
+                vertices.Add(vertex);
+
+                for (int col = 0; col < stride; col++)
+                {
+                    var vif = VxBuffer[vIdx + col];
+                    var vtx = new Vector4(vif.V1, vif.V2, vif.V3, vif.V4);
+
+                    //--sb.Append($"{vtx.X,-12:F4}{vtx.Y,-12:F4}{vtx.Z,-12:F4}{vtx.W,-12:F4}| ");
+
+                    vertex.SetData(vtx, subModel.Type, col);
+                }
+
+                //--sb.AppendLine();
+
+                vertex.ApplyScale(scale);
+
+                //--if (subModel.Flags == 1)
+                //--{
+                //--    vertex.ApplyScale(scale);
+                //--}
+            }
+
+            //--sb.AppendLine();
+
+            return vertices;
+        }
+
+        public static unsafe void UnpackValues(VifParser parser, VifUnpackType packType, bool flag, bool masked, long[][] values)
+        {
+            if (VxBuffer == null)
+            {
+                // create a buffer we can use
+                VxBuffer = new VifBuffer[20000 * VIF.Cycle.Length];
+                VxIndex = 0;
+            }
+
+            VxCount = 0;
+            
             switch (packType)
             {
             case VifUnpackType.S_16:
-                if (!doublePacked)
-                    throw new InvalidOperationException("can't do S_16 with only 1 value :(");
-
                 for (int i = 0; i < values.Length; i++)
                 {
                     var val = values[i][0];
+                    var fV = Convert.ToSingle(val) / 128.0f;
+                    
+                    SetVertex(i, 0, masked, fV);
+                    SetVertex(i, 1, masked, fV);
+                    SetVertex(i, 2, masked, fV);
+                    SetVertex(i, 3, masked, fV);
 
-                    var u = (val >> 0) & 0xFF;
-                    var v = (val >> 8) & 0xFF;
-
-                    if (u > 127)
-                        u -= 128;
-                    if (v > 127)
-                        v -= 128;
-
-                    var vt = new Vertex() {
-                        X = (u / 128.0f),
-                        Y = (v / 128.0f),
-                        Z = 1.0f,
-                    };
-
-                    var uvs = (i < nextPack) ? buffer.UV1s : buffer.UV2s;
-
-                    uvs.Add(vt);
-
-                    SBU.AppendLine($"-> {vt.X:F4}, {vt.Y:F4}");
+                    SBU.AppendLine($"-> {fV:F4}");
                 }
+                break;
+            case VifUnpackType.V2_8:
+            case VifUnpackType.V2_16:
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var x = values[i][0];
+                    var y = values[i][1];
 
+                    var fX = Convert.ToSingle(x) / 128.0f;
+                    var fY = Convert.ToSingle(y) / 128.0f;
+                    
+                    SetVertex(i, 0, masked, fX);
+                    SetVertex(i, 1, masked, fY);
+                    SetVertex(i, 2, masked, fX);
+                    SetVertex(i, 3, masked, fY);
+
+                    SBU.AppendLine($"-> {fX:F4}, {fY:F4}");
+                }
                 break;
             case VifUnpackType.V3_8:
-                if (!masked)
-                    throw new InvalidOperationException("can't do V3_8 non-masked :(");
-
+            case VifUnpackType.V3_16:
                 for (int i = 0; i < values.Length; i++)
                 {
-                    var vn = new Vertex() {
-                        X = (values[i][0] / 256.0f),
-                        Y = (values[i][1] / 256.0f),
-                        Z = (values[i][2] / 256.0f),
-                    };
+                    var x = values[i][0];
+                    var y = values[i][1];
+                    var z = values[i][2];
 
-                    buffer.Normals.Add(vn);
+                    var fX = Convert.ToSingle(x) / 128.0f;
+                    var fY = Convert.ToSingle(y) / 128.0f;
+                    var fZ = Convert.ToSingle(z) / 128.0f;
+                    
+                    SetVertex(i, 0, masked, fX);
+                    SetVertex(i, 1, masked, fY);
+                    SetVertex(i, 2, masked, fZ);
+                    SetVertex(i, 3, masked, fX);
 
-                    SBU.AppendLine($"-> {vn.X:F4}, {vn.Y:F4}, {vn.Z:F4}");
+                    SBU.AppendLine($"-> {fX:F4}, {fY:F4}, {fZ:F4}");
                 }
-
                 break;
             case VifUnpackType.V4_8:
+            case VifUnpackType.V4_16:
                 for (int i = 0; i < values.Length; i++)
                 {
-                    var vx = new VertexStrip() {
-                        X = (values[i][0] / 128.0f),
-                        Y = (values[i][1] / 128.0f),
-                        Z = ((values[i][2] / 128.0f)),
-                        Flags = (int)(values[i][3] & 0xFF),
-                    };
-
-                    buffer.Vertices.Add(vx);
-
-                    SBU.AppendLine($"-> {vx.X:F4}, {vx.Y:F4}, {vx.Z:F4}, {vx.Flags}");
+                    var x = values[i][0];
+                    var y = values[i][1];
+                    var z = values[i][2];
+                    var w = values[i][3];
+                    
+                    var fX = Convert.ToSingle(x) / 128.0f;
+                    var fY = Convert.ToSingle(y) / 128.0f;
+                    var fZ = Convert.ToSingle(z) / 128.0f;
+                    var fW = Convert.ToSingle(w) / 128.0f;
+                    
+                    SetVertex(i, 0, masked, fX);
+                    SetVertex(i, 1, masked, fY);
+                    SetVertex(i, 2, masked, fZ);
+                    SetVertex(i, 3, masked, fW);
+                    
+                    SBU.AppendLine($"-> {fX:F4}, {fY:F4}, {fZ:F4}, {fW:F4}");
                 }
-
                 break;
             }
+
+            VxCount = (values.Length / VIF.Cycle.WriteLength);
         }
 
         public static void DumpModelInfo(ModelPackagePS2 gmc2)
         {
             var sb = new StringBuilder();
-
+            
             var minIndex = 0;
-
-            var top1 = 0;
-            var top2 = 0;
-
+            
             // vif tag info :)
             for (int i = 0; i < gmc2.Models.Count; i++)
             {
                 var model = gmc2.Models[i];
 
-                Console.WriteLine($"**** Model {i + 1} / {gmc2.Models.Count} *****");
-                Console.WriteLine($"Type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
-                Console.WriteLine($"UID: {model.UID:X8}");
-                Console.WriteLine($"Handle: {model.Handle:X8}");
-                Console.WriteLine($"Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
-                Console.WriteLine($"Transform1: ({model.Transform1.X:F4},{model.Transform1.Y:F4},{model.Transform1.Z:F4})");
-                Console.WriteLine($"Transform2: ({model.Transform2.X:F4},{model.Transform2.Y:F4},{model.Transform2.Z:F4})");
-#           if DUMP_MODELS
-                sb.AppendLine($"# ----- Model {i + 1} ----- #");
-                sb.AppendLine($"# type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
-                sb.AppendLine($"# unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
+                Console.WriteLine($"Model {i + 1} / {gmc2.Models.Count}:");
+                Console.WriteLine($"  Type: ({model.Type & 0xF}, {(model.Type & 0xF) >> 4})");
+                Console.WriteLine($"  UID: {model.UID:X8}");
+                Console.WriteLine($"  Handle: {model.Handle:X8}");
+                Console.WriteLine($"  Unknown: ({model.Unknown1:X4},{model.Unknown2:X4})");
+                Console.WriteLine($"  Box offset: ({model.BoxOffset.X:F4},{model.BoxOffset.Y:F4},{model.BoxOffset.Z:F4})");
+                Console.WriteLine($"  Box scale: ({model.BoxScale.X:F4},{model.BoxScale.Y:F4},{model.BoxScale.Z:F4})");
 
-                sb.AppendLine($"o model{i+1:D4}");
-#           endif
-                var meshes = new List<MeshStrip>();
+                Strips = new List<MeshStrip>();
 
-                for (int ii = 0; ii < model.SubModels.Count; ii++)
+                for (int l = 0; l < model.Lods.Count; l++)
                 {
-                    var subModel = model.SubModels[ii];
+                    var lod = model.Lods[l];
 
-                    Console.WriteLine($"******** Sub model {ii + 1} / {model.SubModels.Count} *********");
-                    Console.WriteLine($"Type: {subModel.Type}");
-                    Console.WriteLine($"Flags: {subModel.Flags}");
-                    Console.WriteLine($"Unknown: ({subModel.Unknown1},{subModel.Unknown2})");
-                    Console.WriteLine($"TexId: {subModel.TextureId}");
-                    Console.WriteLine($"TexSource: {subModel.TextureSource:X4}");
+                    Console.WriteLine($"  Lod {l + 1} / {model.Lods.Count}:");
+                    Console.WriteLine($"    Mask: {lod.Mask}");
+                    Console.WriteLine($"    Tris: {lod.NumTriangles}");
+                    Console.WriteLine($"    Scale: ({lod.Scale.X:F4},{lod.Scale.Y:F4},{lod.Scale.Z:F4},{lod.Scale.W:F4})");
 
-                    if (subModel.HasVectorData)
+                    if (lod.IsDummy)
+                        continue;
+                    
+                    for (int ii = 0; ii < lod.Instances.Count; ii++)
                     {
-                        var v1 = subModel.V1;
-                        var v2 = subModel.V2;
-                        Console.WriteLine($"V1: ({v1.X:F4},{v1.Y:F4},{v1.Z:F4})");
-                        Console.WriteLine($"V2: ({v2.X:F4},{v2.Y:F4},{v2.Z:F4})");
-                    }
+                        var instance = lod.Instances[ii];
+                        var subModel = instance.Model;
 
-                    if (subModel.HasTransform)
-                    {
-                        var transform = subModel.Transform;
-                        Console.WriteLine($"Transform X: ({transform.X.X:F4},{transform.X.Y:F4},{transform.X.Z:F4},{transform.X.W:F4})");
-                        Console.WriteLine($"Transform Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
-                        Console.WriteLine($"Transform Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
-                    }
+                        Console.WriteLine($"    Lod Instance {ii + 1} / {lod.Instances.Count}:");
 
-                    var dbf = VIF.DoubleBuffered;
-
-                    VBuffer vBuf = GetBuffer(VIF);
-
-                    using (var ms = new MemoryStream(subModel.ModelDataBuffer))
-                    {
-                        while (ms.Position < ms.Length)
+                        if (instance.HasRotation)
                         {
-                            // check alignment
-                            if ((ms.Position & 0x3) != 0)
-                                ms.Align(4);
+                            var transform = instance.Rotation;
+                            Console.WriteLine($"      Rotation X: ({transform.X.X:F4},{transform.X.Y:F4},{transform.X.Z:F4},{transform.X.W:F4})");
+                            Console.WriteLine($"      Rotation Y: ({transform.Y.X:F4},{transform.Y.Y:F4},{transform.Y.Z:F4},{transform.Y.W:F4})");
+                            Console.WriteLine($"      Rotation Z: ({transform.Z.X:F4},{transform.Z.Y:F4},{transform.Z.Z:F4},{transform.Z.W:F4})");
+                        }
 
-                            try
+                        if (instance.HasTranslation)
+                        {
+                            var trn = instance.Translation;
+                            Console.WriteLine($"      Translation: ({trn.X:F4},{trn.Y:F4},{trn.Z:F4},{trn.W:F4})");
+                        }
+
+                        Console.WriteLine($"      SubModel:");
+                        Console.WriteLine($"        Type: {subModel.Type}");
+                        Console.WriteLine($"        Flags: {subModel.Flags}");
+                        Console.WriteLine($"        Unknown: ({subModel.Unknown1},{subModel.Unknown2})");
+                        Console.WriteLine($"        Tex id: {subModel.TextureId}");
+                        Console.WriteLine($"        Tex source: {subModel.TextureSource:X4}");
+
+                        if (subModel.HasBoundBox)
+                        {
+                            var v1 = subModel.BoxOffset;
+                            var v2 = subModel.BoxScale;
+                            Console.WriteLine($"        Box Offset: ({v1.X:F4},{v1.Y:F4},{v1.Z:F4})");
+                            Console.WriteLine($"        Box Scale: ({v2.X:F4},{v2.Y:F4},{v2.Z:F4})");
+                        }
+                        
+                        var startIndex = VxIndex;
+                        var offset = 0;
+                        
+                        var strip = new MeshStrip(subModel.Type, minIndex, startIndex);
+                        var vertices = new List<Vertex>();
+
+                        Strips.Add(strip);
+
+                        strip.MaterialId = subModel.TextureId;
+                        strip.MaterialSource = subModel.TextureSource;
+
+                        using (var ms = new MemoryStream(subModel.DataBuffer))
+                        {
+                            while (ms.Position < ms.Length)
                             {
-                                VIF.ReadTag(ms, UnpackValues);
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine($">> VIFcode read error: '{e.Message}', terminating...");
-                                Environment.Exit(1);
-                            }
+                                // check alignment
+                                if ((ms.Position & 0x3) != 0)
+                                    ms.Align(4);
 
-                            DumpVIFTag();
+                                try
+                                {
+                                    VIF.ReadTag(ms, UnpackValues);
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine($">> VIFcode read error: '{e.Message}', terminating...");
+                                    Environment.Exit(1);
+                                }
 
-                            switch ((VifCommandType)VIF.Code.CMD)
-                            {
-                            case VifCommandType.ITop:
-                                vBuf.Top = VIF.ITops;
-                                break;
+                                DumpVIFTag();
 
-                            case VifCommandType.MsCal:
-                            case VifCommandType.MsCalf:
-                            case VifCommandType.MsCnt:
-                                // swap buffers
-                                vBuf = GetBuffer(VIF);
-                                break;
+                                switch ((VifCommandType)VIF.Code.CMD)
+                                {
+                                case VifCommandType.MsCal:
+                                case VifCommandType.MsCalf:
+                                case VifCommandType.MsCnt:
+                                    var verts = ReadVertices((startIndex + offset), VxCount, subModel, lod.Scale);
+                                    vertices.AddRange(verts);
+
+                                    VxIndex += VxCount;
+                                    offset += VxCount;
+                                    break;
+                                }
                             }
                         }
+
+                        // data was still waiting?
+                        if (VxIndex == startIndex)
+                        {
+                            offset += VxCount;
+                        
+                            var lastVerts = ReadVertices((startIndex + offset), VxCount, subModel, lod.Scale);
+                            vertices.AddRange(lastVerts);
+                        
+                            VxIndex += VxCount;
+                        }
+
+                        strip.Vertices = vertices;
+
+                        var numVertices = vertices.Count;
+
+                        sb.AppendLine($"# ----- SubModel -----");
+                        sb.AppendLine($"# type: {subModel.Type}");
+                        sb.AppendLine($"# flags: {subModel.Flags}");
+                        sb.AppendLine($"# unknown: ({subModel.Unknown1},{subModel.Unknown2})");
+                        sb.AppendLine($"# index: {startIndex}");
+                        sb.AppendLine($"# vertices: {numVertices}");
+                        sb.AppendLine($"# tex id: {subModel.TextureId}");
+                        sb.AppendLine($"# tex src: {subModel.TextureSource:X4}");
+                        sb.AppendLine();
+
+                        // skip every other vertex
+                        //--for (int v = 0; v < numVertices; v++)
+                        //--{
+                        //--    if ((v % 2) != 0)
+                        //--        vertices[v].Skip = true;
+                        //--}
+                        
+                        //--for (int v = 2; v < numVertices; v++)
+                        //--{
+                        //--    if (vertices[v].Normal.W == -1.0f)
+                        //--        vertices[v - 2].Skip = true;
+                        //--}
+
+                        var indices = new List<int>();
+
+                        var flip = false;
+                        var idx = 0;
+
+                        for (int v = 0; v < numVertices; v++)
+                        {
+                            int i0, i1, i2;
+                        
+                            if ((v + 2) < numVertices)
+                            {
+                                i0 = (minIndex + v) + 0;
+                                i1 = (minIndex + v) + 1;
+                                i2 = (minIndex + v) + 2;
+                            }
+                            else if ((v + 1) < numVertices)
+                            {
+                                i0 = (minIndex + v) + 0;
+                                i1 = (minIndex + v) + 1;
+                                i2 = (minIndex + v) - 1;
+                               
+                            }
+                            else
+                            {
+                                i0 = (minIndex + v) + 0;
+                                i1 = (minIndex + v) - 1;
+                                i2 = (minIndex + v) - 2;
+                            }
+                        
+                            indices.Add(i0);
+                            indices.Add(i1);
+                            indices.Add(i0);
+
+                            indices.Add(i1);
+                            indices.Add(i2);
+                            indices.Add(i1);
+
+                            indices.Add(i2);
+                            indices.Add(i0);
+                            indices.Add(i2);
+                        }
+
+                        //--for (int v = 0; v < numVertices; v++)
+                        //--{
+                        //--    if (vertices[v].Skip)
+                        //--    {
+                        //--        flip = false;
+                        //--        idx++;
+                        //--    }
+                        //--    else
+                        //--    {
+                        //--        int i0, i1, i2;
+                        //--
+                        //--        if (flip)
+                        //--        {
+                        //--            i0 = (idx + 1);
+                        //--            i1 = (idx + 0);
+                        //--            i2 = (idx + 2);
+                        //--        }
+                        //--        else
+                        //--        {
+                        //--            i0 = (idx + 0);
+                        //--            i1 = (idx + 1);
+                        //--            i2 = (idx + 2);
+                        //--        }
+                        //--        
+                        //--        if (i1 < numVertices && i2 < numVertices)
+                        //--        {
+                        //--            indices.Add(minIndex + i0);
+                        //--            indices.Add(minIndex + i1);
+                        //--            indices.Add(minIndex + i2);
+                        //--        }
+                        //--
+                        //--        flip = ((v % 2) != 1);
+                        //--        idx++;
+                        //--    }
+                        //--}
+
+                        minIndex += numVertices;
+                        
+                        var sbV = new StringBuilder(); // v
+                        var sbN = new StringBuilder(); // vn
+                        var sbT = new StringBuilder(); // vt
+
+                        foreach (var vertex in strip.Vertices)
+                        {
+                            var pos = vertex.Position;
+                            var nor = vertex.Normal;
+                            var uv = vertex.UV;
+                            
+                            // NOTE: YZ-axis flipped!
+                            sbV.AppendLine($"v {pos.X:F4} {pos.Z:F4} {pos.Y:F4}");
+                            sbN.AppendLine($"vn {nor.X:F4} {nor.Z:F4} {nor.Y:F4}");
+                            sbT.AppendLine($"vt {uv.X:F4} {uv.Y:F4} 1.0000");
+                        }
+                        
+                        sb.AppendLine(sbV.ToString());
+                        sb.AppendLine(sbN.ToString());
+                        sb.AppendLine(sbT.ToString());
+
+                        sb.AppendLine($"g model_{i + 1:D4}_{l + 1:D4}_{ii + 1:D4}");
+                        sb.AppendLine($"s 1");
+
+                        for (int t = 0; t < indices.Count; t += 3)
+                        {
+                            var s = String.Format("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
+                                indices[t + 0] + 1,
+                                indices[t + 1] + 1,
+                                indices[t + 2] + 1);
+
+                            sb.AppendLine(s);
+                        }
+
+                        sb.AppendLine();
+                        
+                        //--foreach (var vertex in strip.Vertices)
+                        //--{
+                        //--    var pos = vertex.Position;
+                        //--    var nor = vertex.Normal;
+                        //--    var uv = vertex.UV;
+                        //--
+                        //--    sb.Append($"{pos.X,-10:F4}{pos.Y,-10:F4}{pos.Z,-10:F4}{pos.W,-10:F4}| ");
+                        //--    sb.Append($"{nor.X,-10:F4}{nor.Y,-10:F4}{nor.Z,-10:F4}{nor.W,-10:F4}| ");
+                        //--    sb.Append($"{uv.X,-10:F4}{uv.Y,-10:F4}| ");
+                        //--
+                        //--    if (strip.Type == 1)
+                        //--    {
+                        //--        var clr = vertex.Color;
+                        //--        var blw = vertex.BlendWeight;
+                        //--
+                        //--        sb.Append($"{clr.X,-10:F4}{clr.Y,-10:F4}{clr.Z,-10:F4}{clr.W,-10:F4}| ");
+                        //--        sb.Append($"{blw.X,-10:F4}{blw.Y,-10:F4}{blw.Z,-10:F4}| ");
+                        //--    }
+                        //--
+                        //--    sb.AppendLine();
+                        //--}
+
+                        sb.AppendLine();
                     }
-
-#               if DUMP_MODELS
-                    var vertices = new List<VertexStrip>();
-
-                    CollectVertices(_buffer1, ref top1, vertices);
-                    CollectVertices(_buffer2, ref top2, vertices);
-
-                    var numVertices = vertices.Count;
-
-                    var name = $"model{i + 1:D4}_{ii + 1:D4}";
-
-                    sb.AppendLine($"# ----- SubModel {ii + 1} ----- #");
-                    sb.AppendLine($"# type: {subModel.Type}");
-                    sb.AppendLine($"# flags: {subModel.Flags}");
-                    sb.AppendLine($"# unknown: ({subModel.Unknown1},{subModel.Unknown2})");
-                    sb.AppendLine($"# index: {minIndex + 1}");
-                    sb.AppendLine($"# vertices: {numVertices}");
-                    
-                    for (int v = 0; v < numVertices; v++)
-                    {
-                        var vert = vertices[v];
-                    
-                        var vx = (vert.X * model.Transform2.X);
-                        var vy = (vert.Y * model.Transform2.Y);
-                        var vz = (vert.Z * model.Transform2.Z);
-
-                        sb.AppendLine($"v {vx:F4} {vy:F4} {vz:F4}");
-                    }
-                    
-                    sb.AppendLine($"g {name}");
-                    sb.AppendLine($"s off");
-                    
-                    for (int t = 0; t < numVertices - 2; t += 3)
-                    {
-                        int i0, i1, i2;
-                    
-                        i0 = (minIndex + t) + 1;
-                        i1 = (minIndex + t + 1) + 1;
-                        i2 = (minIndex + t + 2) + 1;
-                    
-                        sb.AppendLine($"f {i0} {i1} {i2}");
-                    }
-
-                    minIndex += numVertices;
-                    Console.WriteLine();
-#               endif
                 }
 
                 Console.WriteLine();
             }
-#       if DUMP_MODELS
-            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "dump.obj"), sb.ToString());
-#       endif
+
+            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "model_dump.obj"), sb.ToString());
         }
 
 
@@ -621,6 +956,16 @@ namespace GMC2Snooper
                     sb.AppendLine($"; V{m + 1}");
                 }
                 break;
+            case VifCommandType.StRow:
+                cmdName = "STROW";
+                
+                sb.AppendLine("-> {0,-16:X8}{1,-16:X8}{2,-16:X8}{3,-16:X8}", VIF.Rows[0], VIF.Rows[1], VIF.Rows[2], VIF.Rows[3]);
+                break;
+            case VifCommandType.StCol:
+                cmdName = "STCOL";
+                
+                sb.AppendLine("-> {0,-16:X8}{1,-16:X8}{2,-16:X8}{3,-16:X8}", VIF.Cols[0], VIF.Cols[1], VIF.Cols[2], VIF.Cols[3]);
+                break;
             case VifCommandType.Flush:
                 cmdName = "FLUSH";
                 break;
@@ -674,7 +1019,7 @@ namespace GMC2Snooper
             // dump unpacked values?
             if (SBU.Length > 0)
             {
-                //Console.Write(SBU.ToString());
+                Console.Write(SBU.ToString());
                 SBU = new StringBuilder();
             }
         }

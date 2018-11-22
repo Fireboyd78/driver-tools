@@ -68,7 +68,7 @@ namespace GMC2Snooper
     {
         public int UID { get; set; }
         
-        public List<ModelDefinition> Models { get; set; }
+        public List<Model> Models { get; set; }
         
         public List<MaterialDataPS2> Materials { get; set; }
         public List<SubstanceDataPS2> Substances { get; set; }
@@ -90,7 +90,7 @@ namespace GMC2Snooper
             for (int g = 0; g < data.ModelCount; g++)
                 modelOffsets[g] = stream.ReadInt32();
 
-            Models = new List<ModelDefinition>(data.ModelCount);
+            Models = new List<Model>(data.ModelCount);
 
             for (int g = 0; g < data.ModelCount; g++)
             {
@@ -102,7 +102,7 @@ namespace GMC2Snooper
 
                 stream.Position = (baseOffset + modelOffsets[g]);
 
-                var model = new ModelDefinition();
+                var model = new Model();
 
                 model.LoadBinary(stream);
 
@@ -130,7 +130,7 @@ namespace GMC2Snooper
                 var _m = stream.Read<MaterialDataPS2.Detail>();
                 _m.SubstanceRefsOffset += tsc2Offset;
 
-                var material = _m.Copy();
+                var material = _m.ToClass();
 
                 Materials.Add(material);
                 
@@ -143,7 +143,7 @@ namespace GMC2Snooper
                     var _s = stream.Read<SubstanceDataPS2.Detail>();
                     _s.TextureRefsOffset += tsc2Offset;
 
-                    var substance = _s.Copy();
+                    var substance = _s.ToClass();
                     
                     Substances.Add(substance);
                     material.Substances.Add(substance);
@@ -157,7 +157,7 @@ namespace GMC2Snooper
                         var _t = stream.Read<TextureDataPS2.Detail>();
                         _t.DataOffset += tsc2Offset;
 
-                        var texture = _t.Copy();
+                        var texture = _t.ToClass();
 
                         // read cluts
                         texture.CLUTs = new List<int>(_t.Pixmaps);
@@ -206,7 +206,7 @@ namespace GMC2Snooper
 
         public ModelPackagePS2()
         {
-            Models = new List<ModelDefinition>();
+            Models = new List<Model>();
 
             Materials = new List<MaterialDataPS2>();
             Substances = new List<SubstanceDataPS2>();

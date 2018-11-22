@@ -24,6 +24,7 @@
   <!-- Driver Tools properties -->
   <PropertyGroup>
     <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
+    <IncludeDSCLibrary>false</IncludeDSCLibrary>
     <UsesFreeImage>true</UsesFreeImage>
   </PropertyGroup>
   <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
@@ -60,6 +61,7 @@
     <Compile Include="Configuration\IniConfiguration.cs" />
     <Compile Include="Configuration\IniFile.cs" />
     <Compile Include="Helpers\StringHelper.cs" />
+    <Compile Include="Helpers\DDSUtils.cs" />
     <Compile Include="IO\LocaleReader.cs" />
     <Compile Include="IO\MECFile.cs" />
     <Compile Include="Log.cs" />
@@ -77,10 +79,10 @@
     <Compile Include="Extensions\System\XML\XMLExtensions.cs" />
     <Compile Include="Helpers\Driv3r.cs" />
     <Compile Include="Helpers\Memory.cs" />
-    <Compile Include="IO\ModelFile.cs" />
+    <Compile Include="Models\Formats\Driv3rVehiclesFile.cs" />
+    <Compile Include="Models\Formats\Driv3rModelFile.cs" />
     <Compile Include="IO\ObjFile.cs" />
     <Compile Include="Matrix.cs" />
-    <Compile Include="Models\FVFType.cs" />
     <Compile Include="Models\Hierarchies\HierarchyData.cs" />
     <Compile Include="Models\Hierarchies\VehicleHierarchyData.cs" />
     <Compile Include="Models\Hierarchies\BulletHolder.cs" />
@@ -93,6 +95,9 @@
     <Compile Include="Models\ModelPackages\ModelPackageDSF.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
     <Compile Include="Configuration\RegistryConfiguration.cs" />
+    <Compile Include="Models\Formats\StandaloneTextureData.cs" />
+    <Compile Include="Models\Formats\StandaloneTextureFile.cs" />
+    <Compile Include="Models\VertexBuffer.cs" />
     <Compile Include="Spooling\ChunkSchema.cs" />
     <Compile Include="Spooling\Templates.cs" />
     <Compile Include="Spooling\FileChunker.cs" />
@@ -107,15 +112,14 @@
     <Compile Include="VectorTypes.cs" />
     <None Include="Models\ModelPackages\ModelPackagePC_X.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
-    <Compile Include="Models\TextureCache.cs" />
     <Compile Include="Models\PrimitiveType.cs" />
     <Compile Include="Models\IndexData.cs" />
-    <Compile Include="Models\MeshDefinition.cs" />
+    <Compile Include="Models\SubModel.cs" />
     <Compile Include="Models\PackageTypes.cs" />
-    <Compile Include="Models\MeshGroup.cs" />
-    <Compile Include="Models\ModelPackages\ModelPackage.cs" />
-    <Compile Include="Models\PartDefinition.cs" />
-    <Compile Include="Models\PartsGroup.cs" />
+    <Compile Include="Models\LodInstance.cs" />
+    <Compile Include="Models\ModelPackages\ModelPackageResource.cs" />
+    <Compile Include="Models\Lod.cs" />
+    <Compile Include="Models\Model.cs" />
     <Compile Include="Models\Vertex.cs" />
     <Compile Include="Models\VertexData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

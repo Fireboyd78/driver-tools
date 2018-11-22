@@ -106,6 +106,8 @@ namespace GMC2Snooper.PS2
         // VIF1_STAT-> DBF
         public bool DoubleBuffered { get; set; }
 
+        public int Addr { get; set; }
+
         /// <summary>
         /// The base address of the double-buffered data.
         /// </summary>
@@ -141,6 +143,24 @@ namespace GMC2Snooper.PS2
         /// </summary>
         /// <remarks>VIF1_TOPS</remarks>
         public int Tops { get; set; }
+
+        /// <summary>
+        /// The current number of unpacked values in the buffer.
+        /// </summary>
+        /// <remarks>VIF1_NUM</remarks>
+        public int Num { get; set; }
+        
+        /// <summary>
+		/// The current set of rows.
+		/// </summary>
+		/// <remarks>STROW</remarks>
+        public int[] Rows { get; set; }
+
+        /// <summary>
+		/// The current set of cols.
+		/// </summary>
+		/// <remarks>STCOL</remarks>
+        public int[] Cols { get; set; }
         
         /// <summary>
         /// The most recently processed VIFcode.
@@ -179,6 +199,8 @@ namespace GMC2Snooper.PS2
             var imdt = new VifImmediate(Code.IMDT);
             var cmd = new VifCommand(Code.CMD);
 
+            Addr = imdt.ADDR;
+
             // set when we encounter something not implemented/supported
             var unhandled = false;
 
@@ -208,7 +230,7 @@ namespace GMC2Snooper.PS2
 
             case VifCommandType.MskPath3:
             case VifCommandType.Mark:
-                unhandled = true;
+                //unhandled = true;
                 break;
 
             // no need to handle these
@@ -231,13 +253,20 @@ namespace GMC2Snooper.PS2
                 Mask = stream.ReadStruct<VifWriteMask>();
                 break;
 
-            /*************************
-                      TODO?
-            **************************/
             case VifCommandType.StRow:
+                Rows = new int[4];
+
+                for (int i = 0; i < Rows.Length; i++)
+                    Rows[i] = stream.ReadInt32();
+
+                break;
+
             case VifCommandType.StCol:
-                stream.Position += 4;
-                unhandled = true;
+                Cols = new int[4];
+
+                for (int i = 0; i < Cols.Length; i++)
+                    Cols[i] = stream.ReadInt32();
+
                 break;
 
             // don't know how to handle this (yet), will cause crashes if we continue
@@ -327,10 +356,12 @@ namespace GMC2Snooper.PS2
                         unpackHandler(this, packType, imdt.FLG, (cmd.M == 1), vals);
                     }
                 }
+#if THROW_ON_INVALID_UNPACK_COMMANDS
                 else
                 {
                     throw new InvalidOperationException("Something went wrong when parsing a VIF tag!");
                 }
+#endif
                 break;
             }
             

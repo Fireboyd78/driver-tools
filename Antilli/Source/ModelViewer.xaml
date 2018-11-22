@@ -118,7 +118,7 @@
                         <TextBlock Text="{Binding Name}"/>
                     </HierarchicalDataTemplate>
 
-                    <DataTemplate DataType="{x:Type at:DriverModelVisual3D}">
+                    <DataTemplate DataType="{x:Type at:AntilliModelVisual3D}">
                         <TextBlock Text="Model">
                             <TextBlock.ContextMenu>
                                 <ContextMenu>

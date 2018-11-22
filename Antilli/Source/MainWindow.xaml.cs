@@ -65,43 +65,43 @@ namespace Antilli
             get { return AT.CurrentState.CanShowGlobals; }
         }
         
-        public Driv3rModelFile CurrentModelFile
+        public ModelFile CurrentModelFile
         {
             get { return AT.CurrentState.ModelFile; }
         }
 
-        public ModelPackagePC CurrentModelPackage
+        public ModelPackage CurrentModelPackage
         {
             get { return AT.CurrentState.SelectedModelPackage; }
         }
 
-        public List<ModelPackagePC> ModelPackages
+        public List<ModelPackage> ModelPackages
         {
             get { return AT.CurrentState.ModelPackages; }
         }
 
-        public ModelGroupListItem SelectedPartsGroup
+        public ModelGroupListItem SelectedModelGroup
         {
             get { return Groups.SelectedItem as ModelGroupListItem; }
         }
 
-        public List<ModelGroupListItem> PartsGroups
+        public List<ModelGroupListItem> ModelGroups
         {
             get
             {
-                if (CurrentModelPackage == null || CurrentModelPackage.Parts == null)
+                if (CurrentModelPackage == null || CurrentModelPackage.Models == null)
                     return null;
 
                 List<ModelGroupListItem> items = new List<ModelGroupListItem>();
 
-                PartsGroup curPart = null;
+                Model curModel = null;
 
-                foreach (var part in CurrentModelPackage.Parts)
+                foreach (var model in CurrentModelPackage.Models)
                 {
-                    if (curPart == null || curPart.UID != part.UID)
+                    if (curModel == null || curModel.UID != model.UID)
                     {
-                        items.Add(new ModelGroupListItem(CurrentModelPackage, part));
-                        curPart = part;
+                        items.Add(new ModelGroupListItem(CurrentModelPackage, model));
+                        curModel = model;
                     }
                 }
                 
@@ -273,6 +273,7 @@ namespace Antilli
                 AT.CurrentState.ModelFile = null;
 
                 Viewer.ClearModels();
+                ResetViewWidgets();
             }
         }
 
@@ -318,16 +319,27 @@ namespace Antilli
             var extension = Path.GetExtension(filename).ToLower();
             var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
 
+            var useDPLHack = false;
+
             if (filter.Flags == GameFileFlags.None)
             {
-                MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                filter = FileManager.FindFilter(extension, GameType.DriverPL, (GameFileFlags.Models | GameFileFlags.Textures | GameFileFlags.Resource));
+
+                if (filter.Flags != GameFileFlags.None)
+                {
+                    useDPLHack = true;
+                }
+                else
+                {
+                    MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
             }
 
             var timer = new Stopwatch();
             timer.Start();
 
-            var modelFile = new Driv3rModelFile();
+            var modelFile = new ModelFile();
             var setupModels = true;
             
             switch (extension)
@@ -479,10 +491,14 @@ namespace Antilli
 
         private void OnFileOpenClick()
         {
-            var dialog = FileManager.Driv3rOpenDialog;
+            var dialog = FileManager.OpenDialog;
 
             if (dialog.ShowDialog() ?? false)
+            {
+                dialog.InitialDirectory = Path.GetDirectoryName(dialog.FileName);
                 OnFileOpened(dialog.FileName);
+
+            }
         }
 
         private bool AskUserPrompt(string message)
@@ -600,26 +616,26 @@ namespace Antilli
 
             var lodCount = new int[7];
 
-            if (SelectedPartsGroup != null)
+            if (SelectedModelGroup != null)
             {
-                foreach (var part in SelectedPartsGroup.Parts)
+                foreach (var model in SelectedModelGroup.Models)
                 {
                     // run this check once to prevent unnecessary slowdown
                     if (checkBlendWeights)
                     {
                         checkBlendWeights = false;
-                        AT.CurrentState.CanUseBlendWeights = (part.VertexType == 5);
+                        AT.CurrentState.CanUseBlendWeights = (model.VertexType == 5);
                     }
 
                     // count all possible LODs
                     for (int i = 0; i < 7; i++)
                     {
-                        var partDef = part.Parts[i];
+                        var lod = model.Lods[i];
 
-                        if (partDef == null)
+                        if (lod == null)
                             continue;
 
-                        if (partDef.Groups.Count > 0)
+                        if (lod.Instances.Count > 0)
                             lodCount[i] += 1;
                     }
                 }
@@ -654,8 +670,8 @@ namespace Antilli
             {
                 var prompt = CreateDialog<ExportModelDialog>(true, false);
 
-                if (!SelectedPartsGroup.IsNull)
-                    prompt.FolderName = SelectedPartsGroup.Text.Replace(':', '-');
+                if (!SelectedModelGroup.IsNull)
+                    prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
 
                 if (prompt.ShowDialog() ?? false)
                 {
@@ -673,19 +689,13 @@ namespace Antilli
                             if (prompt.ExportAll)
                             {
                                 int partIdx = 0;
-                                PartsGroup curPart = null;
+                                Model curPart = null;
 
-                                foreach (var part in CurrentModelPackage.Parts)
+                                foreach (var part in CurrentModelPackage.Models)
                                 {
                                     if (curPart == null || curPart.UID != part.UID)
-                                    {
-                                        var id1 = (part.Handle >> 8) & 0xFFFFFF;
-                                        var id2 = part.Handle & 0xFF;
-
-                                        var id3 = (part.UID & 0xFFFF);
-                                        var id4 = (part.UID >> 16) & 0xFFFF;
-                                        
-                                        var filename = $"{partIdx:D4}_{id1:X6}{id2:X2}{id3:X4}{id4:X4}";
+                                    {   
+                                        var filename = $"{partIdx:D4}_{part.UID.High:X8}_{part.UID.Low:X8}";
                                         
                                         OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms);
                                         
@@ -700,15 +710,8 @@ namespace Antilli
                             }
                             else
                             {
-                                var part = SelectedPartsGroup;
-                                
-                                var id1 = (part.Handle >> 8) & 0xFFFFFF;
-                                var id2 = part.Handle & 0xFF;
-
-                                var id3 = (part.UID & 0xFFFF);
-                                var id4 = (part.UID >> 16) & 0xFFFF;
-
-                                var filename = $"{id1:X6}{id2:X2}{id3:X4}{id4:X4}";
+                                var part = SelectedModelGroup;
+                                var filename = $"{part.UID.High:X8}_{part.UID.Low:X8}";
 
                                 if (OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms) == ExportResult.Success)
                                 {
@@ -974,7 +977,7 @@ namespace Antilli
         private void OnModelPackageSelected(object sender, EventArgs e)
         {
             m_deferSelectionChange = true;
-            OnPropertyChanged("PartsGroups");
+            OnPropertyChanged("ModelGroups");
             m_deferSelectionChange = false;
 
             if (CurrentModelPackage != null && CurrentModelPackage.HasModels)
@@ -992,6 +995,13 @@ namespace Antilli
             }
         }
 
+        private void OnFileModified(object sender, EventArgs e)
+        {
+            // hooo boy
+            IsFileDirty = true;
+            CurrentModelPackage.NotifyChanges();
+        }
+
         private void OnModelPackageItemSelected(object sender, SelectionChangedEventArgs e)
         {
             if (Viewer.SelectedModel != null)
@@ -1005,27 +1015,25 @@ namespace Antilli
             ResetViewWidgets();
         }
 
-        private void OnPartsGroupItemSelected(object sender, EventArgs e)
+        private void OnModelGroupItemSelected(object sender, EventArgs e)
         {
             if (m_deferSelectionChange)
                 return;
 
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, new ThreadStart(() => {
-                if (Groups.SelectedIndex == -1)
-                {
-                    Viewer.RemoveActiveModel();
-                    ResetLODButtons();
+            if (Groups.SelectedIndex == -1)
+            {
+                Viewer.RemoveActiveModel();
+                ResetLODButtons();
 
-                    // select the first group
-                    m_deferSelectionChange = true;
-                    Groups.SelectedIndex = 0;
-                }
+                // select the first group
+                m_deferSelectionChange = true;
+                Groups.SelectedIndex = 0;
+            }
 
-                if (SelectedPartsGroup != null)
-                    Viewer.SetActiveModel(SelectedPartsGroup.Parts);
+            if (SelectedModelGroup != null)
+                Viewer.SetActiveModel(SelectedModelGroup.Models);
 
-                UpdateRenderingOptions();
-            }));
+            UpdateRenderingOptions();
 
             if (m_deferSelectionChange)
                 m_deferSelectionChange = false;
@@ -1247,17 +1255,18 @@ namespace Antilli
             };
 
             AT.CurrentState.ModelPackageSelected += OnModelPackageSelected;
+            AT.CurrentState.FileModified += OnFileModified;
 
-            DSC.ProgressUpdated += (o, e) => {
-                var progress_str = e.Message;
-
-                if (e.Progress > -1)
-                    progress_str += $" [{Math.Round(e.Progress):F1}%]";
-                
-                Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new ThreadStart(() => {
-                    Debug.WriteLine($"[INFO] {progress_str}");
-                }));
-            };
+            //--DSC.ProgressUpdated += (o, e) => {
+            //--    var progress_str = e.Message;
+            //--
+            //--    if (e.Progress > -1)
+            //--        progress_str += $" [{Math.Round(e.Progress):F1}%]";
+            //--    
+            //--    Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new ThreadStart(() => {
+            //--        Debug.WriteLine($"[INFO] {progress_str}");
+            //--    }));
+            //--};
             
             KeyDown += (o,e) => {
                 switch (CurrentTab)
@@ -1293,7 +1302,7 @@ namespace Antilli
             };
             
             Packages.SelectionChanged += OnModelPackageItemSelected;
-            Groups.SelectionChanged += OnPartsGroupItemSelected;
+            Groups.SelectionChanged += OnModelGroupItemSelected;
             
             foreach (var child in LODButtons.Children)
             {

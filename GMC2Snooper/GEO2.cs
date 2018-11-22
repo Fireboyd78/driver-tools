@@ -6,58 +6,67 @@ using System.Text;
 
 namespace GMC2Snooper
 {
-    public struct GEO2LodData
+    public struct GEO2LodData : IClassDetail<Lod>
     {
-        public Vector4 Transform;
+        public Vector4 Scale;
 
         public short LodInstanceCount;
-        public short Unknown_12; // flags/count?
+        public short LodMask;
 
         public int LodInstanceDataOffset;
-        public int Unknown_18; // count? 
-        public int Unknown_20; // always zero?
+        public int NumTriangles;
+        public int Reserved;
+
+        public Lod ToClass()
+        {
+            return new Lod() {
+                IsDummy = (LodInstanceCount == 0),
+
+                Mask = LodMask,
+                NumTriangles = NumTriangles,
+
+                Scale = Scale,
+
+                Instances = new List<LodInstance>(LodInstanceCount),
+            };
+        }
 
         public GEO2LodData(Stream stream)
         {
-            Transform = new Vector4() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-                W = stream.ReadSingle(),
-            };
+            Scale = stream.Read<Vector4>();
 
             LodInstanceCount = stream.ReadInt16();
-            Unknown_12 = stream.ReadInt16();
+            LodMask = stream.ReadInt16();
 
             LodInstanceDataOffset = stream.ReadInt32();
-            Unknown_18 = stream.ReadInt32();
-            Unknown_20 = stream.ReadInt32();
+            NumTriangles = stream.ReadInt32();
+            Reserved = stream.ReadInt32();
         }
     }
 
     public struct GEO2LodInstanceData
     {
-        public int TransformAxisOffset; // global transform?
-        public int Unknown_04; // always zero?
+        public int RotationOffset;
+        public int TranslationOffset;
 
         public int SubModelOffset;
 
         public GEO2LodInstanceData(Stream stream)
         {
-            TransformAxisOffset = stream.ReadInt32();
-            Unknown_04 = stream.ReadInt32();
+            RotationOffset = stream.ReadInt32();
+            TranslationOffset = stream.ReadInt32();
             SubModelOffset = stream.ReadInt32();
         }
     }
     
-    public struct GEO2SubModelData
+    public struct GEO2SubModelData : IClassDetail<SubModel>
     {
-        public Vector3 Transform1;
+        public Vector3 BoxOffset;
 
         public short TextureId;
         public short TextureSource;
 
-        public Vector3 Transform2;
+        public Vector3 BoxScale;
 
         public int Unknown_1C; // always zero?
 
@@ -71,22 +80,33 @@ namespace GMC2Snooper
         public int Unknown_28; // always zero?
         public int Unknown_2C; // always zero?
 
+        public SubModel ToClass()
+        {
+            return new SubModel() {
+                HasBoundBox = true,
+            
+                BoxOffset = BoxOffset,
+                BoxScale = BoxScale,
+            
+                TextureId = TextureId,
+                TextureSource = TextureSource,
+            
+                Type = Type,
+                Flags = Flags,
+            
+                Unknown1 = Unknown_1C,
+                Unknown2 = Unknown_28,
+            };
+        }
+
         public GEO2SubModelData(Stream stream)
         {
-            Transform1 = new Vector3() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-            };
+            BoxOffset = stream.Read<Vector3>();
 
             TextureId = stream.ReadInt16();
             TextureSource = stream.ReadInt16();
 
-            Transform2 = new Vector3() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-            };
+            BoxScale = stream.Read<Vector3>();
 
             Unknown_1C = stream.ReadInt32();
 
@@ -102,7 +122,7 @@ namespace GMC2Snooper
         }
     }
 
-    public struct GEO2SubModelDataV2
+    public struct GEO2SubModelDataV2 : IClassDetail<SubModel>
     {
         public short TextureId;
         public short TextureSource;
@@ -111,12 +131,28 @@ namespace GMC2Snooper
 
         public short DataSizeDiv; // size / 10
 
-        public byte Type; // same as GEO2.Type?
+        public byte Type;
         public byte Flags;
 
         public int DataOffset;
 
         public int Unknown_10; // always zero?
+
+        public SubModel ToClass()
+        {
+            return new SubModel() {
+                HasBoundBox = false,
+
+                TextureId = TextureId,
+                TextureSource = TextureSource,
+
+                Type = Type,
+                Flags = Flags,
+
+                Unknown1 = Unknown_04,
+                Unknown2 = Unknown_10,
+            };
+        }
 
         public GEO2SubModelDataV2(Stream stream)
         {
@@ -148,11 +184,11 @@ namespace GMC2Snooper
         public int Handle;
         public int UID;
 
-        public Vector3 Transform1;
+        public Vector3 BoxOffset;
 
         public int Unknown_1C; // always zero?
 
-        public Vector3 Transform2;
+        public Vector3 BoxScale;
 
         public int Unknown_2C;
         public int Unknown_30; // always zero?
@@ -177,19 +213,11 @@ namespace GMC2Snooper
             Handle = stream.ReadInt32();
             UID = stream.ReadInt32();
 
-            Transform1 = new Vector3() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-            };
+            BoxOffset = stream.Read<Vector3>();
 
             Unknown_1C = stream.ReadInt32();
 
-            Transform2 = new Vector3() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-            };
+            BoxScale = stream.Read<Vector3>();
 
             Unknown_2C = stream.ReadInt32();
             Unknown_30 = stream.ReadInt32();
@@ -211,53 +239,42 @@ namespace GMC2Snooper
 
         public TransformAxis(Stream stream)
         {
-            X = new Vector4() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-                W = stream.ReadSingle(),
-            };
-
-            Y = new Vector4() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-                W = stream.ReadSingle(),
-            };
-
-            Z = new Vector4() {
-                X = stream.ReadSingle(),
-                Y = stream.ReadSingle(),
-                Z = stream.ReadSingle(),
-                W = stream.ReadSingle(),
-            };
+            X = stream.Read<Vector4>();
+            Y = stream.Read<Vector4>();
+            Z = stream.Read<Vector4>();
         }
     }
 
-    public class LodEntry
+    public class Lod
     {
         // holds no actual data
         public bool IsDummy { get; set; }
 
-        public int Flags { get; set; }
-        public int Reserved { get; set; }
+        public int Mask { get; set; }
+        public int NumTriangles { get; set; }
 
-        public Vector4 Transform { get; set; }
+        public Vector4 Scale { get; set; }
 
-        public List<SubModel> SubModels { get; set; }
+        public List<LodInstance> Instances { get; set; }
+    }
 
+    public class LodInstance
+    {
+        public TransformAxis Rotation { get; set; }
+        public Vector4 Translation { get; set; }
+
+        public bool HasRotation { get; set; }
+        public bool HasTranslation { get; set; }
+
+        public SubModel Model { get; set; }
     }
 
     public class SubModel
     {
-        public bool HasTransform { get; set; }
-        public bool HasVectorData { get; set; }
-
-        public TransformAxis Transform { get; set; }
-
-        // need to figure out the names
-        public Vector3 V1 { get; set; }
-        public Vector3 V2 { get; set; }
+        public bool HasBoundBox { get; set; }
+        
+        public Vector3 BoxOffset { get; set; }
+        public Vector3 BoxScale { get; set; }
 
         // TODO: Link to actual texture data
         public int TextureId { get; set; }
@@ -270,20 +287,22 @@ namespace GMC2Snooper
         public int Unknown2 { get; set; }
 
         // TODO: Read actual model data!
-        public byte[] ModelDataBuffer { get; set; }
+        public byte[] DataBuffer { get; set; }
     }
     
-    public class ModelDefinition
+    public class Model
     {
         public int Type { get; set; }
+        public bool IsVersion2 { get; set; }
 
         public int UID { get; set; }
         public int Handle { get; set; }
 
-        public Vector3 Transform1 { get; set; }
-        public Vector3 Transform2 { get; set; }
+        public Vector3 BoxOffset { get; set; }
+        public Vector3 BoxScale { get; set; }
 
-        public List<LodEntry> Lods { get; set; }
+        public List<Lod> Lods { get; set; }
+        public List<LodInstance> LodInstances { get; set; }
         public List<SubModel> SubModels { get; set; }
 
         public int Unknown1 { get; set; }
@@ -295,20 +314,22 @@ namespace GMC2Snooper
 
             var data = new GEO2ModelData(stream);
 
-            Type = data.Type;
+            Type = (data.Type & 0x7F);
+            IsVersion2 = (data.Type & 0x80) != 0;
 
             Handle = data.Handle;
             UID = data.UID;
 
-            Transform1 = data.Transform1;
-            Transform2 = data.Transform2;
+            BoxOffset = data.BoxOffset;
+            BoxScale = data.BoxScale;
 
             Unknown1 = data.Unknown_2C;
             Unknown2 = data.Unknown_34;
             
             var lodsOffset = (int)(stream.Position - baseOffset);
 
-            Lods = new List<LodEntry>(data.LodCount);
+            Lods = new List<Lod>(data.LodCount);
+            LodInstances = new List<LodInstance>(data.LodInstanceCount);
             SubModels = new List<SubModel>(data.SubModelCount);
             
             // process data
@@ -317,24 +338,14 @@ namespace GMC2Snooper
                 stream.Position = baseOffset + (lodsOffset + (i * 0x20));
 
                 var _lod = new GEO2LodData(stream);
-                
-                var lod = new LodEntry() {
-                    IsDummy = (_lod.LodInstanceCount == 0),
-
-                    Flags = _lod.Unknown_12,
-                    Reserved = _lod.Unknown_18,
-
-                    Transform = _lod.Transform,
-                };
+                var lod = _lod.ToClass();
 
                 Lods.Add(lod);
-
+                
                 // nothing to see here, move along
-                if (_lod.LodInstanceCount == 0)
+                if (lod.IsDummy)
                     continue;
 
-                lod.SubModels = new List<SubModel>(_lod.LodInstanceCount);
-                
                 for (int l = 0; l < _lod.LodInstanceCount; l++)
                 {
                     stream.Position = baseOffset + (_lod.LodInstanceDataOffset + (l * 0xC));
@@ -344,35 +355,45 @@ namespace GMC2Snooper
                     if (_lodInstance.SubModelOffset == 0)
                         throw new InvalidOperationException("Invalid LOD instance!");
 
-                    stream.Position = baseOffset + _lodInstance.SubModelOffset;
+                    var lodInstance = new LodInstance();
 
-                    SubModel subModel = null;
+                    lod.Instances.Add(lodInstance);
+                    LodInstances.Add(lodInstance);
+
+                    if (_lodInstance.RotationOffset != 0)
+                    {
+                        stream.Position = (baseOffset + _lodInstance.RotationOffset);
+
+                        lodInstance.Rotation = new TransformAxis(stream);
+                        lodInstance.HasRotation = true;
+                    }
+
+                    if (_lodInstance.TranslationOffset != 0)
+                    {
+                        stream.Position = (baseOffset + _lodInstance.TranslationOffset);
+
+                        lodInstance.Translation = stream.Read<Vector4>();
+                        lodInstance.HasTranslation = true;
+                    }
+                    
+                    stream.Position = (baseOffset + _lodInstance.SubModelOffset);
+                    
+                    IClassDetail<SubModel> subModelDetail = null;
 
                     var dataOffset = 0;
                     var dataLength = 0;
 
-                    if ((Type & 0xF0) != 0)
+                    if (IsVersion2)
                     {
                         var _subModel = new GEO2SubModelDataV2(stream);
 
                         if (_subModel.DataOffset == 0)
                             throw new InvalidOperationException("Invalid sub-model (V2)!");
-
-                        subModel = new SubModel() {
-                            HasVectorData = false,
-
-                            TextureId = _subModel.TextureId,
-                            TextureSource = _subModel.TextureSource,
-
-                            Type = _subModel.Type,
-                            Flags = _subModel.Flags,
-
-                            Unknown1 = _subModel.Unknown_04,
-                            Unknown2 = _subModel.Unknown_10,
-                        };
-
+                        
                         dataOffset = _subModel.DataOffset;
                         dataLength = (_subModel.DataSizeDiv * 10);
+
+                        subModelDetail = _subModel;
                     }
                     else
                     {
@@ -380,45 +401,23 @@ namespace GMC2Snooper
 
                         if (_subModel.DataOffset == 0)
                             throw new InvalidOperationException("Invalid sub-model!");
-
-                        subModel = new SubModel() {
-                            HasVectorData = true,
-
-                            V1 = _subModel.Transform1,
-                            V2 = _subModel.Transform2,
-
-                            TextureId = _subModel.TextureId,
-                            TextureSource = _subModel.TextureSource,
-
-                            Type = _subModel.Type,
-                            Flags = _subModel.Flags,
-
-                            Unknown1 = _subModel.Unknown_1C,
-                            Unknown2 = _subModel.Unknown_28,
-                        };
-
+                        
                         dataOffset = _subModel.DataOffset;
                         dataLength = (_subModel.DataSizeDiv * 10);
+
+                        subModelDetail = _subModel;
                     }
 
-                    // transform?
-                    if (_lodInstance.TransformAxisOffset != 0)
-                    {
-                        stream.Position = (baseOffset + _lodInstance.TransformAxisOffset);
-
-                        subModel.Transform = new TransformAxis(stream);
-                        subModel.HasTransform = true;
-                    }
-
+                    var subModel = subModelDetail.ToClass();
+                    
                     stream.Position = (baseOffset + dataOffset);
                     
                     var buffer = new byte[dataLength];
-
                     stream.Read(buffer, 0, dataLength);
 
-                    subModel.ModelDataBuffer = buffer;
-                    
-                    lod.SubModels.Add(subModel);
+                    subModel.DataBuffer = buffer;
+
+                    lodInstance.Model = subModel;
                     SubModels.Add(subModel);
                 }
             }

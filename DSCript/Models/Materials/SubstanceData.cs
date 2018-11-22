@@ -184,7 +184,7 @@ namespace DSCript.Models
     {
         public virtual bool HasAlpha
         {
-            get { return (Flags & 0x4) != 0; }
+            get { return (((Flags & 0x4) != 0) || (Bin == 37)); }
         }
         
         public virtual bool IsEmissive
@@ -194,7 +194,7 @@ namespace DSCript.Models
 
         public virtual bool IsSpecular
         {
-            get { return (Mode == 0x201 || Mode == 0x102); }
+            get { return (((Flags & 0x40) != 0) && (Mode != 0) && (Bin != 37)) || (Mode == 0x201 || Mode == 0x102); }
         }
 
         public virtual SubstanceExtraFlags ExtraFlags

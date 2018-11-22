@@ -178,7 +178,7 @@ namespace Zartex
             */
             new MissionDescriptor("Surveillance",               CityType.Istanbul,      22, 160, 161, 162),
             new MissionDescriptor("Tanner Escapes",             CityType.Istanbul,      24, 164, 165, 180),
-            new MissionDescriptor("Another Lead",               CityType.Istanbul,      25, 166, 167, 168, 181),
+            new MissionDescriptor("Another Lead",               CityType.Istanbul,      25, /*166, 167,*/ 168, 181),
             new MissionDescriptor("Alleyway",                   CityType.Istanbul,      27, 171, 172),
             new MissionDescriptor("The Chase",                  CityType.Istanbul,      28, 173, 174),
             new MissionDescriptor("Bomb Truck",                 CityType.Istanbul,      30, 176),

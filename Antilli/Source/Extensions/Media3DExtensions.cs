@@ -106,7 +106,10 @@ namespace System.Windows.Media.Media3D
         public static void SetOpacity(this DriverModelVisual3D @this, double opacity)
         {
             @this.BaseMaterial.SetOpacity(opacity);
-            @this.UpdateModel();
+        }
+        public static void SetOpacity(this AntilliModelVisual3D @this, double opacity)
+        {
+            @this.Opacity = opacity;
         }
 
         public static void SetOpacity(this ModelVisual3DGroup @this, double opacity)

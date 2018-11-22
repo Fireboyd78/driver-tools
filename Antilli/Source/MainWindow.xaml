@@ -128,8 +128,8 @@
                             <GroupBox Grid.Column="0" Header="Model Packages" HorizontalAlignment="Stretch">
                                 <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
                             </GroupBox>
-                            <GroupBox Grid.Column="2" Header="Model Containers" HorizontalAlignment="Stretch">
-                                <ListBox x:Name="Groups" ItemsSource="{Binding PartsGroups}"
+                            <GroupBox Grid.Column="2" Header="Model Groups" HorizontalAlignment="Stretch">
+                                <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"
                              FontFamily="Consolas"
                              FontStretch="UltraCondensed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
                             </GroupBox>

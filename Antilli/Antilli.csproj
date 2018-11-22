@@ -66,11 +66,11 @@
   </ItemGroup>
   <!-- Source files -->
   <ItemGroup>
-    <ApplicationDefinition Include="$(SrcDir)App.xaml">
+    <ApplicationDefinition Include="Source\App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="$(SrcDir)App.xaml.cs">
+    <Compile Include="Source\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
@@ -95,6 +95,7 @@
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
     <Compile Include="Source\Models\AntilliModel.cs" />
+    <Compile Include="Source\Models\TextureCache.cs" />
     <Compile Include="Source\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>
     </Compile>
@@ -105,84 +106,87 @@
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
     <Compile Include="Source\WPF\TextureTreeItem.cs" />
-    <None Include="$(SrcDir)App.config" />
-    <Compile Include="$(SrcDir)ModelGroupListItem.cs" />
-    <Compile Include="$(SrcDir)ModelListItem.cs" />
-    <Compile Include="$(SrcDir)OBJExporter.cs" />
-    <Compile Include="$(SrcDir)OBJFile.cs" />
-    <Compile Include="$(SrcDir)Settings.cs" />
-    <Compile Include="$(SrcDir)Extensions\Media3DExtensions.cs" />
-    <Compile Include="$(SrcDir)Extensions\TreeViewExtensions.cs" />
-    <Compile Include="$(SrcDir)Extensions\TypeExtensions.cs" />
-    <Compile Include="$(SrcDir)WPF\BoolToVisibilityConverter.cs" />
-    <Compile Include="$(SrcDir)WPF\Controls\AntilliViewport3D.cs" />
-    <Compile Include="$(SrcDir)WPF\Controls\AntilliWindow.cs" />
-    <Compile Include="$(SrcDir)WPF\Controls\ObservableWindow.cs" />
-    <Compile Include="$(SrcDir)WPF\Visuals\BlendModelVisual3D.cs" />
-    <Compile Include="$(SrcDir)WPF\Visuals\DriverModelVisual3D.cs" />
-    <Compile Include="$(SrcDir)WPF\Visuals\GeometryModelVisual3D.cs" />
-    <Compile Include="$(SrcDir)WPF\Visuals\VisualParentHelper.cs" />
-    <Compile Include="$(SrcDir)WPF\ModelVisual3DGroup.cs" />
-    <Page Include="$(SrcDir)ChunkEditor.xaml">
+    <Compile Include="Source\WPF\Visuals\AntilliModelVisual3D.cs" />
+    <None Include="Source\App.config">
+      <SubType>Designer</SubType>
+    </None>
+    <Compile Include="Source\ModelGroupListItem.cs" />
+    <Compile Include="Source\ModelListItem.cs" />
+    <Compile Include="Source\OBJExporter.cs" />
+    <Compile Include="Source\OBJFile.cs" />
+    <Compile Include="Source\Settings.cs" />
+    <Compile Include="Source\Extensions\Media3DExtensions.cs" />
+    <Compile Include="Source\Extensions\TreeViewExtensions.cs" />
+    <Compile Include="Source\Extensions\TypeExtensions.cs" />
+    <Compile Include="Source\WPF\BoolToVisibilityConverter.cs" />
+    <Compile Include="Source\WPF\Controls\AntilliViewport3D.cs" />
+    <Compile Include="Source\WPF\Controls\AntilliWindow.cs" />
+    <Compile Include="Source\WPF\Controls\ObservableWindow.cs" />
+    <Compile Include="Source\WPF\Visuals\BlendModelVisual3D.cs" />
+    <Compile Include="Source\WPF\Visuals\DriverModelVisual3D.cs" />
+    <Compile Include="Source\WPF\Visuals\GeometryModelVisual3D.cs" />
+    <Compile Include="Source\WPF\Visuals\VisualParentHelper.cs" />
+    <Compile Include="Source\WPF\ModelVisual3DGroup.cs" />
+    <Page Include="Source\ChunkEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(SrcDir)ChunkEditor.xaml.cs">
+    <Compile Include="Source\ChunkEditor.xaml.cs">
       <DependentUpon>ChunkEditor.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(SrcDir)Importer.xaml">
+    <Page Include="Source\Importer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(SrcDir)Importer.xaml.cs">
+    <Compile Include="Source\Importer.xaml.cs">
       <DependentUpon>Importer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(SrcDir)MainWindow.xaml">
+    <Page Include="Source\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(SrcDir)MainWindow.xaml.cs">
+    <Compile Include="Source\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <None Include="$(SrcDir)MaterialEditor.xaml">
+    <None Include="Source\MaterialEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </None>
-    <None Include="$(SrcDir)MaterialEditor.xaml.cs">
+    <None Include="Source\MaterialEditor.xaml.cs">
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
       <SubType>Code</SubType>
     </None>
-    <Page Include="$(SrcDir)MKInputBox.xaml">
+    <Page Include="Source\MKInputBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(SrcDir)MKInputBox.xaml.cs">
+    <Compile Include="Source\MKInputBox.xaml.cs">
       <DependentUpon>MKInputBox.xaml</DependentUpon>
     </Compile>
-    <Page Include="$(SrcDir)ModelViewer.xaml">
+    <Page Include="Source\ModelViewer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(SrcDir)ModelViewer.xaml.cs">
+    <Compile Include="Source\ModelViewer.xaml.cs">
       <DependentUpon>ModelViewer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="$(SrcDir)Resources.xaml">
+    <Page Include="Source\Resources.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="$(SrcDir)Resources.xaml.cs">
+    <Compile Include="Source\Resources.xaml.cs">
       <DependentUpon>Resources.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <None Include="$(SrcDir)TextureViewer.xaml">
+    <None Include="Source\TextureViewer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </None>
-    <None Include="$(SrcDir)TextureViewer.xaml.cs">
+    <None Include="Source\TextureViewer.xaml.cs">
       <DependentUpon>TextureViewer.xaml</DependentUpon>
       <SubType>Code</SubType>
     </None>

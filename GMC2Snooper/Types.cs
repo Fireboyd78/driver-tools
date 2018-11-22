@@ -29,6 +29,12 @@ namespace GMC2Snooper
         public float X;
         public float Y;
 
+        public void Scale(float scale)
+        {
+            X /= scale;
+            Y /= scale;
+        }
+
         public Vector2(float x, float y)
         {
             X = x;
@@ -41,6 +47,13 @@ namespace GMC2Snooper
         public float X;
         public float Y;
         public float Z;
+
+        public void Scale(float scale)
+        {
+            X /= scale;
+            Y /= scale;
+            Z /= scale;
+        }
 
         public Vector3(float x, float y, float z)
         {
@@ -56,6 +69,14 @@ namespace GMC2Snooper
         public float Y;
         public float Z;
         public float W;
+
+        public void Scale(float scale)
+        {
+            X /= scale;
+            Y /= scale;
+            Z /= scale;
+            W /= scale;
+        }
 
         public Vector4(float x, float y, float z, float w)
         {

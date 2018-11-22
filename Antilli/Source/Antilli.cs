@@ -58,6 +58,8 @@ namespace Antilli
         Sounds          = (1 << 13),
         Textures        = (1 << 14),
         Vehicles        = (1 << 15),
+        
+        Resource        = (1 << 16),
     }
 
     public struct GameFileFilter
@@ -203,13 +205,13 @@ namespace Antilli
                 get { return CurrentTab == 2; }
             }
 
-            Driv3rModelFile m_modelFile;
-            ModelPackagePC m_modelPackage;
+            ModelFile m_modelFile;
+            ModelPackage m_modelPackage;
 
             bool m_useGlobals;
             bool m_useBlendWeights;
             
-            public Driv3rModelFile ModelFile
+            public ModelFile ModelFile
             {
                 get { return m_modelFile; }
                 set
@@ -222,7 +224,7 @@ namespace Antilli
                 }
             }
             
-            public ModelPackagePC SelectedModelPackage
+            public ModelPackage SelectedModelPackage
             {
                 get { return m_modelPackage; }
                 set
@@ -249,7 +251,7 @@ namespace Antilli
                 }
             }
 
-            public List<ModelPackagePC> ModelPackages
+            public List<ModelPackage> ModelPackages
             {
                 get
                 {
@@ -296,6 +298,13 @@ namespace Antilli
             public EventHandler MaterialSelectQueried;
             public EventHandler TextureSelectQueried;
 
+            public EventHandler FileModified;
+
+            public void NotifyFileChange(object sender)
+            {
+                FileModified?.Invoke(sender, null);
+            }
+            
             public void QueryMaterialSelect(IMaterialData material)
             {
                 MaterialSelectQueried?.Invoke(material, null);
@@ -320,7 +329,7 @@ namespace Antilli
     
     public static class FileManager
     {
-        public static readonly GameFileFilter[] D3Filters = new GameFileFilter[] {
+        public static readonly GameFileFilter[] D3Filters = {
             new GameFileFilter("City|*.d3c",                GameFileFlags.Cities | GameFileFlags.Models | GameFileFlags.Textures),
             new GameFileFilter("City models|*.pcs",         GameFileFlags.Cities | GameFileFlags.Models | GameFileFlags.Textures),
                                                             
@@ -342,33 +351,56 @@ namespace Antilli
             new GameFileFilter("Vehicle globals|*.vgt",     GameFileFlags.Vehicles | GameFileFlags.Textures),
         };
 
-        public static readonly GameFileFilter[] AllFilters = new GameFileFilter[] {
-            new GameFileFilter(GameFileFilter.Combine("DRIV3R", D3Filters)),
-            //new GameFileFilter("Driver: Parallel Lines|*.sp;*.an4;*.d4c;*.d4l;*.chunk;*.mec;*.gfx;*.map;*.pmu;*.ppx;*.pkg*.bnk;", GameFileFlags.DriverPL),
+        public static readonly GameFileFilter[] D4Filters = {
+            new GameFileFilter("Animations|*.an4",          GameFileFlags.Animations),
+
+            new GameFileFilter("City|*.d4c",                GameFileFlags.Cities | GameFileFlags.Models | GameFileFlags.Textures),
+            new GameFileFilter("City litter|*.d4l",         GameFileFlags.Cities | GameFileFlags.Models | GameFileFlags.Textures),
+
+            new GameFileFilter("Font|*.bnk",                GameFileFlags.Textures),
+
+            new GameFileFilter("Minimap|*.map",             GameFileFlags.Models | GameFileFlags.Textures),
+            new GameFileFilter("Overlay|*.gfx",             GameFileFlags.Textures),
+
+            new GameFileFilter("Menu data|*.mec",           GameFileFlags.Textures),
+
+            new GameFileFilter("Particle effects|*.pmu;*.ppx",
+                                                            GameFileFlags.Models | GameFileFlags.Textures),
+
+            new GameFileFilter("Sky|*.pkg",                 GameFileFlags.Models | GameFileFlags.Textures),
+
+            new GameFileFilter("Spoolable Resource|*.sp",   GameFileFlags.Resource),
         };
 
-        public static readonly OpenFileDialog Driv3rOpenDialog = CreateOpenDialog(GameType.Driv3r);
+        public static readonly GameFileFilter[] AllFilters = new GameFileFilter[] {
+            new GameFileFilter(GameFileFilter.Combine("Driv3r", D3Filters)),
+            new GameFileFilter(GameFileFilter.Combine("Driver: Parallel Lines", D4Filters)),
+        };
 
-        public static OpenFileDialog CreateOpenDialog(GameType gameType)
+        private static OpenFileDialog m_openDialog = null;
+
+        public static OpenFileDialog OpenDialog
         {
-            var filter = "All files|*.*";
-            var gameDir = "";
-
-            switch (gameType)
+            get
             {
-            case GameType.Driv3r:
-                filter = GameFileFilter.Combine(D3Filters);
-                gameDir = Driv3r.RootDirectory;
-                break;
-            }
+                if (m_openDialog == null)
+                {
+                    var filter = String.Join("|", AllFilters.Select((f) => f.ToString()));
 
-            return new OpenFileDialog() {
-                CheckFileExists = true,
-                CheckPathExists = true,
-                Filter = filter,
-                InitialDirectory = gameDir,
-                ValidateNames = true,
-            };
+                    // TODO: support more games!
+                    var gameDir = Driv3r.RootDirectory;
+                    
+                    m_openDialog = new OpenFileDialog() {
+                        CheckFileExists = true,
+                        CheckPathExists = true,
+                        Filter = filter,
+                        InitialDirectory = gameDir,
+                        ValidateNames = true,
+                    };
+                }
+
+                return m_openDialog;
+            }
         }
         
         public static GameFileFilter FindFilter(string extension, GameFileFilter[] filters)
@@ -391,6 +423,9 @@ namespace Antilli
             case GameType.Driv3r:
                 filter = FindFilter(extension, D3Filters);
                 break;
+            case GameType.DriverPL:
+                filter = FindFilter(extension, D4Filters);
+                break;
             }
 
             if (searchFlags != GameFileFlags.None)
@@ -410,6 +445,25 @@ namespace Antilli
                 Directory.CreateDirectory(dir);
 
             File.WriteAllBytes(filename, buffer);
+        }
+    }
+
+    public static class Utils
+    {
+        public static bool TryParseNumber(string value, out int result)
+        {
+            result = -1;
+
+            if (value == null)
+                return false;
+            
+            if (value.Length > 2)
+            {
+                if (value.StartsWith("0x"))
+                    return int.TryParse(value.Substring(2), NumberStyles.HexNumber, AT.CurrentCulture, out result);
+            }
+
+            return int.TryParse(value, out result);
         }
     }
 }

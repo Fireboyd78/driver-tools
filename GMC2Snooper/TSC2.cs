@@ -12,12 +12,6 @@ using DSCript.Models;
 
 namespace GMC2Snooper
 {
-    public enum MaterialType
-    {
-        Normal,
-        Animated,
-    }
-
     public enum SubstanceType
     {
         Normal,     // One texture
@@ -36,19 +30,25 @@ namespace GMC2Snooper
         HY2f    = 6,
         VQ4f    = 7,
     }
-    
+
     public interface ICopyDetail<T>
         where T : class
     {
-        T Copy();
+        void CopyTo(T obj);
+    }
+
+    public interface IClassDetail<T>
+        where T : class
+    {
+        T ToClass();
     }
     
     public class MaterialDataPS2
     {
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        public struct Detail : ICopyDetail<MaterialDataPS2>
+        public struct Detail : IClassDetail<MaterialDataPS2>
         {
-            public MaterialDataPS2 Copy()
+            public MaterialDataPS2 ToClass()
             {
                 return new MaterialDataPS2() {
                     Type = (MaterialType)Type,
@@ -83,9 +83,9 @@ namespace GMC2Snooper
     public class SubstanceDataPS2
     {
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        public struct Detail : ICopyDetail<SubstanceDataPS2>
+        public struct Detail : IClassDetail<SubstanceDataPS2>
         {
-            public SubstanceDataPS2 Copy()
+            public SubstanceDataPS2 ToClass()
             {
                 return new SubstanceDataPS2() {
                     Type = (SubstanceType)Type,
@@ -122,9 +122,9 @@ namespace GMC2Snooper
     public class TextureDataPS2
     {
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
-        public struct Detail : ICopyDetail<TextureDataPS2>
+        public struct Detail : IClassDetail<TextureDataPS2>
         {
-            public TextureDataPS2 Copy()
+            public TextureDataPS2 ToClass()
             {
                 return new TextureDataPS2() {
                     GUID = GUID,

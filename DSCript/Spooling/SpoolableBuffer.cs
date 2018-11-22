@@ -59,10 +59,28 @@ namespace DSCript.Spooling
             {
                 if (FileChunker != null)
                 {
-                    m_buffer = FileChunker.GetBuffer(this);
+                    var buffer = FileChunker.GetBuffer(this);
+
+                    m_size = (buffer != null) ? buffer.Length : 0;
+                    
+                    if (m_size > MaxBufferSize)
+                    {
+                        GetTempFileReady();
+
+                        m_tempFile.SetBuffer(buffer);
+                        m_buffer = null;
+                    }
+                    else
+                    {
+                        m_buffer = buffer;
+                    }
 
                     // once you extract, you can't go back (lol)
                     DetachChunker();
+
+                    // return the local copy?
+                    if (m_buffer == null)
+                        return buffer;
                 }
                 else if (m_tempFile != null)
                 {

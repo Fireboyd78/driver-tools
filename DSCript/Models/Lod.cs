@@ -11,19 +11,20 @@ using System.Text;
 
 namespace DSCript.Models
 {
-    public class PartDefinition
+    // TODO: Rename to 'Lod'
+    public class Lod
     {
         public int ID { get; set; }
 
-        public PartsGroup Parent { get; set; }
-        public List<MeshGroup> Groups { get; set; }
+        public Model Parent { get; set; }
+        public List<LodInstance> Instances { get; set; }
 
         public int Type { get; set; }
         
-        public PartDefinition(int id)
+        public Lod(int id)
         {
             ID = id;
-            Groups = new List<MeshGroup>();
+            Instances = new List<LodInstance>();
         }
     }
 }

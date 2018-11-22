@@ -19,6 +19,7 @@
         <Border BorderThickness="1" Margin="0,4,0,0" Grid.Row="1">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="5">
                 <StackPanel Name="propPanel" Orientation="Vertical">
+                    <StackPanel Name="propPanelItems" Orientation="Vertical" />
                     <TextBlock Text="{Binding ContentInfo}" FontFamily="Consolas"/>
                 </StackPanel>
             </ScrollViewer>

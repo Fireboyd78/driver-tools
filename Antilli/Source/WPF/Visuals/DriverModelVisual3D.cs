@@ -42,19 +42,19 @@ namespace Antilli
             Type thisType = typeof(DriverModelVisual3D);
 
             ModelPackageProperty =
-                DependencyProperty.Register("ModelPackage", typeof(ModelPackagePC), thisType,
+                DependencyProperty.Register("ModelPackage", typeof(ModelPackage), thisType,
                 new PropertyMetadata(null, null));
             MeshProperty =
-                DependencyProperty.Register("Mesh", typeof(MeshDefinition), thisType,
+                DependencyProperty.Register("Mesh", typeof(SubModel), thisType,
                 new UIPropertyMetadata(null, MeshChanged));
             MaterialProperty =
                 DependencyProperty.Register("Material", typeof(DSCript.Models.MaterialDataPC), thisType,
                 new UIPropertyMetadata(null, MaterialChanged));
         }
 
-        public MeshDefinition Mesh
+        public SubModel Mesh
         {
-            get { return (MeshDefinition)GetValue(MeshProperty); }
+            get { return (SubModel)GetValue(MeshProperty); }
             set { SetValue(MeshProperty, value); }
         }
 
@@ -90,10 +90,24 @@ namespace Antilli
         {
             if (!Mesh.VertexBuffer.HasDamageVertices)
                 UseBlendWeights = false;
-            
-            Vertices        = Mesh.GetVertices(true);
-            TriangleIndices = new Int32Collection(Mesh.GetTriangleIndices(true));
-            Material        = Mesh.GetMaterial();
+
+            if (Vertices != null)
+                Vertices.Clear();
+
+            if (Mesh.PrimitiveType == PrimitiveType.TriangleFan)
+            {
+                var indices = new List<int>();
+
+                Vertices = Mesh.GetVertices(true, ref indices);
+                TriangleIndices = new Int32Collection(indices);
+            }
+            else
+            {
+                Vertices = Mesh.GetVertices(true);
+                TriangleIndices = new Int32Collection(Mesh.GetTriangleIndices(true));
+            }
+
+            Material = Mesh.GetMaterial();
 
             if (Material == null)
                 OnMaterialChanged();
@@ -113,8 +127,9 @@ namespace Antilli
                 return;
             
             var matGroup = new MaterialGroup();
+            var useMaterials = true;
 
-            if (Material != null)
+            if (useMaterials && (Material != null))
             {
                 var substance = Material.Substances[0];
 
@@ -142,7 +157,7 @@ namespace Antilli
                 var transparent = (alpha && !specular);
                 var loadFlags = (transparent || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
 
-                var bmap = texMap.ToBitmapSource(loadFlags);
+                var bmap = texMap.GetBitmapSource(loadFlags);
 
                 matGroup.Children.Add(new DiffuseMaterial() {
                     Brush = new ImageBrush() {
@@ -168,7 +183,7 @@ namespace Antilli
                 {
                     matGroup.Children.Add(new SpecularMaterial() {
                         Brush = new ImageBrush() {
-                            ImageSource = texMap.ToBitmapSource(BitmapSourceLoadFlags.AlphaMask),
+                            ImageSource = texMap.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
                             TileMode = TileMode.Tile,
                             Stretch = Stretch.Fill,
                             ViewportUnits = BrushMappingMode.Absolute
@@ -188,7 +203,7 @@ namespace Antilli
             base.Material = matGroup;
         }
 
-        public DriverModelVisual3D(MeshDefinition mesh, bool useBlendWeights)
+        public DriverModelVisual3D(SubModel mesh, bool useBlendWeights)
             : base()
         {
             DoubleSided = true;

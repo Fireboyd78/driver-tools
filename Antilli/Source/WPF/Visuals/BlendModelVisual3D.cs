@@ -75,21 +75,18 @@ namespace Antilli
 
             foreach (Vertex vertex in Vertices)
             {
-                if (vertex != null)
+                var pos = vertex.Position;
+                var nor = vertex.Normal;
+
+                if (UseBlendWeights)
                 {
-                    var pos = vertex.Position;
-                    var nor = vertex.Normal;
-
-                    if (UseBlendWeights)
-                    {
-                        pos = (pos + (vertex.PositionW * tweenFactor));
-                        nor = (nor + (vertex.NormalW * tweenFactor));
-                    }
-
-                    positions.Add(pos);
-                    normals.Add(vertex.Normal);
-                    textureCoordinates.Add(vertex.UV);
+                    pos = (pos + (vertex.PositionW * tweenFactor));
+                    nor = (nor + (vertex.NormalW * tweenFactor));
                 }
+
+                positions.Add(pos);
+                normals.Add(nor);
+                textureCoordinates.Add(vertex.UV);
             }
 
             return new MeshGeometry3D() {

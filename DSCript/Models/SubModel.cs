@@ -17,14 +17,14 @@ using DSCript;
 
 namespace DSCript.Models
 {
-    public class MeshDefinition
+    public class SubModel
     {
         /// <summary>
         /// The <see cref="ModelPackage"/> this mesh belongs to.
         /// </summary>
-        public ModelPackage ModelPackage { get; set; }
+        public ModelPackageResource ModelPackage { get; set; }
 
-        public Driv3rModelFile ModelFile
+        public ModelFile ModelFile
         {
             get { return ModelPackage.ModelFile; }
         }
@@ -33,22 +33,15 @@ namespace DSCript.Models
         {
             get
             {
-                if (PartsGroup != null)
-                    return PartsGroup.VertexBuffer;
+                if (Model != null)
+                    return Model.VertexBuffer;
 
                 return null;
             }
         }
-
-        /// <summary>
-        /// The <see cref="PartsGroup"/> this mesh belongs to.
-        /// </summary>
-        public PartsGroup PartsGroup { get; set; }
-
-        /// <summary>
-        /// The <see cref="MeshGroup"/> this mesh belongs to.
-        /// </summary>
-        public MeshGroup MeshGroup { get; set; }
+        
+        public Model Model { get; set; }
+        public LodInstance LodInstance { get; set; }
         
         public PrimitiveType PrimitiveType { get; set; }
         
@@ -82,7 +75,7 @@ namespace DSCript.Models
                     if (ModelFile is Driv3rVehiclesFile && SourceUID == (int)PackageType.VehicleGlobals)
                         return ((Driv3rVehiclesFile)ModelFile).VehicleGlobals.GetStandaloneTexture(MaterialId);
 
-                    ModelPackage mPak = ModelFile.GetModelPackage(SourceUID);
+                    ModelPackageResource mPak = ModelFile.GetModelPackage(SourceUID);
 
                     if (mPak != null && mPak.HasMaterials)
                         return mPak.Materials[MaterialId];
@@ -96,15 +89,97 @@ namespace DSCript.Models
             return null;
         }
 
+        public List<Vertex> GetVertices(bool adjustVertices, ref List<int> indices)
+        {
+            var vBuffer = VertexBuffer;
+
+            if (!vBuffer.HasPositions)
+                return null;
+
+            var vertices = new List<Vertex>(VertexCount);
+            var fans = new List<int>();
+
+            var indexBuffer = ModelPackage.IndexBuffer.Buffer;
+            var indexOffset = (IndexOffset / 2);
+
+            var lookup = new Dictionary<int, int>();
+            var index = 0;
+
+            switch (PrimitiveType)
+            {
+            case PrimitiveType.TriangleFan:
+                // collect vertices + fans
+                for (int v = 0; v < VertexCount; v++)
+                {
+                    var offset = indexOffset + v;
+                    var vIdx = (ushort)indexBuffer[offset];
+
+                    if (!lookup.ContainsKey(vIdx))
+                    {
+                        var vertex = vBuffer.Vertices[vIdx].ToVertex();
+                        
+                        if (adjustVertices)
+                            vertex.FixDirection();
+
+                        vertices.Add(vertex);
+                        lookup.Add(vIdx, index++);
+                    }
+
+                    fans.Add(lookup[vIdx]);
+                }
+
+                // create triangle list
+                // (it really was this simple...)
+                for (int n = 2; n < fans.Count; n++)
+                {
+                    int f0, f1, f2;
+
+                    if ((n % 2) != 0)
+                    {
+                        f0 = fans[n];
+                        f1 = fans[n - 1];
+                        f2 = fans[n - 2];
+                    }
+                    else
+                    {
+                        f0 = fans[n - 2];
+                        f1 = fans[n - 1];
+                        f2 = fans[n];
+                    }
+
+                    if ((f0 != f1) && (f0 != f2) && (f1 != f2))
+                    {
+                        indices.Add(f0);
+                        indices.Add(f1);
+                        indices.Add(f2);
+                    }
+                }
+
+                // clean up after ourselves
+                lookup.Clear();
+                lookup = null;
+
+                fans.Clear();
+                fans = null;
+                break;
+            default:
+                vertices = GetVertices(adjustVertices);
+                indices = GetTriangleIndices(adjustVertices);
+                break;
+            }
+
+            return vertices;
+        }
+
         public List<Vertex> GetVertices(bool adjustVertices = false)
         {
             var vBuffer = VertexBuffer;
 
-            if (!vBuffer.Has3DVertices)
+            if (!vBuffer.HasPositions)
                 return null;
 
             var vertices = new List<Vertex>(VertexCount);
-
+            
             for (int v = 0; v <= VertexCount; v++)
             {
                 var vIdx = (VertexBaseOffset + VertexOffset + v);
@@ -113,7 +188,7 @@ namespace DSCript.Models
                     break;
 
                 var vertex = vBuffer.Vertices[vIdx].ToVertex(adjustVertices);
-                
+
                 vertices.Add(vertex);
             }
 
@@ -178,6 +253,8 @@ namespace DSCript.Models
                     }
                 }
                 break;
+            case PrimitiveType.TriangleFan:
+                throw new InvalidOperationException("Can't generate a triangle fan using this method!");
             default:
                 throw new InvalidOperationException($"Unsupported primitive type '{PrimitiveType}'!");
             }
@@ -185,8 +262,8 @@ namespace DSCript.Models
             return tris;
         }
 
-        public MeshDefinition() { }
-        public MeshDefinition(ModelPackage modelPackage)
+        public SubModel() { }
+        public SubModel(ModelPackageResource modelPackage)
         {
             ModelPackage = modelPackage;
         }

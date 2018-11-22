@@ -98,7 +98,7 @@ namespace Antilli
 
                 foreach (var visual in Visuals)
                 {
-                    foreach (DriverModelVisual3D dmodel in visual.Children)
+                    foreach (AntilliModelVisual3D dmodel in visual.Children)
                         dmodel.UseBlendWeights = _useBlendWeights;
                 }
 
@@ -239,6 +239,24 @@ namespace Antilli
             {
                 SelectedModel = null;
             }
+
+            if (SelectedModel != null)
+            {
+                var dmodel = SelectedModel.Children[0] as AntilliModelVisual3D;
+
+                if (dmodel != null)
+                {
+                    var subModel = dmodel.Model;
+                    var instance = subModel.LodInstance;
+                    var lod = instance.Parent;
+                    var model = lod.Parent;
+
+                    DSC.Log($"{model.Unknown3} {model.Flags} {lod.ID} {lod.Type}");
+                    DSC.Log($"{model.Unknown}");
+                    DSC.Log($"{model.Transform[0]} {model.Transform[1]} {model.Transform[2]} {model.Transform[3]}");
+                    DSC.Log($"{instance.Transform[0]} {instance.Transform[1]} {instance.Transform[2]} {instance.Transform[3]}");
+                }
+            }
         }
 
         private void ViewModelTexture(object sender, RoutedEventArgs e)
@@ -279,7 +297,7 @@ namespace Antilli
             AT.CurrentState.QueryMaterialSelect(material);
         }
 
-        List<PartsGroup> m_partsGroups;
+        List<Model> m_partsGroups;
 
         public void RemoveActiveModel()
         {
@@ -301,14 +319,14 @@ namespace Antilli
 
             foreach (var part in m_partsGroups)
             {
-                var partDef = part.Parts[LevelOfDetail];
+                var partDef = part.Lods[LevelOfDetail];
 
-                if (partDef.Groups == null)
+                if (partDef.Instances == null)
                     continue;
 
                 var meshes = new ModelVisual3DGroup();
 
-                foreach (var group in partDef.Groups)
+                foreach (var group in partDef.Instances)
                 {
                     var m1 = group.Transform[0];
                     var m2 = group.Transform[1];
@@ -338,9 +356,9 @@ namespace Antilli
                         M44 = m4.W,
                     };
 
-                    foreach (var mesh in group.Meshes)
+                    foreach (var mesh in group.SubModels)
                     {
-                        var vis3d = new DriverModelVisual3D(mesh, UseBlendWeights);
+                        var vis3d = new AntilliModelVisual3D(mesh, UseBlendWeights);
 
                         if (ApplyTransforms)
                             vis3d.Transform = new MatrixTransform3D(mtx);
@@ -358,7 +376,7 @@ namespace Antilli
                 // set the new model
                 foreach (var model in models)
                 {
-                    foreach (DriverModelVisual3D dmodel in model.Children)
+                    foreach (AntilliModelVisual3D dmodel in model.Children)
                     {
                         if (dmodel.IsEmissive)
                             EmissiveLayer.Children.Add(dmodel);
@@ -379,7 +397,7 @@ namespace Antilli
             }
         }
 
-        public bool SetActiveModel(List<PartsGroup> partsGroups)
+        public bool SetActiveModel(List<Model> partsGroups)
         {
             m_partsGroups = partsGroups;
             return UpdateActiveModel();

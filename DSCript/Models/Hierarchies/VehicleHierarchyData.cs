@@ -54,7 +54,7 @@ namespace DSCript.Models
             public List<PDLData> Children { get; set; }
         }
         
-        public ModelPackage ModelPackage { get; set; }
+        public ModelPackageResource ModelPackage { get; set; }
 
         public List<VehiclePartData> Parts { get; set; }
 

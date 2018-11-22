@@ -1,4 +1,6 @@
-﻿namespace DSCript.Models
+﻿using System;
+
+namespace DSCript.Models
 {
     public enum PackageType : int
     {

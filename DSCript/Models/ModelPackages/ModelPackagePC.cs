@@ -42,14 +42,14 @@ namespace DSCript.Models
 
         public int UID;
 
-        public int PartsCount;
-        public int PartsOffset;
+        public int ModelsCount;
+        public int ModelsOffset;
 
-        public int MeshGroupsCount;
-        public int MeshGroupsOffset;
+        public int LodInstancesCount;
+        public int LodInstancesOffset;
 
-        public int MeshesCount;
-        public int MeshesOffset;
+        public int SubModelsCount;
+        public int SubModelsOffset;
 
         public int TextureDataOffset;
         public int MaterialDataOffset;
@@ -68,7 +68,7 @@ namespace DSCript.Models
             MeshType = type;
         }
 
-        public int PartSize
+        public int ModelSize
         {
             get
             {
@@ -84,7 +84,7 @@ namespace DSCript.Models
             }
         }
 
-        public int LODSize
+        public int LodSize
         {
             get
             {
@@ -100,7 +100,7 @@ namespace DSCript.Models
             }
         }
 
-        public int MeshGroupSize
+        public int LodInstanceSize
         {
             get
             {
@@ -117,7 +117,7 @@ namespace DSCript.Models
             }
         }
 
-        public int MeshSize
+        public int SubModelSize
         {
             get
             {
@@ -150,19 +150,19 @@ namespace DSCript.Models
             }
         }
 
-        public int GetSizeOfParts()
+        public int GetSizeOfModels()
         {
-            return PartsCount * PartSize;
+            return ModelsCount * ModelSize;
         }
 
-        public int GetSizeOfMeshGroups()
+        public int GetSizeOfLodInstances()
         {
-            return MeshGroupsCount * MeshGroupSize;
+            return LodInstancesCount * LodInstanceSize;
         }
 
-        public int GetSizeOfMeshes()
+        public int GetSizeOfSubModels()
         {
-            return MeshesCount * MeshSize;
+            return SubModelsCount * SubModelSize;
         }
 
         public int GetSizeOfVertexDecls()
@@ -182,14 +182,14 @@ namespace DSCript.Models
 
             UID = stream.ReadInt32();
 
-            PartsCount = stream.ReadInt32();
-            PartsOffset = stream.ReadInt32();
+            ModelsCount = stream.ReadInt32();
+            ModelsOffset = stream.ReadInt32();
 
-            MeshGroupsCount = stream.ReadInt32();
-            MeshGroupsOffset = stream.ReadInt32();
+            LodInstancesCount = stream.ReadInt32();
+            LodInstancesOffset = stream.ReadInt32();
 
-            MeshesCount = stream.ReadInt32();
-            MeshesOffset = stream.ReadInt32();
+            SubModelsCount = stream.ReadInt32();
+            SubModelsOffset = stream.ReadInt32();
 
             stream.Position += 0x8;
 
@@ -212,14 +212,14 @@ namespace DSCript.Models
 
             stream.Write(UID);
 
-            stream.Write(PartsCount);
-            stream.Write(PartsOffset);
+            stream.Write(ModelsCount);
+            stream.Write(ModelsOffset);
 
-            stream.Write(MeshGroupsCount);
-            stream.Write(MeshGroupsOffset);
+            stream.Write(LodInstancesCount);
+            stream.Write(LodInstancesOffset);
 
-            stream.Write(MeshesCount);
-            stream.Write(MeshesOffset);
+            stream.Write(SubModelsCount);
+            stream.Write(SubModelsOffset);
             
             stream.Write(((Version == 6) ? UID : -1) & 0xFFFF | (MagicNumber.FB << 16));
             stream.Write(revision | (0x9999 << 16)); // reserve other part
@@ -241,14 +241,14 @@ namespace DSCript.Models
 
             UID = 0;
 
-            PartsCount = 0;
-            PartsOffset = 0;
+            ModelsCount = 0;
+            ModelsOffset = 0;
 
-            MeshGroupsCount = 0;
-            MeshGroupsOffset = 0;
+            LodInstancesCount = 0;
+            LodInstancesOffset = 0;
 
-            MeshesCount = 0;
-            MeshesOffset = 0;
+            SubModelsCount = 0;
+            SubModelsOffset = 0;
 
             TextureDataOffset = 0;
             MaterialDataOffset = 0;
@@ -272,23 +272,23 @@ namespace DSCript.Models
             Version = version;
             UID = uid;
 
-            PartsCount = nParts;
-            PartsOffset = Memory.Align(0x44, 128);
+            ModelsCount = nParts;
+            ModelsOffset = Memory.Align(0x44, 128);
 
             // only calculate offsets if there's model data
-            if (PartsCount > 0)
+            if (ModelsCount > 0)
             {
-                MeshGroupsCount = nGroups;
-                MeshGroupsOffset = Memory.Align(PartsOffset + (PartsCount * PartSize), 128);
+                LodInstancesCount = nGroups;
+                LodInstancesOffset = Memory.Align(ModelsOffset + (ModelsCount * ModelSize), 128);
 
-                MeshesCount = nMeshes;
-                MeshesOffset = MeshGroupsOffset + (MeshGroupsCount * MeshGroupSize);
+                SubModelsCount = nMeshes;
+                SubModelsOffset = LodInstancesOffset + (LodInstancesCount * LodInstanceSize);
 
                 IndicesCount = nIndices;
                 IndicesLength = IndicesCount * sizeof(short);
 
                 VertexDeclsCount = nVertexDecls;
-                VertexDeclsOffset = Memory.Align(MeshesOffset + (MeshesCount * MeshSize), 128);
+                VertexDeclsOffset = Memory.Align(SubModelsOffset + (SubModelsCount * SubModelSize), 128);
 
                 IndicesOffset = VertexDeclsOffset + (VertexDeclsCount * VertexDeclSize);
             }
@@ -324,8 +324,9 @@ namespace DSCript.Models
     public struct MaterialPackageHeader
     {
         public MaterialPackageType PackageType;
+        public int Version;
 
-        public bool UseLargeFormat;
+        public bool HasPaletteInfo;
 
         public int MaterialsCount;
         public int MaterialsOffset;
@@ -335,6 +336,12 @@ namespace DSCript.Models
 
         public int SubstancesCount;
         public int SubstancesOffset;
+
+        public int PaletteInfoLookupCount;
+        public int PaletteInfoLookupOffset;
+
+        public int PaletteInfoCount;
+        public int PaletteInfoOffset;
 
         public int TextureLookupCount;
         public int TextureLookupOffset;
@@ -352,7 +359,7 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (UseLargeFormat) ? 0x48 : 0x38;
+                    return (HasPaletteInfo) ? 0x48 : 0x38;
                 case MaterialPackageType.Xbox:
                     return 0x48;
                 case MaterialPackageType.PS2:
@@ -369,7 +376,7 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (UseLargeFormat) ? 0x10 : 0x18;
+                    return (HasPaletteInfo) ? 0x10 : 0x18;
                 case MaterialPackageType.PS2:
                 case MaterialPackageType.Xbox:
                     return 0x10;
@@ -385,7 +392,7 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (UseLargeFormat) ? 0x1C : 0x20;
+                    return (HasPaletteInfo) ? 0x1C : 0x20;
                 case MaterialPackageType.Xbox:
                     return 0x1C;
                 case MaterialPackageType.PS2:
@@ -418,7 +425,7 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (UseLargeFormat) ? 0x4 : 0x8;
+                    return (HasPaletteInfo) ? 0x4 : 0x8;
                 case MaterialPackageType.Xbox:
                 case MaterialPackageType.PS2:
                     return 0x4;
@@ -434,10 +441,10 @@ namespace DSCript.Models
             MaterialsOffset = HeaderSize;
 
             SubstanceLookupOffset = MaterialsOffset + (MaterialsCount * MaterialSize);
-            SubstancesOffset      = SubstanceLookupOffset + (SubstanceLookupCount * LookupSize);
+            SubstancesOffset = SubstanceLookupOffset + (SubstanceLookupCount * LookupSize);
 
-            TextureLookupOffset     = SubstancesOffset + (SubstancesCount * SubstanceSize);
-            TexturesOffset          = TextureLookupOffset + (TextureLookupCount * LookupSize);
+            TextureLookupOffset = SubstancesOffset + (SubstancesCount * SubstanceSize);
+            TexturesOffset = TextureLookupOffset + (TextureLookupCount * LookupSize);
 
             TextureDataOffset = Memory.Align(TexturesOffset + (TexturesCount * TextureSize), alignment);
         }
@@ -477,19 +484,14 @@ namespace DSCript.Models
                 SubstancesCount = stream.ReadInt32();
                 SubstancesOffset = stream.ReadInt32();
 
-                if (PackageType == MaterialPackageType.Xbox)
+                // TODO: process palette information (used on Xbox & possibly DPL PC?)
+                if (HasPaletteInfo)
                 {
-                    // int PaletteInfoLookupCount;
-                    // int PaletteInfoLookupOffset;
+                    PaletteInfoLookupCount = stream.ReadInt32();
+                    PaletteInfoLookupOffset = stream.ReadInt32();
 
-                    // int PaletteInfoCount;
-                    // int PaletteInfoOffset;
-
-                    throw new NotImplementedException();
-                }
-                else if (UseLargeFormat)
-                {
-                    stream.Position += 0x10;
+                    PaletteInfoCount = stream.ReadInt32();
+                    PaletteInfoOffset = stream.ReadInt32();
                 }
 
                 TextureLookupCount = stream.ReadInt32();
@@ -506,17 +508,7 @@ namespace DSCript.Models
         public void Write(Stream stream)
         {
             stream.Write((int)PackageType);
-
-            switch (PackageType)
-            {
-            case MaterialPackageType.PC:
-                stream.Write(3);
-                break;
-            case MaterialPackageType.Xbox:
-                stream.Write(2);
-                break;
-            }
-
+            
             if (PackageType == MaterialPackageType.PS2)
             {
                 stream.Write((short)MaterialsCount);
@@ -524,10 +516,12 @@ namespace DSCript.Models
                 stream.Write((short)SubstancesCount);
                 stream.Write((short)TextureLookupCount);
                 stream.Write((short)TexturesCount);
-                stream.Write((short)2);
+                stream.Write((short)Version);
             }
             else
             {
+                stream.Write(Version);
+
                 stream.Write(MaterialsCount);
                 stream.Write(MaterialsOffset);
                 stream.Write(SubstanceLookupCount);
@@ -535,12 +529,13 @@ namespace DSCript.Models
                 stream.Write(SubstancesCount);
                 stream.Write(SubstancesOffset);
                 
-                if (UseLargeFormat)
+                if (HasPaletteInfo)
                 {
                     switch (PackageType)
                     {
                     case MaterialPackageType.PC:
                         {
+                            // no palette info present
                             for (int i = 0; i < 4; i++)
                                 stream.Write(0);
                         } break;
@@ -560,10 +555,23 @@ namespace DSCript.Models
         }
 
         public MaterialPackageHeader(MaterialPackageType packageType) : this(packageType, false) { }
-        public MaterialPackageHeader(MaterialPackageType packageType, bool useLargeFormat)
+        public MaterialPackageHeader(MaterialPackageType packageType, bool hasPaletteInfo)
         {
             PackageType = packageType;
-            UseLargeFormat = useLargeFormat;
+            Version = -1;
+
+            switch (PackageType)
+            {
+            case MaterialPackageType.PS2:
+            case MaterialPackageType.Xbox:
+                Version = 2;
+                break;
+            case MaterialPackageType.PC:
+                Version = 3;
+                break;
+            }
+            
+            HasPaletteInfo = hasPaletteInfo;
 
             MaterialsCount = 0;
             MaterialsOffset = 0;
@@ -573,6 +581,12 @@ namespace DSCript.Models
 
             SubstanceLookupCount = 0;
             SubstanceLookupOffset = 0;
+
+            PaletteInfoLookupCount = 0;
+            PaletteInfoLookupOffset = 0;
+
+            PaletteInfoCount = 0;
+            PaletteInfoOffset = 0;
 
             TexturesCount = 0;
             TexturesOffset = 0;
@@ -588,12 +602,9 @@ namespace DSCript.Models
             : this(packageType, nMaterials, nSubMaterials, nTextures, false)
         { }
 
-        public MaterialPackageHeader(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures, bool useLargeFormat)
-            : this(packageType, useLargeFormat)
+        public MaterialPackageHeader(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures, bool hasPaletteInfo)
+            : this(packageType, hasPaletteInfo)
         {
-            if (PackageType == MaterialPackageType.Xbox)
-                throw new NotImplementedException();
-
             MaterialsCount = nMaterials;
 
             SubstanceLookupCount = nSubMaterials;
@@ -606,40 +617,45 @@ namespace DSCript.Models
         }
 
         public MaterialPackageHeader(MaterialPackageType packageType, Stream stream) : this(packageType, stream, false) { }
-        public MaterialPackageHeader(MaterialPackageType packageType, Stream stream, bool useLargeFormat) : this(packageType, useLargeFormat)
+        public MaterialPackageHeader(MaterialPackageType packageType, Stream stream, bool hasPaletteInfo) : this(packageType, hasPaletteInfo)
         {
             Read(stream);
         }
     }
 
-    public class ModelPackagePC : ModelPackage
+    public class ModelPackage : ModelPackageResource
     {
         protected ModelPackageData Header;
         protected MaterialPackageHeader MaterialsHeader;
 
-        protected void ReadHeader(Stream stream)
+        protected virtual void ReadHeader(Stream stream)
         {
             Header = new ModelPackageData(Spooler.Version, stream);
+
+            Version = Header.Version;
             UID = Header.UID;
         }
 
-        protected void ReadVertexBuffers(Stream stream)
+        protected void ReadVertexBuffers(Stream stream, bool populateBuffers)
         {
             var vBuffersCount = Header.VertexDeclsCount;
             var vBuffersOffset = Header.VertexDeclsOffset;
 
             var declSize = Header.VertexDeclSize;
 
-            if (vBuffersCount != 0)
+            if (populateBuffers)
             {
-                VertexBuffers = new List<VertexBuffer>(vBuffersCount);
-
+                if ((VertexBuffers == null) || (VertexBuffers.Count != vBuffersCount))
+                    throw new InvalidOperationException("You dun goofed!");
+                
                 /* ------------------------------
                  * Read vertex buffer header(s)
                  * ------------------------------ */
                 for (int vB = 0; vB < vBuffersCount; vB++)
                 {
                     stream.Position = vBuffersOffset + (vB * declSize);
+
+                    var vBuffer = VertexBuffers[vB];
 
                     var nVerts = stream.ReadInt32();
                     var vertsSize = stream.ReadInt32();
@@ -648,29 +664,31 @@ namespace DSCript.Models
 
                     if (Header.Version == 1 || Header.Version == 9)
                     {
-                        var unk1 = stream.ReadInt32();
-                        var unk2 = stream.ReadInt32();
-                        var unk3 = stream.ReadInt32();
-                        var unk4 = stream.ReadInt32();
+                        //--var unk1 = stream.ReadInt32();
+                        //--var unk2 = stream.ReadInt32();
+                        //--var unk3 = stream.ReadInt32();
+                        //--var unk4 = stream.ReadInt32();
+                        //--
+                        //--DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
 
-                        DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
+                        // (0, 1, 0, 0) ???
+                        stream.Position += 0x10;
                     }
-
+                    
                     /* ------------------------------
                      * Read vertices in buffer
                      * ------------------------------ */
                     stream.Position = vertsOffset;
 
-                    var vbuf = new byte[vertsSize];
-                    stream.Read(vbuf, 0, vertsSize);
+                    var buffer = new byte[vertsSize];
+                    stream.Read(buffer, 0, vertsSize);
 
-                    var vertexBuffer = VertexBuffer.CreateD3Buffer(vbuf, nVerts, vertsSize, vertLength);
-                    VertexBuffers.Add(vertexBuffer);
+                    vBuffer.CreateVertices(buffer, nVerts, vertsSize);
                 }
             }
             else
             {
-                VertexBuffers = null;
+                VertexBuffers = (vBuffersCount != 0) ? new List<VertexBuffer>(vBuffersCount) : null;
             }
         }
     
@@ -695,9 +713,9 @@ namespace DSCript.Models
         
         protected void ReadModels(Stream stream)
         {
-            var partSize = Header.PartSize;
-            var partLodSize = Header.LODSize;
-            var groupSize = Header.MeshGroupSize;
+            var partSize = Header.ModelSize;
+            var partLodSize = Header.LodSize;
+            var groupSize = Header.LodInstanceSize;
 
             var meshSize = 0; // we don't know yet
 
@@ -708,14 +726,13 @@ namespace DSCript.Models
             var meshIdx = 0;
 
             /* ------------------------------
-             * Read parts groups
+             * Read models
              * ------------------------------ */
-            for (int p = 0; p < Header.PartsCount; p++)
+            for (int p = 0; p < Header.ModelsCount; p++)
             {
-                stream.Position = Header.PartsOffset + (p * partSize);
+                stream.Position = Header.ModelsOffset + (p * partSize);
 
-                var uid = stream.ReadInt32();
-                var handle = stream.ReadInt32();
+                var uid = stream.Read<UID>();
 
                 var unknown = stream.Read<Vector4>();
 
@@ -734,28 +751,45 @@ namespace DSCript.Models
                 // sadly can't be used to force a specific effect cause game overwrites it :(
                 var reserved = stream.ReadInt32();
 
-                var pGroup = new PartsGroup() {
+                var model = new Model() {
                     UID = uid,
-                    Handle = handle,
 
                     Unknown = unknown,
-                    
+
                     VertexType = vBufType,
-                    
+
                     Flags = flags,
                 };
 
-                if (VertexBuffers != null)
-                    pGroup.VertexBuffer = VertexBuffers[vBufIdx];
+                if (VertexBuffers == null)
+                    throw new InvalidOperationException("You dun goofed!");
+
+                VertexBuffer vBuffer = null;
+
+                // initialize first one, second one, etc.
+                if (VertexBuffers.Count == vBufIdx)
+                {
+                    vBuffer = VertexBuffer.Create(Header.Version, vBufType);
+                    VertexBuffers.Add(vBuffer);
+                }
+                else
+                {
+                    vBuffer = VertexBuffers[vBufIdx];
+
+                    if (!vBuffer.CanUseForType(Header.Version, vBufType))
+                        throw new InvalidOperationException("Something has gone HORRIBLY wrong! The fuck did you do?!");
+                }
+
+                model.VertexBuffer = vBuffer;
                 
-                Parts.Add(pGroup);
+                Models.Add(model);
 
                 if (Header.Version == 6)
                     stream.Position += 4;
                 
                 // culling transforms
                 for (int t = 0; t < 8; t++)
-                    pGroup.Transform[t] = stream.Read<Vector4>();
+                    model.Transform[t] = stream.Read<Vector4>();
 
                 var lodStart = stream.Position;
                 
@@ -764,11 +798,11 @@ namespace DSCript.Models
                 {
                     stream.Position = lodStart + (k * partLodSize);
 
-                    var partEntry = new PartDefinition(k) {
-                        Parent = pGroup
+                    var partEntry = new Lod(k) {
+                        Parent = model
                     };
 
-                    pGroup.Parts[k] = partEntry;
+                    model.Lods[k] = partEntry;
 
                     var gOffset = stream.ReadInt32();
 
@@ -787,21 +821,21 @@ namespace DSCript.Models
                         continue;
                     
                     /* ------------------------------
-                     * Read mesh groups
+                     * Read lod instances
                      * ------------------------------ */
                     for (int g = 0; g < gCount; g++)
                     {
                         stream.Position = gOffset + (g * groupSize);
 
-                        var curGroupIdx = ((int)stream.Position - Header.MeshGroupsOffset) / Header.MeshGroupSize;
+                        var curGroupIdx = ((int)stream.Position - Header.LodInstancesOffset) / Header.LodInstanceSize;
 
                         if (curGroupIdx != meshGroupIdx)
                         {
-                            Debug.WriteLine($"WARNING: expected mesh group {meshGroupIdx} / {Header.MeshGroupsCount} but got {curGroupIdx}!");
+                            Debug.WriteLine($"WARNING: expected mesh group {meshGroupIdx} / {Header.LodInstancesCount} but got {curGroupIdx}!");
                             meshGroupIdx = curGroupIdx;
                         }
                         
-                        var mGroup = new MeshGroup() {
+                        var mGroup = new LodInstance() {
                             Parent = partEntry
                         };
 
@@ -824,21 +858,21 @@ namespace DSCript.Models
 
                         mGroup.Reserved = stream.ReadInt32();
                         
-                        partEntry.Groups.Add(mGroup);
-                        MeshGroups.Add(mGroup);
+                        partEntry.Instances.Add(mGroup);
+                        LodInstances.Add(mGroup);
 
                         /* ------------------------------
-                         * Read mesh definitions
+                         * Read sub models
                          * ------------------------------ */
                         for (int m = 0; m < mCount; m++)
                         {
                             stream.Position = mOffset + (m * meshSize);
 
-                            var curMeshIdx = ((int)stream.Position - Header.MeshesOffset) / Header.MeshSize;
+                            var curMeshIdx = ((int)stream.Position - Header.SubModelsOffset) / Header.SubModelSize;
 
                             if (curMeshIdx != meshIdx)
                             {
-                                Debug.WriteLine($"WARNING: expected mesh {meshIdx} / {Header.MeshesCount} but got {curMeshIdx}!");
+                                Debug.WriteLine($"WARNING: expected mesh {meshIdx} / {Header.SubModelsCount} but got {curMeshIdx}!");
                                 meshIdx = curMeshIdx;
                             }
 
@@ -851,14 +885,14 @@ namespace DSCript.Models
                                 if (Header.Version == 9 && (primType & 0xFFFFFFF0) != 0)
                                     Header.SetMeshType(MeshType.Small);
 
-                                meshSize = Header.MeshSize;
+                                meshSize = Header.SubModelSize;
                                 verifyMeshSize = false;
                             }
 
                             if (Header.MeshType == MeshType.Small)
                                 throw new NotImplementedException("Small mesh types not supported!");
 
-                            var mesh = new MeshDefinition(this) {
+                            var mesh = new SubModel(this) {
                                 PrimitiveType = (PrimitiveType)primType,
                                 VertexBaseOffset = stream.ReadInt32(),
                                 VertexOffset = stream.ReadInt32(),
@@ -866,8 +900,8 @@ namespace DSCript.Models
                                 IndexOffset = stream.ReadInt32(),
                                 IndexCount = stream.ReadInt32(),
 
-                                MeshGroup = mGroup,
-                                PartsGroup = pGroup
+                                LodInstance = mGroup,
+                                Model = model
                             };
 
                             if (Header.MeshType == MeshType.Default)
@@ -876,8 +910,8 @@ namespace DSCript.Models
                             mesh.MaterialId = stream.ReadInt16();
                             mesh.SourceUID = stream.ReadUInt16();
 
-                            mGroup.Meshes.Add(mesh);
-                            Meshes.Add(mesh);
+                            mGroup.SubModels.Add(mesh);
+                            SubModels.Add(mesh);
 
                             ++meshIdx;
                         }
@@ -887,62 +921,45 @@ namespace DSCript.Models
                 }
             }
         }
-        
-        protected override void Load()
+
+        protected virtual void ReadMaterials(Stream stream)
         {
-            if (Spooler.Version != 6)
-                throw new Exception("Bad version, cannot load ModelPackage!");
-
-            using (var f = Spooler.GetMemoryStream())
+            var matDataOffset = Header.MaterialDataOffset;
+            var texDataOffset = Header.TextureDataOffset;
+            
+            if (matDataOffset != 0)
             {
-                // header will handle offsets for us
-                ReadHeader(f);
+                stream.Position = matDataOffset;
                 
-                // skip packages with no models
-                if (Header.PartsCount > 0)
+                MaterialsHeader = new MaterialPackageHeader(MaterialPackageType, stream, (Version != 6));
+
+                if (MaterialsHeader.DataSize == 0)
                 {
-                    Parts           = new List<PartsGroup>(Header.PartsCount);
-                    MeshGroups      = new List<MeshGroup>(Header.MeshGroupsCount);
-                    Meshes          = new List<MeshDefinition>(Header.MeshesCount);
-
-                    ReadVertexBuffers(f);
-                    ReadIndexBuffer(f);
-
-                    ReadModels(f);
+                    texDataOffset = matDataOffset + MaterialsHeader.TextureDataOffset;
+                    MaterialsHeader.DataSize = (Spooler.Size - matDataOffset);
                 }
 
-                var pcmpOffset = Header.MaterialDataOffset;
-                var ddsOffset = Header.TextureDataOffset;
+                Materials = new List<MaterialDataPC>(MaterialsHeader.MaterialsCount);
+                Substances = new List<SubstanceDataPC>(MaterialsHeader.SubstancesCount);
+                Textures = new List<TextureDataPC>(MaterialsHeader.TexturesCount);
 
-                // Read PCMP
-                if (pcmpOffset == 0)
-                    return;
-
-                f.Position = pcmpOffset;
-
-                MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, f);
+                var texLookup = new Dictionary<int, byte[]>();
                 
-                Materials       = new List<MaterialDataPC>(MaterialsHeader.MaterialsCount);
-                Substances    = new List<SubstanceDataPC>(MaterialsHeader.SubstancesCount);
-                Textures        = new List<TextureDataPC>(MaterialsHeader.TexturesCount);
-
-                var texLookup   = new Dictionary<int, byte[]>();
-
                 // Materials (Size: 0x18)
                 for (int m = 0; m < MaterialsHeader.MaterialsCount; m++)
                 {
-                    f.Position = pcmpOffset + (MaterialsHeader.MaterialsOffset + (m * MaterialsHeader.MaterialSize));
+                    stream.Position = matDataOffset + (MaterialsHeader.MaterialsOffset + (m * MaterialsHeader.MaterialSize));
 
                     // table info
-                    var mOffset = f.ReadInt32() + pcmpOffset;
-                    var mCount  = f.ReadInt32();
+                    var mOffset = stream.ReadInt32() + matDataOffset;
+                    var mCount = stream.ReadInt32();
 
-                    var mAnimType = f.ReadInt32();
-                    var mAnimSpeed = f.ReadSingle();
-                    
+                    var mAnimType = stream.ReadInt32();
+                    var mAnimSpeed = stream.ReadSingle();
+
                     var material = new MaterialDataPC() {
-                        Type            = (MaterialType)mAnimType,
-                        AnimationSpeed  = mAnimSpeed,
+                        Type = (MaterialType)mAnimType,
+                        AnimationSpeed = mAnimSpeed,
                     };
 
                     Materials.Add(material);
@@ -950,65 +967,194 @@ namespace DSCript.Models
                     // get substance(s)
                     for (int s = 0; s < mCount; s++)
                     {
-                        f.Position  = mOffset + (s * MaterialsHeader.LookupSize);
+                        stream.Position = mOffset + (s * MaterialsHeader.LookupSize);
 
-                        var sOffset = f.ReadInt32() + pcmpOffset;
+                        var sOffset = stream.ReadInt32() + matDataOffset;
 
-                        f.Position  = sOffset;
+                        stream.Position = sOffset;
 
-                        var sFlg = f.ReadInt32();
-                        var sMode = f.ReadUInt16();
-                        var sType = f.ReadUInt16();
-
-                        var substance = new SubstanceDataPC() {
-                            Bin     = (sFlg & 0xFF),
-                            Flags   = (sFlg >> 8),
-                            Mode    = sMode,
-                            Type    = sType,
-                        };
-
-                        material.Substances.Add(substance);
-                        Substances.Add(substance);
-
-                        f.Position += 0x8;
-
-                        var tOffset = f.ReadInt32() + pcmpOffset;
-                        var tCount  = f.ReadInt32();
-
-                        for (int t = 0; t < tCount; t++)
+                        if (MaterialsHeader.HasPaletteInfo)
                         {
-                            f.Position = tOffset + (t * MaterialsHeader.LookupSize);
+                            var sInf = stream.ReadInt32();
+                            var sFlg = stream.ReadInt32();
 
-                            var texOffset = f.ReadInt32() + pcmpOffset;
+                            //--internal stuff from DPL, might help in the future (bits are wrong)
+                            //--var bin = (sFlg >> 21) & 0x7F;
+                            //--var effect = (sFlg >> 14) & 0x7F;
+                            //--var subcontainer = (sInf >> 15) & 0x3FFF;
+                            //--var subid = (sInf >> 1) & 0x3FFF;
+                            //--var buf = (sInf >> 29) & 0xF;
+                            //--
+                            //--
+                            //--Debug.WriteLine("sortkey = BIN: {0}, EFFECT {1}, SUB CONTAINER: {2}, SUB ID: {3}, BUFFER: {3}",
+                            //--    bin, effect, subcontainer, subid, buf);
 
-                            f.Position = texOffset;
+                            var sMode = (sInf & 0xFFFF);
+                            var sType = (sInf >> 16) & 0xFFFF;
 
-                            var textureInfo = new TextureDataPC();
+                            var substance = new SubstanceDataPC() {
+                                Bin = (sFlg & 0xFF),
+                                Flags = (sFlg >> 8),
+                                Mode = sMode,
+                                Type = sType,
+                            };
+
+                            material.Substances.Add(substance);
+                            Substances.Add(substance);
+
+                            var tOffset = stream.ReadInt32() + matDataOffset;
+                            var tCount = stream.ReadInt32();
                             
-                            substance.Textures.Add(textureInfo);
-                            Textures.Add(textureInfo);
+                            // TODO: handle palette info
+                            var pOffset = stream.ReadInt32();
+                            var pCount = stream.ReadInt32();
                             
-                            textureInfo.Reserved    = f.ReadInt32();
-                            textureInfo.CRC32       = f.ReadInt32();
+                            var reserved = stream.ReadInt32();
 
-                            var offset          = f.ReadInt32() + ddsOffset;
-                            var size            = f.ReadInt32();
+                            // TODO: figure out why DPL does this
+                            var check = (reserved & 0x8000000) != 0;
 
-                            textureInfo.Type    = f.ReadInt32();
-
-                            textureInfo.Width   = f.ReadInt16();
-                            textureInfo.Height  = f.ReadInt16();
-
-                            // I think this is AlphaTest or something
-                            textureInfo.Unknown = f.ReadInt32();
-                            
-                            if (!texLookup.ContainsKey(offset))
+                            for (int t = 0; t < tCount; t++)
                             {
-                                f.Position = offset;
-                                texLookup.Add(offset, f.ReadBytes(size));
-                            }
+                                stream.Position = tOffset + (t * MaterialsHeader.LookupSize);
 
-                            textureInfo.Buffer = texLookup[offset];
+                                var texOffset = stream.ReadInt32() + matDataOffset;
+
+                                stream.Position = texOffset;
+                                
+                                var uid = stream.ReadInt32();
+                                var crc = stream.ReadInt32();
+
+                                // possibly a header?
+                                var unk1 = stream.ReadInt32(); // 0xF00?
+                                var unk2 = stream.ReadInt16(); // 1?
+                                var unk3 = stream.ReadInt16(); // 4?
+
+                                if ((unk1 != 0xF00) || ((unk2 != 1) || (unk3 != 4)))
+                                    throw new InvalidDataException("Oops!");
+
+                                var offset = stream.ReadInt32() + texDataOffset;
+                                var size = stream.ReadInt32();
+                                
+                                var format = stream.ReadInt32();
+
+                                // packed data -- very clever!
+                                var width = (format >> 24) & 0xF;
+                                var height = (format >> 20) & 0xF;
+
+                                // not 100% sure on this one
+                                var type = (format >> 16) & 0xF;
+
+                                // TODO: figure this stuff out
+                                var flags = (format & 0xFFFF);
+                                
+                                var tex = new TextureDataPC() {
+                                    UID = uid,
+                                    Hash = crc,
+                                    
+                                    Type = type,
+
+                                    Width = (1 << width),
+                                    Height = (1 << height),
+
+                                    Flags = flags,
+                                };
+
+                                substance.Textures.Add(tex);
+                                Textures.Add(tex);
+
+                                stream.Position = offset;
+                                
+                                // thanks, reflections!
+                                if (size == 0)
+                                {
+                                    var header = default(DDSHeader);
+
+                                    if (!DDSUtils.GetHeaderInfo(stream, ref header))
+                                        throw new InvalidDataException("Can't determine data size of texture!");
+
+                                    size = (header.PitchOrLinearSize + header.Size + 4);
+
+                                    if (header.MipMapCount > 0)
+                                    {
+                                        // why you gotta do me dirty, reflections?!
+                                        stream.Position += size;
+
+                                        while (stream.ReadInt32() != 0x20534444)
+                                        {
+                                            if ((offset + size) >= MaterialsHeader.DataSize)
+                                                break;
+
+                                            size += 4;
+                                        }
+                                    }
+                                }
+
+                                if (!texLookup.ContainsKey(offset))
+                                {
+                                    stream.Position = offset;
+                                    texLookup.Add(offset, stream.ReadBytes(size));
+                                }
+
+                                tex.Buffer = texLookup[offset];
+                            }
+                        }
+                        else
+                        {
+                            var sFlg = stream.ReadInt32();
+                            var sMode = stream.ReadUInt16();
+                            var sType = stream.ReadUInt16();
+
+                            var substance = new SubstanceDataPC() {
+                                Bin = (sFlg & 0xFF),
+                                Flags = (sFlg >> 8),
+                                Mode = sMode,
+                                Type = sType,
+                            };
+
+                            material.Substances.Add(substance);
+                            Substances.Add(substance);
+
+                            stream.Position += 0x8;
+
+                            var tOffset = stream.ReadInt32() + matDataOffset;
+                            var tCount = stream.ReadInt32();
+
+                            for (int t = 0; t < tCount; t++)
+                            {
+                                stream.Position = tOffset + (t * MaterialsHeader.LookupSize);
+
+                                var texOffset = stream.ReadInt32() + matDataOffset;
+
+                                stream.Position = texOffset;
+
+                                var textureInfo = new TextureDataPC();
+
+                                substance.Textures.Add(textureInfo);
+                                Textures.Add(textureInfo);
+
+                                textureInfo.UID = stream.ReadInt32();
+                                textureInfo.Hash = stream.ReadInt32();
+
+                                var offset = stream.ReadInt32() + texDataOffset;
+                                var size = stream.ReadInt32();
+
+                                textureInfo.Type = stream.ReadInt32();
+
+                                textureInfo.Width = stream.ReadInt16();
+                                textureInfo.Height = stream.ReadInt16();
+
+                                // I think this is AlphaTest or something
+                                textureInfo.Flags = stream.ReadInt32();
+
+                                if (!texLookup.ContainsKey(offset))
+                                {
+                                    stream.Position = offset;
+                                    texLookup.Add(offset, stream.ReadBytes(size));
+                                }
+
+                                textureInfo.Buffer = texLookup[offset];
+                            }
                         }
                     }
                 }
@@ -1017,17 +1163,62 @@ namespace DSCript.Models
                 texLookup.Clear();
             }
         }
+        
+        protected override void Load()
+        {
+            switch (Spooler.Context)
+            {
+            case MGX_ModelPackagePC:
+            case MGX_ModelPackageXN:
+                Platform = PlatformType.PC;
+                break;
+            case MGX_ModelPackagePS2:
+                Platform = PlatformType.PS2;
+                break;
+            case MGX_ModelPackageXBox:
+                Platform = PlatformType.Xbox;
+                break;
+            }
+
+            if (Platform != PlatformType.PC)
+                throw new Exception("Unsupported model package type.");
+
+            using (var f = Spooler.GetMemoryStream())
+            {
+                // header will handle offsets for us
+                ReadHeader(f);
+                
+                // skip packages with no models
+                if (Header.ModelsCount > 0)
+                {
+                    Models           = new List<Model>(Header.ModelsCount);
+                    LodInstances      = new List<LodInstance>(Header.LodInstancesCount);
+                    SubModels          = new List<SubModel>(Header.SubModelsCount);
+
+                    ReadVertexBuffers(f, false);
+                    ReadIndexBuffer(f);
+
+                    ReadModels(f);
+                    ReadVertexBuffers(f, true);
+                }
+
+                ReadMaterials(f);
+            }
+        }
 
         protected override void Save()
         {
             var deadMagic   = 0xCDCDCDCD;
             var deadCode    = BitConverter.GetBytes(deadMagic);
 
+            if (Version != 6)
+                throw new NotImplementedException("Saving not implemented for model package format!");
+
             var bufferSize  = 0;
 
-            if (Parts?.Count > 0)
+            if (Models?.Count > 0)
             {
-                Header = new ModelPackageData(6, UID, Parts.Count, MeshGroups.Count, Meshes.Count, IndexBuffer.Buffer.Length, VertexBuffers.Count);
+                Header = new ModelPackageData(Version, UID, Models.Count, LodInstances.Count, SubModels.Count, IndexBuffer.Buffer.Length, VertexBuffers.Count);
 
                 bufferSize = Memory.Align(Header.IndicesOffset + Header.IndicesLength, 4096);
                 
@@ -1038,9 +1229,9 @@ namespace DSCript.Models
             else
             {
                 // model package has no models
-                Header = new ModelPackageData(6, UID);
+                Header = new ModelPackageData(Version, UID);
 
-                bufferSize += Header.PartsOffset;
+                bufferSize += Header.ModelsOffset;
             }
 
             bufferSize = Memory.Align(bufferSize, 4096);
@@ -1048,7 +1239,7 @@ namespace DSCript.Models
             var pcmpOffset = bufferSize;
             var pcmpSize = 0;
             
-            MaterialsHeader = new MaterialPackageHeader(MaterialPackageType.PC, Materials.Count, Substances.Count, Textures.Count);
+            MaterialsHeader = new MaterialPackageHeader(MaterialPackageType, Materials.Count, Substances.Count, Textures.Count);
 
             pcmpSize = MaterialsHeader.TextureDataOffset;
             
@@ -1058,11 +1249,11 @@ namespace DSCript.Models
             {
                 var tex = Textures[i];
 
-                if (!texOffsets.ContainsKey(tex.CRC32))
+                if (!texOffsets.ContainsKey(tex.Hash))
                 {
                     pcmpSize = Memory.Align(pcmpSize, 128);
 
-                    texOffsets.Add(tex.CRC32, (pcmpSize - MaterialsHeader.TextureDataOffset));
+                    texOffsets.Add(tex.Hash, (pcmpSize - MaterialsHeader.TextureDataOffset));
 
                     pcmpSize += tex.Buffer.Length;
                 }
@@ -1086,7 +1277,7 @@ namespace DSCript.Models
 
                 Header.WriteHeader(f);
 
-                if (Parts?.Count > 0)
+                if (Models?.Count > 0)
                 {
                     // Write vertex buffers & declarations
                     var vBufferOffset = Header.GetVertexBuffersOffset();
@@ -1115,14 +1306,14 @@ namespace DSCript.Models
                     foreach (var indice in IndexBuffer.Buffer)
                         f.Write(indice);
 
-                    var meshLookup = new int[Header.MeshesCount];
-                    var groupLookup = new int[Header.MeshGroupsCount];
+                    var meshLookup = new int[Header.SubModelsCount];
+                    var groupLookup = new int[Header.LodInstancesCount];
 
                     // Write meshes
-                    for (int m = 0; m < Header.MeshesCount; m++)
+                    for (int m = 0; m < Header.SubModelsCount; m++)
                     {
-                        var mesh = Meshes[m];
-                        var mOffset = Header.MeshesOffset + (m * Header.MeshSize);
+                        var mesh = SubModels[m];
+                        var mOffset = Header.SubModelsOffset + (m * Header.SubModelSize);
 
                         meshLookup[m] = mOffset;
 
@@ -1145,10 +1336,10 @@ namespace DSCript.Models
                     var mIdx = 0;
 
                     // Write groups
-                    for (int g = 0; g < Header.MeshGroupsCount; g++)
+                    for (int g = 0; g < Header.LodInstancesCount; g++)
                     {
-                        var group = MeshGroups[g];
-                        var gOffset = Header.MeshGroupsOffset + (g * Header.MeshGroupSize);
+                        var group = LodInstances[g];
+                        var gOffset = Header.LodInstancesOffset + (g * Header.LodInstanceSize);
 
                         groupLookup[g] = gOffset;
 
@@ -1161,7 +1352,7 @@ namespace DSCript.Models
                         foreach (var transform in group.Transform)
                             f.Write(transform);
                         
-                        var mCount = (short)group.Meshes.Count;
+                        var mCount = (short)group.SubModels.Count;
                         var useTransform = (short)(group.UseTransform ? 1 : 0);
 
                         f.Write(mCount);
@@ -1178,15 +1369,13 @@ namespace DSCript.Models
                     var gIdx = 0;
 
                     // Write parts
-                    for (int p = 0; p < Header.PartsCount; p++)
+                    for (int p = 0; p < Header.ModelsCount; p++)
                     {
-                        var part = Parts[p];
+                        var part = Models[p];
                         
-                        f.Position = Header.PartsOffset + (p * Header.PartSize);
-                        
-                        f.Write(part.UID);
-                        f.Write(part.Handle);
+                        f.Position = Header.ModelsOffset + (p * Header.ModelSize);
 
+                        f.Write(part.UID);
                         f.Write(part.Unknown);
                        
                         var vBufferId = VertexBuffers.IndexOf(part.VertexBuffer);
@@ -1209,15 +1398,15 @@ namespace DSCript.Models
                         
                         var lodsOffset = f.Position;
                         
-                        for (int d = 0; d < part.Parts.Length; d++)
+                        for (int d = 0; d < part.Lods.Length; d++)
                         {
-                            f.Position = lodsOffset + (d * Header.LODSize);
+                            f.Position = lodsOffset + (d * Header.LodSize);
 
-                            var lod = part.Parts[d];
+                            var lod = part.Lods[d];
 
-                            if (lod?.Groups?.Count > 0)
+                            if (lod?.Instances?.Count > 0)
                             {
-                                var count = lod.Groups.Count;
+                                var count = lod.Instances.Count;
 
                                 f.Write(groupLookup[gIdx]);
 
@@ -1244,7 +1433,7 @@ namespace DSCript.Models
                 var texLookup = new int[MaterialsHeader.TexturesCount];
                 var texDataOffset = pcmpOffset + MaterialsHeader.TextureDataOffset;
 
-                // put offset to texture/material data in header (this sucks)
+                // put offset to texture/material data in header
                 f.Position = 0x28;
 
                 f.Write(texDataOffset);
@@ -1260,10 +1449,10 @@ namespace DSCript.Models
 
                     f.Position = pcmpOffset + tOffset;
 
-                    var dataOffset = texOffsets[tex.CRC32];
+                    var dataOffset = texOffsets[tex.Hash];
 
-                    f.Write(tex.Reserved);
-                    f.Write(tex.CRC32);
+                    f.Write(tex.UID);
+                    f.Write(tex.Hash);
 
                     f.Write(dataOffset);
                     f.Write(tex.Buffer.Length);
@@ -1272,7 +1461,7 @@ namespace DSCript.Models
                     f.Write((short)tex.Width);
                     f.Write((short)tex.Height);
 
-                    f.Write(tex.Unknown);
+                    f.Write(tex.Flags);
 
                     f.Position = texDataOffset + dataOffset;
 
@@ -1383,12 +1572,12 @@ namespace DSCript.Models
                     {
                         var tex = xmlDoc.CreateElement("Texture");
 
-                        tex.SetAttribute("Reserved", texture.Reserved.ToString("X8"));
-                        tex.SetAttribute("UID", texture.CRC32.ToString("X8"));
+                        tex.SetAttribute("UID", texture.UID.ToString("X8"));
+                        tex.SetAttribute("Hash", texture.Hash.ToString("X8"));
                         tex.SetAttribute("Type", texture.Type.ToString());
                         tex.SetAttribute("Width", texture.Width.ToString());
                         tex.SetAttribute("Height", texture.Height.ToString());
-                        tex.SetAttribute("Unknown", texture.Unknown.ToString());
+                        tex.SetAttribute("Flags", texture.Flags.ToString());
 
                         sub.AppendChild(tex);
                     }

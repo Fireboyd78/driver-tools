@@ -12,11 +12,11 @@ using System.Windows.Media.Media3D;
 
 namespace DSCript.Models
 {
-    public class MeshGroup
+    public class LodInstance
     {
-        public PartDefinition Parent { get; set; }
+        public Lod Parent { get; set; }
 
-        public List<MeshDefinition> Meshes { get; set; }
+        public List<SubModel> SubModels { get; set; }
 
         public Vector4[] Transform { get; set; }
 
@@ -25,10 +25,9 @@ namespace DSCript.Models
         // likely unused, but I'm tired of chasing after bugs
         public int Reserved { get; set; }
 
-        public MeshGroup()
+        public LodInstance()
         {
-            Meshes = new List<MeshDefinition>();
-
+            SubModels = new List<SubModel>();
             Transform = new Vector4[4];
         }
     }

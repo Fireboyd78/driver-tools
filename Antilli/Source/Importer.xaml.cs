@@ -106,7 +106,7 @@ namespace Antilli
 
         // need to come up with a better system...
         private ModelConverter m_converter;
-        private ModelPackagePC m_modelPackage;
+        private ModelPackage m_modelPackage;
 
         public bool CanSave
         {

@@ -17,7 +17,7 @@ namespace Antilli
 
         public void UpdateName()
         {
-            Name = $"{BaseName} : {Texture.UID:X8} : {Texture.Width}x{Texture.Height}";
+            Name = $"{BaseName} : {Texture.UID:X8}:{Texture.Hash:X8} : {Texture.Width}x{Texture.Height}";
         }
         
         public TextureTreeItem(int id, ITextureData texture)

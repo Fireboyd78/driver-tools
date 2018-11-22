@@ -39,6 +39,9 @@ namespace DSCript.Models
         Tangent,
 
         Color,
+
+        BiNormal,
+        BlendIndices,
     }
 
     public struct VertexDeclInfo
@@ -122,7 +125,7 @@ namespace DSCript.Models
         }
     }
     
-    public struct VertexDeclaration
+    public class VertexDeclaration
     {
         public static readonly VertexDeclaration Empty = new VertexDeclaration(VertexDeclInfo.Empty);
 
@@ -227,7 +230,7 @@ namespace DSCript.Models
                 throw new ArgumentException("Buffer is not large enough to retrieve vertex data.", nameof(buffer));
 
             var buf = new byte[size];
-            Array.Copy(buffer, offset, buf, 0, size);
+            Buffer.BlockCopy(buffer, offset, buf, 0, size);
 
             return buf;
         }
@@ -248,12 +251,16 @@ namespace DSCript.Models
                     
                     var ptr = Marshal.AllocHGlobal(size);
 
-                    Marshal.Copy(buffer, offset, ptr, size);
+                    try
+                    {
+                        Marshal.Copy(buffer, offset, ptr, size);
 
-                    var result = (T)Marshal.PtrToStructure(ptr, typeof(T));
-
-                    Marshal.FreeHGlobal(ptr);
-                    return result;
+                        return (T)Marshal.PtrToStructure(ptr, typeof(T));
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(ptr);
+                    }
                 }
 
                 offset += size;
@@ -279,16 +286,13 @@ namespace DSCript.Models
 
                     try
                     {
-                        var pData = Marshal.UnsafeAddrOfPinnedArrayElement(buffer, 0) + offset;
-
-                        Marshal.StructureToPtr(data, pData, false);
+                        Marshal.StructureToPtr(data, gc.AddrOfPinnedObject() + offset, false);
+                        return true;
                     }
                     finally
                     {
                         gc.Free();
                     }
-                    
-                    return true;
                 }
 
                 offset += size;
@@ -346,7 +350,7 @@ namespace DSCript.Models
         }
     }
     
-    public class Vertex
+    public struct Vertex
     {
         /// <summary>Gets or sets the position of the vertex.</summary>
         public Vector3 Position;
@@ -379,8 +383,8 @@ namespace DSCript.Models
             PositionW = new Vector3(-PositionW.X, PositionW.Z, PositionW.Y);
             NormalW = new Vector3(-NormalW.X, NormalW.Z, NormalW.Y);
         }
-        
-        public Vertex()
+
+        public void Reset()
         {
             Position = new Vector3();
             Normal = new Vector3();

@@ -48,7 +48,7 @@ namespace DSCript.Models
         public int Unknown { get; set; }
         public int Hinge { get; set; }
 
-        public PartsGroup ModelPart { get; set; }
+        public Model ModelPart { get; set; }
 
         public Vector4 MarkerPoint { get; set; }
 

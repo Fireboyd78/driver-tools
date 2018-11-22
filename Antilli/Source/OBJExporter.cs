@@ -71,9 +71,9 @@ Kd 1.0000 0.2500 0.5000
 Ks 0.0000 0.0000 0.0000
 Ke 0.0000 0.0000 0.0000" + "\r\n";
 
-        public static ExportResult Export(string path, string filename, ModelPackagePC modelPackage, long uid, bool splitMeshByMaterial = false, bool bakeTransforms = false)
+        public static ExportResult Export(string path, string filename, ModelPackage modelPackage, UID uid, bool splitMeshByMaterial = false, bool bakeTransforms = false)
         {
-            if (modelPackage.Meshes.Count < 1)
+            if (modelPackage.SubModels.Count < 1)
             {
                 MessageBoxEx.Show("There are no models to export!", "OBJ Exporter", MessageBoxExFlags.ErrorBoxOK);
                 return ExportResult.Failed;
@@ -101,17 +101,17 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
             var hasNullMaterial = false;
 
-            foreach (var part in modelPackage.Parts)
+            foreach (var part in modelPackage.Models)
             {
-                if (uid != -1 && part.UID != uid)
+                if (part.UID != uid)
                     continue;
 
                 objBuilder.AppendLine("# ---- Parts Group {0} ---- #", ++modelIndex);
                 objBuilder.AppendLine();
 
-                for (int g = 0; g < part.Parts.Length; g++)
+                for (int g = 0; g < part.Lods.Length; g++)
                 {
-                    var groups = part.Parts[g].Groups;
+                    var groups = part.Lods[g].Instances;
 
                     var lodType = (LODTypes.ContainsKey(g)) ? LODTypes[g] : LODTypes[-1];
 
@@ -134,12 +134,10 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                         var m3 = group.Transform[2];
                         var m4 = group.Transform[3];
 
-                        for (int m = 0; m < group.Meshes.Count; m++)
+                        for (int m = 0; m < group.SubModels.Count; m++)
                         {
-                            var mesh = group.Meshes[m];
-
-                            var model = new DriverModelVisual3D(mesh, false);
-                            var material = model.Material;
+                            var mesh = group.SubModels[m];
+                            var material = mesh.GetMaterial();
 
                             // build material(s)
                             if (material != null)
@@ -186,11 +184,14 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                 faces.AppendLine("usemtl null_mtl");
                             }
 
-                            var vCount = model.Vertices.Count;
-                            var tCount = model.TriangleIndices.Count;
+                            var indices = new List<int>();
+                            var vertices = mesh.GetVertices(true, ref indices);
+                            
+                            var vCount = vertices.Count;
+                            var tCount = indices.Count;
 
                             // add vertices
-                            foreach (var vertex in model.Vertices)
+                            foreach (var vertex in vertices)
                             {
                                 Vector3 pos = vertex.Position;
                                 Vector3 normal = vertex.Normal;
@@ -222,9 +223,9 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             for (int t = 0; t < tCount; t += 3)
                             {
                                 faces.AppendFormat("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                                    ((model.TriangleIndices[t] + minIndex + 1) + startIndex),
-                                    ((model.TriangleIndices[t + 1] + minIndex + 1) + startIndex),
-                                    ((model.TriangleIndices[t + 2] + minIndex + 1) + startIndex)).AppendLine();
+                                    ((indices[t] + minIndex + 1) + startIndex),
+                                    ((indices[t + 1] + minIndex + 1) + startIndex),
+                                    ((indices[t + 2] + minIndex + 1) + startIndex)).AppendLine();
                             }
 
                             minIndex += vCount;
