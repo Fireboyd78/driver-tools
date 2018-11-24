@@ -134,7 +134,16 @@ namespace Zartex
                     "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 if (result == DialogResult.OK)
-                    LoadScriptFile(MissionPackage.FileName);
+                {
+                    var filename = MissionPackage.FileName;
+
+                    // close the old file
+                    MissionPackage.Dispose();
+                    MissionPackage = null;
+
+                    // reopen it
+                    LoadScriptFile(filename);
+                }
             }
             else
             {
