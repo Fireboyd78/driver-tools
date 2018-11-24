@@ -43,17 +43,37 @@ namespace Zartex.Converters
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            throw new NotImplementedException();
+            if ((value != null) && (value is string))
+            {
+                var str = value as string;
+                var style = NumberStyles.Any;
+
+                if (str.StartsWith("0x"))
+                {
+                    str = str.Substring(2);
+                    style = NumberStyles.HexNumber;
+                }
+
+                var result = int.Parse(str, style);
+
+                if ((result & 0xFF) == result)
+                    return (byte)result;
+                if ((result & 0xFFFF) == result)
+                    return (short)result;
+
+                return result;
+
+            }
+
+            return base.ConvertFrom(context, culture, value);
         }
 
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
             if (destinationType == typeof(string))
-            {
-                return String.Format("{0:X}", value);
-            }
+                return String.Format("0x{0:X}", value);
 
-            return null;
+            return base.ConvertTo(context, culture, value, destinationType);
         }
     }
 
