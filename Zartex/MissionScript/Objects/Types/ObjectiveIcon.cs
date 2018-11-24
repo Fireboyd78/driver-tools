@@ -10,31 +10,31 @@ using DSCript;
 
 namespace Zartex
 {
-    public class MissionObject_10 : MissionObject
+    public class ObjectiveIconObject : MissionObject
     {
         public override int TypeId
         {
-            get { return 10; }
+            get { return 6; }
         }
+
+        public Vector3 Position { get; set; }
+        public Vector2 Rotation { get; set; }
 
         public int Type { get; set; }
 
-        public Vector2 V1 { get; set; }
-        public Vector2 V2 { get; set; }
-
         protected override void LoadData(Stream stream)
         {
-            Type = stream.ReadInt32();
+            Position = stream.Read<Vector3>();
+            Rotation = stream.Read<Vector2>();
 
-            V1 = stream.Read<Vector2>();
-            V2 = stream.Read<Vector2>();
+            Type = stream.ReadInt32();
         }
 
         protected override void SaveData(Stream stream)
         {
+            stream.Write(Position);
+            stream.Write(Rotation);
             stream.Write(Type);
-            stream.Write(V1);
-            stream.Write(V2);
         }
     }
 }

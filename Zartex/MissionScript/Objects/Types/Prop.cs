@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Zartex
 {
-    public class MissionObject_8 : MissionObject
+    public class PropObject : MissionObject
     {
         public override int TypeId
         {

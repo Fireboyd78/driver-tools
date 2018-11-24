@@ -12,6 +12,7 @@ namespace Zartex
     {
         public abstract int TypeId { get; }
 
+        [Browsable(false)]
         public virtual bool HasCreationData
         {
             get { return false; }

@@ -22,13 +22,13 @@ namespace Zartex
             case 3: return typeof(VolumeObject);
             case 4: return typeof(AreaObject);
             case 5: return typeof(PathObject);
-            case 6: return typeof(MissionObject_6);
+            case 6: return typeof(ObjectiveIconObject);
             case 7: return typeof(CameraObject);
-            case 8: return typeof(MissionObject_8);
-            case 9: return typeof(MissionObject_9);
-            case 10: return typeof(MissionObject_10);
-            case 11: return typeof(MissionObject_11);
-            case 12: return typeof(MissionObject_12);
+            case 8: return typeof(PropObject);
+            case 9: return typeof(SwitchObject);
+            case 10: return typeof(WeaponObject);
+            case 11: return typeof(CollectableObject);
+            case 12: return typeof(MarkerObject);
             }
 
             return null;
@@ -43,7 +43,13 @@ namespace Zartex
             case 3: return "Volume";
             case 4: return "Area";
             case 5: return "Path";
+            case 6: return "ObjectiveIcon";
             case 7: return "Camera";
+            case 8: return "Prop";
+            case 9: return "Switch";
+            case 10: return "Weapon";
+            case 11: return "Collectable";
+            case 12: return "Marker";
             }
 
             return typeId.ToString();

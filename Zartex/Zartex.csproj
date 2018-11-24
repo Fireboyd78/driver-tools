@@ -92,13 +92,13 @@
     <Compile Include="MissionScript\Objects\Types\Volume.cs" />
     <Compile Include="MissionScript\Objects\Types\Area.cs" />
     <Compile Include="MissionScript\Objects\Types\Path.cs" />
-    <Compile Include="MissionScript\Objects\Types\0x6.cs" />
+    <Compile Include="MissionScript\Objects\Types\ObjectiveIcon.cs" />
     <Compile Include="MissionScript\Objects\Types\Camera.cs" />
-    <Compile Include="MissionScript\Objects\Types\0x8.cs" />
-    <Compile Include="MissionScript\Objects\Types\0x9.cs" />
-    <Compile Include="MissionScript\Objects\Types\0xA.cs" />
-    <Compile Include="MissionScript\Objects\Types\0xB.cs" />
-    <Compile Include="MissionScript\Objects\Types\0xC.cs" />
+    <Compile Include="MissionScript\Objects\Types\Prop.cs" />
+    <Compile Include="MissionScript\Objects\Types\Switch.cs" />
+    <Compile Include="MissionScript\Objects\Types\Weapon.cs" />
+    <Compile Include="MissionScript\Objects\Types\Collectable.cs" />
+    <Compile Include="MissionScript\Objects\Types\Marker.cs" />
     <Compile Include="MissionScript\Logic\NodeColor.cs" />
     <Compile Include="NodeWidget.cs">
       <SubType>UserControl</SubType>

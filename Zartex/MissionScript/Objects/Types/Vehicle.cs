@@ -32,6 +32,8 @@ namespace Zartex
         public byte[] CreationData { get; set; }
 
         public Vector3 Position { get; set; }
+
+        [TypeConverter(typeof(HexStringConverter))]
         public int UID { get; set; }
 
         protected override void LoadData(Stream stream)
