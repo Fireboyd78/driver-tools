@@ -65,7 +65,7 @@
       <DependentUpon>InspectorWidget.cs</DependentUpon>
     </Compile>
     <Compile Include="MissionScript\ExportedMissionObjects.cs" />
-    <Compile Include="MissionScript\LogicExport\NodeTypes.cs" />
+    <Compile Include="MissionScript\Logic\NodeTypes.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -74,32 +74,32 @@
     </Compile>
     <Compile Include="MissionScript\ExportedMission.cs" />
     <Compile Include="MissionScript\LogicExportData.cs" />
-    <Compile Include="MissionScript\LogicExport\ActorDefinition.cs" />
-    <Compile Include="MissionScript\LogicExport\LogicDataCollection.cs" />
-    <Compile Include="MissionScript\LogicExport\NodeDefinition.cs" />
-    <Compile Include="MissionScript\LogicExport\StringCollectionData.cs" />
-    <Compile Include="MissionScript\LogicExport\WireCollection.cs" />
-    <Compile Include="MissionScript\LogicExport\WireCollectionData.cs" />
-    <Compile Include="MissionScript\LogicExport\WireNode.cs" />
-    <Compile Include="MissionScript\LogicExport\WireNodeType.cs" />
+    <Compile Include="MissionScript\Logic\ActorDefinition.cs" />
+    <Compile Include="MissionScript\Logic\LogicDataCollection.cs" />
+    <Compile Include="MissionScript\Logic\NodeDefinition.cs" />
+    <Compile Include="MissionScript\Logic\StringCollectionData.cs" />
+    <Compile Include="MissionScript\Logic\WireCollection.cs" />
+    <Compile Include="MissionScript\Logic\WireCollectionData.cs" />
+    <Compile Include="MissionScript\Logic\WireNode.cs" />
+    <Compile Include="MissionScript\Logic\WireNodeType.cs" />
     <Compile Include="MissionScript\MissionScriptFile.cs" />
     <Compile Include="MissionScript\MissionSummaryData.cs" />
     <Compile Include="MPC.cs" />
-    <Compile Include="MissionScript\LogicExport\NodeProperty.cs" />
-    <Compile Include="MissionScript\MissionObjects\IMissionObject.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x1.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x2.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x3.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x4.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x5.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x6.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x7.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x8.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0x9.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0xA.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0xB.cs" />
-    <Compile Include="MissionScript\MissionObjects\Types\0xC.cs" />
-    <Compile Include="MissionScript\LogicExport\NodeColor.cs" />
+    <Compile Include="MissionScript\Logic\NodeProperty.cs" />
+    <Compile Include="MissionScript\Objects\MissionObject.cs" />
+    <Compile Include="MissionScript\Objects\Types\Vehicle.cs" />
+    <Compile Include="MissionScript\Objects\Types\Character.cs" />
+    <Compile Include="MissionScript\Objects\Types\Volume.cs" />
+    <Compile Include="MissionScript\Objects\Types\Area.cs" />
+    <Compile Include="MissionScript\Objects\Types\Path.cs" />
+    <Compile Include="MissionScript\Objects\Types\0x6.cs" />
+    <Compile Include="MissionScript\Objects\Types\Camera.cs" />
+    <Compile Include="MissionScript\Objects\Types\0x8.cs" />
+    <Compile Include="MissionScript\Objects\Types\0x9.cs" />
+    <Compile Include="MissionScript\Objects\Types\0xA.cs" />
+    <Compile Include="MissionScript\Objects\Types\0xB.cs" />
+    <Compile Include="MissionScript\Objects\Types\0xC.cs" />
+    <Compile Include="MissionScript\Logic\NodeColor.cs" />
     <Compile Include="NodeWidget.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -108,8 +108,6 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="MissionScript\MissionObjects\ContainerBlock.cs" />
-    <Compile Include="Vector.cs" />
     <Compile Include="PropertySorter.cs" />
     <Compile Include="TypeConverters.cs" />
     <EmbeddedResource Include="DataGridWidget.resx">

@@ -8,6 +8,8 @@ using System.Reflection;
 using System.Linq;
 using System.Text;
 
+using DSCript;
+
 using Zartex.Converters;
 
 namespace Zartex

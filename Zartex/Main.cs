@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,7 @@ using System.Windows.Forms;
 
 using DSCript;
 
+using Zartex.Converters;
 using Zartex.Settings;
 
 // HACK: Fix discrepencies between "Form.DialogResult" and "System.Windows.Forms.DialogResult"
@@ -25,6 +27,10 @@ namespace Zartex
         static Main()
         {
             DSC.VerifyGameDirectory("Driv3r", "Zartex");
+
+            TypeDescriptor.AddAttributes(typeof(Vector2), new TypeConverterAttribute(typeof(VectorTypeConverter)));
+            TypeDescriptor.AddAttributes(typeof(Vector3), new TypeConverterAttribute(typeof(VectorTypeConverter)));
+            TypeDescriptor.AddAttributes(typeof(Vector4), new TypeConverterAttribute(typeof(VectorTypeConverter)));
         }
 
         string title;
@@ -63,21 +69,63 @@ namespace Zartex
             }
         }
 
+        private void InitTools()
+        {
+            if (MissionPackage.IsLoaded)
+            {
+                Text = String.Format("{0} - {1}", title, Filename);
+                GenerateLogicNodes();
+            }
+
+            mnFile_Save.Enabled = MissionPackage.IsLoaded;
+        }
+
+        private void LoadScriptFile(int missionId)
+        {
+            LoadScriptFile(Driv3r.GetMissionScript(missionId));
+        }
+
+        private void LoadScriptFile(string filename)
+        {
+            Filename = filename;
+            MissionPackage = new MissionScriptFile(Filename);
+
+            InitTools();
+        }
+        
         public void MenuLoadMission(object sender, EventArgs e)
         {
             int missionID = (int)((ToolStripMenuItem)sender).Tag;
-            //LoadScriptFile(MPCFile.GetMissionScriptFilepath(missionID));
+            
             LoadScriptFile(missionID);
+        }
+
+        private void MenuLoadFile(object sender, EventArgs e)
+        {
+            var result = ScriptFile.ShowDialog();
+
+            if (result == DialogResult.OK)
+            {
+                ScriptFile.InitialDirectory = Path.GetDirectoryName(ScriptFile.FileName);
+
+                LoadScriptFile(ScriptFile.FileName);
+            }
         }
 
         private void MenuSaveFile(object sender, EventArgs e)
         {
             var bakFile = MissionPackage.FileName + ".bak";
-            var idx = 0;
+            
+            if (File.Exists(bakFile))
+            {
+                var idx = 1;
 
-            while (File.Exists(bakFile))
-                bakFile += ++idx;
+                while (File.Exists(bakFile + idx))
+                    idx++;
 
+                bakFile += idx;
+            }
+            
             File.Copy(MissionPackage.FileName, bakFile);
 
             if (MissionPackage.Save())
@@ -90,7 +138,7 @@ namespace Zartex
             }
             else
             {
-                MessageBox.Show("File save failed! Not sure why this happened...",
+                MessageBox.Show("Failed to save file!",
                     "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -387,30 +435,27 @@ namespace Zartex
         
         private void GenerateExportedMissionObjects()
         {
-            /*
-            InspectorWidget Widget = new InspectorWidget();
-            TreeView Nodes = Widget.Nodes;
+            var widget = new InspectorWidget();
+            var nodes = widget.Nodes;
 
             Cursor = Cursors.WaitCursor;
-
-            TreeNode master = new TreeNode() {
-                Text = "Exported Mission Objects"
-            };
             
-            Console.WriteLine("There's {0} mission objects.", MissionPackage.ExportedMissionObjects.Count);
+            var objectsData = MissionPackage.MissionData.Objects;
+            var numObjects = objectsData.Objects.Count;
+            
+            for (int i = 0; i < numObjects; i++)
+            {
+                var obj = objectsData[i];
 
-            for (int i = 0; i < MissionPackage.ExportedMissionObjects.Count; i++)
-                master.Nodes.Add(new TreeNode() {
-                    Text = String.Format("{0}: Exported Mission Object", i),
-                    Tag = MissionPackage.ExportedMissionObjects[i]
+                nodes.Nodes.Add(new TreeNode() {
+                    Text = String.Format("[{0}]: {1}", i, ExportedMissionObjects.GetObjectNameById(obj.TypeId)),
+                    Tag = obj
                 });
-
-            Nodes.Nodes.Add(master);
-
-            SafeAddControl(Widget);
+            }
+            
+            SafeAddControl(widget);
 
             Cursor = Cursors.Default;
-            */
         }
         
         private void GenerateWireCollection()
@@ -1010,29 +1055,7 @@ namespace Zartex
             //
             //Cursor = Cursors.Default;
         }
-
-        private void LoadScriptFile(int missionId)
-        {
-            LoadScriptFile(Driv3r.GetMissionScript(missionId));
-        }
-
-        private void LoadScriptFile(string filename)
-        {
-            Filename = filename;
-            MissionPackage = new MissionScriptFile(Filename);
-
-            InitTools();
-        }
         
-        private void InitTools()
-        {
-            if (MissionPackage.IsLoaded)
-            {
-                Text = String.Format("{0} - {1}", title, Filename);
-                GenerateLogicNodes();
-            }
-        }
-
         /// <summary> Safely adds a control to the form.</summary>
         private void SafeAddControl(Control control)
         {
@@ -1057,8 +1080,7 @@ namespace Zartex
                 switch (cType)
                 {
                 case ChunkType.ExportedMissionObjects:
-                    MessageBox.Show("Sorry, not implemented.", "Zartex", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    //GenerateExportedMissionObjects();
+                    GenerateExportedMissionObjects();
                     break;
                 case ChunkType.LogicExportStringCollection:
                     GenerateStringCollection();
@@ -1085,19 +1107,6 @@ namespace Zartex
             }
             else
                 MessageBox.Show("No mission loaded!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-        }
-        
-        private void MenuLoadFile(object sender, EventArgs e)
-        {
-            var result = ScriptFile.ShowDialog();
-            
-            if (result == DialogResult.OK)
-            {
-                ScriptFile.InitialDirectory = Path.GetDirectoryName(ScriptFile.FileName);
-
-                LoadScriptFile(ScriptFile.FileName);
-                mnFile_Save.Enabled = true;
-            }
         }
         
         private void onPaintFlowgraph(object sender, PaintEventArgs e)

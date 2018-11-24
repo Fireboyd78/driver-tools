@@ -129,13 +129,7 @@ namespace Zartex
                 } break;
             case 17:
                 {
-                    Vector4 val = new Vector4() {
-                        X = stream.ReadFloat(),
-                        Y = stream.ReadFloat(),
-                        Z = stream.ReadFloat(),
-                        W = stream.ReadFloat()
-                    };
-
+                    var val = stream.Read<Vector4>();
                     prop = new Float4Property(val);
                 } break;
             case 19:
@@ -213,7 +207,7 @@ namespace Zartex
             else if (property is StringProperty)
             {
                 stream.Write(0x2);
-                stream.Write((int)((short)property.Value) | (0x3E3E << 8));
+                stream.Write((short)property.Value);
             }
             else if (property is AIPersonalityProperty)
             {
@@ -239,13 +233,7 @@ namespace Zartex
             else if (property is Float4Property)
             {
                 stream.Write(0x10);
-
-                var vec = (Vector4)property.Value;
-
-                stream.Write((float)vec.X);
-                stream.Write((float)vec.Y);
-                stream.Write((float)vec.Z);
-                stream.Write((float)vec.W);
+                stream.Write((Vector4)property.Value);
             }
             else if (property is UnicodeStringProperty)
             {
@@ -268,7 +256,10 @@ namespace Zartex
             }
 
             if (alignStream)
-                stream.Align(4);
+            {
+                while ((stream.Position & 0x3) != 0)
+                    stream.WriteByte(0x3E);
+            }
         }
 
         protected int GetSizeOfProperty(NodeProperty prop)

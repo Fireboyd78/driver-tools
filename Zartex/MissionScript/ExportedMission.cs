@@ -25,6 +25,7 @@ namespace Zartex
 
         protected override void Save()
         {
+            SpoolableResourceFactory.Save(Objects);
             SpoolableResourceFactory.Save(LogicData);
         }
     }

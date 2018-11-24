@@ -6,21 +6,27 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 
+using DSCript;
+
 namespace Zartex
 {
     public class MissionObject_11 : MissionObject
     {
-        public override int Id
+        public override int TypeId
         {
             get { return 11; }
         }
 
-        public override int Size
+        public Vector3 V1 { get; set; }
+
+        protected override void LoadData(Stream stream)
         {
-            get { return (4 + (Floats.Count * 4)); }
+            V1 = stream.Read<Vector3>();
         }
 
-        [TypeConverter(typeof(CollectionConverter))]
-        public List<double> Floats { get; set; }
+        protected override void SaveData(Stream stream)
+        {
+            stream.Write(V1);
+        }
     }
 }
