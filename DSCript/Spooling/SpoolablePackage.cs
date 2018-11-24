@@ -80,7 +80,7 @@ namespace DSCript.Spooling
                         {
                             var s = Children[i];
 
-                            if (s.IsDirty)
+                            if (s.AreChangesPending)
                             {
                                 dirtyIndex = i;
                                 break;
