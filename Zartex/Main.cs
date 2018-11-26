@@ -487,7 +487,7 @@ namespace Zartex
                 var lNode = nodeDefs[lNodeIdx];
                 var lNodeName = MissionPackage.MissionData.LogicData.StringCollection[lNode.StringId];
                 
-                var text = $"[{lNodeIdx}]: {NodeTypes.GetNodeType(lNode.OpCode)}";
+                var text = $"[{lNodeIdx}]: {NodeTypes.GetNodeType(lNode.TypeId)}";
 
                 if (!String.IsNullOrEmpty(lNodeName))
                     text = $"{text} \"{lNodeName}\"";
@@ -538,13 +538,13 @@ namespace Zartex
             {
                 var value = (int)prop.Value;
                 
-                switch (prop.OpCode)
+                switch (prop.TypeId)
                 {
                 case 7:
                     if (value != -1)
                     {
                         var actor = MissionPackage.MissionData.LogicData.Actors[value];
-                        var actorName = NodeTypes.GetActorType(actor.OpCode);
+                        var actorName = NodeTypes.GetActorType(actor.TypeId);
                         var actorText = MissionPackage.MissionData.LogicData.StringCollection[actor.StringId];
 
                         if (actorText != "Unknown" && actorText != "Unnamed")
@@ -567,7 +567,7 @@ namespace Zartex
             }
             else
             {
-                switch (prop.OpCode)
+                switch (prop.TypeId)
                 {
                 case 2:
                     propValue = String.Format("{0:0.0###}", (float)prop.Value);
@@ -583,14 +583,14 @@ namespace Zartex
 
                         propValue = String.Format("\"{0}\"", MissionPackage.MissionData.LogicData.StringCollection[strId]);
 
-                        if (prop.OpCode == 8)
-                            propValue = String.Format("{{ {0}, {1} }}", propValue, ((AIPersonalityProperty)prop).PersonalityIndex);
+                        if (prop.TypeId == 8)
+                            propValue = String.Format("{{ {0}, {1} }}", propValue, ((TextFileItemProperty)prop).Index);
                     } break;
                 }
             }
             
             var propNode = new TreeNode() {
-                Text = (prop.OpCode != 19) ? $"{propName}: {propValue}" : propName,
+                Text = (prop.TypeId != 19) ? $"{propName}: {propValue}" : propName,
                 Tag = prop
             };
 
@@ -600,7 +600,7 @@ namespace Zartex
 
         private void StyleNode(TreeNode node, NodeDefinition def)
         {
-            var text = (def is ActorDefinition) ? NodeTypes.GetActorType(def.OpCode) : NodeTypes.GetNodeType(def.OpCode);
+            var text = (def is ActorDefinition) ? NodeTypes.GetActorType(def.TypeId) : NodeTypes.GetNodeType(def.TypeId);
             var name = MissionPackage.MissionData.LogicData.StringCollection[def.StringId];
 
             if (name != "Unknown" && name != "Unnamed")
@@ -813,13 +813,13 @@ namespace Zartex
         public void GenerateDefinition(FlowgraphWidget flowgraph, NodeDefinition def, int x, int y)
         {
             IDictionary<int, string> opcodes =
-                (def.Properties[0].OpCode == 19)
+                (def.Properties[0].TypeId == 19)
                 ? NodeTypes.LogicNodeTypes
                 : NodeTypes.ActorNodeTypes;
 
             string strName = MissionPackage.MissionData.LogicData.StringCollection[def.StringId];
             string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
-            string opcodeName = opcodes.ContainsKey(def.OpCode) ? opcodes[def.OpCode] : def.OpCode.ToString();
+            string opcodeName = opcodes.ContainsKey(def.TypeId) ? opcodes[def.TypeId] : def.TypeId.ToString();
 
             NodeWidget node = new NodeWidget() {
                 Flowgraph = flowgraph,
@@ -904,7 +904,7 @@ namespace Zartex
             int nodeCount = definition.Count;
 
             IDictionary<int, string> opcodes =
-                (definition[0].Properties[0].OpCode == 19)
+                (definition[0].Properties[0].TypeId == 19)
                 ? NodeTypes.LogicNodeTypes
                 : NodeTypes.ActorNodeTypes;
 
