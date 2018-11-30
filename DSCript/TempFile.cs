@@ -162,40 +162,47 @@ namespace DSCript
             return ((tempFile.Handle > -1) && _tempFiles[tempFile.Handle] == tempFile);
         }
 
-        internal static int GetNextFreeHandle()
+        internal static int FindFreeHandle(int index)
         {
-            if (_nextTempHandle < _maxTempHandles && _tempFiles[_nextTempHandle] != null)
+            for (int handle = index; handle < _maxTempHandles; handle++)
             {
-                // no handle found yet
-                _nextTempHandle = -1;
-
-                // start at the beginning and work our way up
-                var handle = 0;
-
-                while (handle < _maxTempHandles)
-                {
-                    if (_tempFiles[handle] == null)
-                    {
-                        _nextTempHandle = handle;
-                        break;
-                    }
-                }
-
-                // was there a free handle we could use?
-                if (_nextTempHandle == -1)
-                {
-                    DSC.Log("Increasing max number of temp handles...");
-
-                    // time to start hogging up more memory >_>
-                    _maxTempHandles += 250;
-
-                    var tempFiles = new DSCTempFile[_maxTempHandles];
-                    Array.Copy(_tempFiles, tempFiles, _tempFiles.Length);
-
-                    _tempFiles = tempFiles;
-                }
+                if (_tempFiles[handle] == null)
+                    return handle;
             }
 
+            return -1;
+        }
+
+        internal static int AllocateHandles(int count)
+        {
+            // will be first available handle after allocation
+            var first = _maxTempHandles;
+
+            DSC.Log("Increasing max number of temp handles...");
+
+            // time to start hogging up more memory >_>
+            _maxTempHandles += count;
+
+            var tempFiles = new DSCTempFile[_maxTempHandles];
+            Array.Copy(_tempFiles, tempFiles, _tempFiles.Length);
+
+            _tempFiles = tempFiles;
+            
+            return first;
+        }
+
+        internal static int GetFreeHandle()
+        {
+            if ((_nextTempHandle >= _maxTempHandles) || (_tempFiles[_nextTempHandle] != null))
+            {
+                _nextTempHandle = FindFreeHandle(0);
+
+                // was there a free handle we could use?
+                // if not, allocate some more
+                if (_nextTempHandle == -1)
+                    _nextTempHandle = AllocateHandles(250);
+            }
+            
             return _nextTempHandle++;
         }
 
@@ -209,8 +216,10 @@ namespace DSCript
                 throw new InvalidOperationException("Cannot add a temp file that was already initialized!");
             }
 
-            tempFile.Handle = _nextTempHandle;
-            _tempFiles[GetNextFreeHandle()] = tempFile;
+            var handle = GetFreeHandle();
+
+            tempFile.Handle = handle;
+            _tempFiles[handle] = tempFile;
         }
 
         internal static void UnregisterTempFile(DSCTempFile tempFile)
