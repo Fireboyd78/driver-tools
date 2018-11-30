@@ -375,6 +375,12 @@ namespace DSCript.Models
         public Vector3 PositionW;
         public Vector3 NormalW;
 
+        public void ApplyScale(Vector3 scale)
+        {
+            Position *= scale;
+            PositionW *= scale;
+        }
+
         public void FixDirection()
         {
             Position = new Vector3(-Position.X, Position.Z, Position.Y);

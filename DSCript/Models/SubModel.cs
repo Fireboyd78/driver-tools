@@ -127,7 +127,7 @@ namespace DSCript.Models
                         var vertex = vBuffer.Vertices[vIdx].ToVertex();
 
                         if (useScale)
-                            vertex.Position *= scale;
+                            vertex.ApplyScale(scale);
 
                         if (adjustVertices)
                             vertex.FixDirection();
@@ -208,7 +208,7 @@ namespace DSCript.Models
                 var vertex = vBuffer.Vertices[vIdx].ToVertex();
 
                 if (useScale)
-                    vertex.Position *= scale;
+                    vertex.ApplyScale(scale);
 
                 if (adjustVertices)
                     vertex.FixDirection();

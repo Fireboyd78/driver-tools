@@ -45,12 +45,12 @@ namespace Antilli
             var positions = new Point3DCollection(nVerts);
             var normals = new Vector3DCollection(nVerts);
             var textureCoordinates = new PointCollection(nVerts);
-
+            
             foreach (var vertex in Vertices)
             {
                 var pos = vertex.Position;
                 var nor = vertex.Normal;
-
+                
                 if (tweenVertices)
                 {
                     pos = (pos + (vertex.PositionW * TweenFactor));
