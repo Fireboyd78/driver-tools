@@ -53,11 +53,35 @@ namespace DSCript
             );
         }
 
+        public static Vector2 Multiply(Vector2 vector1, Vector2 vector2)
+        {
+            return new Vector2(
+                vector1.X * vector2.X,
+                vector1.Y * vector2.Y
+            );
+        }
+
         public static Vector2 Multiply(Vector2 vector, float scalar)
         {
             return new Vector2(
                 vector.X * scalar,
                 vector.Y * scalar
+            );
+        }
+
+        public static Vector2 Scale(Vector2 vector1, Vector2 vector2)
+        {
+            return new Vector2(
+                vector1.X / vector2.X,
+                vector1.Y / vector2.Y
+            );
+        }
+
+        public static Vector2 Scale(Vector2 vector, float scalar)
+        {
+            return new Vector2(
+                vector.X / scalar,
+                vector.Y / scalar
             );
         }
 
@@ -71,9 +95,24 @@ namespace DSCript
             return Subtract(vector1, vector2);
         }
 
+        public static Vector2 operator *(Vector2 vector1, Vector2 vector2)
+        {
+            return Multiply(vector1, vector2);
+        }
+
         public static Vector2 operator *(Vector2 vector, float scalar)
         {
             return Multiply(vector, scalar);
+        }
+
+        public static Vector2 operator /(Vector2 vector1, Vector2 vector2)
+        {
+            return Scale(vector1, vector2);
+        }
+
+        public static Vector2 operator /(Vector2 vector, float scalar)
+        {
+            return Scale(vector, scalar);
         }
 
         public static bool operator ==(Vector2 left, Vector2 right)
@@ -152,12 +191,39 @@ namespace DSCript
             );
         }
 
+        public static Vector3 Multiply(Vector3 vector1, Vector3 vector2)
+        {
+            return new Vector3(
+                vector1.X * vector2.X,
+                vector1.Y * vector2.Y,
+                vector1.Z * vector2.Z
+            );
+        }
+
         public static Vector3 Multiply(Vector3 vector, float scalar)
         {
             return new Vector3(
                 vector.X * scalar,
                 vector.Y * scalar,
                 vector.Z * scalar
+            );
+        }
+
+        public static Vector3 Scale(Vector3 vector1, Vector3 vector2)
+        {
+            return new Vector3(
+                vector1.X / vector2.X,
+                vector1.Y / vector2.Y,
+                vector1.Z / vector2.Z
+            );
+        }
+
+        public static Vector3 Scale(Vector3 vector, float scalar)
+        {
+            return new Vector3(
+                vector.X / scalar,
+                vector.Y / scalar,
+                vector.Z / scalar
             );
         }
 
@@ -171,9 +237,24 @@ namespace DSCript
             return Subtract(vector1, vector2);
         }
 
+        public static Vector3 operator *(Vector3 vector1, Vector3 vector2)
+        {
+            return Multiply(vector1, vector2);
+        }
+
         public static Vector3 operator *(Vector3 vector, float scalar)
         {
             return Multiply(vector, scalar);
+        }
+
+        public static Vector3 operator /(Vector3 vector1, Vector3 vector2)
+        {
+            return Scale(vector1, vector2);
+        }
+
+        public static Vector3 operator /(Vector3 vector, float scalar)
+        {
+            return Scale(vector, scalar);
         }
 
         public static bool operator ==(Vector3 left, Vector3 right)
@@ -201,11 +282,11 @@ namespace DSCript
             return Color.FromScRgb(1.0f, value.X, value.Y, value.Z);
         }
 
-        public static implicit operator Vector4(Vector3 value)
+        public static implicit operator Vector3(Vector4 value)
         {
-            return new Vector4(value.X, value.Y, value.Z, 1.0f);
+            return new Vector3(value.X, value.Y, value.Z);
         }
-
+        
         public override string ToString()
         {
             return $"{X:F4},{Y:F4},{Z:F4}";
@@ -272,6 +353,16 @@ namespace DSCript
             );
         }
 
+        public static Vector4 Multiply(Vector4 vector1, Vector4 vector2)
+        {
+            return new Vector4(
+                vector1.X * vector2.X,
+                vector1.Y * vector2.Y,
+                vector1.Z * vector2.Z,
+                vector1.W * vector2.W
+            );
+        }
+
         public static Vector4 Multiply(Vector4 vector, float scalar)
         {
             return new Vector4(
@@ -279,6 +370,26 @@ namespace DSCript
                 vector.Y * scalar,
                 vector.Z * scalar,
                 vector.W * scalar
+            );
+        }
+
+        public static Vector4 Scale(Vector4 vector1, Vector4 vector2)
+        {
+            return new Vector4(
+                vector1.X / vector2.X,
+                vector1.Y / vector2.Y,
+                vector1.Z / vector2.Z,
+                vector1.W / vector2.W
+            );
+        }
+
+        public static Vector4 Scale(Vector4 vector, float scalar)
+        {
+            return new Vector4(
+                vector.X / scalar,
+                vector.Y / scalar,
+                vector.Z / scalar,
+                vector.W / scalar
             );
         }
 
@@ -292,9 +403,24 @@ namespace DSCript
             return Subtract(vector1, vector2);
         }
 
+        public static Vector4 operator *(Vector4 vector1, Vector4 vector2)
+        {
+            return Multiply(vector1, vector2);
+        }
+
         public static Vector4 operator *(Vector4 vector, float scalar)
         {
             return Multiply(vector, scalar);
+        }
+
+        public static Vector4 operator /(Vector4 vector1, Vector4 vector2)
+        {
+            return Scale(vector1, vector2);
+        }
+
+        public static Vector4 operator /(Vector4 vector, float scalar)
+        {
+            return Scale(vector, scalar);
         }
 
         public static bool operator ==(Vector4 left, Vector4 right)
@@ -306,7 +432,7 @@ namespace DSCript
         {
             return !left.Equals(right);
         }
-
+        
         public static implicit operator Point4D(Vector4 value)
         {
             return new Point4D(value.X, value.Y, value.Z, value.W);
@@ -315,6 +441,11 @@ namespace DSCript
         public static implicit operator Color(Vector4 value)
         {
             return Color.FromScRgb(value.W, value.X, value.Y, value.Z);
+        }
+
+        public static implicit operator Vector4(Vector3 value)
+        {
+            return new Vector4(value.X, value.Y, value.Z, 1.0f);
         }
 
         public override string ToString()
