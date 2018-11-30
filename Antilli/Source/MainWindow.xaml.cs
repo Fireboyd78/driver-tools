@@ -319,7 +319,7 @@ namespace Antilli
             var extension = Path.GetExtension(filename).ToLower();
             var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
 
-            var useDPLHack = false;
+            AT.CurrentState.UseDPLHacks = false;
 
             if (filter.Flags == GameFileFlags.None)
             {
@@ -327,7 +327,7 @@ namespace Antilli
 
                 if (filter.Flags != GameFileFlags.None)
                 {
-                    useDPLHack = true;
+                    AT.CurrentState.UseDPLHacks = true;
                 }
                 else
                 {

@@ -86,7 +86,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
             var objBuilder  = new StringBuilder();
 
             var header = String.Format(
-                "# Driver Model .OBJ Exporter v0.7b\r\n" +
+                "# Driver Model .OBJ Exporter v0.78b\r\n" +
                 "# Exported: {0}\r\n", DateTime.Now);
 
             objBuilder.AppendLine(header);
@@ -94,7 +94,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
             objBuilder.AppendFormat("mtllib {0}.mtl", filename).AppendLines(2);
 
-            var materials = new List<DSCript.Models.MaterialDataPC>();
+            var materials = new List<MaterialDataPC>();
             
             var startIndex = 0;
             var modelIndex = 0;
@@ -106,7 +106,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                 if (part.UID != uid)
                     continue;
 
-                objBuilder.AppendLine("# ---- Parts Group {0} ---- #", ++modelIndex);
+                objBuilder.AppendLine("# ---- Model {0} ---- #", ++modelIndex);
                 objBuilder.AppendLine();
 
                 for (int g = 0; g < part.Lods.Length; g++)

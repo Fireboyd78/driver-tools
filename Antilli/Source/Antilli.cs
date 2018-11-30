@@ -204,7 +204,7 @@ namespace Antilli
             {
                 get { return CurrentTab == 2; }
             }
-
+            
             ModelFile m_modelFile;
             ModelPackage m_modelPackage;
 
@@ -314,6 +314,8 @@ namespace Antilli
             {
                 TextureSelectQueried?.Invoke(texture, null);
             }
+
+            public bool UseDPLHacks { get; set; }
         }
 
         public static StateData CurrentState;

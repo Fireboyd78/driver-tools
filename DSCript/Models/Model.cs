@@ -87,7 +87,8 @@ namespace DSCript.Models
     {
         public UID UID;
         
-        public Vector4 Unknown { get; set; }
+        // only used in DPL!?
+        public Vector4 Scale { get; set; }
 
         /// <summary>
         /// Gets or sets the Vertex Buffer to use when accessing vertices

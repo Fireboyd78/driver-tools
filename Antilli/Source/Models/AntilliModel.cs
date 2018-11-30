@@ -211,7 +211,7 @@ namespace Antilli
                 var model = new Model() {
                     UID = mdl.UID,
 
-                    V1 = mdl.Unknown,
+                    V1 = mdl.Scale,
 
                     Transform1 = new Matrix(
                         t11.X, t11.Y, t11.Z, t11.W,

@@ -741,13 +741,11 @@ namespace Antilli
             foreach (var model in Models)
             {
                 model.UID = new UID(uid, handle);
-
-                // no fucking clue what this is
-                // with my luck, it's just padding :/
-                model.Unknown = new Vector4() {
-                    X = 0.0f,
-                    Y = 0.0f,
-                    Z = 0.0f,
+                
+                model.Scale = new Vector4() {
+                    X = 1.0f,
+                    Y = 1.0f,
+                    Z = 1.0f,
                     W = 1.0f,
                 };
 

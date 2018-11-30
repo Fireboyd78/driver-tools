@@ -97,17 +97,25 @@ namespace DSCript.Models
                 return null;
 
             var vertices = new List<Vertex>(VertexCount);
-            var fans = new List<int>();
-
-            var indexBuffer = ModelPackage.IndexBuffer.Buffer;
-            var indexOffset = (IndexOffset / 2);
-
-            var lookup = new Dictionary<int, int>();
-            var index = 0;
-
+            
             switch (PrimitiveType)
             {
             case PrimitiveType.TriangleFan:
+                var fans = new List<int>();
+
+                var indexBuffer = ModelPackage.IndexBuffer.Buffer;
+                var indexOffset = (IndexOffset / 2);
+
+                var lookup = new Dictionary<int, int>();
+                var index = 0;
+
+                var instance = LodInstance;
+                var lod = instance.Parent;
+                var model = lod.Parent;
+
+                Vector3 scale = model.Scale;
+                var useScale = (ModelPackage.Version == 1);
+
                 // collect vertices + fans
                 for (int v = 0; v < VertexCount; v++)
                 {
@@ -117,7 +125,10 @@ namespace DSCript.Models
                     if (!lookup.ContainsKey(vIdx))
                     {
                         var vertex = vBuffer.Vertices[vIdx].ToVertex();
-                        
+
+                        if (useScale)
+                            vertex.Position *= scale;
+
                         if (adjustVertices)
                             vertex.FixDirection();
 
@@ -179,7 +190,14 @@ namespace DSCript.Models
                 return null;
 
             var vertices = new List<Vertex>(VertexCount);
-            
+
+            var instance = LodInstance;
+            var lod = instance.Parent;
+            var model = lod.Parent;
+
+            Vector3 scale = model.Scale;
+            var useScale = (ModelPackage.Version == 1);
+
             for (int v = 0; v <= VertexCount; v++)
             {
                 var vIdx = (VertexBaseOffset + VertexOffset + v);
@@ -187,8 +205,14 @@ namespace DSCript.Models
                 if (vIdx >= vBuffer.Count)
                     break;
 
-                var vertex = vBuffer.Vertices[vIdx].ToVertex(adjustVertices);
+                var vertex = vBuffer.Vertices[vIdx].ToVertex();
 
+                if (useScale)
+                    vertex.Position *= scale;
+
+                if (adjustVertices)
+                    vertex.FixDirection();
+                
                 vertices.Add(vertex);
             }
 

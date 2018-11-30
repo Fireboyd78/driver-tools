@@ -283,7 +283,7 @@ namespace Antilli
         {
             Content.Geometry = Mesh.ToGeometry(UseBlendWeights);
         }
-
+        
         protected virtual void OnModelChanged()
         {
             if (Mesh != null)
@@ -291,7 +291,7 @@ namespace Antilli
                 Mesh.Vertices.Clear();
                 Mesh.TriangleIndices.Clear();
             }
-
+            
             var indices = new List<int>();
             var vertices = Model.GetVertices(true, ref indices);
             

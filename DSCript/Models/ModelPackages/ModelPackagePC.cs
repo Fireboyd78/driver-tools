@@ -754,7 +754,7 @@ namespace DSCript.Models
                 var model = new Model() {
                     UID = uid,
 
-                    Unknown = unknown,
+                    Scale = unknown,
 
                     VertexType = vBufType,
 
@@ -1376,7 +1376,7 @@ namespace DSCript.Models
                         f.Position = Header.ModelsOffset + (p * Header.ModelSize);
 
                         f.Write(part.UID);
-                        f.Write(part.Unknown);
+                        f.Write(part.Scale);
                        
                         var vBufferId = VertexBuffers.IndexOf(part.VertexBuffer);
 

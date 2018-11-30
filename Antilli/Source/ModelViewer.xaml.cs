@@ -252,9 +252,10 @@ namespace Antilli
                     var model = lod.Parent;
 
                     DSC.Log($"{model.Unknown3} {model.Flags} {lod.ID} {lod.Type}");
-                    DSC.Log($"{model.Unknown}");
-                    DSC.Log($"{model.Transform[0]} {model.Transform[1]} {model.Transform[2]} {model.Transform[3]}");
-                    DSC.Log($"{instance.Transform[0]} {instance.Transform[1]} {instance.Transform[2]} {instance.Transform[3]}");
+                    DSC.Log($"{model.Scale}");
+                    DSC.Log($"{model.Transform[0]}\n\t{model.Transform[1]}\n\t{model.Transform[2]}\n\t{model.Transform[3]}");
+                    DSC.Log($"{model.Transform[4]}\n\t{model.Transform[5]}\n\t{model.Transform[6]}\n\t{model.Transform[7]}");
+                    DSC.Log($"{instance.Transform[0]}\n\t{instance.Transform[1]}\n\t{instance.Transform[2]}\n\t{instance.Transform[3]}");
                 }
             }
         }
