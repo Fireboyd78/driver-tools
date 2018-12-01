@@ -93,6 +93,11 @@ namespace DSCript.Spooling
             }
         }
 
+        public SpoolerCollection Children
+        {
+            get { return Content.Children; }
+        }
+
         #region Event Handlers
         /// <summary>
         /// An event that is called when a spooler is loaded from a file. The event args are unused.
