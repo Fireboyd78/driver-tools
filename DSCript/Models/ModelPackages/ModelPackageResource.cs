@@ -30,6 +30,26 @@ namespace DSCript.Models
         protected const int MGX_ModelPackageXBox    = 0x4258444D; // 'MDXB'
         protected const int MGX_ModelPackagePC      = 0x4350444D; // 'MDPC'
         protected const int MGX_ModelPackageXN      = 0x4E58444D; // 'MDXN'
+
+        public static int GetChunkId(PlatformType platform, int version)
+        {
+            switch (platform)
+            {
+            case PlatformType.PS2:
+                return MGX_ModelPackagePS2;
+            case PlatformType.Xbox:
+                return MGX_ModelPackageXBox;
+            case PlatformType.PC:
+                switch (version)
+                {
+                case 1: return MGX_ModelPackageXN;
+                case 6: return MGX_ModelPackagePC;
+                }
+                break;
+            }
+            
+            return 0x21505453;
+        }
         
         public PlatformType Platform { get; set; }
         
