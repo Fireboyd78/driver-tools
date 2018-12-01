@@ -1244,19 +1244,24 @@ namespace DSCript.Models
             pcmpSize = MaterialsHeader.TextureDataOffset;
             
             var texOffsets = new Dictionary<int, int>(MaterialsHeader.TexturesCount);
+            var texOffsetList = new List<int>();
 
             for (int i = 0; i < MaterialsHeader.TexturesCount; i++)
             {
                 var tex = Textures[i];
 
-                if (!texOffsets.ContainsKey(tex.Hash))
+                var hash = (int)Memory.GetCRC32(tex.Buffer);
+
+                if (!texOffsets.ContainsKey(hash))
                 {
                     pcmpSize = Memory.Align(pcmpSize, 128);
 
-                    texOffsets.Add(tex.Hash, (pcmpSize - MaterialsHeader.TextureDataOffset));
+                    texOffsets.Add(hash, (pcmpSize - MaterialsHeader.TextureDataOffset));
 
                     pcmpSize += tex.Buffer.Length;
                 }
+
+                texOffsetList.Add(texOffsets[hash]);
             }
 
             MaterialsHeader.DataSize = pcmpSize;
@@ -1449,7 +1454,7 @@ namespace DSCript.Models
 
                     f.Position = pcmpOffset + tOffset;
 
-                    var dataOffset = texOffsets[tex.Hash];
+                    var dataOffset = texOffsetList[t];
 
                     f.Write(tex.UID);
                     f.Write(tex.Hash);
