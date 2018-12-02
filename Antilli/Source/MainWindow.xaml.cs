@@ -1273,6 +1273,32 @@ namespace Antilli
                 {
                 case 0:
                     Viewer.OnKeyPressed(o, e);
+
+                    switch (e.Key)
+                    {
+                    case Key.X:
+                        var modelPackage = ModelConverter.Convert(CurrentModelPackage, 6);
+
+                        // assume it's a vehicle
+                        modelPackage.UID = 0xFF;
+
+                        var resource = modelPackage.GetInterface();
+
+                        resource.Save();
+
+                        var chunker = new FileChunker();
+
+                        chunker.Children.Add(resource.Spooler);
+
+                        var filename = Path.Combine(Settings.ExportDirectory,
+                            $"{Path.GetFileNameWithoutExtension(CurrentModelFile.FileName)}_converted.vvv");
+
+                        chunker.Save(filename);
+
+                        MessageBox.Show($"Successfully converted to '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                        break;
+                    }
+
                     break;
                 case 1:
                     MaterialViewWidget.OnKeyPressed(o, e);

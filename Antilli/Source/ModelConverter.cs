@@ -18,8 +18,6 @@ using COLLADA;
 
 namespace Antilli
 {
-    
-
     public enum EffectType
     {
         Static,
@@ -254,7 +252,7 @@ namespace Antilli
 
             public List<PolyMesh> Meshes;
 
-            public LodInstance SubModel;
+            public LodInstance Instance;
 
             public void LoadMesh(COLLADAMesh colladaMesh, COLLADAMaterialLibrary mtlLib)
             {
@@ -286,11 +284,11 @@ namespace Antilli
                 var vertices = vertexBuffer.Vertices;
                 var indices = indexBuffer.Indices;
 
-                var lodInstance = SubModel.Parent;
+                var lodInstance = Instance.Parent;
                 var model = lodInstance.Parent;
 
                 // reset the old meshes (causes crash if we don't do this)
-                SubModel.SubModels = new List<SubModel>();
+                Instance.SubModels = new List<SubModel>();
                 
                 foreach (var polyMesh in Meshes)
                 {
@@ -339,7 +337,7 @@ namespace Antilli
 
                     var mesh = new SubModel() {
                         Model = model,
-                        LodInstance = SubModel,
+                        LodInstance = Instance,
 
                         PrimitiveType = PrimitiveType.TriangleList,
 
@@ -377,7 +375,7 @@ namespace Antilli
                     meshes.Add(mesh);
                 }
 
-                SubModel.SubModels.AddRange(meshes);
+                Instance.SubModels.AddRange(meshes);
 
                 return meshes;
             }
@@ -387,10 +385,10 @@ namespace Antilli
                 Meshes = new List<PolyMesh>();
             }
 
-            public GeometryHolder(LodInstance subModel)
+            public GeometryHolder(LodInstance instance)
                 : base()
             {
-                SubModel = subModel;
+                Instance = instance;
             }
         }
 
@@ -412,10 +410,11 @@ namespace Antilli
 
         public string UID { get; set; }
 
+        public int Version { get; set; }
         public EffectType EffectType { get; set; }
 
         public List<Model> Models { get; set; }
-        public List<LodInstance> SubModels { get; set; }
+        public List<LodInstance> Instances { get; set; }
 
         public List<GeometryHolder> Geometries { get; set; }
         public List<MaterialHolder> Materials { get; set; }
@@ -440,6 +439,20 @@ namespace Antilli
             case "L":       return 2;
             case "VL":      return 4;
             case "SHADOW":  return 5;
+            }
+
+            return -1;
+        }
+
+        private static int GetLodType(int slot)
+        {
+            switch (slot)
+            {
+            case 0: return 0x1E;
+            case 1: return 0x1C;
+            case 2: return 0x18;
+            case 3: return 1;
+            case 5: return 0;
             }
 
             return -1;
@@ -527,13 +540,13 @@ namespace Antilli
                 if (childPart.GeometryInstances.Count != 0)
                     throw new InvalidOperationException($"Child {partIdx} ('{childPart.Info.Id}') in root node is malformed.");
 
-                var partsGroup = new Model() {
+                var model = new Model() {
                     VertexType = -1
                 };
 
-                var parts = partsGroup.Lods;
+                var lods = model.Lods;
 
-                Models.Add(partsGroup);
+                Models.Add(model);
 
                 var geomQueue = new COLLADAGeometryInstance[7];
 
@@ -559,22 +572,22 @@ namespace Antilli
                     geomQueue[slotIdx] = lodInstance.GeometryInstances[0];
 
                     var partDef = new Lod(slotIdx) {
-                        Parent = partsGroup,
+                        Parent = model,
                         Type = GetPartSlotType(slotType),
                     };
 
-                    parts[slotIdx] = partDef;
+                    lods[slotIdx] = partDef;
 
-                    var subModel = new LodInstance() {
+                    var instance = new LodInstance() {
                         Parent = partDef
                     };
 
-                    partDef.Instances.Add(subModel);
+                    partDef.Instances.Add(instance);
                     
                     var transform = lodInstance.Matrix.Values;
 
                     for (int t = 0; t < 4; t++)
-                        subModel.Transform[t] = GetVectorFromTransform(transform, (t * 4));
+                        instance.Transform[t] = GetVectorFromTransform(transform, (t * 4));
                 }
 
                 // gotta make yet another fucking queue
@@ -585,16 +598,16 @@ namespace Antilli
 
                 for (int p = 0; p < 7; p++)
                 {
-                    var part = partsGroup.Lods[p];
+                    var part = model.Lods[p];
 
                     // nothing to see here
                     if (part == null)
                         continue;
 
-                    var subModel = part.Instances[0];
+                    var instance = part.Instances[0];
 
                     // correct order
-                    SubModels.Add(subModel);
+                    Instances.Add(instance);
 
                     var geomInst = geomQueue[p];
 
@@ -608,7 +621,7 @@ namespace Antilli
                         throw new InvalidOperationException($"Geometry URL '{geomInst.Url}' not found!");
 
                     var mesh = geom.Mesh;
-                    var geometry = new GeometryHolder(subModel);
+                    var geometry = new GeometryHolder(instance);
 
                     geometry.LoadMesh(mesh, collada.MaterialLibrary);
 
@@ -672,18 +685,233 @@ namespace Antilli
 
             return true;
         }
+
+        public static ModelPackage Convert(ModelPackage modelPackage, int version)
+        {
+            var spooler = new SpoolableBuffer() {
+                Context = ModelPackageResource.GetChunkId(modelPackage.Platform, version),
+                Version = (byte)version,
+                Alignment = SpoolerAlignment.Align4096,
+                Description = "Custom model package",
+            };
+            
+            var resource = SpoolableResourceFactory.Create<ModelPackage>(spooler);
+
+            // fuck
+            if (modelPackage.VertexBuffers.Count != 1)
+                throw new InvalidOperationException("Can't recompile model package -- must have exactly ONE vertex buffer!");
+            
+            resource.UID = modelPackage.UID;
+            resource.Platform = modelPackage.Platform;
+            resource.Version = version;
+
+            var gModels = new List<Model>();
+            var gLodInstances = new List<LodInstance>();
+            var gSubModels = new List<SubModel>();
+
+            var gMaterials = new List<MaterialDataPC>();
+            var gSubstances = new List<SubstanceDataPC>();
+            var gTextures = new List<TextureDataPC>();
+
+            var gVertices = new List<Vertex>();
+            var gIndices = new List<short>();
+
+            var lookup = new Dictionary<int, int>();
+
+            var vBuffer = modelPackage.VertexBuffers[0];
+            VertexBuffer vertexBuffer = null;
+            
+            var scaleVerts = (modelPackage.Version == 1);
+
+            // copy materials
+            gMaterials.AddRange(modelPackage.Materials);
+            gSubstances.AddRange(modelPackage.Substances);
+            gTextures.AddRange(modelPackage.Textures);
+
+            var mtlLookup = new Dictionary<int, int>();
+            
+            foreach (var _model in modelPackage.Models)
+            {
+                if (vertexBuffer == null)
+                    vertexBuffer = VertexBuffer.Create(version, _model.VertexType);
+
+                var model = new Model() {
+                    UID = _model.UID,
+
+                    VertexBuffer = vertexBuffer,
+                    VertexType = _model.VertexType,
+
+                    Flags = _model.Flags,
+                    Scale = _model.Scale,
+                    Transform = _model.Transform,
+                };
+
+                gModels.Add(model);
+                
+                var lods = new List<Lod>();
+
+                foreach (var _lod in _model.Lods)
+                {
+                    var lod = new Lod(_lod.ID) {
+                        Parent = model,
+                        Type = GetLodType(_lod.ID),
+                    };
+
+                    if (lod.Type == -1)
+                        lod.Type = _lod.Type;
+                    
+                    lods.Add(lod);
+
+                    var instances = new List<LodInstance>();
+                    
+                    foreach (var _instance in _lod.Instances)
+                    {
+                        var instance = new LodInstance() {
+                            Parent = lod,
+
+                            Reserved = _instance.Reserved,
+                            Transform = _instance.Transform,
+                            UseTransform = _instance.UseTransform,
+                        };
+
+                        instances.Add(instance);
+                        gLodInstances.Add(instance);
+
+                        var subModels = new List<SubModel>();
+
+                        foreach (var _subModel in _instance.SubModels)
+                        {
+                            var tris = new List<int>();
+                            var vertices = _subModel.CollectVertices(out tris);
+
+                            var vertexOffset = gVertices.Count;
+                            var vertexCount = 0;
+
+                            var indexOffset = gIndices.Count;
+                            var indexCount = (tris.Count / 3);
+
+                            // combine vertices
+                            for (int t = 0; t < tris.Count; t++)
+                            {
+                                var idx = tris[t];
+                                var vIdx = vertices[idx];
+
+                                if (!lookup.ContainsKey(vIdx))
+                                {
+                                    var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
+
+                                    if (scaleVerts)
+                                        vertex.ApplyScale(model.Scale);
+
+                                    lookup.Add(vIdx, (vertexOffset + vertexCount));
+
+                                    gVertices.Add(vertex);
+                                    vertexCount++;
+                                }
+
+                                // append to buffer
+                                gIndices.Add((short)lookup[vIdx]);
+                            }
+
+                            var sourceUID = _subModel.SourceUID;
+                            var materialId = _subModel.MaterialId;
+
+                            // retarget for old-style materials
+                            if (version == 6)
+                            {
+                                if (sourceUID == modelPackage.UID)
+                                {
+                                    sourceUID = 0xFFFD;
+                                }
+                                else if (sourceUID != 0xCCCC)
+                                {
+                                    var materialKey = (_subModel.MaterialId << 16) | sourceUID;
+                                    
+                                    if (!mtlLookup.ContainsKey(materialKey))
+                                    {
+                                        // copy from another model package
+                                        var material = _subModel.GetMaterial();
+
+                                        mtlLookup.Add(materialKey, gMaterials.Count);
+
+                                        gMaterials.Add(material);
+
+                                        foreach (var substance in material.Substances)
+                                        {
+                                            gSubstances.Add(substance);
+                                            gTextures.AddRange(substance.Textures);
+                                        }
+                                    }
+
+                                    materialId = mtlLookup[materialKey];
+                                    sourceUID = 0xFFFD;
+                                }
+                            }
+                            
+                            var subModel = new SubModel() {
+                                Model = model,
+                                LodInstance = instance,
+                                ModelPackage = resource,
+
+                                PrimitiveType = PrimitiveType.TriangleList,
+
+                                VertexOffset = vertexOffset,
+                                VertexCount = vertexCount,
+
+                                IndexOffset = indexOffset,
+                                IndexCount = indexCount,
+
+                                MaterialId = materialId,
+                                SourceUID = sourceUID,
+                            };
+
+                            subModels.Add(subModel);
+                            gSubModels.Add(subModel);
+                        }
+
+                        instance.SubModels = subModels;
+                    }
+
+                    lod.Instances = instances;
+                }
+
+                model.Lods = lods.ToArray();
+            }
+
+            // compile buffers
+            vertexBuffer.CreateVertices(gVertices);
+
+            resource.VertexBuffers = new List<VertexBuffer>() {
+                vertexBuffer
+            };
+
+            var indexBuffer = new IndicesHolder() {
+                Indices = gIndices
+            };
+
+            resource.IndexBuffer = indexBuffer.Compile();
+
+            resource.Models = gModels;
+            resource.LodInstances = gLodInstances;
+            resource.SubModels = gSubModels;
+
+            resource.Materials = gMaterials;
+            resource.Substances = gSubstances;
+            resource.Textures = gTextures;
+
+            return resource;
+        }
         
         public ModelPackage ToModelPackage()
         {
             var modelPackage = SpoolableResourceFactory.Create<ModelPackage>();
             
             var vDeclType = GetVertexDeclType(EffectType);
-
-            // HACK: assume Driv3r format!
-            var vertexBuffer = VertexBuffer.Create(0, vDeclType);
+            
+            var vertexBuffer = VertexBuffer.Create(Version, vDeclType);
             var indexBuffer = new IndicesHolder();
 
-            var meshList = new List<SubModel>();
+            var subModels = new List<SubModel>();
 
             var vertexBaseOffset = vertexBuffer.Count;
             
@@ -695,9 +923,9 @@ namespace Antilli
                     continue;
                 }
 
-                var subModel = geom.SubModel;
-                var lodInstance = subModel.Parent;
-                var model = lodInstance.Parent;
+                var instance = geom.Instance;
+                var lod = instance.Parent;
+                var model = lod.Parent;
                 
                 // fixup vertex decl type if needed
                 if (model.VertexType == -1)
@@ -708,9 +936,9 @@ namespace Antilli
                 }
                 
                 // populates vertex/index buffers and adds them to the submodel
-                var meshes = geom.CompileMeshes(vertexBuffer, indexBuffer, (lodInstance.ID == 5));
+                var meshes = geom.CompileMeshes(vertexBuffer, indexBuffer, (lod.ID == 5));
                 
-                meshList.AddRange(meshes);
+                subModels.AddRange(meshes);
 
                 // HACK: apply model package to meshes (REWRITE EVERYTHING!!!)
                 foreach (var mesh in meshes)
@@ -719,8 +947,8 @@ namespace Antilli
             
             // finally...compile the model package
             modelPackage.Models = Models;
-            modelPackage.LodInstances = SubModels;
-            modelPackage.SubModels = meshList;
+            modelPackage.LodInstances = Instances;
+            modelPackage.SubModels = subModels;
 
             modelPackage.VertexBuffers = new List<VertexBuffer>() {
                 vertexBuffer
@@ -826,7 +1054,7 @@ namespace Antilli
         public ModelConverter()
         {
             Models = new List<Model>();
-            SubModels = new List<LodInstance>();
+            Instances = new List<LodInstance>();
             Geometries = new List<GeometryHolder>();
         }
     }
