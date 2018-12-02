@@ -31,14 +31,14 @@ namespace DSCript.Models
         // bounding box? collision plane?
         public class Thing3
         {
-            public Matrix Transform { get; set; }
+            public Matrix44 Transform { get; set; }
             public Vector4 Unknown { get; set; }
         }
         
         public class PDLData
         {
             public Vector4 Position { get; set; }
-            public Matrix Transform { get; set; }
+            public Matrix44 Transform { get; set; }
             
             public int Unknown1 { get; set; }
 
@@ -62,7 +62,7 @@ namespace DSCript.Models
 
         public List<CenterPoint> CenterPoints { get; set; }
         public List<Thing3> T3Entries { get; set; }
-        public List<Matrix> PivotPoints { get; set; }
+        public List<Matrix44> PivotPoints { get; set; }
 
         public List<PDLEntry> PDLEntries { get; set; }
 
@@ -137,7 +137,7 @@ namespace DSCript.Models
                 for (int i = 0; i < vInfo.T3Count; i++)
                 {
                     T3Entries.Add(new Thing3() {
-                        Transform = f.Read<Matrix>(),
+                        Transform = f.Read<Matrix44>(),
                         Unknown = f.Read<Vector4>(),
                     });
                 }
@@ -145,11 +145,11 @@ namespace DSCript.Models
                 // read thing4 data
                 f.Position = (header.ExtraPartsDataOffset + vInfo.T4Offset);
 
-                PivotPoints = new List<Matrix>(vInfo.T4Count);
+                PivotPoints = new List<Matrix44>(vInfo.T4Count);
 
                 for (int i = 0; i < vInfo.T4Count; i++)
                 {
-                    var m44 = f.Read<Matrix>();
+                    var m44 = f.Read<Matrix44>();
 
                     PivotPoints.Add(m44);
                 }
@@ -193,7 +193,7 @@ namespace DSCript.Models
 
                         dataEntries.Add(new PDLData() {
                             Position = f.Read<Vector4>(),
-                            Transform = f.Read<Matrix>(),
+                            Transform = f.Read<Matrix44>(),
                             Unknown1 = f.ReadInt32(),
                             Unknown2 = f.Read<Vector3>(),
                         });

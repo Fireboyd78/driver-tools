@@ -61,8 +61,8 @@ namespace Antilli
 
             public Vector4 V1;
 
-            public Matrix Transform1;
-            public Matrix Transform2;
+            public Matrix44 Transform1;
+            public Matrix44 Transform2;
 
             public List<LodInstance> Lods;
         }
@@ -78,7 +78,7 @@ namespace Antilli
         {
             public string Name;
 
-            public Matrix Transform;
+            public Matrix44 Transform;
 
             public List<Mesh> Meshes;
         }
@@ -213,13 +213,13 @@ namespace Antilli
 
                     V1 = mdl.Scale,
 
-                    Transform1 = new Matrix(
+                    Transform1 = new Matrix44(
                         t11.X, t11.Y, t11.Z, t11.W,
                         t12.X, t12.Y, t12.Z, t12.W,
                         t13.X, t13.Y, t13.Z, t13.W,
                         t14.X, t14.Y, t14.Z, t14.W
                     ),
-                    Transform2 = new Matrix(
+                    Transform2 = new Matrix44(
                         t21.X, t21.Y, t21.Z, t21.W,
                         t22.X, t22.Y, t22.Z, t22.W,
                         t23.X, t23.Y, t23.Z, t23.W,
@@ -252,7 +252,7 @@ namespace Antilli
                         var t4 = g.Transform[3];
 
                         var subModel = new SubModel() {
-                            Transform = new Matrix(
+                            Transform = new Matrix44(
                                 t1.X, t1.Y, t1.Z, t1.W,
                                 t2.X, t2.Y, t2.Z, t2.W,
                                 t3.X, t3.Y, t3.Z, t3.W,
