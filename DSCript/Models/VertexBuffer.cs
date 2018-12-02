@@ -149,8 +149,8 @@ namespace DSCript.Models
             {
             case 1:
                 return GetD4VertexDeclType(type);
-            case 9:
             case 6:
+            case 9:
                 return GetD3VertexDeclType(type);
             }
 
@@ -251,10 +251,70 @@ namespace DSCript.Models
                 Vertices.Add(vertex);
             }
         }
+
+        public void CreateVertices(List<Vertex> vertices)
+        {
+            Vertices = new List<VertexData>();
+
+            foreach (var v in vertices)
+            {
+                var vertex = CreateVertex(v);
+
+                Vertices.Add(vertex);
+            }
+        }
         
         public VertexData CreateVertex()
         {
             return new VertexData(Declaration);
+        }
+
+        public VertexData CreateVertex(Vertex source)
+        {
+            var vertex = new VertexData(Declaration);
+
+            if (Declaration.HasType<Vector3>(VertexUsageType.Position, 0))
+            {
+                vertex.SetData(VertexUsageType.Position, 0, source.Position);
+
+                if (Declaration.HasType<Vector3>(VertexUsageType.Position, 1))
+                    vertex.SetData(VertexUsageType.Position, 1, source.PositionW);
+            }
+
+            if (Declaration.HasType<Vector3>(VertexUsageType.Normal, 0))
+            {
+                vertex.SetData(VertexUsageType.Normal, 0, source.Normal);
+
+                if (Declaration.HasType<Vector3>(VertexUsageType.Normal, 1))
+                    vertex.SetData(VertexUsageType.Normal, 1, source.NormalW);
+            }
+
+            if (Declaration.HasType<Vector2>(VertexUsageType.TextureCoordinate, 0))
+                vertex.SetData(VertexUsageType.TextureCoordinate, 0, source.UV);
+
+            if (Declaration.HasType<Vector4>(VertexUsageType.BlendWeight, 0))
+                vertex.SetData(VertexUsageType.BlendWeight, 0, source.BlendWeight);
+
+
+            if (Declaration.HasType<ColorRGBA>(VertexUsageType.Color, 0))
+                vertex.SetData(VertexUsageType.Color, 0, (ColorRGBA)source.Color);
+            else if (Declaration.HasType<Vector4>(VertexUsageType.Color, 0))
+                vertex.SetData(VertexUsageType.Color, 0, (Vector4)source.Color);
+
+            switch (Declaration.GetType(VertexUsageType.Tangent, 0))
+            {
+            case VertexDataType.Float:
+                vertex.SetData(VertexUsageType.Tangent, 0, source.Tangent);
+                break;
+            case VertexDataType.Vector3:
+                vertex.SetData(VertexUsageType.Tangent, 0, (Vector3)source.TangentVector);
+                break;
+            case VertexDataType.Vector4:
+                vertex.SetData(VertexUsageType.Tangent, 0, source.TangentVector);
+                break;
+            }
+
+            return vertex;
         }
 
         public bool CanUseForType(int version, int type)
