@@ -88,54 +88,6 @@ namespace DSCript.Models
 
             return null;
         }
-        
-        protected List<int> GetTriangleList(List<int> indices)
-        {
-            var tris = new List<int>();
-            var index = 0;
-
-            while (index < indices.Count)
-            {
-                for (int i = 0; i < 3; i++)
-                    tris.Add(indices[index + i]);
-
-                index += 3;
-            }
-
-            return tris;
-        }
-        
-        protected List<int> GetTriangleStrip(List<int> indices)
-        {
-            var tris = new List<int>();
-
-            for (int n = 2; n < indices.Count; n++)
-            {
-                int f0, f1, f2;
-                
-                if ((n % 2) != 0)
-                {
-                    f0 = indices[n];
-                    f1 = indices[n - 1];
-                    f2 = indices[n - 2];
-                }
-                else
-                {
-                    f0 = indices[n - 2];
-                    f1 = indices[n - 1];
-                    f2 = indices[n];
-                }
-
-                if ((f0 != f1) && (f0 != f2) && (f1 != f2))
-                {
-                    tris.Add(f0);
-                    tris.Add(f1);
-                    tris.Add(f2);
-                }
-            }
-
-            return tris;
-        }
 
         protected List<int> GetIndices()
         {
@@ -151,30 +103,15 @@ namespace DSCript.Models
 
             return indices;
         }
-
-        protected List<int> GetTriangleList()
-        {
-            var indices = GetIndices();
-
-            return GetTriangleList(indices);
-        }
-
-        protected List<int> GetTriangleStrip()
-        {
-            var indices = GetIndices();
-
-            return GetTriangleStrip(indices);
-        }
-
+        
         public List<int> CollectVertices(out List<int> tris)
         {
             tris = new List<int>();
             
-            var indexBuffer = ModelPackage.IndexBuffer.Buffer;
+            var indices = ModelPackage.IndexBuffer.Buffer;
 
             // collect list of vertex indices
             var vertices = new List<int>();
-            
             
             var lookup = new Dictionary<int, int>();
             var index = 0;
@@ -192,7 +129,7 @@ namespace DSCript.Models
                 for (int v = 0; v < VertexCount; v++)
                 {
                     var offset = indexOffset + v;
-                    var vIdx = (ushort)indexBuffer[offset];
+                    var vIdx = (ushort)indices[offset];
 
                     if (!lookup.ContainsKey(vIdx))
                     {
@@ -203,7 +140,30 @@ namespace DSCript.Models
                     fans.Add(lookup[vIdx]);
                 }
 
-                tris = GetTriangleStrip(fans);
+                for (int n = 2; n < fans.Count; n++)
+                {
+                    int f0, f1, f2;
+
+                    if ((n % 2) != 0)
+                    {
+                        f0 = fans[n];
+                        f1 = fans[n - 1];
+                        f2 = fans[n - 2];
+                    }
+                    else
+                    {
+                        f0 = fans[n - 2];
+                        f1 = fans[n - 1];
+                        f2 = fans[n];
+                    }
+
+                    if ((f0 != f1) && (f0 != f2) && (f1 != f2))
+                    {
+                        tris.Add(f0);
+                        tris.Add(f1);
+                        tris.Add(f2);
+                    }
+                }
             }
             else
             {
@@ -216,14 +176,52 @@ namespace DSCript.Models
 
                     vertices.Add(vIdx);
                 }
-                
+
                 switch (PrimitiveType)
                 {
                 case PrimitiveType.TriangleList:
-                    tris = GetTriangleList();
+                    for (int i = 0; i < IndexCount; i++)
+                    {
+                        int i0, i1, i2;
+
+                        var offset = IndexOffset + (i * 3);
+
+                        i0 = indices[offset];
+                        i1 = indices[offset + 1];
+                        i2 = indices[offset + 2];
+
+                        tris.Add(i0 - VertexOffset);
+                        tris.Add(i1 - VertexOffset);
+                        tris.Add(i2 - VertexOffset);
+                    }
                     break;
                 case PrimitiveType.TriangleStrip:
-                    tris = GetTriangleStrip();
+                    for (int i = 0; i < IndexCount; i++)
+                    {
+                        int i0, i1, i2;
+
+                        var offset = (IndexOffset + i);
+
+                        if ((i % 2) != 0)
+                        {
+                            i0 = indices[offset + 2];
+                            i1 = indices[offset + 1];
+                            i2 = indices[offset];
+                        }
+                        else
+                        {
+                            i0 = indices[offset];
+                            i1 = indices[offset + 1];
+                            i2 = indices[offset + 2];
+                        }
+
+                        if ((i0 != i1) && (i0 != i2) && (i1 != i2))
+                        {
+                            tris.Add(i0 - VertexOffset);
+                            tris.Add(i1 - VertexOffset);
+                            tris.Add(i2 - VertexOffset);
+                        }
+                    }
                     break;
                 }
             }
@@ -241,6 +239,56 @@ namespace DSCript.Models
             if (!vBuffer.HasPositions)
                 return null;
 
+#if !USE_OLD_VERTEX_CODE
+            var tris = new List<int>();
+            var vertices = CollectVertices(out tris);
+
+            var result = new List<Vertex>();
+            var index = 0;
+
+            var lookup = new Dictionary<int, int>();
+
+            var instance = LodInstance;
+            var lod = instance.Parent;
+            var model = lod.Parent;
+            
+            Vector3 scale = model.Scale;
+            var useScale = (ModelPackage.Version == 1);
+
+            var prims = new List<int>();
+            
+            // combine vertices
+            for (int t = 0; t < tris.Count; t++)
+            {
+                var idx = tris[t];
+                var vIdx = vertices[idx];
+
+                if (!lookup.ContainsKey(vIdx))
+                {
+                    var vertex = VertexBuffer.Vertices[vIdx].ToVertex();
+
+                    if (useScale)
+                        vertex.ApplyScale(model.Scale);
+
+                    if (adjustVertices)
+                        vertex.FixDirection();
+
+                    lookup.Add(vIdx, index++);
+                    result.Add(vertex);
+                }
+
+                // append to buffer
+                prims.Add(lookup[vIdx]);
+            }
+            
+            indices.AddRange(prims);
+
+            // clean up after ourselves
+            lookup.Clear();
+            lookup = null;
+
+            return result;
+#else
             var vertices = new List<Vertex>(VertexCount);
             
             switch (PrimitiveType)
@@ -325,6 +373,7 @@ namespace DSCript.Models
             }
 
             return vertices;
+#endif
         }
 
         public List<Vertex> GetVertices(bool adjustVertices = false)
