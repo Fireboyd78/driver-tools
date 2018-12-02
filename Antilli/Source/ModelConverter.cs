@@ -895,6 +895,98 @@ namespace Antilli
             resource.LodInstances = gLodInstances;
             resource.SubModels = gSubModels;
 
+            // fix materials
+            if (version == 6)
+            {
+                gSubstances = new List<SubstanceDataPC>();
+                gTextures = new List<TextureDataPC>();
+
+                foreach (var material in gMaterials)
+                {
+                    foreach (var substance in material.Substances)
+                    {
+                        substance.Type &= ~0xFF;
+
+                        if (substance.Mode == 0x101)
+                            substance.Mode = 0x102;
+
+                        if ((substance.Flags & 0x40) != 0)
+                            substance.Flags &= ~0x40;
+
+                        if ((substance.Flags & 0xC0) != 0)
+                        {
+                            substance.Flags &= ~0xC0;
+                            substance.Flags |= 0x180;
+                        }
+
+                        if (substance.ExtraFlags == (SubstanceExtraFlags.Damage | SubstanceExtraFlags.ColorMask))
+                        {
+                            substance.Type = (int)(SubstanceExtraFlags.DamageWithColorMask) << 8;
+
+                            var texA1 = substance.Textures[0];
+                            var texA2 = new TextureDataPC() {
+                                UID = texA1.UID,
+                                Hash = texA1.Hash + 0x12345,
+                                Type = texA1.Type,
+                                Flags = texA1.Flags,
+                                Width = texA1.Width,
+                                Height = texA1.Height,
+                                Buffer = texA1.Buffer,
+                            };
+
+                            var texB1 = substance.Textures[1];
+                            var texB2 = new TextureDataPC() {
+                                UID = texB1.UID,
+                                Hash = texB1.Hash + 0x12345,
+                                Type = texB1.Type,
+                                Flags = texB1.Flags,
+                                Width = texB1.Width,
+                                Height = texB1.Height,
+                                Buffer = texB1.Buffer,
+                            };
+
+                            // allow damage to work
+                            substance.Textures = new List<TextureDataPC>() {
+                                texA1,
+                                texA2,
+                                texB1,
+                                texB2,
+                            }; ;
+                        }
+
+                        if (substance.ExtraFlags == SubstanceExtraFlags.ColorMask)
+                        {
+                            var texA1 = substance.Textures[0];
+                            var texA2 = new TextureDataPC() {
+                                UID = texA1.UID,
+                                Hash = texA1.Hash + 0x12345,
+                                Type = texA1.Type,
+                                Flags = texA1.Flags,
+                                Width = texA1.Width,
+                                Height = texA1.Height,
+                                Buffer = texA1.Buffer,
+                            };
+
+                            // allow mask to work
+                            substance.Textures = new List<TextureDataPC>() {
+                                texA1,
+                                texA2,
+                            };
+                        }
+
+                        gSubstances.Add(substance);
+    
+                        foreach (var texture in substance.Textures)
+                        {
+                            // fix flags
+                            texture.Flags = 0;
+
+                            gTextures.Add(texture);
+                        }
+                    }
+                }
+            }
+
             resource.Materials = gMaterials;
             resource.Substances = gSubstances;
             resource.Textures = gTextures;
