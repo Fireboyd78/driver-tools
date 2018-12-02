@@ -442,10 +442,15 @@ namespace DSCript
         {
             return Color.FromScRgb(value.W, value.X, value.Y, value.Z);
         }
-
+        
         public static implicit operator Vector4(Vector3 value)
         {
             return new Vector4(value.X, value.Y, value.Z, 1.0f);
+        }
+
+        public static implicit operator Vector4(Color value)
+        {
+            return new Vector4(value.ScR, value.ScG, value.ScB, value.ScA);
         }
 
         public override string ToString()

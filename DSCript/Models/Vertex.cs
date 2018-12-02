@@ -341,6 +341,11 @@ namespace DSCript.Models
             return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
 
+        public static implicit operator ColorRGBA(Color color)
+        {
+            return new ColorRGBA(color.R, color.G, color.B, color.A);
+        }
+
         public ColorRGBA(byte r, byte g, byte b, byte a)
         {
             R = r;
