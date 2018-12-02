@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Windows;
@@ -8,7 +9,7 @@ using System.Windows.Media.Media3D;
 
 namespace DSCript
 {
-    public struct Vector2
+    public struct Vector2 : IEquatable<Vector2>
     {
         public float X;
         public float Y;
@@ -134,7 +135,7 @@ namespace DSCript
         {
             return $"{X:F4},{Y:F4}";
         }
-
+        
         public Vector2(float x, float y)
         {
             X = x;
@@ -142,7 +143,7 @@ namespace DSCript
         }
     }
 
-    public struct Vector3
+    public struct Vector3 : IEquatable<Vector3>
     {
         public float X;
         public float Y;
@@ -300,7 +301,7 @@ namespace DSCript
         }
     }
 
-    public struct Vector4
+    public struct Vector4 : IEquatable<Vector4>
     {
         public float X;
         public float Y;
