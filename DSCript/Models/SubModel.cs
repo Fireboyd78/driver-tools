@@ -88,6 +88,151 @@ namespace DSCript.Models
 
             return null;
         }
+        
+        protected List<int> GetTriangleList(List<int> indices)
+        {
+            var tris = new List<int>();
+            var index = 0;
+
+            while (index < indices.Count)
+            {
+                for (int i = 0; i < 3; i++)
+                    tris.Add(indices[index + i]);
+
+                index += 3;
+            }
+
+            return tris;
+        }
+        
+        protected List<int> GetTriangleStrip(List<int> indices)
+        {
+            var tris = new List<int>();
+
+            for (int n = 2; n < indices.Count; n++)
+            {
+                int f0, f1, f2;
+                
+                if ((n % 2) != 0)
+                {
+                    f0 = indices[n];
+                    f1 = indices[n - 1];
+                    f2 = indices[n - 2];
+                }
+                else
+                {
+                    f0 = indices[n - 2];
+                    f1 = indices[n - 1];
+                    f2 = indices[n];
+                }
+
+                if ((f0 != f1) && (f0 != f2) && (f1 != f2))
+                {
+                    tris.Add(f0);
+                    tris.Add(f1);
+                    tris.Add(f2);
+                }
+            }
+
+            return tris;
+        }
+
+        protected List<int> GetIndices()
+        {
+            var indexBuffer = ModelPackage.IndexBuffer.Buffer;
+            var indices = new List<int>();
+
+            for (int n = 0; n < IndexCount; n++)
+            {
+                var idx = indexBuffer[IndexOffset + n];
+
+                indices.Add(idx - VertexOffset);
+            }
+
+            return indices;
+        }
+
+        protected List<int> GetTriangleList()
+        {
+            var indices = GetIndices();
+
+            return GetTriangleList(indices);
+        }
+
+        protected List<int> GetTriangleStrip()
+        {
+            var indices = GetIndices();
+
+            return GetTriangleStrip(indices);
+        }
+
+        public List<int> CollectVertices(out List<int> tris)
+        {
+            tris = new List<int>();
+            
+            var indexBuffer = ModelPackage.IndexBuffer.Buffer;
+
+            // collect list of vertex indices
+            var vertices = new List<int>();
+            
+            
+            var lookup = new Dictionary<int, int>();
+            var index = 0;
+
+            if (PrimitiveType == PrimitiveType.TriangleFan)
+            {
+                var fans = new List<int>();
+                var indexOffset = (IndexOffset / 2);
+
+                var instance = LodInstance;
+                var lod = instance.Parent;
+                var model = lod.Parent;
+
+                // collect vertices + fans
+                for (int v = 0; v < VertexCount; v++)
+                {
+                    var offset = indexOffset + v;
+                    var vIdx = (ushort)indexBuffer[offset];
+
+                    if (!lookup.ContainsKey(vIdx))
+                    {
+                        vertices.Add(vIdx);
+                        lookup.Add(vIdx, index++);
+                    }
+
+                    fans.Add(lookup[vIdx]);
+                }
+
+                tris = GetTriangleStrip(fans);
+            }
+            else
+            {
+                for (int v = 0; v <= VertexCount; v++)
+                {
+                    var vIdx = (VertexBaseOffset + VertexOffset + v);
+
+                    if (vIdx >= VertexBuffer.Count)
+                        break;
+
+                    vertices.Add(vIdx);
+                }
+                
+                switch (PrimitiveType)
+                {
+                case PrimitiveType.TriangleList:
+                    tris = GetTriangleList();
+                    break;
+                case PrimitiveType.TriangleStrip:
+                    tris = GetTriangleStrip();
+                    break;
+                }
+            }
+            
+            lookup.Clear();
+            lookup = null;
+
+            return vertices;
+        }
 
         public List<Vertex> GetVertices(bool adjustVertices, ref List<int> indices)
         {
