@@ -190,28 +190,25 @@ namespace Antilli
 
             AddSpoolersDeadlyRecurse(LoadedChunk, ChunkList);
         }
-        
-        private void UpdateSearchFilter(string filter)
+
+        private void DelayUpdateSpoolers()
         {
-            if ((m_filterThread != null) && m_filterThread.IsAlive)
-            {
-                m_filterString = filter;
-                m_filterTimeout = 750;
-            }
-            else
-            {
-                m_filterThread = new Thread(new ThreadStart(() => {
-                    m_filterString = filter;
-                    m_filterTimeout = 750;
+            while (m_filterTimeout-- > 0)
+                Thread.Sleep(1);
 
-                    while (m_filterTimeout-- > 0)
-                        Thread.Sleep(1);
+            Dispatcher.Invoke((Action)UpdateSpoolers);
+        }
+        
+        private void QueueFilterUpdate(string filter)
+        {
+            m_filterString = filter;
+            m_filterTimeout = 750;
 
-                    Dispatcher.Invoke(new Action(UpdateSpoolers));
-                })) { IsBackground = true };
-                
+            if ((m_filterThread == null) || !m_filterThread.IsAlive)
+            {
+                m_filterThread = new Thread(DelayUpdateSpoolers) { IsBackground = true };
                 m_filterThread.Start();
-            }
+            }   
         }
 
         public string SearchFilter
@@ -823,7 +820,7 @@ namespace Antilli
                 }
             };
 
-            tbSearchFilter.TextChanged += (o, e) => UpdateSearchFilter(tbSearchFilter.Text);
+            tbSearchFilter.TextChanged += (o, e) => QueueFilterUpdate(tbSearchFilter.Text);
         }
     }
 

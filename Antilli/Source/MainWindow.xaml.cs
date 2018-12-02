@@ -1365,7 +1365,7 @@ namespace Antilli
             exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
             exportAIModel.Click += (o, e) => ExportAntilliModelFile();
 
-            chunkViewer.Click += (o, e) => CreateDialog<ChunkViewer>(true);
+            chunkViewer.Click += (o, e) => CreateDialog<ChunkViewer>(false);
             modelTool.Click += (o, e) => CreateDialog<Importer>(true);
 
             optionsDlg.Click += (o, e) => CreateDialog<OptionsDialog>(true);
