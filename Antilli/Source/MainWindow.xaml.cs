@@ -492,7 +492,7 @@ namespace Antilli
         private void OnFileOpenClick()
         {
             var dialog = FileManager.OpenDialog;
-
+            
             if (dialog.ShowDialog() ?? false)
             {
                 dialog.InitialDirectory = Path.GetDirectoryName(dialog.FileName);
@@ -1376,11 +1376,8 @@ namespace Antilli
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);
             });
-
+            
             Viewer.Loaded += (o, e) => {
-                // for those who don't install Driv3r to a known directory
-                DSC.VerifyGameDirectory("Driv3r", "Antilli");
-                
 #region disabled code
                 /*
                 var filename = @"C:\Dev\Research\Driv3r\__Research\PS2\city3.chunk";

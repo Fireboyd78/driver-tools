@@ -380,6 +380,13 @@ namespace Antilli
         };
 
         private static OpenFileDialog m_openDialog = null;
+        private static string m_rootDir = String.Empty;
+        
+        public static string RootDirectory
+        {
+            get { return m_rootDir; }
+            set { m_rootDir = value; }
+        }
 
         public static OpenFileDialog OpenDialog
         {
@@ -389,14 +396,15 @@ namespace Antilli
                 {
                     var filter = String.Join("|", AllFilters.Select((f) => f.ToString()));
 
-                    // TODO: support more games!
-                    var gameDir = Driv3r.RootDirectory;
+                    // TODO: don't do dumb things like this!
+                    if (DSC.VerifyGameDirectory("Driv3r", "Antilli"))
+                        RootDirectory = Driv3r.RootDirectory;
                     
                     m_openDialog = new OpenFileDialog() {
                         CheckFileExists = true,
                         CheckPathExists = true,
                         Filter = filter,
-                        InitialDirectory = gameDir,
+                        InitialDirectory = RootDirectory,
                         ValidateNames = true,
                     };
                 }
