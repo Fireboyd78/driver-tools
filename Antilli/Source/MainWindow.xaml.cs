@@ -510,6 +510,12 @@ namespace Antilli
         {
             var filename = CurrentModelFile.FileName;
 
+            if (AT.CurrentState.UseDPLHacks)
+            {
+                MessageBox.Show("Sorry -- saving is currently not implemented for Driver: Parallel Lines.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             if (saveAs)
             {
                 var name = Path.GetFileName(filename);
