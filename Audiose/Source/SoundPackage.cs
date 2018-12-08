@@ -858,8 +858,10 @@ namespace Audiose
                     if (!File.Exists(bankFile))
                         throw new InvalidOperationException($"SoundBank file '{bankFile}' is missing!");
 
-                    var bankXml = new XmlDocument();
-                    bankXml.Load(bankFile);
+                    var bankDoc = new XmlDocument();
+                    bankDoc.Load(bankFile);
+
+                    var bankXml = bankDoc.DocumentElement;
 
                     bank.SubDirectory = bankDir;
                     bank.Deserialize(bankXml);
