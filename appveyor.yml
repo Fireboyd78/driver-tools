@@ -1,4 +1,4 @@
-version: 1.8.4.{build}-{branch}
+version: 1.9.1.{build}-{branch}
 image: Visual Studio 2017
 clone_folder: C:\Dev\Code\Projects\Driver Tools
 environment:
