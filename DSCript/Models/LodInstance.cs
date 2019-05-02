@@ -18,17 +18,19 @@ namespace DSCript.Models
 
         public List<SubModel> SubModels { get; set; }
 
-        public Vector4[] Transform { get; set; }
+        public Matrix44 Transform { get; set; }
 
         public bool UseTransform { get; set; }
-
+        
         // likely unused, but I'm tired of chasing after bugs
         public int Reserved { get; set; }
+
+        public int Handle { get; set; }
 
         public LodInstance()
         {
             SubModels = new List<SubModel>();
-            Transform = new Vector4[4];
+            Transform = Matrix44.Identity;
         }
     }
 }

@@ -109,7 +109,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                 objBuilder.AppendLine("# ---- Model {0} ---- #", ++modelIndex);
                 objBuilder.AppendLine();
 
-                for (int g = 0; g < part.Lods.Length; g++)
+                for (int g = 0; g < part.Lods.Count; g++)
                 {
                     var groups = part.Lods[g].Instances;
 
@@ -137,14 +137,16 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                         for (int m = 0; m < group.SubModels.Count; m++)
                         {
                             var mesh = group.SubModels[m];
-                            var material = mesh.GetMaterial();
+
+                            MaterialDataPC material = null;
+                            int materialType = modelPackage.FindMaterial(mesh.Material, out material);
 
                             // build material(s)
-                            if (material != null)
+                            if (materialType != 0)
                             {
-                                var mtlIdx = mesh.MaterialId + 1;
+                                var mtlIdx = mesh.Material.Handle + 1;
 
-                                bool isGlobalTexture = (mesh.SourceUID != 0xFFFD && mesh.SourceUID != mesh.ModelPackage.UID);
+                                bool isGlobalTexture = (materialType == 1);
 
                                 var mtlName = String.Format("{0}_{1}",
                                     (isGlobalTexture) ? "global_mat" : "mat",

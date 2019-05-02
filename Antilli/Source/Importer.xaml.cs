@@ -125,7 +125,10 @@ namespace Antilli
         {
             var colladaDoc = new COLLADADocument(filename);
 
-            m_converter = new ModelConverter();
+            m_converter = new ModelConverter() {
+                Version = 6, // Driv3r
+            };
+            
             m_converter.LoadCOLLADA(colladaDoc);
 
             // HACK HACK HACK

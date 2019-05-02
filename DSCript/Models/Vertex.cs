@@ -148,7 +148,7 @@ namespace DSCript.Models
                 return size;
             }
         }
-
+        
         public VertexDataType GetType(VertexUsageType usageType, short usageIndex)
         {
             foreach (var entry in m_entries)
@@ -250,7 +250,7 @@ namespace DSCript.Models
                         throw new InvalidCastException("Vertex data cannot be cast to the specified type.");
                     
                     var ptr = Marshal.AllocHGlobal(size);
-
+                    
                     try
                     {
                         Marshal.Copy(buffer, offset, ptr, size);

@@ -25,7 +25,7 @@ namespace DSCript.Models
         {
             get { return m_buffer; }
         }
-
+        
         // this is some of the dirtiest code I've ever written...
         public unsafe bool PossiblyEqual(ref VertexData other)
         {

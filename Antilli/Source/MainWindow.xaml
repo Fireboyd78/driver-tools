@@ -63,26 +63,37 @@
                 </LinearGradientBrush>
             </Menu.Background>
             <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="fileOpen" Header="Open" Template="{DynamicResource atDark_subMenuItem}"/>
+                <MenuItem x:Name="fileOpen" Header="Open"/>
                 <Separator/>
                 <MenuItem x:Name="fileClose" Header="Close" IsEnabled="{Binding IsFileOpened}"/>
                 <Separator/>
                 <MenuItem x:Name="fileSave" Header="Save" IsEnabled="{Binding CanSaveFile}"/>
                 <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsFileOpened}"/>
                 <Separator/>
+                <MenuItem x:Name="fileImport" Header="Import">
+                    <MenuItem x:Name="impAntilliScene" Header="Antilli Scene"/>
+                    <MenuItem x:Name="impModelPackage" Header="Model Package"/>
+                </MenuItem>
+                <MenuItem x:Name="fileExport" Header="Export">
+                    <MenuItem x:Name="expAntilliScene" Header="Antilli Scene"/>
+                    <MenuItem x:Name="expModelPackage" Header="Model Package"/>
+                    <MenuItem x:Name="expWavefrontOBJ" Header="Wavefront OBJ"/>
+                </MenuItem>
+                <Separator/>
                 <MenuItem x:Name="fileExit" Header="Exit"/>
             </MenuItem>
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="exportSel" Header="Export..."/>
-                <Separator/>
-                <MenuItem x:Name="exportMDPC" Header="Export Model Package"/>
-                <MenuItem x:Name="exportVPK" Header="Export .VPK"/>
-                <MenuItem x:Name="exportAIModel" Header="Export .AIModel"/>
-                <Separator/>
                 <MenuItem x:Name="chunkViewer" Header="Chunk Editor"/>
                 <MenuItem x:Name="modelTool" Header="Model Tool"/>
                 <Separator />
                 <MenuItem x:Name="optionsDlg" Header="Options..."/>
+                <!--
+                <Separator />
+                <MenuItem Header="Blender">
+                    <MenuItem x:Name="blenderSync" Header="Connect"/>
+                    <MenuItem x:Name="blenderSendCmd" Header="Send Command"/>
+                </MenuItem>
+                -->
             </MenuItem>
         </Menu>
 

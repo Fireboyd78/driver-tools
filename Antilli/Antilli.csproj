@@ -70,6 +70,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Source\AntilliClient.cs" />
     <Compile Include="Source\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -95,6 +96,7 @@
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
     <Compile Include="Source\Models\AntilliModel.cs" />
+    <Compile Include="Source\Models\AntilliScene.cs" />
     <Compile Include="Source\Models\TextureCache.cs" />
     <Compile Include="Source\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>

@@ -237,7 +237,7 @@ namespace Antilli
                         continue;
 
                     var lod = new LodInstance() {
-                        Type = GetLodSlotIndex(p.Type)
+                        Type = GetLodSlotIndex(p.Mask)
                     };
 
                     lods.Add(lod);
@@ -267,15 +267,18 @@ namespace Antilli
                         foreach (var msh in g.SubModels)
                         {
                             Material material = null;
-
-                            if ((msh.SourceUID != m.UID) && (msh.SourceUID != 0xFFFD))
+                            
+                            if ((msh.Material.Handle != m.UID) && (msh.Material.UID != 0xFFFD))
                             {
-                                var mtl = msh.GetMaterial();
+                                MaterialDataPC mtl = null;
 
-                                material = Material.Create($"mtl_{mIdx++}", mtl);
-                                material.IsGlobal = true;
+                                if (modelPackage.FindMaterial(msh.Material, out mtl) != 0)
+                                {
+                                    material = Material.Create($"mtl_{mIdx++}", mtl);
+                                    material.IsGlobal = true;
 
-                                materials.Add(material);
+                                    materials.Add(material);
+                                }
                             }
 
                             // don't adjust vertices
@@ -305,102 +308,6 @@ namespace Antilli
             m.Materials = materials;
 
             return m;
-        }
-
-        public void SaveXML(string filename)
-        {
-            var xml = new XDocument();
-
-            var root = new XElement("ModelPackage");
-
-            root.SetAttributeValue("Version", Version);
-            root.SetAttributeValue("UID", UID);
-            root.SetAttributeValue("Type", Type.ToString());
-
-            var materials = new XElement("Materials");
-
-            root.Add(materials);
-
-            foreach (var m in Materials)
-            {
-                var material = new XElement((m.IsAnimation) ? "Animation" : "Group");
-                
-                if (m.IsAnimation)
-                    material.SetAttributeValue("Speed", m.AnimationSpeed);
-
-                materials.Add(material);
-
-                foreach (var s in m.Substances)
-                {
-                    var substance = new XElement("Substance");
-
-                    substance.SetAttributeValue("Bin", s.Bin);
-                    substance.SetAttributeValue("Flags", s.Flags);
-                    substance.SetAttributeValue("Registers", $"{s.K1},{s.K2},{s.K3}");
-                    substance.SetAttributeValue("SlotFlags", s.ExtraFlags);
-
-                    material.Add(substance);
-                    
-                    foreach (var t in s.Textures)
-                    {
-                        var texture = new XElement("Texture");
-                        texture.SetAttributeValue("Map", t);
-
-                        substance.Add(texture);
-                    }
-                }
-            }
-            
-            root.Save(filename);
-        }
-
-        public void SaveASCII(string filename)
-        {
-            var sb = new StringBuilder();
-            
-            sb.AppendLine($"# Antilli Model Format\n");
-
-            sb.AppendLine($"version {Version:F2}\n");
-            sb.AppendLine($"uid {UID}\n");
-
-            sb.AppendLine($"type {Type.ToString()}");
-            sb.AppendLine($"flags none\n");
-
-            foreach (var m in Materials)
-            {
-                sb.Append($"material {m.Name}");
-
-                if (m.IsGlobal)
-                    sb.Append($":global");
-
-                sb.AppendLine($" {{");
-                
-                if (m.IsAnimation)
-                    sb.AppendLine($"\tanimation {m.AnimationSpeed:F2}");
-                
-                foreach (var s in m.Substances)
-                {
-                    sb.AppendLine($"\tsubstance {{");
-                    sb.AppendLine($"\t\tbin {s.Bin}");
-                    sb.AppendLine($"\t\tflags {s.Flags}");
-                    sb.AppendLine($"\t\tinfo {s.K1} {s.K2} {s.K3}");
-
-                    sb.AppendLine($"\t\ttextures {{");
-
-                    if (s.ExtraFlags != 0)
-                        sb.AppendLine($"\t\t\tflags {s.ExtraFlags}");
-
-                    foreach (var t in s.Textures)
-                        sb.AppendLine($"\t\t\tmap \"{t}\"");
-
-                    sb.AppendLine($"\t\t}}");
-                    sb.AppendLine($"\t}}");
-                }
-                
-                sb.AppendLine($"}}\n");
-            }
-
-            File.WriteAllText(filename, sb.ToString());
         }
     }
 }

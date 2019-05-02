@@ -14,14 +14,14 @@ using DSCript.Spooling;
 
 namespace DSCript.Models
 {
-    public class StandaloneTextureData : SpoolableResource<SpoolablePackage>
+    public class GlobalTexturesResource : SpoolableResource<SpoolablePackage>, IMaterialPackage
     {
-        public short UID { get; set; }
+        public int UID { get; set; }
 
-        public ModelPackage ModelPackage { get; set; }
-
-        public List<MaterialDataPC> StandaloneTextures { get; set; }
-
+        public List<MaterialDataPC> Materials { get; set; }
+        public List<SubstanceDataPC> Substances { get; set; }
+        public List<TextureDataPC> Textures { get; set; }
+        
         protected override void Load()
         {
             var upst = Spooler.GetFirstChild(ChunkType.StandaloneTextures) as SpoolableBuffer;
@@ -30,31 +30,37 @@ namespace DSCript.Models
             if (upst == null || mdpc == null)
                 return;
 
-            ModelPackage = SpoolableResourceFactory.Create<ModelPackage>(mdpc, true);
-
-            var materials = ModelPackage.Materials;
+            var pak = SpoolableResourceFactory.Create<ModelPackage>(mdpc, true);
+            var materials = pak.Materials;
 
             using (var f = upst.GetMemoryStream())
             {
-                f.Position = 0x10;
+                // skip padding
+                f.Position += 16;
 
-                UID = f.ReadInt16();
+                var data = f.ReadInt32();
 
-                var count = f.ReadInt16();
+                var uid = (data & 0xFFFF);
+                var count = ((data >> 16) & 0xFFFF);
 
                 if (count != materials.Count)
-                    throw new Exception("Failed to load StandaloneTextureData - texture count mismatch!");
+                    throw new InvalidOperationException("Failed to load global textures - material count mismatch!");
 
-                StandaloneTextures = new List<MaterialDataPC>(count);
+                UID = uid;
+                Materials = new List<MaterialDataPC>(count);
 
                 for (int i = 0; i < count; i++)
                 {
-                    var matId = f.ReadInt16();
+                    var handle = (f.ReadInt32() & 0xFFFF);
+                    
+                    if (handle != i)
+                        Debug.WriteLine($"Global material {i} remapped to {handle}.");
 
-                    StandaloneTextures.Add(materials[matId]);
-
-                    f.Position += 0x2;
+                    Materials.Add(materials[handle]);
                 }
+
+                Substances = pak.Substances;
+                Textures = pak.Textures;
             }
         }
 
@@ -64,20 +70,10 @@ namespace DSCript.Models
         }
     }
 
-    public class StandaloneTextureFile : FileChunker
+    public class GlobalTexturesFile : FileChunker
     {
-        public StandaloneTextureData StandaloneTextureData { get; set; }
-
-        public MaterialDataPC GetStandaloneTexture(int id)
-        {
-            return (HasTextures) ? StandaloneTextureData.StandaloneTextures[id] : null;
-        }
-
-        public ModelPackage GetModelPackage()
-        {
-            return (HasTextures) ? StandaloneTextureData.ModelPackage : null;
-        }
-
+        public GlobalTexturesResource GlobalTextures { get; set; }
+        
         public override bool CanSave
         {
             get { return (HasTextures); }
@@ -85,18 +81,18 @@ namespace DSCript.Models
 
         public bool HasTextures
         {
-            get { return (StandaloneTextureData != null && StandaloneTextureData.StandaloneTextures.Count > 0); }
+            get { return (GlobalTextures != null && GlobalTextures.Materials.Count > 0); }
         }
 
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
             if (sender is SpoolablePackage && sender.Context == 0x0)
-                StandaloneTextureData = sender.AsResource<StandaloneTextureData>(true);
+                GlobalTextures = sender.AsResource<GlobalTexturesResource>(true);
 
             base.OnSpoolerLoaded(sender, e);
         }
 
-        public StandaloneTextureFile() { }
-        public StandaloneTextureFile(string filename) : base(filename) { }
+        public GlobalTexturesFile() { }
+        public GlobalTexturesFile(string filename) : base(filename) { }
     }
 }

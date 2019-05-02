@@ -113,6 +113,47 @@ namespace DSCript
         public float M43;
         public float M44;
 
+        public static readonly Matrix44 Identity = new Matrix44(
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            1.0f, 0.0f, 0.0f, 1.0f
+        );
+
+        public Vector4 this[int row]
+        {
+            get { return GetRow(row); }
+            set { SetRow(row, value); }
+        }
+
+        public Vector4 GetRow(int row)
+        {
+            switch (row)
+            {
+            case 0: return new Vector4(M11, M12, M13, M14);
+            case 1: return new Vector4(M21, M22, M23, M24);
+            case 2: return new Vector4(M31, M32, M33, M34);
+            case 3: return new Vector4(M41, M42, M43, M44);
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(row), row, "Invalid matrix row.");
+            }
+        }
+
+        public void SetRow(int row, Vector4 value)
+        {
+            switch (row)
+            {
+            case 0: M11 = value.X; M12 = value.Y; M13 = value.Z; M14 = value.W; break;
+            case 1: M21 = value.X; M22 = value.Y; M23 = value.Z; M24 = value.W; break;
+            case 2: M31 = value.X; M32 = value.Y; M33 = value.Z; M34 = value.W; break;
+            case 3: M41 = value.X; M42 = value.Y; M43 = value.Z; M44 = value.W; break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(row), row, "Invalid matrix row.");
+            }
+        }
+        
         public bool Equals(Matrix44 other)
         {
             return (other.M11 == M11) && (other.M12 == M12) && (other.M13 == M13) && (other.M14 == M14)

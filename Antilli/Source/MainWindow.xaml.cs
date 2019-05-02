@@ -118,13 +118,10 @@ namespace Antilli
 
                 var materials = new List<MaterialTreeItem>();
                 int count = 0;
-                
-                if (CurrentModelPackage != null && CurrentModelPackage.HasMaterials)
-                {
-                    foreach (var material in CurrentModelPackage.Materials)
-                        materials.Add(new MaterialTreeItem(++count, material));
-                }
-                
+
+                foreach (var material in CurrentModelPackage.Materials)
+                    materials.Add(new MaterialTreeItem(++count, material));
+
                 return materials;
             }
         }
@@ -133,17 +130,17 @@ namespace Antilli
         {
             get
             {
-                var modelFile = CurrentModelFile as Driv3rVehiclesFile;
+                var modelFile = CurrentModelFile as IVehiclesFile;
 
-                if (modelFile == null || !modelFile.HasVehicleGlobals)
+                if (modelFile == null || !modelFile.HasGlobals)
                     return null;
 
-                var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
+                var globals = modelFile.GlobalTextures;
 
                 var materials = new List<MaterialTreeItem>();
                 int count = 0;
                 
-                foreach (var material in modelPackage.Materials)
+                foreach (var material in globals.Materials)
                     materials.Add(new MaterialTreeItem(++count, material));
 
                 return materials;
@@ -171,17 +168,17 @@ namespace Antilli
         {
             get
             {
-                var modelFile = CurrentModelFile as Driv3rVehiclesFile;
+                var modelFile = CurrentModelFile as IVehiclesFile;
 
-                if (modelFile == null || !modelFile.HasVehicleGlobals)
+                if (modelFile == null || !modelFile.HasGlobals)
                     return null;
 
-                var modelPackage = modelFile.VehicleGlobals.GetModelPackage();
+                var globals = modelFile.GlobalTextures;
 
                 var textures = new List<TextureTreeItem>();
                 int count = 0;
 
-                foreach (var texture in modelPackage.Textures)
+                foreach (var texture in globals.Textures)
                     textures.Add(new TextureTreeItem(count++, texture));
 
                 return textures;
@@ -308,28 +305,22 @@ namespace Antilli
                 vgtFile = Driv3r.GetVehicleGlobals(city);
 
             if (File.Exists(vgtFile))
-                vehicleFile.VehicleGlobals = new StandaloneTextureFile(vgtFile);
+                vehicleFile.VehicleGlobals = new GlobalTexturesFile(vgtFile);
 
             AT.CurrentState.ModelFile = vehicleFile;
-            AT.CurrentState.CanUseGlobals = vehicleFile.HasVehicleGlobals;
+            AT.CurrentState.CanUseGlobals = vehicleFile.HasGlobals;
         }
 
         private void OnFileOpened(string filename)
         {
             var extension = Path.GetExtension(filename).ToLower();
             var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
-
-            AT.CurrentState.UseDPLHacks = false;
-
+            
             if (filter.Flags == GameFileFlags.None)
             {
                 filter = FileManager.FindFilter(extension, GameType.DriverPL, (GameFileFlags.Models | GameFileFlags.Textures | GameFileFlags.Resource));
 
-                if (filter.Flags != GameFileFlags.None)
-                {
-                    AT.CurrentState.UseDPLHacks = true;
-                }
-                else
+                if (filter.Flags == GameFileFlags.None)
                 {
                     MessageBox.Show("Unsupported file type selected, please try another file.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
@@ -470,10 +461,21 @@ namespace Antilli
 
             if (setupModels)
             {
-                modelFile.Load(filename);
+                if (filename.IndexOf("vehicles", StringComparison.InvariantCultureIgnoreCase) != -1)
+                {
+                    var vehiclesFile = new SpooledVehiclesFile(filename);
+                    modelFile = vehiclesFile;
 
-                AT.CurrentState.ModelFile = modelFile;
-                AT.CurrentState.CanUseGlobals = false;
+                    AT.CurrentState.ModelFile = vehiclesFile;
+                    AT.CurrentState.CanUseGlobals = vehiclesFile.HasGlobals;
+                }
+                else
+                {
+                    modelFile.Load(filename);
+
+                    AT.CurrentState.ModelFile = modelFile;
+                    AT.CurrentState.CanUseGlobals = false;
+                }
             }
 
             SetCurrentFile(filename);
@@ -497,7 +499,6 @@ namespace Antilli
             {
                 dialog.InitialDirectory = Path.GetDirectoryName(dialog.FileName);
                 OnFileOpened(dialog.FileName);
-
             }
         }
 
@@ -509,13 +510,7 @@ namespace Antilli
         private void OnFileSaveClick(bool saveAs)
         {
             var filename = CurrentModelFile.FileName;
-
-            if (AT.CurrentState.UseDPLHacks)
-            {
-                MessageBox.Show("Sorry -- saving is currently not implemented for Driver: Parallel Lines.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
+            
             if (saveAs)
             {
                 var name = Path.GetFileName(filename);
@@ -535,6 +530,8 @@ namespace Antilli
                 {
                     filename = saveDlg.FileName;
 
+                    ShowWaitCursor = true;
+
                     if (CurrentModelFile.Save(filename))
                     {
                         IsFileDirty = false;
@@ -546,12 +543,16 @@ namespace Antilli
                     {
                         MessageBox.Show($"Failed to save '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
+
+                    ShowWaitCursor = false;
                 }
             }
             else
             {
                 if (AskUserPrompt($"All pending changes will be saved to '{CurrentModelFile.FileName}'. Do you wish to OVERWRITE the original file? (NO BACKUPS WILL BE CREATED)"))
                 {
+                    ShowWaitCursor = true;
+
                     if (CurrentModelFile.Save())
                     {
                         IsFileDirty = false;
@@ -561,6 +562,8 @@ namespace Antilli
                     {
                         MessageBox.Show($"Failed to save '{filename}'! No changes were made.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
+
+                    ShowWaitCursor = false;
                 }
             }
         }
@@ -667,100 +670,183 @@ namespace Antilli
             // select the correct LOD
             m_lodBtnRefs[Viewer.LevelOfDetail].IsChecked = true;
         }
-        
-        private void ExportModelFile()
+
+        /*
+        private void ConnectToBlender()
         {
-            if (CurrentModelPackage == null)
-                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (AT.CurrentState.BlenderClient == null)
+            {
+                var client = new AntilliClient("localhost", 33759);
+
+                ShowWaitCursor = true;
+
+                if (client.Connect())
+                {
+                    AT.CurrentState.BlenderClient = client;
+
+                    MessageBox.Show("Connection successfully established!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Could not establish a connection!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+
+                ShowWaitCursor = false;
+            }
             else
             {
-                var prompt = CreateDialog<ExportModelDialog>(true, false);
+                MessageBox.Show("A connection to Blender has already been established!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
 
-                if (!SelectedModelGroup.IsNull)
-                    prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+        private void SendCommandToBlender()
+        {
+            var client = AT.CurrentState.BlenderClient;
 
-                if (prompt.ShowDialog() ?? false)
+            if (client != null)
+            {
+                var inputBox = new MKInputBox("Blender Sender!", "Enter command:") {
+                    Owner = this,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                if (inputBox.ShowDialog() ?? false)
                 {
-                    var flags = prompt.Flags;
-                    var name = prompt.FolderName;
+                    var message = inputBox.InputValue;
 
-                    var path = Path.Combine(Settings.ModelsDirectory, name);
-
-                    switch (prompt.Format)
-                    {
-                    case ExportModelFormat.WavefrontObj:
-                        {
-                            ShowWaitCursor = true;
-
-                            if (prompt.ExportAll)
-                            {
-                                int partIdx = 0;
-                                Model curPart = null;
-
-                                foreach (var part in CurrentModelPackage.Models)
-                                {
-                                    if (curPart == null || curPart.UID != part.UID)
-                                    {   
-                                        var filename = $"{partIdx:D4}_{part.UID.High:X8}_{part.UID.Low:X8}";
-                                        
-                                        OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms);
-                                        
-                                        curPart = part;
-                                        partIdx++;
-                                    }
-                                }
-
-                                var modelCountStr = String.Format($"{partIdx} {{0}}", (partIdx > 1) ? "models" : "model");
-                                
-                                MessageBox.Show($"Successfully exported {modelCountStr} to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-                            }
-                            else
-                            {
-                                var part = SelectedModelGroup;
-                                var filename = $"{part.UID.High:X8}_{part.UID.Low:X8}";
-
-                                if (OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms) == ExportResult.Success)
-                                {
-                                    var msg = String.Format("Successfully exported to '{0}'!", path);
-                                    MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-                                }
-                                else
-                                {
-                                    var msg = String.Format("Failed to export the file '{0}'!", path);
-                                    MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Error);
-                                }
-                            }
-
-                            ShowWaitCursor = false;
-                        } break;
-                    default:
-                        MessageBox.Show("Unsupported format!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                        break;
-                    }
+                    Trace.WriteLine($"Sending message to Blender: '{message}'");
+                    client.Send(inputBox.InputValue);
                 }
             }
         }
-        
-        private void ExportModelPackage()
-        {
-            if (CurrentModelPackage == null)
-                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-            else
-            {
-                string path = Path.Combine(Settings.ExportDirectory, Path.GetFileName(CurrentModelFile.FileName));
-                
-                AT.Log("Compiling ModelPackage...");
-                CurrentModelPackage.GetInterface().Save();
-                
-                AT.Log("Exporting ModelPackage...");
-                CurrentModelPackage.ModelFile.Save(path, false);
-                AT.Log("Done!");
+        */
 
-                IsFileDirty = false;
-                MessageBox.Show($"Successfully exported to '{path}'!", "ModelPackage Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+        private void ImportAntilliScene()
+        {
+
+        }
+
+        private void ExportAntilliScene()
+        {
+            var prompt = CreateDialog<ExportModelDialog>(true, false);
+
+            if (!SelectedModelGroup.IsNull)
+                prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+
+            if (prompt.ShowDialog() ?? false)
+            {
+                var flags = prompt.Flags;
+                var name = prompt.FolderName;
+
+                var path = Path.Combine(Settings.ExportDirectory, name);
+
+                ShowWaitCursor = true;
+
+                var scene = new AntilliScene(CurrentModelPackage);
+
+                using (var ms = new MemoryStream())
+                {
+                    scene.Serialize(ms);
+
+                    var buffer = ms.ToArray();
+
+                    File.WriteAllBytes(path, buffer);
+                }
+
+                ShowWaitCursor = false;
             }
         }
 
+        private void ImportModelPackage()
+        {
+
+        }
+
+        private void ExportModelPackage()
+        {
+            var prompt = CreateDialog<ExportModelDialog>(true, false);
+
+            if (!SelectedModelGroup.IsNull)
+                prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+
+            prompt.ShowFormatSelector = true;
+
+            if (prompt.ShowDialog() ?? false)
+            {
+                var flags = prompt.Flags;
+                var name = prompt.FolderName;
+
+                var path = Path.Combine(Settings.ModelsDirectory, name);
+
+                ShowWaitCursor = true;
+
+                //
+                // TODO
+                //
+
+                ShowWaitCursor = false;
+            }
+        }
+
+        private void ExportWavefrontOBJ()
+        {
+            var prompt = CreateDialog<ExportModelDialog>(true, false);
+
+            if (!SelectedModelGroup.IsNull)
+                prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+
+            if (prompt.ShowDialog() ?? false)
+            {
+                var flags = prompt.Flags;
+                var name = prompt.FolderName;
+
+                var path = Path.Combine(Settings.ModelsDirectory, name);
+
+                ShowWaitCursor = true;
+
+                if (prompt.ExportAll)
+                {
+                    int partIdx = 0;
+                    Model curPart = null;
+
+                    foreach (var part in CurrentModelPackage.Models)
+                    {
+                        if (curPart == null || curPart.UID != part.UID)
+                        {
+                            var filename = $"{partIdx:D4}_{part.UID.High:X8}_{part.UID.Low:X8}";
+
+                            OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms);
+
+                            curPart = part;
+                            partIdx++;
+                        }
+                    }
+
+                    var modelCountStr = String.Format($"{partIdx} {{0}}", (partIdx > 1) ? "models" : "model");
+
+                    MessageBox.Show($"Successfully exported {modelCountStr} to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    var part = SelectedModelGroup;
+                    var filename = $"{part.UID.High:X8}_{part.UID.Low:X8}";
+
+                    if (OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms) == ExportResult.Success)
+                    {
+                        var msg = String.Format("Successfully exported to '{0}'!", path);
+                        MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        var msg = String.Format("Failed to export the file '{0}'!", path);
+                        MessageBox.Show(msg, "OBJ Exporter", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+
+                ShowWaitCursor = false;
+            }
+        }
+        
         private void ExportVehicleHierarchyVPK()
         {
             var modelFile = CurrentModelFile as Driv3rVehiclesFile;
@@ -771,7 +857,7 @@ namespace Antilli
                 return;
             }
 
-            var idx = (!modelFile.IsMissionVehicleFile) ? modelFile.Models.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
+            var idx = (!modelFile.HasVirtualVehicles) ? modelFile.Packages.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
 
             var hierarchy =  modelFile.Hierarchies[idx];
 
@@ -784,133 +870,22 @@ namespace Antilli
 
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        private void ExportAntilliModelFile()
-        {
-            if (CurrentModelPackage == null || CurrentModelFile == null)
-            {
-                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var modelFile = CurrentModelFile as Driv3rVehiclesFile;
-
-            var idx = (!modelFile.IsMissionVehicleFile) ? modelFile.Models.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
-
-            var hierarchy = modelFile.Hierarchies[idx];
-
-            var dir = Settings.ExportDirectory;
-            var path = String.Format("{0}\\{1}_{2}.mod.xml", dir, Path.GetFileName(CurrentModelFile.FileName).Replace('.', '_'), hierarchy.UID);
-
-            var m = AntilliModel.Create(CurrentModelPackage);
-            m.SaveXML(path);
-
-#if false
-            var header = Encoding.UTF8.GetBytes("ANTILLI!");
-
-            var version = 1;
-            var flags = 0; // reserved for future use
-
-            using (var ms = new MemoryStream())
-            {
-                ms.Write(header);
-                ms.Write((short)((flags << 8) | version));
-                ms.Write((short)MagicNumber.FB); // ;)
-
-                // size of model data
-                ms.Position += 4;
-
-                var parts = CurrentModelPackage.Parts;
-                var vBuffers = CurrentModelPackage.VertexBuffers;
-                var materials = CurrentModelPackage.Materials;
-                var textures = CurrentModelPackage.Textures;
-
-                // model package stuff
-                ms.Write(CurrentModelPackage.UID);
-
-                ms.Write((short)parts.Count);
-                ms.Write((short)vBuffers.Count);
-                ms.Write((short)materials.Count);
-                ms.Write((short)textures.Count);
-
-                // reserved -- must be -1 to skip
-                ms.Write(-1);
-
-                // vertex buffers
-                foreach (var vBuf in vBuffers)
-                    vBuf.WriteTo(ms, true);
-
-                var texLookup = new Dictionary<int, int>();
-                var texLookupCount = 0;
-
-                var texNames = new List<String>();
-
-                // individual texture names
-                foreach (var tex in textures)
-                {
-                    if (texLookup.ContainsKey(tex.CRC32))
-                        continue;
-
-                    var texName = $"{tex.CRC32}.dds";
-                    texLookup.Add(tex.CRC32, texLookupCount++);
-
-                    texNames.Add(texName);
-                }
-
-                ms.Write(texLookupCount);
-
-                foreach (var texName in texNames)
-                    ms.Write(texName + '\0');
-
-                // materials
-                foreach (var mat in materials)
-                {
-                    ms.Write((short)mat.Substances.Count);
-                    ms.Write((short)mat.Type);
-
-                    ms.Write(mat.AnimationSpeed);
-
-                    foreach (var substance in mat.Substances)
-                    {
-                        ms.Write(substance.Flags);
-                        ms.Write((short)substance.Mode);
-                        ms.Write((short)substance.Type);
-
-                        ms.Write(substance.Textures.Count);
-
-                        foreach (var texture in substance.Textures)
-                        {
-                            ms.Write(texture.Reserved);
-                            ms.Write((short)texture.Type);
-                            ms.Write((short)texLookup[texture.CRC32]);
-                            ms.Write(texture.Unknown);
-                        }
-                    }
-                }
-
-                // TODO: Write model data
-
-                var hierPtr = ms.Position;
-                var modelSize = (int)(hierPtr - 16);
-
-                ms.Position = 0xC;
-                ms.Write(modelSize);
-
-                ms.Position = hierPtr;
-                // TODO: Write hierarchy data
-
-                // commit changes
-                ms.SetLength(ms.Position);
-
-                File.WriteAllBytes(path, ms.ToArray());
-            }
-#endif
-            MessageBox.Show($"Successfully exported AIModel file to '{path}'!", "Antilli Model Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
         
         private void ExportTexture(ITextureData texture)
         {
-            var path = Path.Combine(Settings.ExportDirectory, String.Format("{0}.dds", texture.UID));
+            var filename = $"{texture.Hash:X8}";
+
+            if (texture.UID != 0x01010101)
+                filename = $"{texture.UID:X8}_{texture.Hash:X8}";
+
+            var ext = "biff";
+
+            if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
+                ext = "bin";
+
+            filename = $"{filename}.{ext}";
+
+            var path = Path.Combine(Settings.TexturesDirectory, filename);
 
             FileManager.WriteFile(path, texture.Buffer);
 
@@ -923,31 +898,36 @@ namespace Antilli
                 AddExtension = true,
                 CheckFileExists = true,
                 CheckPathExists = true,
-                Filter = "DDS Texture|*.dds",
-                Title = "Choose DDS Texture:",
+                Filter = "Texture files|*.dds;*.tga;*.bmp;",
+                Title = "Select a file:",
                 ValidateNames = true
             };
-
+            
             if (replaceTexture.ShowDialog() ?? false)
             {
-                var ddsBuffer = File.ReadAllBytes(replaceTexture.FileName);
+                var buffer = File.ReadAllBytes(replaceTexture.FileName);
 
-                var texRef = TextureCache.GetTexture(texture);
-                texRef.SetBuffer(ddsBuffer);
+                var type = "biff";
 
-                // fill in a null texture's UID
-                // otherwise, leave it alone (bad idea?)
-                if (texRef.Data.UID == 0)
-                    texRef.Data.UID = (int)Memory.GetCRC32(ddsBuffer);
-                
-                Viewer.UpdateActiveModel();
+                if (Utils.TryGetImageFormat(buffer, out type)
+                    || (buffer.Length == 0))
+                {
+                    var texRef = TextureCache.GetTexture(texture);
+                    texRef.SetBuffer(buffer);
 
-                // reload the active texture if necessary
-                if (IsViewWidgetVisible)
-                    CurrentViewWidget.SetTexture(texture);
+                    Viewer.UpdateActiveModel();
 
-                IsFileDirty = true;
-                CurrentModelPackage.NotifyChanges();
+                    // reload the active texture if necessary
+                    if (IsViewWidgetVisible)
+                        CurrentViewWidget.SetTexture(texture);
+
+                    IsFileDirty = true;
+                    CurrentModelPackage.NotifyChanges();
+                }
+                else
+                {
+                    MessageBox.Show("Invalid texture file selected!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -1230,6 +1210,8 @@ namespace Antilli
                     sb.AppendLine($"{exception.Message}");
                     sb.AppendLine();
 
+                    MemoryCache.Dump(sb, true);
+
                     sb.AppendLine($"===== Stack trace =====");
                     sb.AppendLine($"{stk.ToString()}");
                     sb.AppendLine($"=======================");
@@ -1331,6 +1313,14 @@ namespace Antilli
                     TextureViewWidget.OnKeyPressed(o, e);
                     break;
                 }
+
+                if (e.Key == Key.F5)
+                {
+                    var sb = new StringBuilder();
+                    MemoryCache.Dump(sb, true);
+
+                    MessageBox.Show(sb.ToString(), "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             };
             
             Packages.SelectionChanged += OnModelPackageItemSelected;
@@ -1365,16 +1355,24 @@ namespace Antilli
             fileSaveAs.Click += (o, e) => OnFileSaveClick(true);
 
             fileExit.Click += (o, e) => OnFileExitClick();
-
-            exportSel.Click += (o, e) => ExportModelFile();
-            exportMDPC.Click += (o, e) => ExportModelPackage();
-            exportVPK.Click += (o, e) => ExportVehicleHierarchyVPK();
-            exportAIModel.Click += (o, e) => ExportAntilliModelFile();
-
+            
             chunkViewer.Click += (o, e) => CreateDialog<ChunkViewer>(false);
             modelTool.Click += (o, e) => CreateDialog<Importer>(true);
 
             optionsDlg.Click += (o, e) => CreateDialog<OptionsDialog>(true);
+
+            impAntilliScene.Click += (o, e) => ImportAntilliScene();
+            expAntilliScene.Click += (o, e) => ExportAntilliScene();
+
+            impModelPackage.Click += (o, e) => ImportModelPackage();
+            expModelPackage.Click += (o, e) => ExportModelPackage();
+
+            expWavefrontOBJ.Click += (o, e) => ExportWavefrontOBJ();
+
+            /*
+            blenderSync.Click += (o, e) => ConnectToBlender();
+            blenderSendCmd.Click += (o, e) => SendCommandToBlender();
+            */
 
             mtlListExpandAll.Click += (o, e) => MaterialsList.ExpandAll(true);
             mtlListCollapseAll.Click += (o, e) => MaterialsList.ExpandAll(false);

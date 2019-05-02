@@ -107,7 +107,11 @@ namespace Antilli
                 TriangleIndices = new Int32Collection(Mesh.GetTriangleIndices(true));
             }
 
-            Material = Mesh.GetMaterial();
+            MaterialDataPC material = null;
+
+            Mesh.ModelPackage.FindMaterial(Mesh.Material, out material);
+
+            Material = material;
 
             if (Material == null)
                 OnMaterialChanged();

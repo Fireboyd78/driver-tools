@@ -17,12 +17,18 @@ using DSCript.Spooling;
 
 namespace DSCript.Models
 {
-    public class VehicleHierarchyData : SpoolableResource<SpoolableBuffer>
+    public class VehicleHierarchyData : SpoolableResource<SpoolableBuffer>, IDetailProvider
     {
         public static readonly MagicNumber VPKBulletMagic = "BULL";
         public static readonly int VPKBulletVersion = 2;
         
         public class CenterPoint
+        {
+            public Vector4 Position { get; set; }
+            public Vector4 Rotation { get; set; }
+        }
+
+        public class MarkerPoint
         {
             public Vector4 Position { get; set; }
             public Vector4 Rotation { get; set; }
@@ -58,8 +64,7 @@ namespace DSCript.Models
 
         public List<VehiclePartData> Parts { get; set; }
 
-        public List<Vector4> MarkerPoints { get; set; }
-
+        public List<MarkerPoint> MarkerPoints { get; set; }
         public List<CenterPoint> CenterPoints { get; set; }
         public List<Thing3> T3Entries { get; set; }
         public List<Matrix44> PivotPoints { get; set; }
@@ -67,6 +72,10 @@ namespace DSCript.Models
         public List<PDLEntry> PDLEntries { get; set; }
 
         public List<BulletHolder> BulletHolders { get; set; }
+
+        public PlatformType Platform { get; set; }
+
+        public int Version { get; set; }
 
         public int UID { get; set; }
         public int Flags { get; set; }
@@ -84,156 +93,214 @@ namespace DSCript.Models
             }
         }
 
+        TDetail IDetailProvider.Deserialize<TDetail>(Stream stream)
+        {
+            return Deserialize<TDetail>(stream);
+        }
+
+        void IDetailProvider.Serialize<TDetail>(Stream stream, ref TDetail detail)
+        {
+            Serialize(stream, ref detail);
+        }
+
+        protected TDetail Deserialize<TDetail>(Stream stream)
+            where TDetail : IDetail, new()
+        {
+            var result = new TDetail();
+            result.Deserialize(stream, this);
+
+            return result;
+        }
+
+        protected void Serialize<TDetail>(Stream stream, ref TDetail detail)
+            where TDetail : IDetail
+        {
+            detail.Serialize(stream, this);
+        }
+
         protected override void Load()
         {
-            var awhf = this.Spooler;
-
-            using (var f = awhf.GetMemoryStream())
+            using (var stream = Spooler.GetMemoryStream())
             {
                 // skip header
-                f.Position = 0xC;
+                stream.Position = 0xC;
 
-                var header = f.Read<HierarchyDataHeader>();
-                var vInfo = header.VehicleHierarchyInfo;
+                var header = stream.Read<HierarchyInfo>();
 
-                if (header.HierarchyType != HierarchyDataType.Vehicle)
+                if (header.Type != 6)
                     throw new InvalidOperationException("Cannot load vehicle hierarchy data -- invalid hierarchy type!");
-                
+
+                var vInfo = Deserialize<VehicleHierarchyInfo>(stream);
+
                 UID = header.UID;
                 Flags = vInfo.Flags;
+
+                //
+                // Parts
+                //
                 
-                var bulDataOffset = (header.PDLOffset + header.PDLSize);
-
-                // read thing1 data
-                f.Position = (header.ExtraPartsDataOffset + vInfo.T1Offset);
-
-                MarkerPoints = new List<Vector4>(vInfo.T1Count);
-
-                for (int i = 0; i < vInfo.T1Count; i++)
+                Parts = new List<VehiclePartData>(header.Count);
+                
+                for (int i = 0; i < header.Count; i++)
                 {
-                    var v4 = f.Read<Vector4>();
-
-                    MarkerPoints.Add(v4);
+                    var part = stream.Read<VehiclePartData>();
+                    Parts.Add(part);
                 }
 
-                // read thing2 data
-                f.Position = (header.ExtraPartsDataOffset + vInfo.T2Offset);
+                //
+                // Thing2 data
+                //
 
                 CenterPoints = new List<CenterPoint>(vInfo.T2Count);
                 
                 for (int i = 0; i < vInfo.T2Count; i++)
                 {
-                    CenterPoints.Add(new CenterPoint() {
-                        Position = f.Read<Vector4>(),
-                        Rotation = f.Read<Vector4>(),
-                    });
+                    var point = new CenterPoint() {
+                        Position = stream.Read<Vector4>(),
+                        Rotation = stream.Read<Vector4>(),
+                    };
+                    
+                    CenterPoints.Add(point);
                 }
 
-                // read thing3 data
-                f.Position = (header.ExtraPartsDataOffset + vInfo.T3Offset);
+                //
+                // Thing3 data
+                //
 
                 T3Entries = new List<Thing3>(vInfo.T3Count);
-
+                
                 for (int i = 0; i < vInfo.T3Count; i++)
                 {
                     T3Entries.Add(new Thing3() {
-                        Transform = f.Read<Matrix44>(),
-                        Unknown = f.Read<Vector4>(),
+                        Transform = stream.Read<Matrix44>(),
+                        Unknown = stream.Read<Vector4>(),
                     });
                 }
 
-                // read thing4 data
-                f.Position = (header.ExtraPartsDataOffset + vInfo.T4Offset);
+                //
+                // Thing1 data
+                //
+
+                MarkerPoints = new List<MarkerPoint>(vInfo.T1Count);
+
+                for (int i = 0; i < vInfo.T1Count; i++)
+                {
+                    var point = new MarkerPoint() {
+                        Position = stream.Read<Vector4>(),
+                    };
+
+                    // thank god Reflections did this, otherwise we'd be f*$%ed!
+                    if (Version == 1)
+                        point.Rotation = stream.Read<Vector4>();
+
+                    MarkerPoints.Add(point);
+                }
+                
+                //
+                // Thing4 data
+                //
 
                 PivotPoints = new List<Matrix44>(vInfo.T4Count);
-
+                
                 for (int i = 0; i < vInfo.T4Count; i++)
                 {
-                    var m44 = f.Read<Matrix44>();
+                    var m44 = stream.Read<Matrix44>();
 
                     PivotPoints.Add(m44);
                 }
 
-                // read PDL data
-                var pdlOffset = header.PDLOffset;
-
-                f.Position = header.PDLOffset;
-
-                // TODO: Write a struct to encapsulate this stuff
-                var entriesCount = f.ReadInt32();
-                var pdlDataCount = f.ReadInt32();
-
-                var entriesOffset = f.ReadInt32() + pdlOffset;
-                var pdlDataOffset = f.ReadInt32() + pdlOffset;
-
-                var pdlMagic = f.ReadString();
-
-                if (pdlMagic != "PDL001.002.003a")
-                    throw new Exception("ERROR - invalid PDL magic!!!");
-
-                PDLEntries = new List<PDLEntry>(entriesCount);
-
-                for (int i = 0; i < entriesCount; i++)
-                {
-                    var baseOffset = (f.Position = (i * 0x10) + entriesOffset);
-
-                    var count = f.ReadInt32();
-                    var offset = f.ReadInt32() + baseOffset;
-                    var unknown = f.ReadSingle();
-                    var reserved = f.ReadInt32();
-
-                    var dataEntries = new List<PDLData>(count);
-
-                    if (count < 1)
-                        throw new Exception("ERROR - invalid PDL entry!!!");
-
-                    for (int t = 0; t < count; t++)
-                    {
-                        f.Position = (t * 0x60) + offset;
-
-                        dataEntries.Add(new PDLData() {
-                            Position = f.Read<Vector4>(),
-                            Transform = f.Read<Matrix44>(),
-                            Unknown1 = f.ReadInt32(),
-                            Unknown2 = f.Read<Vector3>(),
-                        });
-                    }
-
-                    PDLEntries.Add(new PDLEntry() {
-                        Children = dataEntries,
-                        Unknown = unknown,
-                        Reserved = reserved
-                    });
-                }
-
-                // read parts
-                f.Position = header.PartsOffset;
-
-                Parts = new List<VehiclePartData>(header.PartsCount);
-
-                for (int i = 0; i < header.PartsCount; i++)
-                {
-                    var part = f.Read<VehiclePartData>();
-                    Parts.Add(part);
-                }
+                //
+                // Physics data
+                //
                 
-                // read bullet hole data
-                f.Position = bulDataOffset;
+                var pdlOffset = (int)stream.Position;
+                var pdl = Deserialize<PhysicsInfo>(stream);
+                
+                PDLEntries = new List<PDLEntry>(pdl.T1Count);
 
-                var nBullets = f.ReadInt32();
-                var nHolders = f.ReadInt32(); // => t3Count
+                var pdlLookup = new Dictionary<int, int>();
+                var pdlData = new List<PDLData>();
 
-                if (nHolders != vInfo.T3Count)
-                    throw new InvalidOperationException("UH-OH! Looks like the bullet hole data is corrupt!");
+                //
+                // PDL.Thing2 data
+                //
+
+                stream.Position = pdlOffset + pdl.T2Offset;
+                
+                for (int i = 0; i < pdl.T2Count; i++)
+                {
+                    var ptr = (int)stream.Position;
+
+                    var data = new PDLData() {
+                        Position = stream.Read<Vector4>(),
+                        Transform = stream.Read<Matrix44>(),
+                        Unknown1 = stream.ReadInt32(),
+                        Unknown2 = stream.Read<Vector3>(),
+                    };
+
+                    pdlLookup.Add(ptr, i);
+                    pdlData.Add(data);
+                }
+
+                //
+                // PDL.Thing1 data
+                //
+
+                stream.Position = pdlOffset + pdl.T1Offset;
+                
+                for (int i = 0; i < pdl.T1Count; i++)
+                {
+                    var ptr = (int)stream.Position;
+                    
+                    var count = stream.ReadInt32();
+                    var offset = stream.ReadInt32() + ptr;
+                    var unknown = stream.ReadSingle();
+                    var reserved = stream.ReadInt32();
+                    
+                    List<PDLData> children = null;
+
+                    if (count != 0)
+                    {
+                        var childrenIdx = -1;
+
+                        if (pdlLookup.TryGetValue(offset, out childrenIdx))
+                            children = pdlData.GetRange(childrenIdx, count);
+
+                        if (children == null)
+                            throw new InvalidOperationException("Failed to get physics data children!");
+                    }
+                    var entry = new PDLEntry() {
+                        Children = children,
+                        Unknown = unknown,
+                        Reserved = reserved,
+                    };
+
+                    PDLEntries.Add(entry);
+                }
+
+                //
+                // Bullet data
+                //
+
+                var bulDataOffset = (pdlOffset + header.PDLSize);
+                
+                stream.Position = bulDataOffset;
+                
+                var nBullets = stream.ReadInt32();
+                var nHolders = stream.ReadInt32(); // => t3Count
+
+                // idk man ¯\_(ツ)_/¯
+                //if (nHolders != vInfo.T3Count)
+                //    throw new InvalidOperationException("UH-OH! Looks like the bullet hole data is corrupt!");
 
                 BulletHolders = new List<BulletHolder>(nHolders);
 
                 var holders = new int[nHolders];
 
                 for (int i = 0; i < nHolders; i++)
-                    holders[i] = f.ReadInt32();
+                    holders[i] = stream.ReadInt32();
 
-                f.Position = bulDataOffset + Memory.Align(0x8 + (nHolders * 0x4), 16);
+                stream.Position = bulDataOffset + Memory.Align(0x8 + (nHolders * 0x4), 16);
 
                 // resolve bullet hole offsets and counts
                 var nBulletsRead = 0;
@@ -251,7 +318,7 @@ namespace DSCript.Models
                         if (nBulletsRead == nBullets)
                             throw new InvalidOperationException($"Panel {p} expected {holderLen - b} more bullets when there's no more left!");
 
-                        var bullet = BulletData.Unpack(f);
+                        var bullet = BulletData.Unpack(stream);
                         ++nBulletsRead;
 
                         holder.Bullets.Add(bullet);

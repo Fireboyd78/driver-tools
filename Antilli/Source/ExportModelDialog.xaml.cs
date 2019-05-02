@@ -84,18 +84,17 @@ namespace Antilli
                 changedCallback?.Invoke();
             };
         }
-
+        
         public ExportModelFormat Format
         {
             get
             {
-                switch (cmbFormat.SelectedIndex)
+                switch (cmbGame.SelectedIndex)
                 {
-                case 0: return ExportModelFormat.WavefrontObj;
-                case 1: return ExportModelFormat.ModelPackage;
+                case 0: return ExportModelFormat.Driv3r;
+                case 1: return ExportModelFormat.DriverParallelLines;
                 }
 
-                // this shouldn't ever happen
                 return ExportModelFormat.Invalid;
             }
         }
@@ -104,6 +103,8 @@ namespace Antilli
         {
             get { return _flags; }
         }
+
+        public bool ShowFormatSelector { get; set; }
 
         public bool IsValid
         {
@@ -178,7 +179,7 @@ namespace Antilli
     {
         Invalid = -1,
 
-        WavefrontObj,
-        ModelPackage,
+        Driv3r,
+        DriverParallelLines,
     }
 }

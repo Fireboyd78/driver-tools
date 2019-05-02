@@ -24,6 +24,11 @@ namespace DSCript
         /// [MDXN] - A block that contains various models and textures (new format found in DPL and DSF)
         /// </summary>
         ModelPackagePC_X = 0x4E58444D,
+
+        /// <summary>
+        /// [MDWI] - Wii model package
+        /// </summary>
+        ModelPackageWii = 0x4957444D,
         
         /// <summary>
         /// [0x0] - A block that acts as a unifiable package for various data types

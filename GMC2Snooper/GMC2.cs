@@ -118,7 +118,7 @@ namespace GMC2Snooper
             
             stream.Position = tsc2Offset;
 
-            var tsc2Header = new MaterialPackageHeader(MaterialPackageType.PS2, stream);
+            var tsc2Header = new MaterialPackageData(MaterialPackageType.PS2, stream);
 
             Materials = new List<MaterialDataPS2>(tsc2Header.MaterialsCount);
 

@@ -112,7 +112,13 @@ namespace Antilli
         }
 
         public static readonly DiffuseMaterial NullMaterial = new DiffuseMaterial() {
-            Brush = new SolidColorBrush(Color.FromArgb(255, 255, 64, 128))
+            Brush = new SolidColorBrush(Color.FromArgb(255, 255, 64, 128)),
+        };
+
+        public static readonly DiffuseMaterial ShadowMaterial = new DiffuseMaterial() {
+            Brush = new SolidColorBrush(Color.FromArgb(255, 0, 0, 0)) {
+                Opacity = 0.5f
+            },
         };
 
         public bool IsEmissive { get; private set; }
@@ -226,24 +232,23 @@ namespace Antilli
                 var cTex = TextureCache.GetTexture(texInfo);
                 var texMap = cTex.Bitmap;
 
-                var transparent = (alpha && !specular);
-                var loadFlags = (transparent || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
-
-                var bmap = texMap.GetBitmapSource(loadFlags);
-
-                materials.Children.Add(new DiffuseMaterial() {
-                    Brush = new ImageBrush() {
-                        Opacity = Opacity,
-                        ImageSource = bmap,
-                        TileMode = TileMode.Tile,
-                        Stretch = Stretch.Fill,
-                        ViewportUnits = BrushMappingMode.Absolute
-                    }
-                });
-
-                if (emissive)
+                if (texMap == null)
                 {
-                    materials.Children.Add(new EmissiveMaterial() {
+                    // null texture?
+                    materials.Children.Add(NullMaterial);
+
+                    IsEmissive = false;
+                    HasTransparency = false;
+                }
+                else
+                {
+
+                    var transparent = (alpha && !specular);
+                    var loadFlags = (transparent || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
+
+                    var bmap = texMap.GetBitmapSource(loadFlags);
+
+                    materials.Children.Add(new DiffuseMaterial() {
                         Brush = new ImageBrush() {
                             Opacity = Opacity,
                             ImageSource = bmap,
@@ -252,23 +257,36 @@ namespace Antilli
                             ViewportUnits = BrushMappingMode.Absolute
                         }
                     });
-                }
-                else if (specular)
-                {
-                    materials.Children.Add(new SpecularMaterial() {
-                        Brush = new ImageBrush() {
-                            Opacity = Opacity,
-                            ImageSource = texMap.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
-                            TileMode = TileMode.Tile,
-                            Stretch = Stretch.Fill,
-                            ViewportUnits = BrushMappingMode.Absolute
-                        },
-                        SpecularPower = 75.0
-                    });
-                }
 
-                IsEmissive = emissive;
-                HasTransparency = alpha;
+                    if (emissive)
+                    {
+                        materials.Children.Add(new EmissiveMaterial() {
+                            Brush = new ImageBrush() {
+                                Opacity = Opacity,
+                                ImageSource = bmap,
+                                TileMode = TileMode.Tile,
+                                Stretch = Stretch.Fill,
+                                ViewportUnits = BrushMappingMode.Absolute
+                            }
+                        });
+                    }
+                    else if (specular)
+                    {
+                        materials.Children.Add(new SpecularMaterial() {
+                            Brush = new ImageBrush() {
+                                Opacity = Opacity,
+                                ImageSource = texMap.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
+                                TileMode = TileMode.Tile,
+                                Stretch = Stretch.Fill,
+                                ViewportUnits = BrushMappingMode.Absolute
+                            },
+                            SpecularPower = 75.0
+                        });
+                    }
+
+                    IsEmissive = emissive;
+                    HasTransparency = alpha;
+                }
             }
             else
             {
@@ -298,7 +316,23 @@ namespace Antilli
             var triangleIndices = new Int32Collection(indices);
             
             Mesh = new AntilliMesh3D(vertices, triangleIndices);
-            Material = Model.GetMaterial();
+
+            var pak = Model.ModelPackage;
+            var mtl = Model.Material;
+
+            MaterialDataPC material = null;
+
+            var result = pak.FindMaterial(mtl, out material);
+
+            Material = material;
+
+            if ((mtl.UID == 0) && (mtl.Handle == 0) || (mtl.UID == 0xCCCC))
+            {
+                Content.Material = ShadowMaterial;
+                Content.BackMaterial = (DoubleSided) ? ShadowMaterial : null;
+
+                HasTransparency = true;
+            }
         }
         
         public AntilliModelVisual3D()

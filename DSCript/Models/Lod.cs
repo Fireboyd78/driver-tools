@@ -19,7 +19,9 @@ namespace DSCript.Models
         public Model Parent { get; set; }
         public List<LodInstance> Instances { get; set; }
 
-        public int Type { get; set; }
+        public int Flags { get; set; }
+
+        public int Mask { get; set; }
         
         public Lod(int id)
         {

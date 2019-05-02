@@ -480,15 +480,15 @@
 
                 <TextBlock Grid.Column="4" Margin="{TemplateBinding Padding}" Text="{TemplateBinding InputGestureText}"/>
     
-                <!-- broken?!
                 <Path x:Name="RightArrow"
                       Grid.Column="5"
                       Data="M0,0L4,3.5 0,7z"
-                      Fill="#FF212121"
+                      Fill="#FF808080"
                       HorizontalAlignment="Left"
-                      Margin="8,0,0,0"
-                      VerticalAlignment="Center"/>
-                -->
+                      Margin="6,0,0,0"
+                      VerticalAlignment="Center"
+                      Visibility="Collapsed"/>
+                
                 <Popup x:Name="PART_Popup"
                        AllowsTransparency="True"
                        Focusable="False"
@@ -550,6 +550,9 @@
             <Trigger Property="CanContentScroll" SourceName="SubMenuScrollViewer" Value="False">
                 <Setter Property="Canvas.Top" TargetName="OpaqueRect" Value="{Binding VerticalOffset, ElementName=SubMenuScrollViewer}"/>
                 <Setter Property="Canvas.Left" TargetName="OpaqueRect" Value="{Binding HorizontalOffset, ElementName=SubMenuScrollViewer}"/>
+            </Trigger>
+            <Trigger Property="Role" Value="SubmenuHeader">
+                <Setter Property="Visibility" TargetName="RightArrow" Value="Visible"/>
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>

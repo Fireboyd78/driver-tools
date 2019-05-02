@@ -11,24 +11,47 @@ using System.Text;
 
 namespace DSCript.Models
 {
-    public class IndexData
+    public class IndexBuffer
     {
+        short[] m_Buffer = null;
+
         public int Length
         {
             get { return 2; }
         }
 
-        public short[] Buffer { get; set; }
+        public short[] Indices
+        {
+            get { return m_Buffer; }
+            set
+            {
+                m_Buffer = value;
+            }
+        }
 
         public short this[int id]
         {
-            get { return Buffer[id]; }
-            set { Buffer[id] = value; }
+            get { return Indices[id]; }
+            set { Indices[id] = value; }
         }
 
-        public IndexData(int count)
+        public IndexBuffer(int count)
         {
-            Buffer = new short[count];
+            Indices = new short[count];
+        }
+
+        public IndexBuffer(byte[] buffer, int count)
+        {
+            var size = (count * Length);
+
+            if (size > buffer.Length)
+                throw new InvalidOperationException("Can't create index buffer -- not enough data!");
+            
+            m_Buffer = new short[count];
+
+            var handle = GCHandle.Alloc(m_Buffer, GCHandleType.Pinned);
+
+            Marshal.Copy(buffer, 0, handle.AddrOfPinnedObject(), size);
         }
     }
 }

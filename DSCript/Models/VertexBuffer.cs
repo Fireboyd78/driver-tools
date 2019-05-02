@@ -183,12 +183,14 @@ namespace DSCript.Models
         {
             return new VertexBuffer(version, type);
         }
-
+        
         private VertexDeclaration m_decl = null;
 
         public int Type { get; }
-        public int Version { get; }
+        public int Format { get; }
 
+        public int Version { get; }
+        
         public VertexDeclaration Declaration
         {
             get { return m_decl; }
@@ -241,7 +243,7 @@ namespace DSCript.Models
             get { return Declaration.HasType<Vector2>(VertexUsageType.TextureCoordinate, 0); }
         }
 
-        public void CreateVertices(byte[] buffer, int count, int length)
+        public void CreateVertices(byte[] buffer, int count)
         {
             Vertices = new List<VertexData>(count);
 
@@ -320,8 +322,11 @@ namespace DSCript.Models
         public bool CanUseForType(int version, int type)
         {
             var otherType = GetVertexDeclType(version, type);
+            
+            if (Version != version)
+                throw new InvalidOperationException($"Vertex buffer version mismatch! ({version} != {Version})");
 
-            return ((Version == version) && (Type == otherType));
+            return (Format == otherType);
         }
         
         public void WriteTo(Stream stream, bool writeDeclInfo = false)
@@ -341,8 +346,10 @@ namespace DSCript.Models
 
         protected VertexBuffer(int version, int type)
         {
-            Type = GetVertexDecl(version, type, out m_decl);
+            Type = type;
+            Format = GetVertexDecl(version, type, out m_decl);
             Version = version;
+            Vertices = new List<VertexData>();
         }
 
         protected VertexBuffer(VertexDeclaration declaration)

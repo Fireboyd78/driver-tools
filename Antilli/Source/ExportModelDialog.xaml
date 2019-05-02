@@ -31,11 +31,12 @@
                 <!--
                     Select model format
                 -->
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Visibility="{Binding ShowFormatSelector, FallbackValue=Collapsed, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Label Content="Format:" Padding="6,4"/>
-                    <ComboBox Name="cmbFormat" Width="120" Padding="4,2" Height="20" SelectedIndex="0" VerticalAlignment="Center">
-                        <ComboBoxItem Content="Wavefront OBJ"/>
-                        <ComboBoxItem Content="Model Package" IsEnabled="False"/>
+                    <ComboBox Name="cmbGame" Width="80" Margin="4,0" Padding="4,2" Height="20" SelectedIndex="0"
+                              VerticalAlignment="Center">
+                        <ComboBoxItem Content="Driv3r"/>
+                        <ComboBoxItem Content="Driver: Parallel Lines"/>
                     </ComboBox>
                 </StackPanel>
                 <!--

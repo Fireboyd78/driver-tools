@@ -12,7 +12,7 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Antilli Editor")]
-[assembly: AssemblyCopyright("Copyright (C) 2014-2018 Fireboyd78")]
+[assembly: AssemblyCopyright("Copyright (C) 2014-2019 Fireboyd78")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -51,6 +51,6 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("2.7.*")]
-[assembly: AssemblyFileVersion("2.7.2.0")]
+[assembly: AssemblyVersion("2.11.*")]
+[assembly: AssemblyFileVersion("2.11.0.0")]
 [assembly: NeutralResourcesLanguageAttribute("en-US")]

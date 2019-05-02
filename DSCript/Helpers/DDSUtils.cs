@@ -139,6 +139,80 @@ namespace DSCript
                 return GetHeaderInfo(ms, ref header);
         }
 
+        // source: https://github.com/dstien/gameformats/blob/master/mm3/decdds/
+        public static int GetDataSize(ref DDSHeader header)
+        {
+            // Find data length for texture/cube/volume with mips at given dimentions/bpp.
+            var images = 1;
+
+            if ((header.Caps2 & 0x200) != 0)
+            {
+                images = 0;
+
+                // check bits 10-15 (0x400-0x8000)
+                for (int n = 0; n < 6; n++)
+                {
+                    var mask = (1 << (10 + n));
+
+                    if ((header.Caps2 & mask) != 0)
+                        ++images;
+                }
+            }
+
+            var imglen = 0;
+            var mips = (header.MipMapCount != 0) ? header.MipMapCount : 1;
+
+            var fourCC = header.PixelFormat.FourCC;
+            var texel = ((fourCC & 0xFFFFFF) == 0x545844); // 'DXT' texture
+            var type = ((fourCC >> 24) - 0x30);
+            var bpp = -1;
+
+            if (texel)
+            {
+                switch (type)
+                {
+                case 1:
+                    bpp = 4;
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    bpp = 8;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Invalid texture format '{fourCC:X8}'.");
+                }
+            }
+            else
+            {
+                bpp = header.PixelFormat.RGBBitCount;
+            }
+            
+            var volume = (header.Caps2 & 0x200000) != 0;
+
+            for (int mip = 0; mip < mips; mip++)
+            {
+                var width = Math.Max(header.Width >> mip, 1);
+                var height = Math.Max(header.Height >> mip, 1);
+
+                var depth = (header.Depth >> mip);
+
+                var slices = (volume && (depth != 0)) ? depth : 1;
+                
+                if (texel)
+                {
+                    imglen += ((width + 3) / 4) * ((height + 3) / 4) * bpp * 2 * slices * images;
+                }
+                else
+                {
+                    imglen += (width * height * bpp) / 8 * slices * images;
+                }
+            }
+
+            return imglen;
+        }
+
         public static int GetTextureType(int fourCC)
         {
             switch (fourCC)

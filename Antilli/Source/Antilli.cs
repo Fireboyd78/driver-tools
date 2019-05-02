@@ -34,7 +34,7 @@ namespace Antilli
 {
     public enum GameType : int
     {
-        None = 0,
+        None = -1,
 
         Driv3r,
         DriverPL,
@@ -210,6 +210,8 @@ namespace Antilli
 
             bool m_useGlobals;
             bool m_useBlendWeights;
+
+            public AntilliClient BlenderClient { get; set; }
             
             public ModelFile ModelFile
             {
@@ -240,7 +242,7 @@ namespace Antilli
 
                     NotifyChange("Materials");
                     NotifyChange("Textures");
-
+                    
                     if (CanUseGlobals)
                     {
                         NotifyChange("GlobalMaterials");
@@ -256,7 +258,7 @@ namespace Antilli
                 get
                 {
                     if (ModelFile != null)
-                        return ModelFile.Models;
+                        return ModelFile.Packages;
 
                     return null;
                 }
@@ -314,8 +316,6 @@ namespace Antilli
             {
                 TextureSelectQueried?.Invoke(texture, null);
             }
-
-            public bool UseDPLHacks { get; set; }
         }
 
         public static StateData CurrentState;
@@ -474,6 +474,33 @@ namespace Antilli
             }
 
             return int.TryParse(value, out result);
+        }
+
+        public static bool TryGetImageFormat(byte[] buffer, out string result)
+        {
+            var magic = BitConverter.ToInt32(buffer, 0);
+
+            switch (magic)
+            {
+            // iffy at best
+            case 0x20000:
+            case 0xA0000:
+                result = "tga";
+                return true;
+            case 0x364D42:
+            case 0x384D42:
+            case 0x10364D42:
+            case 0x10384D42:
+                result = "bmp";
+                return true;
+            case 0x20534444:
+                result = "dds";
+                return true;
+            }
+
+            // unknown
+            result = "";
+            return false;
         }
     }
 }

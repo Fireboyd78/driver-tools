@@ -83,12 +83,18 @@ namespace DSCript.Models
         }
     }
 
+    public struct BBox
+    {
+        public Vector4 V11, V12, V13, V14;
+        public Vector4 V21, V22, V23, V24;
+    }
+
     public class Model
     {
         public UID UID;
-        
+
         // only used in DPL!?
-        public Vector4 Scale { get; set; }
+        public Vector4 Scale;
 
         /// <summary>
         /// Gets or sets the Vertex Buffer to use when accessing vertices
@@ -101,10 +107,18 @@ namespace DSCript.Models
 
         public int Flags { get; set; }
 
-        // something shadow related?
-        public int Unknown3 { get; set; }
+        public BBox BoundingBox;
 
-        public Vector4[] Transform { get; set; } = new Vector4[8];
-        public Lod[] Lods { get; set; } = new Lod[7];
+        public Vector4[] Transform = new Vector4[8];
+        public List<Lod> Lods { get; set; }
+
+        public Model()
+        {
+            Lods = new List<Lod>(7);
+
+            // reserve space for the data
+            for (int i = 0; i < 7; i++)
+                Lods.Add(null);
+        }
     }
 }

@@ -141,5 +141,8 @@ namespace System
             IntPtr hWnd,
             [Out] string lpClassName,
             int nMaxCount);
+        
+        [DllImport("kernel32.dll")]
+        public static extern void RtlZeroMemory(IntPtr dst, int length);
     }
 }

@@ -238,10 +238,10 @@ namespace Antilli
                 get { return (Count * Stride); }
             }
 
-            public IndexData Compile()
+            public IndexBuffer Compile()
             {
-                return new IndexData(Count) {
-                    Buffer = Indices.ToArray(),
+                return new IndexBuffer(Count) {
+                    Indices = Indices.ToArray(),
                 };
             }
         }
@@ -347,8 +347,7 @@ namespace Antilli
                         IndexOffset = indexOffset,
                         IndexCount = numPrims,
 
-                        MaterialId = polyMesh.MaterialId,
-                        SourceUID = 0xFFFD, // assume it's a self-contained vehicle texture
+                        Material = new MaterialHandle((ushort)polyMesh.MaterialId, 0xFFFD),
                     };
 
                     if (shadowModelHack)
@@ -573,7 +572,7 @@ namespace Antilli
 
                     var partDef = new Lod(slotIdx) {
                         Parent = model,
-                        Type = GetPartSlotType(slotType),
+                        Mask = GetPartSlotType(slotType),
                     };
 
                     lods[slotIdx] = partDef;
@@ -587,7 +586,7 @@ namespace Antilli
                     var transform = lodInstance.Matrix.Values;
 
                     for (int t = 0; t < 4; t++)
-                        instance.Transform[t] = GetVectorFromTransform(transform, (t * 4));
+                        instance.Transform.SetRow(t, GetVectorFromTransform(transform, (t * 4)));
                 }
 
                 // gotta make yet another fucking queue
@@ -704,7 +703,7 @@ namespace Antilli
             resource.UID = modelPackage.UID;
             resource.Platform = modelPackage.Platform;
             resource.Version = version;
-
+            
             var gModels = new List<Model>();
             var gLodInstances = new List<LodInstance>();
             var gSubModels = new List<SubModel>();
@@ -728,7 +727,7 @@ namespace Antilli
             gSubstances.AddRange(modelPackage.Substances);
             gTextures.AddRange(modelPackage.Textures);
 
-            var mtlLookup = new Dictionary<int, int>();
+            var mtlLookup = new Dictionary<MaterialHandle, int>();
             
             foreach (var _model in modelPackage.Models)
             {
@@ -754,11 +753,11 @@ namespace Antilli
                 {
                     var lod = new Lod(_lod.ID) {
                         Parent = model,
-                        Type = GetLodType(_lod.ID),
+                        Mask = GetLodType(_lod.ID),
                     };
 
-                    if (lod.Type == -1)
-                        lod.Type = _lod.Type;
+                    if (lod.Mask == -1)
+                        lod.Mask = _lod.Mask;
                     
                     lods.Add(lod);
 
@@ -813,38 +812,36 @@ namespace Antilli
                                 gIndices.Add((short)lookup[vIdx]);
                             }
 
-                            var sourceUID = _subModel.SourceUID;
-                            var materialId = _subModel.MaterialId;
+                            var material = _subModel.Material;
 
                             // retarget for old-style materials
                             if (version == 6)
                             {
-                                if (sourceUID == modelPackage.UID)
+                                if (material.UID == modelPackage.UID)
                                 {
-                                    sourceUID = 0xFFFD;
+                                    material.UID = 0xFFFD;
                                 }
-                                else if (sourceUID != 0xCCCC)
-                                {
-                                    var materialKey = (_subModel.MaterialId << 16) | sourceUID;
-                                    
-                                    if (!mtlLookup.ContainsKey(materialKey))
+                                else if (material.UID != 0xCCCC)
+                                {   
+                                    if (!mtlLookup.ContainsKey(material))
                                     {
-                                        // copy from another model package
-                                        var material = _subModel.GetMaterial();
+                                        MaterialDataPC mtl = null;
 
-                                        mtlLookup.Add(materialKey, gMaterials.Count);
-
-                                        gMaterials.Add(material);
-
-                                        foreach (var substance in material.Substances)
+                                        if (modelPackage.TryFindMaterial(_subModel.Material, out mtl))
                                         {
-                                            gSubstances.Add(substance);
-                                            gTextures.AddRange(substance.Textures);
+                                            mtlLookup.Add(material, gMaterials.Count);
+                                            gMaterials.Add(mtl);
+
+                                            foreach (var substance in mtl.Substances)
+                                            {
+                                                gSubstances.Add(substance);
+                                                gTextures.AddRange(substance.Textures);
+                                            }
                                         }
                                     }
 
-                                    materialId = mtlLookup[materialKey];
-                                    sourceUID = 0xFFFD;
+                                    material.Handle = (ushort)mtlLookup[material];
+                                    material.UID = 0xFFFD;
                                 }
                             }
                             
@@ -861,8 +858,7 @@ namespace Antilli
                                 IndexOffset = indexOffset,
                                 IndexCount = indexCount,
 
-                                MaterialId = materialId,
-                                SourceUID = sourceUID,
+                                Material = material,
                             };
 
                             subModels.Add(subModel);
@@ -875,7 +871,7 @@ namespace Antilli
                     lod.Instances = instances;
                 }
 
-                model.Lods = lods.ToArray();
+                model.Lods = lods;
             }
 
             // compile buffers
@@ -1050,6 +1046,7 @@ namespace Antilli
 
             // temporarily force vehicle package
             modelPackage.UID = 0xFF;
+            modelPackage.Version = Version;
 
             // generate uid shit
             var uidBuffer = GetBufferFromHexString(UID);

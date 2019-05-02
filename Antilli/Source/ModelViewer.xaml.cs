@@ -251,10 +251,14 @@ namespace Antilli
                     var lod = instance.Parent;
                     var model = lod.Parent;
 
-                    DSC.Log($"{model.Unknown3} {model.Flags} {lod.ID} {lod.Type}");
+                    var bbox = model.BoundingBox;
+
+                    DSC.Log($"{model.Flags} {lod.ID} {lod.Mask}");
                     DSC.Log($"{model.Scale}");
-                    DSC.Log($"{model.Transform[0]}\n\t{model.Transform[1]}\n\t{model.Transform[2]}\n\t{model.Transform[3]}");
-                    DSC.Log($"{model.Transform[4]}\n\t{model.Transform[5]}\n\t{model.Transform[6]}\n\t{model.Transform[7]}");
+
+                    DSC.Log($"{bbox.V11}\n\t{bbox.V12}\n\t{bbox.V13}\n\t{bbox.V14}");
+                    DSC.Log($"{bbox.V21}\n\t{bbox.V22}\n\t{bbox.V23}\n\t{bbox.V24}");
+
                     DSC.Log($"{instance.Transform[0]}\n\t{instance.Transform[1]}\n\t{instance.Transform[2]}\n\t{instance.Transform[3]}");
                 }
             }

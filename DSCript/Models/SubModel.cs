@@ -17,6 +17,109 @@ using DSCript;
 
 namespace DSCript.Models
 {
+    [StructLayout(LayoutKind.Sequential, Pack = 2, Size = 4)]
+    public struct MaterialHandle : IComparable<MaterialHandle>, IEquatable<MaterialHandle>, IComparable<int>, IEquatable<int>
+    {
+        public ushort Handle;
+        public ushort UID;
+
+        public bool Equals(int other)
+        {
+            var hash = GetHashCode();
+
+            return (hash == other);
+        }
+
+        public bool Equals(MaterialHandle other)
+        {
+            return ((Handle == other.Handle) && (UID == other.UID));
+        }
+
+        public int CompareTo(int other)
+        {
+            var hash = GetHashCode();
+
+            return hash.CompareTo(other);
+        }
+
+        public int CompareTo(MaterialHandle other)
+        {
+            if (Equals(other))
+                return 0;
+            
+            var hash = other.GetHashCode();
+
+            return CompareTo(hash);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Handle | (UID << 16));
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is MaterialHandle)
+                return Equals((MaterialHandle)obj);
+            if (obj is int)
+                return Equals((int)obj);
+
+            return base.Equals(obj);
+        }
+
+        public static bool operator ==(MaterialHandle lhs, MaterialHandle rhs)
+        {
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(MaterialHandle lhs, MaterialHandle rhs)
+        {
+            return !lhs.Equals(rhs);
+        }
+
+        public static bool operator ==(MaterialHandle lhs, int rhs)
+        {
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(MaterialHandle lhs, int rhs)
+        {
+            return !lhs.Equals(rhs);
+        }
+
+        public override string ToString()
+        {
+            return $"{Handle:X4}:{UID:X4}";
+        }
+
+        public MaterialHandle(int material)
+        {
+            Handle = (ushort)(material & 0xFFFF);
+            UID = (ushort)((material >> 16) & 0xFFFF);
+        }
+
+        public MaterialHandle(ushort handle, ushort uid)
+        {
+            Handle = handle;
+            UID = uid;
+        }
+    }
+
+    public struct IndexedPrimitive
+    {
+        public PrimitiveType Type;
+
+        public int VertexBaseOffset;
+
+        public int VertexOffset;
+        public int VertexCount;
+
+        public int IndexOffset;
+        public int IndexCount;
+
+        public MaterialHandle Material;
+    }
+
     public class SubModel
     {
         /// <summary>
@@ -53,45 +156,11 @@ namespace DSCript.Models
         public int IndexOffset { get; set; }
         public int IndexCount { get; set; }
 
-        /// <summary>
-        /// The material used for this mesh.
-        /// </summary>
-        public int MaterialId { get; set; }
-
-        /// <summary>
-        /// The UID of the package containing the material.
-        /// </summary>
-        public int SourceUID { get; set; }
-
-        public MaterialDataPC GetMaterial()
-        {
-            try
-            {
-                if (SourceUID == ModelPackage.UID || SourceUID == 0xFFFD)
-                    return ModelPackage.Materials[MaterialId];
-
-                if (ModelFile != null)
-                {
-                    if (ModelFile is Driv3rVehiclesFile && SourceUID == (int)PackageType.VehicleGlobals)
-                        return ((Driv3rVehiclesFile)ModelFile).VehicleGlobals.GetStandaloneTexture(MaterialId);
-
-                    ModelPackageResource mPak = ModelFile.GetModelPackage(SourceUID);
-
-                    if (mPak != null && mPak.HasMaterials)
-                        return mPak.Materials[MaterialId];
-                }
-            }
-            catch (Exception)
-            {
-                Debug.WriteLine($"Material load error -- ({MaterialId} : {SourceUID:X4})");
-            }
-
-            return null;
-        }
-
+        public MaterialHandle Material;
+        
         protected List<int> GetIndices()
         {
-            var indexBuffer = ModelPackage.IndexBuffer.Buffer;
+            var indexBuffer = ModelPackage.IndexBuffer.Indices;
             var indices = new List<int>();
 
             for (int n = 0; n < IndexCount; n++)
@@ -108,7 +177,7 @@ namespace DSCript.Models
         {
             tris = new List<int>();
             
-            var indices = ModelPackage.IndexBuffer.Buffer;
+            var indices = ModelPackage.IndexBuffer.Indices;
 
             // collect list of vertex indices
             var vertices = new List<int>();
@@ -415,7 +484,7 @@ namespace DSCript.Models
         
         public List<Int32> GetTriangleIndices(bool swapOrder = false)
         {
-            var indices = ModelPackage.IndexBuffer.Buffer;
+            var indices = ModelPackage.IndexBuffer.Indices;
             var idx = IndexOffset;
 
             var tris = new List<Int32>();

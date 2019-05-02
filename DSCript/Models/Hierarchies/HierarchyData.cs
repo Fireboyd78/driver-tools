@@ -8,8 +8,6 @@ using System.Runtime.InteropServices;
 
 using DSCript.Spooling;
 
-// uninitialized and unused struct member warnings
-#pragma warning disable 169, 649
 namespace DSCript.Models
 {
     public enum HierarchyDataType : int
@@ -18,170 +16,165 @@ namespace DSCript.Models
         Vehicle = 6,
     }
     
-    [StructLayout(LayoutKind.Sequential)]
-    public struct PropHierarchyInfoData
+    public struct PropHierarchyInfo
     {
-        // some kind of transformation data?
+        // related to mass?
         public float V1;
         public float V2;
 
         public int Reserved;
     }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct VehicleHierarchyInfoData
+    
+    public struct VehicleHierarchyInfo : IDetail
     {
         public int Flags;
         
-        public short T1Count;
-        public short T2Count;
-        public short T3Count;
-        public short T4Count;
+        public short T1Count; // READ ORDER: 3
+        public short T2Count; // READ ORDER: 1
+        public short T3Count; // READ ORDER: 2
+        public short T4Count; // READ ORDER: 4
+
+        public int ExtraData;
+        public int ExtraFlags;
+        
+        void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+        {
+            Flags = stream.ReadInt32();
+
+            T1Count = stream.ReadInt16();
+            T2Count = stream.ReadInt16();
+            T3Count = stream.ReadInt16();
+            T4Count = stream.ReadInt16();
+            
+            if (provider.Version == 1)
+            {
+                ExtraFlags = stream.ReadInt32() & 0; // force to zero
+                ExtraData = stream.ReadInt32();
+            }
+            else
+            {
+                // Driv3r format
+                ExtraData = stream.ReadInt32();
+                ExtraFlags = MagicNumber.FIREBIRD;
+
+                // skip junk data
+                stream.Position += 4;
+            }
+        }
+
+        void IDetail.Serialize(Stream stream, IDetailProvider provider)
+        {
+            stream.Write(Flags);
+
+            stream.Write(T1Count);
+            stream.Write(T2Count);
+            stream.Write(T3Count);
+            stream.Write(T4Count);
+
+            if (ExtraFlags != 0)
+            {
+                stream.Write(ExtraData);
+                stream.Write(ExtraFlags);
+            }
+            else
+            {
+                stream.Write(0);
+                stream.Write(ExtraData);
+            }
+        }
+
+        public int T1Size
+        {
+            get { return (ExtraFlags != 0) ? 0x10 : 0x20; }
+        }
+
+        public int T2Size
+        {
+            get { return 0x20; }
+        }
+
+        public int T3Size
+        {
+            get { return 0x50; }
+        }
+
+        public int T4Size
+        {
+            get { return 0x40; }
+        }
         
         public int T1Length
         {
-            get { return (T1Count * 0x10); }
+            get
+            {
+                return (T1Count * T1Size);
+            }
         }
 
         public int T2Length
         {
-            get { return (T2Count * 0x20); }
+            get { return (T2Count * T2Size); }
         }
 
         public int T3Length
         {
-            get { return (T3Count * 0x50); }
+            get { return (T3Count * T3Size); }
         }
 
         public int T4Length
         {
-            get { return (T4Count * 0x40); }
+            get { return (T4Count * T4Size); }
         }
 
         public int BufferSize
         {
             get { return (T1Length + T2Length + T3Length + T4Length); }
         }
-
-        /*
-            Offsets are relative to the 'HierarchyDataHeader.ExtraPartsDataOffset' value
-        */
-
-        public int T1Offset
-        {
-            get { return T3Offset + T3Length; }
-        }
-
-        public int T2Offset
-        {
-            get { return 0; }
-        }
-
-        public int T3Offset
-        {
-            get { return T2Offset + T2Length; }
-        }
-
-        public int T4Offset
-        {
-            get { return T1Offset + T1Length; }
-        }
     }
     
-    [StructLayout(LayoutKind.Sequential)]
-    public struct HierarchyDataHeader
+    public struct HierarchyInfo
     {
-        private int m_type;     // kind of data present (prop=1, vehicle=6, may be other unused ones)
+        public int Type;
 
-        public int PartsCount;  // number of parts in hierarchy
-        public int UID;         // unique identifier for the hierarchy
-        public int PDLSize;     // used as offset past PDL for stuff like bullet hole data
+        public int Count;   // number of parts in hierarchy
+        public int UID;     // unique identifier for the hierarchy
 
-        [StructLayout(LayoutKind.Explicit, Size = 0xC)]
-        private struct HierarchyInfoData
-        {
-            [FieldOffset(0)]
-            public VehicleHierarchyInfoData VehicleInfo;
+        public int PDLSize; // used as offset past PDL for stuff like bullet hole data
+    }
 
-            [FieldOffset(0)]
-            public PropHierarchyInfoData PropInfo;
-        } HierarchyInfoData m_hierInfo;
+    public struct PhysicsInfo : IDetail
+    {
+        public static readonly string Magic = "PDL001.002.003a";
+
+        public int T1Count;
+        public int T2Count;
+
+        public int T1Offset;
+        public int T2Offset;
         
-        public PropHierarchyInfoData PropHierarchyInfo
+        void IDetail.Deserialize(Stream stream, IDetailProvider provider)
         {
-            get { return m_hierInfo.PropInfo; }
-            set { m_hierInfo.PropInfo = value; }
+            T1Count = stream.ReadInt32();
+            T2Count = stream.ReadInt32();
+
+            T1Offset = stream.ReadInt32();
+            T2Offset = stream.ReadInt32();
+
+            var check = stream.ReadString(16);
+
+            if (check != Magic)
+                throw new InvalidDataException("Invalid PDL magic!");
         }
 
-        public VehicleHierarchyInfoData VehicleHierarchyInfo
+        void IDetail.Serialize(Stream stream, IDetailProvider provider)
         {
-            get { return m_hierInfo.VehicleInfo; }
-            set { m_hierInfo.VehicleInfo = value; }
-        }
+            stream.Write(T1Count);
+            stream.Write(T2Count);
 
-        public HierarchyDataType HierarchyType
-        {
-            get { return (HierarchyDataType)m_type; }
-            set { m_type = (int)value; }
-        }
+            stream.Write(T1Offset);
+            stream.Write(T2Offset);
 
-        // size of header including header info
-        // NOTE: this includes the unused stuff at the beginning!
-        public static int HeaderSize
-        {
-            get { return 0x28; }
-        }
-
-        public int PartsOffset
-        {
-            get
-            {
-                switch (m_type)
-                {
-                case 1: return (HeaderSize + 0x18);
-                case 6: return (HeaderSize + 0x8);
-                }
-                return -1;
-            }
-        }
-        
-        public int PartsLength
-        {
-            get
-            {
-                switch (m_type)
-                {
-                case 1: return (PartsCount * 0x50);
-                case 6: return (PartsCount * 0x20);
-                }
-                return -1;
-            }
-        }
-        
-        public int PDLOffset
-        {
-            get
-            {
-                var pdlOffset = (PartsOffset + PartsLength);
-
-                if (m_type == 6)
-                    pdlOffset += VehicleHierarchyInfo.BufferSize;
-
-                return pdlOffset;
-            }
-        }
-
-        public int ExtraPartsDataOffset
-        {
-            get
-            {
-                if (m_type == 6)
-                    return (PartsOffset + PartsLength);
-
-                // no extra data present
-                return -1;
-            }
+            stream.Write(Magic + "\0");
         }
     }
 }
-#pragma warning restore 169, 649

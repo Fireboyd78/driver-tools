@@ -79,8 +79,8 @@
     <Compile Include="Extensions\System\XML\XMLExtensions.cs" />
     <Compile Include="Helpers\Driv3r.cs" />
     <Compile Include="Helpers\Memory.cs" />
-    <Compile Include="Models\Formats\Driv3rVehiclesFile.cs" />
-    <Compile Include="Models\Formats\Driv3rModelFile.cs" />
+    <Compile Include="Models\Formats\VehiclesFile.cs" />
+    <Compile Include="Models\Formats\ModelFile.cs" />
     <Compile Include="IO\ObjFile.cs" />
     <Compile Include="Matrix.cs" />
     <Compile Include="Models\Hierarchies\HierarchyData.cs" />
@@ -92,6 +92,8 @@
     <Compile Include="Models\Materials\SubstanceData.cs" />
     <Compile Include="Models\Materials\TextureData.cs" />
     <Compile Include="Models\Materials\TextureFlags.cs" />
+    <Compile Include="Models\ModelPackages\Details\ModelPackageData.cs" />
+    <Compile Include="Models\ModelPackages\Details\MaterialPackageData.cs" />
     <Compile Include="Models\ModelPackages\ModelPackageDSF.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
     <Compile Include="Configuration\RegistryConfiguration.cs" />
@@ -115,7 +117,6 @@
     <Compile Include="Models\PrimitiveType.cs" />
     <Compile Include="Models\IndexData.cs" />
     <Compile Include="Models\SubModel.cs" />
-    <Compile Include="Models\PackageTypes.cs" />
     <Compile Include="Models\LodInstance.cs" />
     <Compile Include="Models\ModelPackages\ModelPackageResource.cs" />
     <Compile Include="Models\Lod.cs" />

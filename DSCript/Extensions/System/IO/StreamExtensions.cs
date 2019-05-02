@@ -13,26 +13,86 @@ namespace System.IO
 {
     public static class StreamExtensions
     {
+        public static bool UseBigEndian = false;
+
         public static T Read<T>(this Stream stream)
         {
-            var length = Marshal.SizeOf(typeof(T));
+            var type = typeof(T);
+            var size = 0;
 
-            return stream.Read<T>(length);
+            var ptr = MemoryCache.Alloc(type, out size);
+
+            var buffer = new byte[size];
+            stream.Read(buffer, 0, size);
+
+            try
+            {
+                Marshal.Copy(buffer, 0, ptr, size);
+
+                return (T)Marshal.PtrToStructure(ptr, type);
+            }
+            catch (AccessViolationException e)
+            {
+                throw new AccessViolationException($"Something went horribly wrong trying to marshall a type from a stream!", e);
+            }
         }
 
-        public static T Read<T>(this Stream stream, int length)
+        public static T Read<T>(this Stream stream, int size)
         {
-            var data = new byte[length];
-            var ptr = Marshal.AllocHGlobal(length);
+            if (size < 0)
+                throw new ArgumentOutOfRangeException(nameof(size), "Size cannot be negative.");
 
-            stream.Read(data, 0, length);
-            Marshal.Copy(data, 0, ptr, length);
+            // don't waste our time for nothing!
+            if (size == 0)
+                return default(T);
 
-            var t = (T)Marshal.PtrToStructure(ptr, typeof(T));
+            var type = typeof(T);
+            var typeSize = 0;
+            
+            // guaranteed equal to sizeof(T)
+            var ptr = MemoryCache.Alloc<T>(out typeSize);
+            
+            var buffer = new byte[size];
+            stream.Read(buffer, 0, size);
+            
+            try
+            {
+                Marshal.Copy(buffer, 0, ptr, size);
 
-            Marshal.FreeHGlobal(ptr);
-            return t;
+                return (T)Marshal.PtrToStructure(ptr, type);
+            }
+            catch (AccessViolationException e)
+            {
+                throw new AccessViolationException($"Something went horribly wrong when trying to marshall a structure from a stream!", e);
+            }
         }
+        
+        public static void Read<T>(this Stream stream, ref T value, int offset = 0, int size = 0)
+        {
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset), "Offset cannot be negative.");
+            if (size < 0)
+                throw new ArgumentOutOfRangeException(nameof(size), "Size cannot be negative.");
+
+            var type = typeof(T);
+            var typeSize = Marshal.SizeOf(type);
+
+            if (size == 0)
+                size = (typeSize - offset);
+            
+            if ((offset + size) > typeSize)
+                throw new ArgumentOutOfRangeException(nameof(offset), "Cannot extend past the size of an underlying type.");
+            
+            var buffer = new byte[size];
+            stream.Read(buffer, 0, size);
+
+            var handle = GCHandle.Alloc(value, GCHandleType.Pinned);
+            var ptr = handle.AddrOfPinnedObject() + offset;
+
+            Marshal.Copy(buffer, 0, ptr, size);
+            handle.Free();
+        }
+
 
         public static void Write<T>(this Stream stream, T data)
         {
@@ -125,33 +185,33 @@ namespace System.IO
             return b;
         }
 
-        public static int PeekInt16(this Stream stream, bool bigEndian = false)
+        public static int PeekInt16(this Stream stream)
         {
-            int i = stream.ReadInt16(bigEndian);
+            int i = stream.ReadInt16();
             stream.Position -= sizeof(short);
 
             return i;
         }
 
-        public static uint PeekUInt16(this Stream stream, bool bigEndian = false)
+        public static uint PeekUInt16(this Stream stream)
         {
-            var i = stream.ReadUInt16(bigEndian);
+            var i = stream.ReadUInt16();
             stream.Position -= sizeof(ushort);
 
             return i;
         }
 
-        public static int PeekInt32(this Stream stream, bool bigEndian = false)
+        public static int PeekInt32(this Stream stream)
         {
-            var i = stream.ReadInt32(bigEndian);
+            var i = stream.ReadInt32();
             stream.Position -= sizeof(int);
 
             return i;
         }
 
-        public static uint PeekUInt32(this Stream stream, bool bigEndian = false)
+        public static uint PeekUInt32(this Stream stream)
         {
-            var i = stream.ReadUInt32(bigEndian);
+            var i = stream.ReadUInt32();
             stream.Position -= sizeof(uint);
 
             return i;
@@ -197,67 +257,67 @@ namespace System.IO
             return chars;
         }
 
-        public static short ReadInt16(this Stream stream, bool bigEndian = false)
+        public static short ReadInt16(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(short)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToInt16(buffer, 0);
         }
 
-        public static ushort ReadUInt16(this Stream stream, bool bigEndian = false)
+        public static ushort ReadUInt16(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(ushort)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToUInt16(buffer, 0);
         }
 
-        public static int ReadInt32(this Stream stream, bool bigEndian = false)
+        public static int ReadInt32(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(int)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToInt32(buffer, 0);
         }
 
-        public static uint ReadUInt32(this Stream stream, bool bigEndian = false)
+        public static uint ReadUInt32(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(uint)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToUInt32(buffer, 0);
         }
 
-        public static long ReadInt64(this Stream stream, bool bigEndian = false)
+        public static long ReadInt64(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(long)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToInt64(buffer, 0);
         }
 
-        public static ulong ReadUInt64(this Stream stream, bool bigEndian = false)
+        public static ulong ReadUInt64(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(ulong)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToUInt64(buffer, 0);
@@ -273,30 +333,30 @@ namespace System.IO
             return (float)(a + b + c);
         }
 
-        public static double ReadFloat(this Stream stream, bool bigEndian = false)
+        public static double ReadFloat(this Stream stream)
         {
-            var val = (double)stream.ReadSingle(bigEndian);
+            var val = (double)stream.ReadSingle();
 
-            return Math.Round(val, 3);
+            return Math.Round(val, 4);
         }
 
-        public static float ReadSingle(this Stream stream, bool bigEndian = false)
+        public static float ReadSingle(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(float)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToSingle(buffer, 0);
         }
 
-        public static double ReadDouble(this Stream stream, bool bigEndian = false)
+        public static double ReadDouble(this Stream stream)
         {
             byte[] buffer = new byte[sizeof(double)];
             stream.Read(buffer);
 
-            if (bigEndian)
+            if (UseBigEndian)
                 Array.Reverse(buffer);
 
             return BitConverter.ToDouble(buffer, 0);

@@ -15,1155 +15,816 @@ using System.Xml.Linq;
 
 namespace DSCript.Models
 {
-    public enum MeshType
-    {
-        // Driv3r (PC), DPL (Xbox/PC)
-        Default,
-        // Driv3r (Xbox)
-        Small
-    }
-    
-    public struct ModelPackageData
-    {
-        public struct ModelDefinition
-        {
-            public int UID;
-            public int Handle;
-            
-            public short VertexBufferId;
-
-            public short Unknown1;
-            public short Unknown2;
-
-            public int Unknown3;
-        }
-
-        public readonly int Version;
-
-        public int UID;
-
-        public int ModelsCount;
-        public int ModelsOffset;
-
-        public int LodInstancesCount;
-        public int LodInstancesOffset;
-
-        public int SubModelsCount;
-        public int SubModelsOffset;
-
-        public int TextureDataOffset;
-        public int MaterialDataOffset;
-
-        public int IndicesCount;
-        public int IndicesLength;
-        public int IndicesOffset;
-
-        public int VertexDeclsCount;
-        public int VertexDeclsOffset;
-        
-        public MeshType MeshType;
-
-        public void SetMeshType(MeshType type)
-        {
-            MeshType = type;
-        }
-
-        public int ModelSize
-        {
-            get
-            {
-                switch (Version)
-                {
-                case 1:
-                case 9:
-                    return 0x14C;
-                case 6:
-                    return 0x188;
-                }
-                return 0;
-            }
-        }
-
-        public int LodSize
-        {
-            get
-            {
-                switch (Version)
-                {
-                case 1:
-                case 9:
-                    return 0x18;
-                case 6:
-                    return 0x20;
-                }
-                return 0;
-            }
-        }
-
-        public int LodInstanceSize
-        {
-            get
-            {
-                switch (Version)
-                {
-                case 1:
-                case 9:
-                    return 0x4E;
-
-                case 6:
-                    return 0x58;
-                }
-                return 0;
-            }
-        }
-
-        public int SubModelSize
-        {
-            get
-            {
-                switch (MeshType)
-                {
-                case MeshType.Default:
-                    return 0x38;
-
-                case MeshType.Small:
-                    return 0x18;
-                }
-                return 0;
-            }
-        }
-
-        public int VertexDeclSize
-        {
-            get
-            {
-                switch (Version)
-                {
-                case 1:
-                case 9:
-                    return 0x20;
-
-                case 6:
-                    return 0x1C;
-                }
-                return 0;
-            }
-        }
-
-        public int GetSizeOfModels()
-        {
-            return ModelsCount * ModelSize;
-        }
-
-        public int GetSizeOfLodInstances()
-        {
-            return LodInstancesCount * LodInstanceSize;
-        }
-
-        public int GetSizeOfSubModels()
-        {
-            return SubModelsCount * SubModelSize;
-        }
-
-        public int GetSizeOfVertexDecls()
-        {
-            return VertexDeclsCount * VertexDeclSize;
-        }
-
-        public int GetVertexBuffersOffset()
-        {
-            return Memory.Align(IndicesOffset + IndicesLength, 4096);
-        }
-
-        public void ReadHeader(Stream stream)
-        {
-            if (stream.ReadInt32() != Version)
-                throw new Exception("Bad version, cannot load ModelPackage!");
-
-            UID = stream.ReadInt32();
-
-            ModelsCount = stream.ReadInt32();
-            ModelsOffset = stream.ReadInt32();
-
-            LodInstancesCount = stream.ReadInt32();
-            LodInstancesOffset = stream.ReadInt32();
-
-            SubModelsCount = stream.ReadInt32();
-            SubModelsOffset = stream.ReadInt32();
-
-            stream.Position += 0x8;
-
-            TextureDataOffset = stream.ReadInt32();
-            MaterialDataOffset = stream.ReadInt32();
-
-            IndicesCount = stream.ReadInt32();
-            IndicesLength = stream.ReadInt32();
-            IndicesOffset = stream.ReadInt32();
-
-            VertexDeclsCount = stream.ReadInt32();
-            VertexDeclsOffset = stream.ReadInt32();
-        }
-
-        public void WriteHeader(Stream stream)
-        {
-            const int revision = 1;
-
-            stream.Write(Version);
-
-            stream.Write(UID);
-
-            stream.Write(ModelsCount);
-            stream.Write(ModelsOffset);
-
-            stream.Write(LodInstancesCount);
-            stream.Write(LodInstancesOffset);
-
-            stream.Write(SubModelsCount);
-            stream.Write(SubModelsOffset);
-            
-            stream.Write(((Version == 6) ? UID : -1) & 0xFFFF | (MagicNumber.FB << 16));
-            stream.Write(revision | (0x9999 << 16)); // reserve other part
-            
-            stream.Write(TextureDataOffset);
-            stream.Write(MaterialDataOffset);
-
-            stream.Write(IndicesCount);
-            stream.Write(IndicesLength);
-            stream.Write(IndicesOffset);
-
-            stream.Write(VertexDeclsCount);
-            stream.Write(VertexDeclsOffset);
-        }
-
-        public ModelPackageData(int version)
-        {
-            Version = version;
-
-            UID = 0;
-
-            ModelsCount = 0;
-            ModelsOffset = 0;
-
-            LodInstancesCount = 0;
-            LodInstancesOffset = 0;
-
-            SubModelsCount = 0;
-            SubModelsOffset = 0;
-
-            TextureDataOffset = 0;
-            MaterialDataOffset = 0;
-
-            IndicesCount = 0;
-            IndicesLength = 0;
-            IndicesOffset = 0;
-
-            VertexDeclsCount = 0;
-            VertexDeclsOffset = 0;
-
-            MeshType = MeshType.Default;
-        }
-
-        public ModelPackageData(int version, int uid, int nParts, int nGroups, int nMeshes, int nIndices, int nVertexDecls, MeshType meshType)
-            : this(version)
-        {
-            // we need this to calculate the size of meshes
-            MeshType = meshType;
-
-            Version = version;
-            UID = uid;
-
-            ModelsCount = nParts;
-            ModelsOffset = Memory.Align(0x44, 128);
-
-            // only calculate offsets if there's model data
-            if (ModelsCount > 0)
-            {
-                LodInstancesCount = nGroups;
-                LodInstancesOffset = Memory.Align(ModelsOffset + (ModelsCount * ModelSize), 128);
-
-                SubModelsCount = nMeshes;
-                SubModelsOffset = LodInstancesOffset + (LodInstancesCount * LodInstanceSize);
-
-                IndicesCount = nIndices;
-                IndicesLength = IndicesCount * sizeof(short);
-
-                VertexDeclsCount = nVertexDecls;
-                VertexDeclsOffset = Memory.Align(SubModelsOffset + (SubModelsCount * SubModelSize), 128);
-
-                IndicesOffset = VertexDeclsOffset + (VertexDeclsCount * VertexDeclSize);
-            }
-        }
-
-        public ModelPackageData(int version, int uid, int nParts, int nGroups, int nMeshes, int nIndices, int nVertexDecls)
-            : this(version, uid, nParts, nGroups, nMeshes, nIndices, nVertexDecls, MeshType.Default)
-        {
-
-        }
-
-        public ModelPackageData(int version, int uid)
-            : this(version, uid, 0, 0, 0, 0, 0)
-        {
-
-        }
-
-        public ModelPackageData(int version, Stream stream) : this(version)
-        {
-            ReadHeader(stream);
-        }
-    }
-
-    public enum MaterialPackageType : int
-    {
-        PC      = 0x504D4350,   // 'PCMP'
-        PS2     = 0x32435354,   // 'TSC2'
-        Xbox    = 0x504D4258,   // 'XBMP'
-
-        Unknown = -1,
-    }
-
-    public struct MaterialPackageHeader
-    {
-        public MaterialPackageType PackageType;
-        public int Version;
-
-        public bool HasPaletteInfo;
-
-        public int MaterialsCount;
-        public int MaterialsOffset;
-
-        public int SubstanceLookupCount;
-        public int SubstanceLookupOffset;
-
-        public int SubstancesCount;
-        public int SubstancesOffset;
-
-        public int PaletteInfoLookupCount;
-        public int PaletteInfoLookupOffset;
-
-        public int PaletteInfoCount;
-        public int PaletteInfoOffset;
-
-        public int TextureLookupCount;
-        public int TextureLookupOffset;
-        
-        public int TexturesCount;
-        public int TexturesOffset;
-        
-        public int TextureDataOffset;
-        public int DataSize;
-
-        public int HeaderSize
-        {
-            get
-            {
-                switch (PackageType)
-                {
-                case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x48 : 0x38;
-                case MaterialPackageType.Xbox:
-                    return 0x48;
-                case MaterialPackageType.PS2:
-                    return 0x14;
-                }
-                return 0;
-            }
-        }
-
-        public int MaterialSize
-        {
-            get
-            {
-                switch (PackageType)
-                {
-                case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x10 : 0x18;
-                case MaterialPackageType.PS2:
-                case MaterialPackageType.Xbox:
-                    return 0x10;
-                }
-                return 0;
-            }
-        }
-
-        public int SubstanceSize
-        {
-            get
-            {
-                switch (PackageType)
-                {
-                case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x1C : 0x20;
-                case MaterialPackageType.Xbox:
-                    return 0x1C;
-                case MaterialPackageType.PS2:
-                    return 0xC;
-                }
-                return 0;
-            }
-        }
-
-        public int TextureSize
-        {
-            get
-            {
-                switch (PackageType)
-                {
-                case MaterialPackageType.PC:
-                case MaterialPackageType.Xbox:
-                    return 0x20;
-                case MaterialPackageType.PS2:
-                    return 0x28;
-                }
-                return 0;
-            }
-        }
-
-        public int LookupSize
-        {
-            get
-            {
-                switch (PackageType)
-                {
-                case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x4 : 0x8;
-                case MaterialPackageType.Xbox:
-                case MaterialPackageType.PS2:
-                    return 0x4;
-                }
-                return 0;
-            }
-        }
-
-        private void GenerateOffsets()
-        {
-            var alignment = (PackageType == MaterialPackageType.PS2) ? 128 : 4096;
-
-            MaterialsOffset = HeaderSize;
-
-            SubstanceLookupOffset = MaterialsOffset + (MaterialsCount * MaterialSize);
-            SubstancesOffset = SubstanceLookupOffset + (SubstanceLookupCount * LookupSize);
-
-            TextureLookupOffset = SubstancesOffset + (SubstancesCount * SubstanceSize);
-            TexturesOffset = TextureLookupOffset + (TextureLookupCount * LookupSize);
-
-            TextureDataOffset = Memory.Align(TexturesOffset + (TexturesCount * TextureSize), alignment);
-        }
-        
-        public void Read(Stream stream)
-        {
-            if (stream.ReadInt32() != (int)PackageType)
-                throw new InvalidOperationException("Bad magic - Cannot load material package!");
-
-            if (PackageType == MaterialPackageType.PS2)
-            {
-                MaterialsCount = stream.ReadInt16();
-                SubstanceLookupCount = stream.ReadInt16();
-                SubstancesCount = stream.ReadInt16();
-                TextureLookupCount = stream.ReadInt16();
-                TexturesCount = stream.ReadInt16();
-
-                // skip version
-                stream.Position += 2;
-
-                DataSize = stream.ReadInt32();
-                
-                // offsets need to be generated manually
-                GenerateOffsets();
-            }
-            else
-            {
-                // skip version
-                stream.Position += 4;
-
-                MaterialsCount = stream.ReadInt32();
-                MaterialsOffset = stream.ReadInt32();
-
-                SubstanceLookupCount = stream.ReadInt32();
-                SubstanceLookupOffset = stream.ReadInt32();
-
-                SubstancesCount = stream.ReadInt32();
-                SubstancesOffset = stream.ReadInt32();
-
-                // TODO: process palette information (used on Xbox & possibly DPL PC?)
-                if (HasPaletteInfo)
-                {
-                    PaletteInfoLookupCount = stream.ReadInt32();
-                    PaletteInfoLookupOffset = stream.ReadInt32();
-
-                    PaletteInfoCount = stream.ReadInt32();
-                    PaletteInfoOffset = stream.ReadInt32();
-                }
-
-                TextureLookupCount = stream.ReadInt32();
-                TextureLookupOffset = stream.ReadInt32();
-
-                TexturesCount = stream.ReadInt32();
-                TexturesOffset = stream.ReadInt32();
-
-                TextureDataOffset = stream.ReadInt32();
-                DataSize = stream.ReadInt32();
-            }
-        }
-
-        public void Write(Stream stream)
-        {
-            stream.Write((int)PackageType);
-            
-            if (PackageType == MaterialPackageType.PS2)
-            {
-                stream.Write((short)MaterialsCount);
-                stream.Write((short)SubstanceLookupCount);
-                stream.Write((short)SubstancesCount);
-                stream.Write((short)TextureLookupCount);
-                stream.Write((short)TexturesCount);
-                stream.Write((short)Version);
-            }
-            else
-            {
-                stream.Write(Version);
-
-                stream.Write(MaterialsCount);
-                stream.Write(MaterialsOffset);
-                stream.Write(SubstanceLookupCount);
-                stream.Write(SubstanceLookupOffset);
-                stream.Write(SubstancesCount);
-                stream.Write(SubstancesOffset);
-                
-                if (HasPaletteInfo)
-                {
-                    switch (PackageType)
-                    {
-                    case MaterialPackageType.PC:
-                        {
-                            // no palette info present
-                            for (int i = 0; i < 4; i++)
-                                stream.Write(0);
-                        } break;
-                    case MaterialPackageType.Xbox:
-                        throw new NotImplementedException();
-                    }
-                }
-
-                stream.Write(TextureLookupCount);
-                stream.Write(TextureLookupOffset);
-                stream.Write(TexturesCount);
-                stream.Write(TexturesOffset);
-
-                stream.Write(TextureDataOffset);
-                stream.Write(DataSize);
-            }
-        }
-
-        public MaterialPackageHeader(MaterialPackageType packageType) : this(packageType, false) { }
-        public MaterialPackageHeader(MaterialPackageType packageType, bool hasPaletteInfo)
-        {
-            PackageType = packageType;
-            Version = -1;
-
-            switch (PackageType)
-            {
-            case MaterialPackageType.PS2:
-            case MaterialPackageType.Xbox:
-                Version = 2;
-                break;
-            case MaterialPackageType.PC:
-                Version = 3;
-                break;
-            }
-            
-            HasPaletteInfo = hasPaletteInfo;
-
-            MaterialsCount = 0;
-            MaterialsOffset = 0;
-
-            SubstancesCount = 0;
-            SubstancesOffset = 0;
-
-            SubstanceLookupCount = 0;
-            SubstanceLookupOffset = 0;
-
-            PaletteInfoLookupCount = 0;
-            PaletteInfoLookupOffset = 0;
-
-            PaletteInfoCount = 0;
-            PaletteInfoOffset = 0;
-
-            TexturesCount = 0;
-            TexturesOffset = 0;
-
-            TextureLookupCount = 0;
-            TextureLookupOffset = 0;
-
-            TextureDataOffset = 0;
-            DataSize = 0;
-        }
-
-        public MaterialPackageHeader(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures)
-            : this(packageType, nMaterials, nSubMaterials, nTextures, false)
-        { }
-
-        public MaterialPackageHeader(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures, bool hasPaletteInfo)
-            : this(packageType, hasPaletteInfo)
-        {
-            MaterialsCount = nMaterials;
-
-            SubstanceLookupCount = nSubMaterials;
-            SubstancesCount = nSubMaterials;
-
-            TextureLookupCount = nTextures;
-            TexturesCount = nTextures;
-
-            GenerateOffsets();
-        }
-
-        public MaterialPackageHeader(MaterialPackageType packageType, Stream stream) : this(packageType, stream, false) { }
-        public MaterialPackageHeader(MaterialPackageType packageType, Stream stream, bool hasPaletteInfo) : this(packageType, hasPaletteInfo)
-        {
-            Read(stream);
-        }
-    }
-
     public class ModelPackage : ModelPackageResource
     {
-        protected ModelPackageData Header;
-        protected MaterialPackageHeader MaterialsHeader;
-
-        protected virtual void ReadHeader(Stream stream)
+        protected void ReadVertexDeclarations(Stream stream, ref ModelPackageData detail, out List<VertexBufferInfo> decls)
         {
-            Header = new ModelPackageData(Spooler.Version, stream);
+            var vBuffersCount = detail.VertexDeclsCount;
+            var vBuffersOffset = detail.VertexDeclsOffset;
+            
+            decls = new List<VertexBufferInfo>(vBuffersCount);
 
-            Version = Header.Version;
-            UID = Header.UID;
-        }
-
-        protected void ReadVertexBuffers(Stream stream, bool populateBuffers)
-        {
-            var vBuffersCount = Header.VertexDeclsCount;
-            var vBuffersOffset = Header.VertexDeclsOffset;
-
-            var declSize = Header.VertexDeclSize;
-
-            if (populateBuffers)
+            if (vBuffersCount != 0)
             {
-                if ((VertexBuffers == null) || (VertexBuffers.Count != vBuffersCount))
-                    throw new InvalidOperationException("You dun goofed!");
-                
-                /* ------------------------------
-                 * Read vertex buffer header(s)
-                 * ------------------------------ */
+                VertexBuffers = new List<VertexBuffer>(vBuffersCount);
+
+                stream.Position = vBuffersOffset;
+
+                var declSize = detail.VertexDeclSize;
+
+                // Populate vertex declarations
                 for (int vB = 0; vB < vBuffersCount; vB++)
                 {
-                    stream.Position = vBuffersOffset + (vB * declSize);
+                    var decl = Deserialize<VertexBufferInfo>(stream);
 
-                    var vBuffer = VertexBuffers[vB];
+                    // mark uninitialized
+                    decl.Type = 0xABCDEF;
 
-                    var nVerts = stream.ReadInt32();
-                    var vertsSize = stream.ReadInt32();
-                    var vertsOffset = stream.ReadInt32();
-                    var vertLength = stream.ReadInt32();
-
-                    if (Header.Version == 1 || Header.Version == 9)
-                    {
-                        //--var unk1 = stream.ReadInt32();
-                        //--var unk2 = stream.ReadInt32();
-                        //--var unk3 = stream.ReadInt32();
-                        //--var unk4 = stream.ReadInt32();
-                        //--
-                        //--DSC.Log($"vBuffer[{vB}] unknown data: {unk1:X8}, {unk2:X8}, {unk3:X8}, {unk4:X8}");
-
-                        // (0, 1, 0, 0) ???
-                        stream.Position += 0x10;
-                    }
-                    
-                    /* ------------------------------
-                     * Read vertices in buffer
-                     * ------------------------------ */
-                    stream.Position = vertsOffset;
-
-                    var buffer = new byte[vertsSize];
-                    stream.Read(buffer, 0, vertsSize);
-
-                    vBuffer.CreateVertices(buffer, nVerts, vertsSize);
+                    decls.Add(decl);
                 }
             }
             else
             {
-                VertexBuffers = (vBuffersCount != 0) ? new List<VertexBuffer>(vBuffersCount) : null;
+                VertexBuffers = null;
             }
         }
-    
-        protected void ReadIndexBuffer(Stream stream)
+
+        protected void WriteVertexDeclarations(Stream stream, ref ModelPackageData detail, ref List<VertexBufferInfo> decls)
         {
-            var nIndices = Header.IndicesCount;
+            stream.Position = detail.VertexDeclsOffset;
+
+            for (int vB = 0; vB < detail.VertexDeclsCount; vB++)
+            {
+                var _decl = decls[vB];
+
+                Serialize(stream, ref _decl);
+            }
+        }
+
+        protected void ReadVertices(Stream stream, ref ModelPackageData detail, ref List<VertexBufferInfo> decls)
+        {
+            int vBufferIdx = 0;
+
+            foreach (var decl in decls)
+            {
+                var vBufferType = decl.Type;
+
+                if (vBufferType == 0xABCDEF)
+                    throw new InvalidOperationException("Can't create vertices; one or more vertex buffers are uninitialized!");
+
+                var vBuffer = VertexBuffers[vBufferIdx++];
+                var vertexLength = vBuffer.Declaration.SizeOf;
+
+                // Too early. Come back later.
+                if (decl.VertexLength != vertexLength)
+                    throw new InvalidOperationException($"Vertex buffer expected vertex size of {vertexLength} but got {decl.VertexLength}.");
+
+                stream.Position = decl.VerticesOffset;
+
+                var buffer = new byte[decl.VerticesLength];
+                stream.Read(buffer, 0, decl.VerticesLength);
+
+                vBuffer.CreateVertices(buffer, decl.VerticesCount);
+            }
+        }
+
+        protected void WriteVertices(Stream stream, ref ModelPackageData detail, out List<VertexBufferInfo> decls)
+        {
+            decls = new List<VertexBufferInfo>();
+
+            var vBuffersOffset = detail.GetVertexBuffersOffset();
+
+            stream.Position = vBuffersOffset;
+
+            foreach (var vBuffer in VertexBuffers)
+            {
+                var offset = (int)stream.Position;
+
+                var _vBuffer = new VertexBufferInfo() {
+                    VerticesCount = vBuffer.Count,
+                    VerticesOffset = offset,
+
+                    Type = vBuffer.Type,
+
+                    VertexLength = vBuffer.Declaration.SizeOf,
+                };
+
+                vBuffer.WriteTo(stream);
+
+                _vBuffer.VerticesLength = (int)(stream.Position - offset);
+                
+                decls.Add(_vBuffer);
+            }
+            
+            // make sure we update the materials offset
+            detail.MaterialDataOffset = Memory.Align((int)stream.Position, 4096);
+        }
+        
+        protected void ReadIndices(Stream stream, ref ModelPackageData detail)
+        {
+            var nIndices = detail.IndicesCount;
 
             if (nIndices != 0)
             {
-                stream.Position = Header.IndicesOffset;
+                stream.Position = detail.IndicesOffset;
 
-                IndexBuffer = new IndexData(nIndices);
-
-                for (int i = 0; i < nIndices; i++)
-                    IndexBuffer.Buffer[i] = stream.ReadInt16();
+                var buffer = new byte[nIndices * 2];
+                stream.Read(buffer, 0, buffer.Length);
+                
+                IndexBuffer = new IndexBuffer(buffer, nIndices);
             }
             else
             {
                 IndexBuffer = null;
             }
         }
-        
-        protected void ReadModels(Stream stream)
+
+        protected void WriteIndices(Stream stream, ref ModelPackageData detail)
         {
-            var partSize = Header.ModelSize;
-            var partLodSize = Header.LodSize;
-            var groupSize = Header.LodInstanceSize;
+            stream.Position = detail.IndicesOffset;
 
-            var meshSize = 0; // we don't know yet
+            var count = detail.IndicesCount;
+            var size = (count * IndexBuffer.Length);
 
-            // Driv3r on Xbox has a special mesh type, so we'll figure it out now
-            var verifyMeshSize = true;
+            var buffer = new byte[count * IndexBuffer.Length];
 
-            var meshGroupIdx = 0;
-            var meshIdx = 0;
+            Memory.Copy(IndexBuffer.Indices, 0, buffer, size);
 
-            /* ------------------------------
-             * Read models
-             * ------------------------------ */
-            for (int p = 0; p < Header.ModelsCount; p++)
+            stream.Write(buffer, 0, size);
+        }
+        
+        protected void ReadModels(Stream stream, ref ModelPackageData detail, ref List<VertexBufferInfo> vBuffers)
+        {
+            var luSubModels = new Dictionary<int, int>();
+            var luLodInstances = new Dictionary<int, int>();
+            
+            //
+            // Sub models
+            //
+
+            stream.Position = detail.SubModelsOffset;
+
+            for (int i = 0; i < detail.SubModelsCount; i++)
             {
-                stream.Position = Header.ModelsOffset + (p * partSize);
+                var offset = (int)stream.Position;
 
-                var uid = stream.Read<UID>();
+                var _subModel = Deserialize<SubModelInfo>(stream);
 
-                var unknown = stream.Read<Vector4>();
+                var subModel = new SubModel() {
+                    ModelPackage        = this,
 
-                // INCOMING TRANSMISSION...
-                // RE: OPERATION S.T.E.R.N....
-                // ...
-                // YOUR ASSISTANCE HAS BEEN NOTED...
-                // ...
-                // <END OF TRANSMISSION>...
-                var vBufIdx = stream.ReadInt16();
-                var vBufType = stream.ReadInt16();
+                    PrimitiveType       = (PrimitiveType)_subModel.PrimitiveType,
 
-                var flags = stream.ReadInt32();
+                    VertexBaseOffset    = _subModel.VertexBaseOffset,
+                    VertexOffset        = _subModel.VertexOffset,
+                    VertexCount         = _subModel.VertexCount,
 
-                // reserved space for effect index
-                // sadly can't be used to force a specific effect cause game overwrites it :(
-                var reserved = stream.ReadInt32();
+                    IndexOffset         = _subModel.IndexOffset,
+                    IndexCount          = _subModel.IndexCount,
 
-                var model = new Model() {
-                    UID = uid,
-
-                    Scale = unknown,
-
-                    VertexType = vBufType,
-
-                    Flags = flags,
+                    Material            = _subModel.Material,
                 };
 
-                if (VertexBuffers == null)
-                    throw new InvalidOperationException("You dun goofed!");
+                luSubModels.Add(offset, i);
+                SubModels.Add(subModel);
+            }
 
-                VertexBuffer vBuffer = null;
+            //
+            // Lod instances
+            //
 
-                // initialize first one, second one, etc.
-                if (VertexBuffers.Count == vBufIdx)
+            stream.Position = detail.LodInstancesOffset;
+
+            for (int i = 0; i < detail.LodInstancesCount; i++)
+            {
+                var offset = (int)stream.Position;
+
+                var _lodInstance = Deserialize<LodInstanceInfo>(stream);
+
+                var lodInstance = new LodInstance() {
+                    Transform = _lodInstance.Transform,
+                    UseTransform = (_lodInstance.UseTransform == 1),
+
+                    Reserved = _lodInstance.Info.Reserved,
+                    Handle = _lodInstance.Info.Handle,
+                };
+
+                luLodInstances.Add(offset, i);
+
+                if (_lodInstance.SubModelsCount != 0)
                 {
-                    vBuffer = VertexBuffer.Create(Header.Version, vBufType);
-                    VertexBuffers.Add(vBuffer);
+                    var subModelsIdx = -1;
+
+                    if (luSubModels.TryGetValue(_lodInstance.SubModelsOffset, out subModelsIdx))
+                    {
+                        lodInstance.SubModels = SubModels.GetRange(subModelsIdx, _lodInstance.SubModelsCount);
+
+                        foreach (var subModel in lodInstance.SubModels)
+                            subModel.LodInstance = lodInstance;
+                    }
+                }
+                
+                LodInstances.Add(lodInstance);
+            }
+            
+            //
+            // Models
+            //
+
+            stream.Position = detail.ModelsOffset;
+
+            for (int p = 0; p < detail.ModelsCount; p++)
+            {
+                if (VertexBuffers == null)
+                    throw new InvalidOperationException("Uh-oh! There's no vertex buffers for the models to use!");
+
+                var _model = Deserialize<ModelInfo>(stream);
+
+                var vBufferIdx = _model.BufferIndex;
+                var vBuffer = vBuffers[vBufferIdx];
+                
+                if (vBuffer.Type == 0xABCDEF)
+                {
+                    // setup the type
+                    vBuffer.Type = _model.BufferType;
+                    vBuffers[vBufferIdx] = vBuffer;
+                }
+
+                VertexBuffer vb = null;
+
+                // initialize vertex buffer?
+                if (_model.BufferIndex == VertexBuffers.Count)
+                {
+                    vb = VertexBuffer.Create(detail.Version, vBuffer.Type);
+
+                    VertexBuffers.Add(vb);
                 }
                 else
                 {
-                    vBuffer = VertexBuffers[vBufIdx];
-
-                    if (!vBuffer.CanUseForType(Header.Version, vBufType))
-                        throw new InvalidOperationException("Something has gone HORRIBLY wrong! The fuck did you do?!");
+                    vb = VertexBuffers[_model.BufferIndex];
                 }
 
-                model.VertexBuffer = vBuffer;
-                
+                var model = new Model() {
+                    UID = _model.UID,
+                    Scale = _model.Scale,
+                    Flags = _model.Flags,
+
+                    VertexBuffer = vb,
+                    VertexType = _model.BufferType,
+
+                    BoundingBox = stream.Read<BBox>(),
+                };
+
                 Models.Add(model);
-
-                if (Header.Version == 6)
-                    stream.Position += 4;
                 
-                // culling transforms
-                for (int t = 0; t < 8; t++)
-                    model.Transform[t] = stream.Read<Vector4>();
-
-                var lodStart = stream.Position;
-                
-                // 7 LODs per part
+                // 7 LODs per model
                 for (int k = 0; k < 7; k++)
                 {
-                    stream.Position = lodStart + (k * partLodSize);
-
-                    var partEntry = new Lod(k) {
-                        Parent = model
+                    var _lod = Deserialize<LodInfo>(stream);
+                    
+                    var lod = new Lod(k) {
+                        Parent = model,
+                        
+                        Mask = _lod.Mask,
+                        Flags = _lod.Flags,
                     };
 
-                    model.Lods[k] = partEntry;
+                    model.Lods[k] = lod;
 
-                    var gOffset = stream.ReadInt32();
-
-                    if (Header.Version == 6)
-                        stream.Position += 0x4;
-
-                    var gCount = stream.ReadInt32();
-
-                    // skip irrelevant data
-                    stream.Position += 0x8;
-                    
-                    partEntry.Type = stream.ReadInt32();
-                    
-                    // nothing to see here, move along
-                    if (gCount == 0)
-                        continue;
-                    
-                    /* ------------------------------
-                     * Read lod instances
-                     * ------------------------------ */
-                    for (int g = 0; g < gCount; g++)
+                    if (_lod.InstancesCount != 0)
                     {
-                        stream.Position = gOffset + (g * groupSize);
+                        var lodInstancesIdx = -1;
 
-                        var curGroupIdx = ((int)stream.Position - Header.LodInstancesOffset) / Header.LodInstanceSize;
-
-                        if (curGroupIdx != meshGroupIdx)
+                        if (luLodInstances.TryGetValue(_lod.InstancesOffset, out lodInstancesIdx))
                         {
-                            Debug.WriteLine($"WARNING: expected mesh group {meshGroupIdx} / {Header.LodInstancesCount} but got {curGroupIdx}!");
-                            meshGroupIdx = curGroupIdx;
-                        }
-                        
-                        var mGroup = new LodInstance() {
-                            Parent = partEntry
-                        };
+                            lod.Instances = LodInstances.GetRange(lodInstancesIdx, _lod.InstancesCount);
 
-                        var mOffset = stream.ReadInt32();
-
-                        if (Header.Version == 6)
-                            stream.Position += 4;
-
-                        for (int i = 0; i < 4; i++)
-                        {
-                            mGroup.Transform[i] = stream.Read<Vector4>();
-                        }
-                        
-                        var mCount = stream.ReadInt16();
-
-                        mGroup.UseTransform = (stream.ReadInt16() != 0);
-
-                        if (Header.Version == 6)
-                            stream.Position += 4;
-
-                        mGroup.Reserved = stream.ReadInt32();
-                        
-                        partEntry.Instances.Add(mGroup);
-                        LodInstances.Add(mGroup);
-
-                        /* ------------------------------
-                         * Read sub models
-                         * ------------------------------ */
-                        for (int m = 0; m < mCount; m++)
-                        {
-                            stream.Position = mOffset + (m * meshSize);
-
-                            var curMeshIdx = ((int)stream.Position - Header.SubModelsOffset) / Header.SubModelSize;
-
-                            if (curMeshIdx != meshIdx)
+                            // setup the parents
+                            foreach (var lodInst in lod.Instances)
                             {
-                                Debug.WriteLine($"WARNING: expected mesh {meshIdx} / {Header.SubModelsCount} but got {curMeshIdx}!");
-                                meshIdx = curMeshIdx;
+                                lodInst.Parent = lod;
+
+                                foreach (var subModel in lodInst.SubModels)
+                                {
+                                    subModel.LodInstance = lodInst;
+                                    subModel.Model = model;
+                                }
                             }
-
-                            var primType = stream.ReadInt32();
-
-                            // we'll only have to do this once
-                            if (verifyMeshSize)
-                            {
-                                // driv3r mesh size hack
-                                if (Header.Version == 9 && (primType & 0xFFFFFFF0) != 0)
-                                    Header.SetMeshType(MeshType.Small);
-
-                                meshSize = Header.SubModelSize;
-                                verifyMeshSize = false;
-                            }
-
-                            if (Header.MeshType == MeshType.Small)
-                                throw new NotImplementedException("Small mesh types not supported!");
-
-                            var mesh = new SubModel(this) {
-                                PrimitiveType = (PrimitiveType)primType,
-                                VertexBaseOffset = stream.ReadInt32(),
-                                VertexOffset = stream.ReadInt32(),
-                                VertexCount = stream.ReadInt32(),
-                                IndexOffset = stream.ReadInt32(),
-                                IndexCount = stream.ReadInt32(),
-
-                                LodInstance = mGroup,
-                                Model = model
-                            };
-
-                            if (Header.MeshType == MeshType.Default)
-                                stream.Position += 0x18;
-
-                            mesh.MaterialId = stream.ReadInt16();
-                            mesh.SourceUID = stream.ReadUInt16();
-
-                            mGroup.SubModels.Add(mesh);
-                            SubModels.Add(mesh);
-
-                            ++meshIdx;
                         }
-
-                        ++meshGroupIdx;
-                    }
+                    }   
                 }
             }
         }
 
-        protected virtual void ReadMaterials(Stream stream)
+        protected void WriteModels(Stream stream, ref ModelPackageData detail, ref List<VertexBufferInfo> decls)
         {
-            var matDataOffset = Header.MaterialDataOffset;
-            var texDataOffset = Header.TextureDataOffset;
+            var luLodInstances = new Dictionary<LodInstance, int>();
+            var luSubModels = new Dictionary<SubModel, int>();
+
+            //
+            // Sub models
+            //
+
+            stream.Position = detail.SubModelsOffset;
+
+            foreach (var subModel in SubModels)
+            {
+                var offset = (int)stream.Position;
+
+                luSubModels.Add(subModel, offset);
+
+                var _subModel = new SubModelInfo() {
+                    PrimitiveType = (int)subModel.PrimitiveType,
+
+                    VertexBaseOffset = subModel.VertexBaseOffset,
+                    VertexOffset = subModel.VertexOffset,
+                    VertexCount = subModel.VertexCount,
+
+                    IndexOffset = subModel.IndexOffset,
+                    IndexCount = subModel.IndexCount,
+
+                    Material = subModel.Material,
+                };
+
+                Serialize(stream, ref _subModel);
+            }
+
+            //
+            // Lod instances
+            //
+
+            stream.Position = detail.LodInstancesOffset;
+
+            foreach (var lodInst in LodInstances)
+            {
+                var offset = (int)stream.Position;
+
+                luLodInstances.Add(lodInst, offset);
+
+                var subModels = lodInst.SubModels;
+
+                var subModelsCount = subModels.Count;
+                var subModelsOffset = (subModelsCount > 0) ? luSubModels[subModels[0]] : 0;
+
+                var _lodInst = new LodInstanceInfo() {
+                    SubModelsOffset = subModelsOffset,
+                    SubModelsCount = (short)subModelsCount,
+
+                    Transform = lodInst.Transform,
+
+                    UseTransform = (short)((lodInst.UseTransform) ? 1 : 0),
+
+                    Info = new LodInstanceInfo.DebugInfo() {
+                        Handle = (short)lodInst.Handle,
+                        Reserved = lodInst.Reserved,
+                    },
+                };
+
+                Serialize(stream, ref _lodInst);
+            }
+
+            //
+            // Models
+            //
+
+            stream.Position = detail.ModelsOffset;
+
+            foreach (var model in Models)
+            {
+                var _model = new ModelInfo() {
+                    UID = model.UID,
+
+                    Scale = model.Scale,
+
+                    BufferIndex = (short)VertexBuffers.IndexOf(model.VertexBuffer),
+                    BufferType = (short)model.VertexBuffer.Type,
+
+                    Flags = model.Flags,
+
+                    Reserved = 0,
+                };
+
+                Serialize(stream, ref _model);
+
+                stream.Write(model.BoundingBox);
+
+                var lods = model.Lods;
+
+                foreach (var lod in lods)
+                {
+                    var lodInstances = lod.Instances;
+
+                    var lodInstancesCount = lodInstances.Count;
+                    var lodInstancesOffset = (lodInstancesCount > 0) ? luLodInstances[lodInstances[0]] : 0;
+
+                    var _lod = new LodInfo() {
+                        InstancesCount = lodInstancesCount,
+                        InstancesOffset = lodInstancesOffset,
+
+                        Mask = lod.Mask,
+
+                        Flags = lod.Flags,
+                        Reserved = 0,
+                    };
+
+                    Serialize(stream, ref _lod);
+                }
+            }
+        }
+
+        protected void ReadMaterials(Stream stream, ref ModelPackageData detail)
+        {
+            var matDataOffset = detail.MaterialDataOffset;
+            var texDataOffset = detail.TextureDataOffset;
             
             if (matDataOffset != 0)
             {
                 stream.Position = matDataOffset;
                 
-                MaterialsHeader = new MaterialPackageHeader(MaterialPackageType, stream, (Version != 6));
-
-                if (MaterialsHeader.DataSize == 0)
+                var info = new MaterialPackageData(MaterialPackageType, stream, (Version != 6));
+                
+                if (info.DataSize == 0)
                 {
-                    texDataOffset = matDataOffset + MaterialsHeader.TextureDataOffset;
-                    MaterialsHeader.DataSize = (Spooler.Size - matDataOffset);
+                    texDataOffset = matDataOffset + info.TextureDataOffset;
+                    info.DataSize = (Spooler.Size - matDataOffset);
                 }
 
-                Materials = new List<MaterialDataPC>(MaterialsHeader.MaterialsCount);
-                Substances = new List<SubstanceDataPC>(MaterialsHeader.SubstancesCount);
-                Textures = new List<TextureDataPC>(MaterialsHeader.TexturesCount);
+                Materials = new List<MaterialDataPC>(info.MaterialsCount);
+                Substances = new List<SubstanceDataPC>(info.SubstancesCount);
+                Textures = new List<TextureDataPC>(info.TexturesCount);
 
-                var texLookup = new Dictionary<int, byte[]>();
+                var luSubstanceRefs = new SortedDictionary<int, ReferenceInfo<SubstanceDataPC>>();
+                var luTextureRefs = new SortedDictionary<int, ReferenceInfo<TextureDataPC>>();
+
+                var luSubstances = new Dictionary<int, SubstanceDataPC>();
+                var luTextures = new Dictionary<int, TextureDataPC>();
                 
-                // Materials (Size: 0x18)
-                for (int m = 0; m < MaterialsHeader.MaterialsCount; m++)
+                var luTextureOffsets = new Dictionary<TextureDataPC, int>();
+                var luTextureSizes = new Dictionary<int, int>();
+
+                //
+                // Textures
+                //
+
+                stream.Position = (matDataOffset + info.TexturesOffset);
+
+                for (int t = 0; t < info.TexturesCount; t++)
                 {
-                    stream.Position = matDataOffset + (MaterialsHeader.MaterialsOffset + (m * MaterialsHeader.MaterialSize));
+                    var offset = (int)stream.Position;
+                    var _tex = Deserialize<TextureInfo>(stream);
 
-                    // table info
-                    var mOffset = stream.ReadInt32() + matDataOffset;
-                    var mCount = stream.ReadInt32();
+                    var tex = new TextureDataPC() {
+                        UID = _tex.UID,
+                        Hash = _tex.Hash,
 
-                    var mAnimType = stream.ReadInt32();
-                    var mAnimSpeed = stream.ReadSingle();
+                        Type = _tex.Type,
 
-                    var material = new MaterialDataPC() {
-                        Type = (MaterialType)mAnimType,
-                        AnimationSpeed = mAnimSpeed,
+                        Width = _tex.Width,
+                        Height = _tex.Height,
+
+                        Flags = _tex.Flags,
                     };
 
-                    Materials.Add(material);
+                    Textures.Add(tex);
 
-                    // get substance(s)
-                    for (int s = 0; s < mCount; s++)
+                    luTextures.Add(offset - matDataOffset, tex);
+
+                    if (!luTextureOffsets.ContainsKey(tex))
                     {
-                        stream.Position = mOffset + (s * MaterialsHeader.LookupSize);
+                        luTextureOffsets.Add(tex, _tex.DataOffset);
 
-                        var sOffset = stream.ReadInt32() + matDataOffset;
-
-                        stream.Position = sOffset;
-
-                        if (MaterialsHeader.HasPaletteInfo)
-                        {
-                            var sInf = stream.ReadInt32();
-                            var sFlg = stream.ReadInt32();
-
-                            //--internal stuff from DPL, might help in the future (bits are wrong)
-                            //--var bin = (sFlg >> 21) & 0x7F;
-                            //--var effect = (sFlg >> 14) & 0x7F;
-                            //--var subcontainer = (sInf >> 15) & 0x3FFF;
-                            //--var subid = (sInf >> 1) & 0x3FFF;
-                            //--var buf = (sInf >> 29) & 0xF;
-                            //--
-                            //--
-                            //--Debug.WriteLine("sortkey = BIN: {0}, EFFECT {1}, SUB CONTAINER: {2}, SUB ID: {3}, BUFFER: {3}",
-                            //--    bin, effect, subcontainer, subid, buf);
-
-                            var sMode = (sInf & 0xFFFF);
-                            var sType = (sInf >> 16) & 0xFFFF;
-
-                            var substance = new SubstanceDataPC() {
-                                Bin = (sFlg & 0xFF),
-                                Flags = (sFlg >> 8),
-                                Mode = sMode,
-                                Type = sType,
-                            };
-
-                            material.Substances.Add(substance);
-                            Substances.Add(substance);
-
-                            var tOffset = stream.ReadInt32() + matDataOffset;
-                            var tCount = stream.ReadInt32();
-                            
-                            // TODO: handle palette info
-                            var pOffset = stream.ReadInt32();
-                            var pCount = stream.ReadInt32();
-                            
-                            var reserved = stream.ReadInt32();
-
-                            // TODO: figure out why DPL does this
-                            var check = (reserved & 0x8000000) != 0;
-
-                            for (int t = 0; t < tCount; t++)
-                            {
-                                stream.Position = tOffset + (t * MaterialsHeader.LookupSize);
-
-                                var texOffset = stream.ReadInt32() + matDataOffset;
-
-                                stream.Position = texOffset;
-                                
-                                var uid = stream.ReadInt32();
-                                var crc = stream.ReadInt32();
-
-                                // possibly a header?
-                                var unk1 = stream.ReadInt32(); // 0xF00?
-                                var unk2 = stream.ReadInt16(); // 1?
-                                var unk3 = stream.ReadInt16(); // 4?
-
-                                if ((unk1 != 0xF00) || ((unk2 != 1) || (unk3 != 4)))
-                                    throw new InvalidDataException("Oops!");
-
-                                var offset = stream.ReadInt32() + texDataOffset;
-                                var size = stream.ReadInt32();
-                                
-                                var format = stream.ReadInt32();
-
-                                // packed data -- very clever!
-                                var width = (format >> 24) & 0xF;
-                                var height = (format >> 20) & 0xF;
-
-                                // not 100% sure on this one
-                                var type = (format >> 16) & 0xF;
-
-                                // TODO: figure this stuff out
-                                var flags = (format & 0xFFFF);
-                                
-                                var tex = new TextureDataPC() {
-                                    UID = uid,
-                                    Hash = crc,
-                                    
-                                    Type = type,
-
-                                    Width = (1 << width),
-                                    Height = (1 << height),
-
-                                    Flags = flags,
-                                };
-
-                                substance.Textures.Add(tex);
-                                Textures.Add(tex);
-
-                                stream.Position = offset;
-                                
-                                // thanks, reflections!
-                                if (size == 0)
-                                {
-                                    var header = default(DDSHeader);
-
-                                    if (!DDSUtils.GetHeaderInfo(stream, ref header))
-                                        throw new InvalidDataException("Can't determine data size of texture!");
-
-                                    size = (header.PitchOrLinearSize + header.Size + 4);
-
-                                    if (header.MipMapCount > 0)
-                                    {
-                                        // why you gotta do me dirty, reflections?!
-                                        stream.Position += size;
-
-                                        while (stream.ReadInt32() != 0x20534444)
-                                        {
-                                            if ((offset + size) >= MaterialsHeader.DataSize)
-                                                break;
-
-                                            size += 4;
-                                        }
-                                    }
-                                }
-
-                                if (!texLookup.ContainsKey(offset))
-                                {
-                                    stream.Position = offset;
-                                    texLookup.Add(offset, stream.ReadBytes(size));
-                                }
-
-                                tex.Buffer = texLookup[offset];
-                            }
-                        }
-                        else
-                        {
-                            var sFlg = stream.ReadInt32();
-                            var sMode = stream.ReadUInt16();
-                            var sType = stream.ReadUInt16();
-
-                            var substance = new SubstanceDataPC() {
-                                Bin = (sFlg & 0xFF),
-                                Flags = (sFlg >> 8),
-                                Mode = sMode,
-                                Type = sType,
-                            };
-
-                            material.Substances.Add(substance);
-                            Substances.Add(substance);
-
-                            stream.Position += 0x8;
-
-                            var tOffset = stream.ReadInt32() + matDataOffset;
-                            var tCount = stream.ReadInt32();
-
-                            for (int t = 0; t < tCount; t++)
-                            {
-                                stream.Position = tOffset + (t * MaterialsHeader.LookupSize);
-
-                                var texOffset = stream.ReadInt32() + matDataOffset;
-
-                                stream.Position = texOffset;
-
-                                var textureInfo = new TextureDataPC();
-
-                                substance.Textures.Add(textureInfo);
-                                Textures.Add(textureInfo);
-
-                                textureInfo.UID = stream.ReadInt32();
-                                textureInfo.Hash = stream.ReadInt32();
-
-                                var offset = stream.ReadInt32() + texDataOffset;
-                                var size = stream.ReadInt32();
-
-                                textureInfo.Type = stream.ReadInt32();
-
-                                textureInfo.Width = stream.ReadInt16();
-                                textureInfo.Height = stream.ReadInt16();
-
-                                // I think this is AlphaTest or something
-                                textureInfo.Flags = stream.ReadInt32();
-
-                                if (!texLookup.ContainsKey(offset))
-                                {
-                                    stream.Position = offset;
-                                    texLookup.Add(offset, stream.ReadBytes(size));
-                                }
-
-                                textureInfo.Buffer = texLookup[offset];
-                            }
-                        }
+                        if (!luTextureSizes.ContainsKey(_tex.DataOffset))
+                            luTextureSizes.Add(_tex.DataOffset, _tex.DataSize);
                     }
                 }
 
+                //
+                // Texture references
+                //
+
+                stream.Position = (matDataOffset + info.TextureLookupOffset);
+
+                for (int t = 0; t < info.TextureLookupCount; t++)
+                {
+                    var offset = (int)stream.Position;
+                    var lookup = Deserialize<ReferenceInfo<TextureDataPC>>(stream);
+                    
+                    lookup.Reference = luTextures[lookup.Offset];
+
+                    luTextureRefs.Add(offset - matDataOffset, lookup);
+                }
+
+                //
+                // Substances
+                //
+
+                stream.Position = (matDataOffset + info.SubstancesOffset);
+
+                for (int s = 0; s < info.SubstancesCount; s++)
+                {
+                    var offset = (int)stream.Position;
+                    var _substance = Deserialize<SubstanceInfo>(stream);
+
+                    var substance = new SubstanceDataPC() {
+                        Bin = _substance.Bin,
+
+                        Flags = _substance.Flags,
+                        
+                        Mode = (_substance.R1 | (_substance.R2 << 8)),
+                        Type = (_substance.R3 | (_substance.TextureFlags << 8)),
+                    };
+
+                    substance.Textures = luTextureRefs
+                        .Where((kv) => kv.Key >= _substance.TextureRefsOffset)
+                        .Take(_substance.TextureRefsCount)
+                        .Select((kv) => kv.Value.Reference)
+                        .ToList();
+
+                    Substances.Add(substance);
+
+                    luSubstances.Add(offset - matDataOffset, substance);
+                }
+
+                //
+                // Substance references
+                //
+
+                stream.Position = (matDataOffset + info.SubstanceLookupOffset);
+
+                for (int s = 0; s < info.SubstanceLookupCount; s++)
+                {
+                    var offset = (int)stream.Position;
+                    var lookup = Deserialize<ReferenceInfo<SubstanceDataPC>>(stream);
+
+                    lookup.Reference = luSubstances[lookup.Offset];
+
+                    luSubstanceRefs.Add(offset - matDataOffset, lookup);
+                }
+
+                //
+                // Materials
+                //
+
+                stream.Position = (matDataOffset + info.MaterialsOffset);
+
+                for (int m = 0; m < info.MaterialsCount; m++)
+                {
+                    var _material = Deserialize<MaterialInfo>(stream);
+
+                    var material = new MaterialDataPC() {
+                        Type = (MaterialType)_material.Type,
+                        AnimationSpeed = _material.AnimationSpeed,
+                    };
+
+                    material.Substances = luSubstanceRefs
+                        .Where((kv) => kv.Key >= _material.SubstanceRefsOffset)
+                        .Take(_material.SubstanceRefsCount)
+                        .Select((kv) => kv.Value.Reference)
+                        .ToList();
+
+                    Materials.Add(material);
+                }
+
+                // populate texture buffers
+                foreach (var lu in luTextureOffsets)
+                {
+                    var texture = lu.Key;
+
+                    var offset = (texDataOffset + lu.Value);
+                    var size = luTextureSizes[lu.Value];
+
+                    // thanks, reflections!
+                    if (size == 0)
+                    {
+                        var header = default(DDSHeader);
+
+                        stream.Position = offset;
+
+                        if (!DDSUtils.GetHeaderInfo(stream, ref header))
+                            throw new InvalidDataException("Can't determine data size of texture!");
+
+                        size = (DDSHeader.SizeOf + DDSUtils.GetDataSize(ref header) + 4);
+                    }
+
+                    var buffer = new byte[size];
+
+                    stream.Position = offset;
+                    stream.Read(buffer, 0, size);
+
+                    texture.Buffer = buffer;
+                }
+
                 // lookup tables no longer needed
-                texLookup.Clear();
+                luSubstances.Clear();
+                luTextures.Clear();
+
+                luSubstanceRefs.Clear();
+                luTextureRefs.Clear();
+
+                luTextureOffsets.Clear();
+                luTextureSizes.Clear();
             }
         }
-        
+
+        protected void WriteMaterials(Stream stream, ref ModelPackageData detail)
+        {
+            var luSubstances = new Dictionary<SubstanceDataPC, int>();
+            var luTextures = new Dictionary<TextureDataPC, int>();
+
+            var luSubstanceRefs = new SortedDictionary<int, ReferenceInfo<SubstanceDataPC>>();
+            var luTextureRefs = new SortedDictionary<int, ReferenceInfo<TextureDataPC>>();
+
+            var luTextureOffsets = new Dictionary<TextureDataPC, int>();
+            var luTextureSizes = new Dictionary<int, int>();
+
+            var info = new MaterialPackageData(MaterialPackageType, Materials.Count, Substances.Count, Textures.Count, (Version != 6));
+
+            var textureDataOffset = info.TextureDataOffset;
+            var textureDataLength = 0;
+
+            detail.TextureDataOffset = (detail.MaterialDataOffset + textureDataOffset);
+
+            //
+            // Textures
+            //
+
+            stream.Position = (detail.MaterialDataOffset + info.TexturesOffset);
+
+            foreach (var texture in Textures)
+            {
+                var offset = (int)(stream.Position - detail.MaterialDataOffset);
+
+                luTextures.Add(texture, offset);
+
+                var buffer = texture.Buffer;
+
+                var _texture = new TextureInfo() {
+                    UID = texture.UID,
+                    Hash = texture.Hash,
+
+                    DataOffset = textureDataLength,
+                    DataSize = buffer.Length,
+
+                    Type = texture.Type,
+
+                    Width = (short)texture.Width,
+                    Height = (short)texture.Height,
+
+                    Flags = texture.Flags,
+
+                    Reserved = 0,
+                };
+
+                Serialize(stream, ref _texture);
+                
+                luTextureOffsets.Add(texture, _texture.DataOffset);
+                luTextureSizes.Add(_texture.DataOffset, _texture.DataSize);
+
+                textureDataLength = Memory.Align(textureDataLength + _texture.DataSize, 128);
+            }
+
+            //
+            // Texture references
+            //
+
+            stream.Position = (detail.MaterialDataOffset + info.TextureLookupOffset);
+
+            foreach (var texture in Textures)
+            {
+                var offset = (int)(stream.Position - detail.MaterialDataOffset);
+                var lookup = new ReferenceInfo<TextureDataPC>(texture, luTextures[texture]);
+
+                Serialize(stream, ref lookup);
+
+                luTextureRefs.Add(offset, lookup);
+            }
+
+            //
+            // Substances
+            //
+
+            stream.Position = (detail.MaterialDataOffset + info.SubstancesOffset);
+
+            foreach (var substance in Substances)
+            {
+                var offset = (int)(stream.Position - detail.MaterialDataOffset);
+
+                luSubstances.Add(substance, offset);
+
+                var textures = substance.Textures;
+
+                var textureRefsCount = textures.Count;
+                var textureRefsOffset = (textureRefsCount > 0)
+                    ? luTextureRefs.Single((kv) => kv.Value.Reference == textures[0]).Key : 0;
+
+                var _substance = new SubstanceInfo() {
+                    Bin = (byte)substance.Bin,
+
+                    Flags = substance.Flags,
+
+                    R1 = (byte)(substance.Mode & 0xFF),
+                    R2 = (byte)((substance.Mode >> 8) & 0xFF),
+                    R3 = (byte)(substance.Type & 0xFF),
+
+                    TextureFlags = (byte)((substance.Type >> 8) & 0xFF),
+
+                    TextureRefsCount = textureRefsCount,
+                    TextureRefsOffset = textureRefsOffset,
+
+                    Reserved = 0,
+                };
+
+                Serialize(stream, ref _substance);
+            }
+
+            //
+            // Substance references
+            //
+
+            stream.Position = (detail.MaterialDataOffset + info.SubstanceLookupOffset);
+
+            foreach (var substance in Substances)
+            {
+                var offset = (int)(stream.Position - detail.MaterialDataOffset);
+                var lookup = new ReferenceInfo<SubstanceDataPC>(substance, luSubstances[substance]);
+
+                Serialize(stream, ref lookup);
+
+                luSubstanceRefs.Add(offset, lookup);
+            }
+
+            //
+            // Materials
+            //
+
+            stream.Position = (detail.MaterialDataOffset + info.MaterialsOffset);
+
+            foreach (var material in Materials)
+            {
+                var offset = (int)(stream.Position - detail.MaterialDataOffset);
+
+                var substances = material.Substances;
+
+                var substanceRefsCount = substances.Count;
+                var substanceRefsOffset = (substanceRefsCount > 0)
+                    ? luSubstanceRefs.Single((kv) => kv.Value.Reference == substances[0]).Key : 0;
+
+                var _material = new MaterialInfo() {
+                    SubstanceRefsCount = substanceRefsCount,
+                    SubstanceRefsOffset = substanceRefsOffset,
+
+                    Type = (int)material.Type,
+
+                    AnimationSpeed = material.AnimationSpeed,
+                };
+
+                Serialize(stream, ref _material);
+            }
+
+            //
+            // Texture data
+            //
+
+            stream.Position = (detail.MaterialDataOffset + info.TextureDataOffset);
+
+            foreach (var lu in luTextureOffsets)
+            {
+                var texture = lu.Key;
+
+                var offset = (lu.Value + textureDataOffset);
+                var size = luTextureSizes[lu.Value];
+
+                stream.Position = (detail.MaterialDataOffset + offset);
+                stream.Write(texture.Buffer, 0, size);
+            }
+
+            info.DataSize = (int)(stream.Position - detail.MaterialDataOffset);
+
+            //
+            // Header
+            //
+
+            stream.Position = detail.MaterialDataOffset;
+
+            Serialize(stream, ref info);
+
+            // cleanup
+            luSubstances.Clear();
+            luTextures.Clear();
+
+            luSubstanceRefs.Clear();
+            luTextureRefs.Clear();
+
+            luTextureOffsets.Clear();
+            luTextureSizes.Clear();
+        }
+
+        protected void LoadPS2(Stream stream)
+        {
+            // do nothing for now
+            return;
+        }
+
         protected override void Load()
         {
             switch (Spooler.Context)
@@ -1178,372 +839,96 @@ namespace DSCript.Models
             case MGX_ModelPackageXBox:
                 Platform = PlatformType.Xbox;
                 break;
+            case MGX_ModelPackageWii:
+                Platform = PlatformType.Wii;
+                break;
             }
+            
+            Version = Spooler.Version;
 
-            if (Platform != PlatformType.PC)
-                throw new Exception("Unsupported model package type.");
-
-            using (var f = Spooler.GetMemoryStream())
+            using (var stream = Spooler.GetMemoryStream())
             {
-                // header will handle offsets for us
-                ReadHeader(f);
-                
-                // skip packages with no models
-                if (Header.ModelsCount > 0)
+                if (Platform == PlatformType.PS2)
                 {
-                    Models           = new List<Model>(Header.ModelsCount);
-                    LodInstances      = new List<LodInstance>(Header.LodInstancesCount);
-                    SubModels          = new List<SubModel>(Header.SubModelsCount);
-
-                    ReadVertexBuffers(f, false);
-                    ReadIndexBuffer(f);
-
-                    ReadModels(f);
-                    ReadVertexBuffers(f, true);
+                    LoadPS2(stream);
                 }
+                else
+                {
+                    if (Platform == PlatformType.Wii)
+                        StreamExtensions.UseBigEndian = true;
 
-                ReadMaterials(f);
+                    var detail = Deserialize<ModelPackageData>(stream);
+
+                    UID = detail.UID;
+
+                    Models = new List<Model>(detail.ModelsCount);
+                    LodInstances = new List<LodInstance>(detail.LodInstancesCount);
+                    SubModels = new List<SubModel>(detail.SubModelsCount);
+
+                    // skip packages with no models
+                    if (detail.ModelsCount > 0)
+                    {
+                        List<VertexBufferInfo> decls = null;
+
+                        ReadVertexDeclarations(stream, ref detail, out decls);
+                        ReadModels(stream, ref detail, ref decls);
+
+                        ReadVertices(stream, ref detail, ref decls);
+                        ReadIndices(stream, ref detail);
+                    }
+
+                    if (Platform != PlatformType.Wii)
+                        ReadMaterials(stream, ref detail);
+
+                    if (Platform == PlatformType.Wii)
+                        StreamExtensions.UseBigEndian = false;
+                }
             }
         }
-
+        
         protected override void Save()
         {
-            var deadMagic   = 0xCDCDCDCD;
-            var deadCode    = BitConverter.GetBytes(deadMagic);
+            if (Platform == PlatformType.Wii)
+                throw new InvalidOperationException("Can't save Wii model packages!");
 
-            if (Version != 6)
-                throw new NotImplementedException("Saving not implemented for model package format!");
+            // initialize with no models
+            var detail = new ModelPackageData(Version, UID);
 
-            var bufferSize  = 0;
-
-            if (Models?.Count > 0)
+            if (Models.Count > 0)
             {
-                Header = new ModelPackageData(Version, UID, Models.Count, LodInstances.Count, SubModels.Count, IndexBuffer.Buffer.Length, VertexBuffers.Count);
-
-                bufferSize = Memory.Align(Header.IndicesOffset + Header.IndicesLength, 4096);
-                
-                // add up vertex buffer sizes
-                foreach (var vBuffer in VertexBuffers)
-                    bufferSize += vBuffer.Size;
-            }
-            else
-            {
-                // model package has no models
-                Header = new ModelPackageData(Version, UID);
-
-                bufferSize += Header.ModelsOffset;
+                detail = new ModelPackageData(Version, UID,
+                    Models.Count, LodInstances.Count, SubModels.Count, IndexBuffer.Indices.Length, VertexBuffers.Count);
             }
 
-            bufferSize = Memory.Align(bufferSize, 4096);
+            byte[] buffer = null;
 
-            var pcmpOffset = bufferSize;
-            var pcmpSize = 0;
-            
-            MaterialsHeader = new MaterialPackageHeader(MaterialPackageType, Materials.Count, Substances.Count, Textures.Count);
-
-            pcmpSize = MaterialsHeader.TextureDataOffset;
-            
-            var texOffsets = new Dictionary<int, int>(MaterialsHeader.TexturesCount);
-            var texOffsetList = new List<int>();
-
-            for (int i = 0; i < MaterialsHeader.TexturesCount; i++)
+            using (var stream = new MemoryStream())
             {
-                var tex = Textures[i];
-
-                var hash = (int)Memory.GetCRC32(tex.Buffer);
-
-                if (!texOffsets.ContainsKey(hash))
+                if (detail.ModelsCount > 0)
                 {
-                    pcmpSize = Memory.Align(pcmpSize, 128);
+                    List<VertexBufferInfo> decls = null;
 
-                    texOffsets.Add(hash, (pcmpSize - MaterialsHeader.TextureDataOffset));
+                    WriteIndices(stream, ref detail);
 
-                    pcmpSize += tex.Buffer.Length;
+                    WriteVertices(stream, ref detail, out decls);
+                    WriteVertexDeclarations(stream, ref detail, ref decls);
+
+                    WriteModels(stream, ref detail, ref decls);
                 }
+                
+                WriteMaterials(stream, ref detail);
 
-                texOffsetList.Add(texOffsets[hash]);
+                //
+                // Header
+                //
+
+                stream.Position = 0;
+                Serialize(stream, ref detail);
+
+                buffer = stream.ToArray();
             }
 
-            MaterialsHeader.DataSize = pcmpSize;
-
-            // add the PCMP size to the buffer size
-            bufferSize += Memory.Align(pcmpSize, 4096);
-
-            // Now that we have our initialized buffer size, write ALL the data!
-            var buffer = new byte[bufferSize];
-            
-            using (var f = new MemoryStream(buffer))
-            {
-                const short revHeader = 0x78FB;
-
-                var writeRevision = new Action<int>((revision) => {
-                    f.Write(revHeader | (revision << 16));
-                });
-
-                Header.WriteHeader(f);
-
-                if (Models?.Count > 0)
-                {
-                    // Write vertex buffers & declarations
-                    var vBufferOffset = Header.GetVertexBuffersOffset();
-
-                    for (int vB = 0; vB < VertexBuffers.Count; vB++)
-                    {
-                        f.Position = Header.VertexDeclsOffset + (vB * Header.VertexDeclSize);
-
-                        var vBuffer = VertexBuffers[vB];
-                        var vBSize = vBuffer.Size;
-
-                        f.Write(vBuffer.Count);
-                        f.Write(vBSize);
-                        f.Write(vBufferOffset);
-                        f.Write(vBuffer.Declaration.SizeOf);
-                        
-                        f.Position = vBufferOffset;
-                        vBuffer.WriteTo(f);
-
-                        vBufferOffset += vBSize;
-                    }
-
-                    // Write indices
-                    f.Position = Header.IndicesOffset;
-
-                    foreach (var indice in IndexBuffer.Buffer)
-                        f.Write(indice);
-
-                    var meshLookup = new int[Header.SubModelsCount];
-                    var groupLookup = new int[Header.LodInstancesCount];
-
-                    // Write meshes
-                    for (int m = 0; m < Header.SubModelsCount; m++)
-                    {
-                        var mesh = SubModels[m];
-                        var mOffset = Header.SubModelsOffset + (m * Header.SubModelSize);
-
-                        meshLookup[m] = mOffset;
-
-                        f.Position = mOffset;
-
-                        f.Write((int)mesh.PrimitiveType);
-                        f.Write(mesh.VertexBaseOffset);
-                        f.Write(mesh.VertexOffset);
-                        f.Write(mesh.VertexCount);
-
-                        f.Write(mesh.IndexOffset);
-                        f.Write(mesh.IndexCount);
-                        
-                        f.Position += 0x18;
-
-                        f.Write((short)mesh.MaterialId);
-                        f.Write((short)mesh.SourceUID);
-                    }
-
-                    var mIdx = 0;
-
-                    // Write groups
-                    for (int g = 0; g < Header.LodInstancesCount; g++)
-                    {
-                        var group = LodInstances[g];
-                        var gOffset = Header.LodInstancesOffset + (g * Header.LodInstanceSize);
-
-                        groupLookup[g] = gOffset;
-
-                        f.Position = gOffset;
-
-                        f.Write(meshLookup[mIdx]);
-
-                        f.Position += 0x4;
-
-                        foreach (var transform in group.Transform)
-                            f.Write(transform);
-                        
-                        var mCount = (short)group.SubModels.Count;
-                        var useTransform = (short)(group.UseTransform ? 1 : 0);
-
-                        f.Write(mCount);
-                        f.Write(useTransform);
-                        
-                        f.Write((int)MagicNumber.FIREBIRD); // ;)
-                        f.Write(group.Reserved);
-
-                        writeRevision(2);
-
-                        mIdx += mCount;
-                    }
-
-                    var gIdx = 0;
-
-                    // Write parts
-                    for (int p = 0; p < Header.ModelsCount; p++)
-                    {
-                        var part = Models[p];
-                        
-                        f.Position = Header.ModelsOffset + (p * Header.ModelSize);
-
-                        f.Write(part.UID);
-                        f.Write(part.Scale);
-                       
-                        var vBufferId = VertexBuffers.IndexOf(part.VertexBuffer);
-
-                        if (vBufferId == -1)
-                            throw new Exception("FATAL ERROR: Cannot get Vertex Buffer ID - CANNOT EXPORT MODEL PACKAGE!!!");
-
-                        f.Write((short)vBufferId);
-
-                        f.Write(part.VertexType);
-
-                        f.Write(part.Flags);
-
-                        f.Position += 0x4;
-
-                        f.Write((int)MagicNumber.FIREBIRD); // ;)
-
-                        foreach (var transform in part.Transform)
-                            f.Write(transform);
-                        
-                        var lodsOffset = f.Position;
-                        
-                        for (int d = 0; d < part.Lods.Length; d++)
-                        {
-                            f.Position = lodsOffset + (d * Header.LodSize);
-
-                            var lod = part.Lods[d];
-
-                            if (lod?.Instances?.Count > 0)
-                            {
-                                var count = lod.Instances.Count;
-
-                                f.Write(groupLookup[gIdx]);
-
-                                f.Position += 0x4;
-                                f.Write(count);
-
-                                f.Write((int)MagicNumber.FIREBIRD); // ;)
-
-                                writeRevision(3);
-
-                                f.Write(lod.Type);
-
-                                gIdx += count;
-                            }
-                        }
-                    }
-                }
-                
-                // -- Write PCMP -- \\
-                f.Position = pcmpOffset;
-                
-                MaterialsHeader.Write(f);
-                
-                var texLookup = new int[MaterialsHeader.TexturesCount];
-                var texDataOffset = pcmpOffset + MaterialsHeader.TextureDataOffset;
-
-                // put offset to texture/material data in header
-                f.Position = 0x28;
-
-                f.Write(texDataOffset);
-                f.Write(pcmpOffset);
-                
-                // write textures
-                for (int t = 0; t < MaterialsHeader.TexturesCount; t++)
-                {
-                    var tex = Textures[t];
-                    var tOffset = MaterialsHeader.TexturesOffset + (t * MaterialsHeader.TextureSize);
-                    
-                    texLookup[t] = tOffset;
-
-                    f.Position = pcmpOffset + tOffset;
-
-                    var dataOffset = texOffsetList[t];
-
-                    f.Write(tex.UID);
-                    f.Write(tex.Hash);
-
-                    f.Write(dataOffset);
-                    f.Write(tex.Buffer.Length);
-                    f.Write(tex.Type);
-
-                    f.Write((short)tex.Width);
-                    f.Write((short)tex.Height);
-
-                    f.Write(tex.Flags);
-
-                    f.Position = texDataOffset + dataOffset;
-
-                    // skip dupes
-                    if (f.PeekInt32() == 0)
-                        f.Write(tex.Buffer);
-                }
-
-                // write texture lookup
-                for (int t = 0; t < MaterialsHeader.TextureLookupCount; t++)
-                {
-                    var tlOffset = MaterialsHeader.TextureLookupOffset + (t * MaterialsHeader.LookupSize);
-
-                    f.Position = pcmpOffset + tlOffset;
-                    f.Write(texLookup[t]);
-
-                    // replace offset with the lookup table one
-                    texLookup[t] = tlOffset;
-                }
-
-                var sLookup = new int[MaterialsHeader.SubstancesCount];
-
-                var tIdx = 0;
-
-                // write substances
-                for (int s = 0; s < MaterialsHeader.SubstancesCount; s++)
-                {
-                    var substance = Substances[s];
-                    var sOffset = MaterialsHeader.SubstancesOffset + (s * MaterialsHeader.SubstanceSize);
-
-                    sLookup[s] = sOffset;
-
-                    f.Position = pcmpOffset + sOffset;
-
-                    f.Write((substance.Flags << 8) | substance.Bin);
-
-                    f.Write((short)substance.Mode);
-                    f.Write((short)substance.Type);
-
-                    f.Position += 0x8;
-                    
-                    f.Write(texLookup[tIdx]);
-                    f.Write(substance.Textures.Count);
-
-                    tIdx += substance.Textures.Count;
-                }
-
-                // write substance lookup
-                for (int s = 0; s < MaterialsHeader.SubstanceLookupCount; s++)
-                {
-                    var smlOffset = MaterialsHeader.SubstanceLookupOffset + (s * MaterialsHeader.LookupSize);
-
-                    f.Position = pcmpOffset + smlOffset;
-                    f.Write(sLookup[s]);
-
-                    // replace offset with the lookup table one
-                    sLookup[s] = smlOffset;
-                }
-
-                var sIdx = 0;
-
-                // write materials
-                for (int m = 0; m < MaterialsHeader.MaterialsCount; m++)
-                {
-                    var material = Materials[m];
-
-                    f.Position = pcmpOffset + (MaterialsHeader.MaterialsOffset + (m * MaterialsHeader.MaterialSize));
-                    
-                    f.Write(sLookup[sIdx]);
-                    f.Write(material.Substances.Count);
-
-                    f.Write((int)material.Type);
-                    f.Write(material.AnimationSpeed);
-
-                    sIdx += material.Substances.Count;
-                }
-            }
+            Array.Resize(ref buffer, Memory.Align(buffer.Length, 4096));
 
             Spooler.SetBuffer(buffer);
         }
