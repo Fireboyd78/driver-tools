@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -1213,6 +1214,7 @@ namespace Audiose
             {
                 MagicNumber XAHeader_v1 = 0x92783465; // ' e4x’ '
                 MagicNumber XAHeader_v2 = "XA30";
+                MagicNumber XAHeader_WMA = 0x75B22630; // partial match for WMA header
 
                 var magic = fs.ReadInt32();
                 var version = 0;
@@ -1221,6 +1223,15 @@ namespace Audiose
                     version = 1;
                 if (magic == XAHeader_v2)
                     version = 2;
+                if (magic == XAHeader_WMA)
+                {
+                    var audPath = Path.ChangeExtension(Config.Input, ".wma");
+                    
+                    // make a copy with WMA extension
+                    File.Copy(Config.Input, audPath, true);
+
+                    return ParseResult.Success;
+                }
                 
                 var listOffset = 0;
                 var platform = -1; // PS2 = 0, Xbox = 1, PC = 2
@@ -1277,17 +1288,17 @@ namespace Audiose
                     Console.WriteLine("WARNING: Unknown XA audio file format, please report this!");
                     return ParseResult.Failure;
                 }
-
-                if (platform == 1)
-                {
-                    Console.WriteLine("Sorry, Xbox audio is currently not supported.");
-                    return ParseResult.Failure;
-                }
-
+                
                 var numTracks = 0;
                 var numChannels = 0;
                 var frequency = 0;
-                var compressed = false;
+
+                var isXboxFormat = false;
+
+                // adpcm stuff
+                var isADPCM = false;
+                var sample_count = 0;
+                var sample_size = 0;
 
                 if (version == 1)
                     numTracks = 2;
@@ -1304,45 +1315,68 @@ namespace Audiose
                     break;
                 case 1:
                     {
-                        // TODO
+                        // handled below
+                        isXboxFormat = true;
                     }
                     break;
                 case 2:
                     {
                         numChannels = 2;
                         frequency = fs.ReadInt32();
-                        compressed = (fs.ReadInt32() == 1);
+                        isADPCM = (fs.ReadInt32() == 1);
                     }
                     break;
                 }
-
-                // DPL PC music
-                if (compressed)
-                {
-                    Console.WriteLine("Sorry, compressed audio files are currently unsupported.");
-                    return ParseResult.Failure;
-                }
-
+                
                 readList(fs);
 
+                if (platform == 2)
+                {
+                    sample_count = fs.ReadInt32();
+                    sample_size = fs.ReadInt32();
+                }
+
+                var audExt = (isXboxFormat) ? "wma" : "wav";
+                
                 for (int i = 0; i < numTracks; i++)
                 {
                     Console.WriteLine($"Processing audio track {i + 1} / {numTracks}...");
 
-                    var buffer = readData(fs, i);
-
-                    var audName = $"{xaName}_{(i + 1):D2}.wav";
+                    var audName = $"{xaName}_{(i + 1):D2}.{audExt}";
                     var audPath = Path.Combine(Path.GetDirectoryName(Config.Input), audName);
 
-                    if (platform == 0)
+                    var buffer = readData(fs, i);
+                    
+                    switch (platform)
+                    {
+                    case 0:
                         buffer = VAG.DecodeSound(buffer);
+                        break;
+                    case 2:
+                        if (isADPCM)
+                        {
+                            Console.WriteLine($"Decoding...");
+                            buffer = ADPCM.Decode(buffer, sample_count, sample_size);
+                        }
 
+                        break;
+                    }
+                    
                     Console.WriteLine($"> Saving to '{audPath}'...");
 
-                    using (var f = File.Open(audPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    if (isXboxFormat)
                     {
-                        var fmtChunk = new AudioFormatChunk(numChannels, frequency);
-                        f.WriteRIFF(buffer, fmtChunk);
+                        // Xbox music is just WMA audio, no need to generate RIFF stuff
+                        File.WriteAllBytes(audPath, buffer);
+                    }
+                    else
+                    {
+                        using (var f = File.Open(audPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                        {
+                            var fmtChunk = new AudioFormatChunk(numChannels, frequency);
+
+                            f.WriteRIFF(buffer, fmtChunk);
+                        }
                     }
                 }
             }

@@ -53,7 +53,7 @@ namespace Audiose
 
             double vagPrev1 = 0.0;
             double vagPrev2 = 0.0;
-
+            
             int k = 0;
 
             fixed (byte* r = result)
@@ -75,10 +75,11 @@ namespace Audiose
 
                         i += 2;
                     }
-
+                    
                     for (int s = 0; s < 2; s++)
                     {
                         var sd = (buffer[i] >> (s * 4)) & 0xF;
+
                         ((short*)r)[k++] = VagToPCM(sp, sd, ref vagPrev1, ref vagPrev2);
                     }
                 }

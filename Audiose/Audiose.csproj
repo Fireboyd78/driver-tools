@@ -35,6 +35,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Source\ADPCM.cs" />
     <Compile Include="Source\ArgInfo.cs" />
     <Compile Include="Source\Config.cs" />
     <Compile Include="Source\SoundPackage.cs" />
