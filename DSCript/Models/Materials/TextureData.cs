@@ -34,10 +34,11 @@ namespace DSCript.Models
     public sealed class TextureDataPC : ITextureData
     {
         private byte[] m_buffer = null;
+#if USE_TEXTURE_CACHE
         private int m_size = 0;
 
         private DSCTempFile m_tempFile = null;
-        
+#endif
         public int UID { get; set; }
         public int Hash { get; set; }
 

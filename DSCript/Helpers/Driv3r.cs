@@ -226,7 +226,7 @@ namespace DSCript
 
                 return gIni.GetSections()[0];
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return InvalidPath;
             }

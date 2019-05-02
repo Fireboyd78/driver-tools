@@ -90,8 +90,7 @@ namespace System
         static int s_CacheBytesSaved = 0; // how much memory has been reused
 
         static ZeroMemoryDelegate s_ZeroMemoryFunc = null;
-        static bool s_UseSecureZeroMemory = true; // are we dealing with top secret information?!
-
+        
         public static int Hits => s_CacheHits;
         public static int Misses => s_CacheMisses;
 
