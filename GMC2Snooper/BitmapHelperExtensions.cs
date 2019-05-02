@@ -30,24 +30,14 @@ namespace GMC2Snooper
                     break;
             }
         }
-
-        public static void Unswizzle(this BitmapHelper bitmap, int width, int height, SwizzleType type)
-        {
-            Unswizzle(bitmap, width, height, type, 0);
-        }
-
-        public static void Unswizzle(this BitmapHelper bitmap, int width, int height, SwizzleType type, int where)
+        
+        public static void Unswizzle(this BitmapHelper bitmap, int width, int height, SwizzleType type, int where = 0)
         {
             byte[] buffer = new byte[width * height];
             Unswizzle(bitmap, buffer, width, height, type, where);
         }
-
-        public static void Unswizzle(this BitmapHelper bitmap, byte[] buffer, int width, int height, SwizzleType type)
-        {
-            Unswizzle(bitmap, buffer, width, height, type, 0);
-        }
-
-        public static void Unswizzle(this BitmapHelper bitmap, byte[] buffer, int width, int height, SwizzleType type, int where)
+        
+        public static void Unswizzle(this BitmapHelper bitmap, byte[] buffer, int width, int height, SwizzleType type, int where = 0)
         {
             switch (type)
             {

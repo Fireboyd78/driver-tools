@@ -312,7 +312,7 @@ namespace GMC2Snooper
             public Vector2 UV;
 
             public bool Skip;
-
+            
             public void ApplyScale(Vector4 positionScale)
             {
                 //--Position.X *= (100.0f * positionScale.X);
@@ -384,21 +384,37 @@ namespace GMC2Snooper
         public class MeshStrip
         {
             public int Type;
-
-            public int MinIndex;
-            public int StartIndex;
             
             public int MaterialId;
             public int MaterialSource;
 
             public List<Vertex> Vertices;
             
-            public MeshStrip(int type, int minIndex, int startIndex)
+            public MeshStrip(int type)
             {
                 Type = type;
+            }
+        }
 
-                MinIndex = minIndex;
-                StartIndex = startIndex;
+        public class LodHolder
+        {
+            public int Lod;
+            public List<MeshStrip> Strips;
+
+            public LodHolder(int lod)
+            {
+                Lod = lod;
+                Strips = new List<MeshStrip>();
+            }
+        }
+
+        public class ModelHolder
+        {
+            public List<LodHolder> Lods;
+
+            public ModelHolder(Model model)
+            {
+                Lods = new List<LodHolder>(model.Lods.Count);
             }
         }
         
@@ -416,8 +432,6 @@ namespace GMC2Snooper
         public static VifBuffer[] VxBuffer = null;
         public static int VxIndex = 0;
         public static int VxCount = 0;
-
-        public static List<MeshStrip> Strips = new List<MeshStrip>();
         
         public static unsafe VifBuffer* GetVertexPtr(int index)
         {
@@ -572,11 +586,21 @@ namespace GMC2Snooper
             VxCount = (values.Length / VIF.Cycle.WriteLength);
         }
 
+        static bool VertsEqual(Vertex a, Vertex b)
+        {
+            var posA = a.Position;
+            var posB = b.Position;
+
+            return ((posA.X == posB.X) 
+                && (posA.Y == posB.Y)
+                && (posA.Z == posB.Z)
+                && (posA.W == posB.W));
+        }
+
         public static void DumpModelInfo(ModelPackagePS2 gmc2)
         {
             var sb = new StringBuilder();
-            
-            var minIndex = 0;
+            var models = new List<ModelHolder>();
             
             // vif tag info :)
             for (int i = 0; i < gmc2.Models.Count; i++)
@@ -591,11 +615,15 @@ namespace GMC2Snooper
                 Console.WriteLine($"  Box offset: ({model.BoxOffset.X:F4},{model.BoxOffset.Y:F4},{model.BoxOffset.Z:F4})");
                 Console.WriteLine($"  Box scale: ({model.BoxScale.X:F4},{model.BoxScale.Y:F4},{model.BoxScale.Z:F4})");
 
-                Strips = new List<MeshStrip>();
-
+                var holder = new ModelHolder(model);
+                models.Add(holder);
+                
                 for (int l = 0; l < model.Lods.Count; l++)
                 {
                     var lod = model.Lods[l];
+                    var lodHolder = new LodHolder(l);
+
+                    holder.Lods.Add(lodHolder);
 
                     Console.WriteLine($"  Lod {l + 1} / {model.Lods.Count}:");
                     Console.WriteLine($"    Mask: {lod.Mask}");
@@ -643,12 +671,14 @@ namespace GMC2Snooper
                         
                         var startIndex = VxIndex;
                         var offset = 0;
+
+                        var strip = new MeshStrip(subModel.Type) {
+                            MaterialId = subModel.TextureId,
+                            MaterialSource = subModel.TextureSource
+                        };
                         
-                        var strip = new MeshStrip(subModel.Type, minIndex, startIndex);
                         var vertices = new List<Vertex>();
-
-                        Strips.Add(strip);
-
+                        
                         strip.MaterialId = subModel.TextureId;
                         strip.MaterialSource = subModel.TextureSource;
 
@@ -699,115 +729,39 @@ namespace GMC2Snooper
                         }
 
                         strip.Vertices = vertices;
+                        lodHolder.Strips.Add(strip);
+                    }
+                }
 
-                        var numVertices = vertices.Count;
+                Console.WriteLine();
+            }
 
-                        sb.AppendLine($"# ----- SubModel -----");
-                        sb.AppendLine($"# type: {subModel.Type}");
-                        sb.AppendLine($"# flags: {subModel.Flags}");
-                        sb.AppendLine($"# unknown: ({subModel.Unknown1},{subModel.Unknown2})");
-                        sb.AppendLine($"# index: {startIndex}");
-                        sb.AppendLine($"# vertices: {numVertices}");
-                        sb.AppendLine($"# tex id: {subModel.TextureId}");
-                        sb.AppendLine($"# tex src: {subModel.TextureSource:X4}");
-                        sb.AppendLine();
+            var minIndex = 0;
+            var sbR = new StringBuilder();
+            var sbP = new StringBuilder();
 
-                        // skip every other vertex
-                        //--for (int v = 0; v < numVertices; v++)
-                        //--{
-                        //--    if ((v % 2) != 0)
-                        //--        vertices[v].Skip = true;
-                        //--}
-                        
-                        //--for (int v = 2; v < numVertices; v++)
-                        //--{
-                        //--    if (vertices[v].Normal.W == -1.0f)
-                        //--        vertices[v - 2].Skip = true;
-                        //--}
+            for (int m = 0; m < models.Count; m++)
+            {
+                var model = models[m];
 
-                        var indices = new List<int>();
+                for (int l = 0; l < model.Lods.Count; l++)
+                {
+                    var lod = model.Lods[l];
 
-                        var flip = false;
-                        var idx = 0;
+                    if (l != 1)
+                        continue;
 
-                        for (int v = 0; v < numVertices; v++)
-                        {
-                            int i0, i1, i2;
-                        
-                            if ((v + 2) < numVertices)
-                            {
-                                i0 = (minIndex + v) + 0;
-                                i1 = (minIndex + v) + 1;
-                                i2 = (minIndex + v) + 2;
-                            }
-                            else if ((v + 1) < numVertices)
-                            {
-                                i0 = (minIndex + v) + 0;
-                                i1 = (minIndex + v) + 1;
-                                i2 = (minIndex + v) - 1;
-                               
-                            }
-                            else
-                            {
-                                i0 = (minIndex + v) + 0;
-                                i1 = (minIndex + v) - 1;
-                                i2 = (minIndex + v) - 2;
-                            }
-                        
-                            indices.Add(i0);
-                            indices.Add(i1);
-                            indices.Add(i0);
+                    for (int s = 0; s < lod.Strips.Count; s++)
+                    {
+                        var strip = lod.Strips[s];
 
-                            indices.Add(i1);
-                            indices.Add(i2);
-                            indices.Add(i1);
-
-                            indices.Add(i2);
-                            indices.Add(i0);
-                            indices.Add(i2);
-                        }
-
-                        //--for (int v = 0; v < numVertices; v++)
-                        //--{
-                        //--    if (vertices[v].Skip)
-                        //--    {
-                        //--        flip = false;
-                        //--        idx++;
-                        //--    }
-                        //--    else
-                        //--    {
-                        //--        int i0, i1, i2;
-                        //--
-                        //--        if (flip)
-                        //--        {
-                        //--            i0 = (idx + 1);
-                        //--            i1 = (idx + 0);
-                        //--            i2 = (idx + 2);
-                        //--        }
-                        //--        else
-                        //--        {
-                        //--            i0 = (idx + 0);
-                        //--            i1 = (idx + 1);
-                        //--            i2 = (idx + 2);
-                        //--        }
-                        //--        
-                        //--        if (i1 < numVertices && i2 < numVertices)
-                        //--        {
-                        //--            indices.Add(minIndex + i0);
-                        //--            indices.Add(minIndex + i1);
-                        //--            indices.Add(minIndex + i2);
-                        //--        }
-                        //--
-                        //--        flip = ((v % 2) != 1);
-                        //--        idx++;
-                        //--    }
-                        //--}
-
-                        minIndex += numVertices;
-                        
                         var sbV = new StringBuilder(); // v
                         var sbN = new StringBuilder(); // vn
                         var sbT = new StringBuilder(); // vt
+
+                        var nVertices = 0;
+
+                        sbP.AppendLine("[");
 
                         foreach (var vertex in strip.Vertices)
                         {
@@ -819,56 +773,78 @@ namespace GMC2Snooper
                             sbV.AppendLine($"v {pos.X:F4} {pos.Z:F4} {pos.Y:F4}");
                             sbN.AppendLine($"vn {nor.X:F4} {nor.Z:F4} {nor.Y:F4}");
                             sbT.AppendLine($"vt {uv.X:F4} {uv.Y:F4} 1.0000");
+
+                            sbP.AppendLine($"\t({pos.X:F4},{pos.Y:F4},{pos.Z:F4},{pos.W:F4}),");
+
+                            sbR.Append($"{pos.X,-10:F4}{pos.Y,-10:F4}{pos.Z,-10:F4}{pos.W,-10:F4}| ");
+                            sbR.Append($"{nor.X,-10:F4}{nor.Y,-10:F4}{nor.Z,-10:F4}{nor.W,-10:F4}| ");
+                            sbR.Append($"{uv.X,-10:F4}{uv.Y,-10:F4}| ");
+
+                            if (strip.Type == 1)
+                            {
+                                var clr = vertex.Color;
+                                var blw = vertex.BlendWeight;
+
+                                sbR.Append($"{clr.X,-10:F4}{clr.Y,-10:F4}{clr.Z,-10:F4}{clr.W,-10:F4}| ");
+                                sbR.Append($"{blw.X,-10:F4}{blw.Y,-10:F4}{blw.Z,-10:F4}| ");
+                            }
+
+                            sbR.AppendLine();
+
+                            ++nVertices;
                         }
-                        
+
+                        sbP.AppendLine("],");
+                        sbR.AppendLine();
+
+                        sb.AppendLine($"# type: {strip.Type}");
+                        sb.AppendLine($"# tex id: {strip.MaterialId}");
+                        sb.AppendLine($"# src id: {strip.MaterialSource:X4}");
+                        sb.AppendLine();
+
                         sb.AppendLine(sbV.ToString());
                         sb.AppendLine(sbN.ToString());
                         sb.AppendLine(sbT.ToString());
 
-                        sb.AppendLine($"g model_{i + 1:D4}_{l + 1:D4}_{ii + 1:D4}");
+                        sb.AppendLine($"g model_{m + 1:D4}_{l + 1:D4}_{s + 1:D4}");
                         sb.AppendLine($"s 1");
 
-                        for (int t = 0; t < indices.Count; t += 3)
+                        for (int i = 2; i < nVertices; i++)
                         {
-                            var s = String.Format("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}",
-                                indices[t + 0] + 1,
-                                indices[t + 1] + 1,
-                                indices[t + 2] + 1);
+                            int i0, i1, i2;
 
-                            sb.AppendLine(s);
+                            if ((i % 2) != 0)
+                            {
+                                i0 = minIndex + i;
+                                i1 = minIndex + (i - 1);
+                                i2 = minIndex + (i - 2);
+                            }
+                            else
+                            {
+                                i0 = minIndex + (i - 2);
+                                i1 = minIndex + (i - 1);
+                                i2 = minIndex + i;
+                            }
+
+                            var v0 = strip.Vertices[i0 - minIndex];
+                            var v1 = strip.Vertices[i1 - minIndex];
+                            var v2 = strip.Vertices[i2 - minIndex];
+
+                            if (VertsEqual(v0, v1) || VertsEqual(v0, v2) || VertsEqual(v1, v2))
+                                continue;
+                            
+                            sb.AppendLine("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}", i0 + 1, i1 + 1, i2 + 1);
                         }
 
                         sb.AppendLine();
-                        
-                        //--foreach (var vertex in strip.Vertices)
-                        //--{
-                        //--    var pos = vertex.Position;
-                        //--    var nor = vertex.Normal;
-                        //--    var uv = vertex.UV;
-                        //--
-                        //--    sb.Append($"{pos.X,-10:F4}{pos.Y,-10:F4}{pos.Z,-10:F4}{pos.W,-10:F4}| ");
-                        //--    sb.Append($"{nor.X,-10:F4}{nor.Y,-10:F4}{nor.Z,-10:F4}{nor.W,-10:F4}| ");
-                        //--    sb.Append($"{uv.X,-10:F4}{uv.Y,-10:F4}| ");
-                        //--
-                        //--    if (strip.Type == 1)
-                        //--    {
-                        //--        var clr = vertex.Color;
-                        //--        var blw = vertex.BlendWeight;
-                        //--
-                        //--        sb.Append($"{clr.X,-10:F4}{clr.Y,-10:F4}{clr.Z,-10:F4}{clr.W,-10:F4}| ");
-                        //--        sb.Append($"{blw.X,-10:F4}{blw.Y,-10:F4}{blw.Z,-10:F4}| ");
-                        //--    }
-                        //--
-                        //--    sb.AppendLine();
-                        //--}
 
-                        sb.AppendLine();
+                        minIndex += nVertices;
                     }
                 }
-
-                Console.WriteLine();
             }
 
+            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "vertices.txt"), sbR.ToString());
+            File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "vertices.py"), sbP.ToString());
             File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "model_dump.obj"), sb.ToString());
         }
 
@@ -1206,12 +1182,32 @@ namespace GMC2Snooper
                 }
             case TextureCompType.VQ2:
                 {
+                    Debug.WriteLine("Processing VQ2!");
+                    
+                    var img = new BitmapHelper(tex.Width, tex.Height, PixelFormat.Format8bppIndexed);
+                    //var clut = Read8bppCLUT(texBuffer, clutTex, clutIdx);
 
-                } break;
+                    var buffer = Swizzlers.UnSwizzle8(texBuffer, tex.Width, tex.Height, tex.CLUTs[1]);
+
+                    img.Pixels = buffer;
+                    //img.SetColorPalette(clut);
+                    
+                    return img;
+                }
             case TextureCompType.VQ4:
                 {
+                    Debug.WriteLine("Processing VQ4!");
 
-                } break;
+                    var img = new BitmapHelper(tex.Width, tex.Height, PixelFormat.Format8bppIndexed);
+                    //var clut = Read8bppCLUT(texBuffer, clutTex, clutIdx);
+
+                    var buffer = Swizzlers.UnSwizzle8(texBuffer, tex.Width, tex.Height, tex.CLUTs[1]);
+
+                    img.Pixels = buffer;
+                    //img.SetColorPalette(clut);
+
+                    return img;
+                }
             case TextureCompType.HY2:
             case TextureCompType.HY2f:
                 {
@@ -1219,8 +1215,16 @@ namespace GMC2Snooper
                 } break;
             case TextureCompType.VQ4f:
                 {
+                    Debug.WriteLine("Processing VQ4f as PAL8!");
 
-                } break;
+                    var img = new BitmapHelper(texBuffer, tex.Width, tex.Height, tex.CLUTs[1], PixelFormat.Format8bppIndexed);
+                    var clut = Read8bppCLUT(texBuffer, clutTex, clutIdx);
+
+                    img.Unswizzle(tex.Width, tex.Height, SwizzleType.Swizzle8bit);
+                    img.SetColorPalette(clut);
+
+                    return img;
+                }
             }
             return null;
         }

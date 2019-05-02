@@ -10,7 +10,7 @@ namespace GMC2Snooper
     public enum SwizzleType
     {
         Swizzle4bit,
-        Swizzle8bit
+        Swizzle8bit,
     }
 
     public static class Swizzlers
@@ -256,6 +256,43 @@ namespace GMC2Snooper
         }
 
         public static byte[] UnSwizzleVQ2(byte[] buffer, int width, int height, int where)
+        {
+            // Destination data & index
+            byte[] destination = new byte[width * height * 4];
+            int destinationIndex;
+
+            // Twiddle map
+            int[] twiddleMap = MakeTwiddleMap(width);
+
+            // Decode texture data
+            for (int y = 0; y < height; y += 2)
+            {
+                var ty = twiddleMap[y >> 1];
+
+                for (int x = 0; x < width; x += 2)
+                {
+                    var tx = twiddleMap[x >> 1];
+                    var index = buffer[where + ((tx << 1) | ty)] * 4;
+
+                    for (int x2 = 0; x2 < 2; x2++)
+                    {
+                        for (int y2 = 0; y2 < 2; y2++)
+                        {
+                            destinationIndex = (((y + y2) * width) + (x + x2)) * 4;
+
+                            for (int i = 0; i < 4; i++)
+                                destination[destinationIndex + i] = (byte)(index + i);
+
+                            index++;
+                        }
+                    }
+                }
+            }
+
+            return destination;
+        }
+
+        public static byte[] UnSwizzleVQ4(byte[] buffer, int width, int height, int where)
         {
             var result = new byte[width * height];
             int destinationIndex;

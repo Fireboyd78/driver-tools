@@ -57,6 +57,12 @@ namespace GMC2Snooper
             Format = format;
         }
 
+        public BitmapHelper(int width, int height, PixelFormat format)
+        {
+            Format = format;
+            Bitmap = new Bitmap(width, height, format);
+        }
+
         public BitmapHelper(byte[] pixels, int width, int height, PixelFormat format) : this(pixels, width, height, 0, format) { }
 
         public BitmapHelper(byte[] pixels, int width, int height, int where, PixelFormat format)
