@@ -44,7 +44,7 @@
             // newNodeToolStripMenuItem
             // 
             this.newNodeToolStripMenuItem.Name = "newNodeToolStripMenuItem";
-            this.newNodeToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.newNodeToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
             this.newNodeToolStripMenuItem.Text = "New Node";
             this.newNodeToolStripMenuItem.Click += new System.EventHandler(this.newNodeToolStripMenuItem_Click);
             // 
@@ -57,7 +57,6 @@
             this.DoubleBuffered = true;
             this.Name = "FlowgraphWidget";
             this.Size = new System.Drawing.Size(413, 317);
-            this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.FlowgraphWidget_MouseClick);
             this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
 

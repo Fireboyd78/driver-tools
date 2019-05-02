@@ -96,8 +96,8 @@
     <Compile Include="MissionScript\Objects\Types\Camera.cs" />
     <Compile Include="MissionScript\Objects\Types\Prop.cs" />
     <Compile Include="MissionScript\Objects\Types\Switch.cs" />
-    <Compile Include="MissionScript\Objects\Types\Weapon.cs" />
     <Compile Include="MissionScript\Objects\Types\Collectable.cs" />
+    <Compile Include="MissionScript\Objects\Types\AnimProp.cs" />
     <Compile Include="MissionScript\Objects\Types\Marker.cs" />
     <Compile Include="MissionScript\Logic\NodeColor.cs" />
     <Compile Include="NodeWidget.cs">

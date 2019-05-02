@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -28,7 +30,7 @@ namespace Zartex
         private NodeWidget _nodeDraw;
 
         private Point addNodeLocation;
-
+        
         public void AddNode(NodeWidget node)
         {
             if (!_nodes.Contains(node))
@@ -59,17 +61,17 @@ namespace Zartex
                 AddNode(node);
         }
 
-        public void LinkNodes(NodeWidget output, NodeWidget input)
+        public void LinkNodes(NodeWidget output, NodeWidget input, WireNodeType nodeType = WireNodeType.GroupEnable)
         {
             if (!_nodes.Contains(output))
                 AddNode(output);
             if (!_nodes.Contains(input))
                 AddNode(input);
 
-            int i = _nodes.IndexOf(output);
+            var idx = _nodes.IndexOf(output);
+            var node = _nodes[idx];
             
-            if (!_nodes[i].Outputs.Contains(input.nodeIn))
-                _nodes[i].AddOutput(input.nodeIn);
+            node.AddWire(input, nodeType);
         }
 
         public void OnNodesAdded(object sender, PaintNodeEventArgs e)
@@ -83,46 +85,91 @@ namespace Zartex
 
         public void OnNodesUpdated(object sender, PaintNodeEventArgs e)
         {
-            using (Pen pen = new Pen(new SolidBrush(Color.FromArgb(128, 128, 255)), 1F))
+            var args = e.PaintEventArgs;
+            var gfx = args.Graphics;
+
+            gfx.SmoothingMode = SmoothingMode.HighSpeed;
+            
+            using (var pen = new Pen(new SolidBrush(e.WireColor), 1.0f))
             {
-                e.PaintEventArgs.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+                var nodeL = PointToClient(e.SenderScreenLocation);
+                var nodeR = PointToClient(e.ReceiverScreenLocation);
+                
+                var boundL = e.SenderNode.Bounds;
+                var boundR = e.ReceiverNode.Bounds;
 
-                Point receiverNode = PointToClient(e.ReceiverScreenLocation);
-                Point senderNode = PointToClient(e.SenderScreenLocation);
+                nodeL.X += boundL.Width - 1;
+                nodeL.Y += boundL.Height / 2;
+                
+                nodeR.Y += boundR.Height / 2;
+                
+                var points = new List<Point>();
 
-                senderNode.X += e.SenderNode.Bounds.Width - 1;
-                senderNode.Y += e.SenderNode.Bounds.Height / 2;
+                points.Add(nodeL);
 
-                receiverNode.Y += e.ReceiverNode.Bounds.Height / 2;
+                nodeL.X += 10;
+                points.Add(nodeL);
 
-                //Console.WriteLine("Drawing a line from {0} to {1}.", e.SenderNode.Parent.Name, e.ReceiverNode.Parent.Name);
+                nodeR.X -= 10;
 
-                e.PaintEventArgs.Graphics.DrawLine(pen, senderNode, receiverNode);
+                if (nodeR.X < nodeL.X)
+                {
+                    if (nodeR.Y < nodeL.Y)
+                    {
+                        nodeL.Y -= (e.SenderNode.Top + 15);
+                        points.Add(nodeL);
+
+                        var nodeM = new Point(nodeR.X, nodeR.Y + (e.ReceiverNode.Bottom + 15));
+
+                        points.Add(nodeM);
+                        points.Add(nodeR);
+                    }
+                    else
+                    {
+                        nodeL.Y += (e.SenderNode.Bottom + 15);
+                        points.Add(nodeL);
+
+                        var nodeM = new Point(nodeR.X, nodeR.Y - (e.ReceiverNode.Top + 15));
+
+                        points.Add(nodeM);
+                        points.Add(nodeR);
+                    }
+                }
+                else
+                {
+                    points.Add(nodeR);
+                }
+
+                nodeR.X += 10;
+                points.Add(nodeR);
+
+                for (int p = 1; p < points.Count; p++)
+                    gfx.DrawLine(pen, points[p - 1], points[p]);
             }
         }
 
         public void OnLineDrawing(object sender, PaintDrawingEventArgs e)
         {
-            using (Graphics g = CreateGraphics())
+            using (var g = CreateGraphics())
             {
-                e.PaintEventArgs = new PaintEventArgs(g, this.Parent.ClientRectangle);
-
+                e.PaintEventArgs = new PaintEventArgs(g, Parent.ClientRectangle);
+        
                 _nodeDraw = ((NodeWidget)sender);
-
+        
                 OnLineDraw(sender, e.PaintEventArgs);
             }
         }
-
+        
         public void OnLineDraw(object sender, PaintEventArgs e)
         {
             if (_nodeDraw != null)
             {
-                using (Pen pen = new Pen(new SolidBrush(Color.FromArgb(128, 128, 255)), 1F))
+                using (var pen = new Pen(new SolidBrush(Color.FromArgb(192, 192, 192)), 1.0f))
                 {
                     Point basePoint = _nodeDraw._line.BasePoint;
                     Point dragPoint = _nodeDraw._line.DragPoint;
-
-                    e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+        
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     e.Graphics.DrawLine(pen, basePoint, dragPoint);
                 }
             }
@@ -132,10 +179,11 @@ namespace Zartex
         {
             _nodeDraw = null;
         }
-
+        
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+            
             foreach (NodeWidget node in _nodes)
                 node.PaintNodes(e);
 
@@ -143,18 +191,71 @@ namespace Zartex
                 _nodeDraw.DrawLines(e);
         }
 
-        private void FlowgraphWidget_MouseClick(object sender, MouseEventArgs e)
+        ScrollableControl scrollPanel = null;
+
+        bool mouseDragging = false;
+        Point mouseOrigin = new Point(0, 0);
+        
+        protected override void OnMouseMove(MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Right)
+            if (mouseDragging)
             {
+                var origin = scrollPanel.AutoScrollPosition;
+                var target = e.Location;
+                
+                var delta = new Point() {
+                    X = (target.X - mouseOrigin.X),
+                    Y = (target.Y - mouseOrigin.Y),
+                };
+
+                var position = new Point() {
+                    X = -(origin.X + delta.X),
+                    Y = -(origin.Y + delta.Y),
+                };
+                
+                scrollPanel.AutoScrollPosition = position;
+            }
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            switch (e.Button)
+            {
+            case MouseButtons.Left:
+                if (mouseDragging)
+                {
+                    mouseDragging = false;
+                    scrollPanel = null;
+                }
+                break;
+            }
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            switch (e.Button)
+            {
+            case MouseButtons.Left:
+                // hacks, cause I'm an idiot
+                scrollPanel = Parent as ScrollableControl;
+
+                if (scrollPanel != null)
+                {
+                    mouseDragging = true;
+                    mouseOrigin = e.Location;
+                }
+
+                break;
+            case MouseButtons.Right:
                 addNodeLocation = PointToScreen(e.Location);
                 contextMenuStrip1.Show(addNodeLocation);
+                break;
             }
-
+            
             if (Focused)
                 Parent.Focus();
         }
-
+        
         private void newNodeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             NodeWidget node = new NodeWidget() {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -26,8 +27,8 @@ namespace Zartex
             case 7: return typeof(CameraObject);
             case 8: return typeof(PropObject);
             case 9: return typeof(SwitchObject);
-            case 10: return typeof(WeaponObject);
-            case 11: return typeof(CollectableObject);
+            case 10: return typeof(CollectableObject);
+            case 11: return typeof(AnimPropObject);
             case 12: return typeof(MarkerObject);
             }
 
@@ -47,8 +48,8 @@ namespace Zartex
             case 7: return "Camera";
             case 8: return "Prop";
             case 9: return "Switch";
-            case 10: return "Weapon";
-            case 11: return "Collectable";
+            case 10: return "Collectable";
+            case 11: return "AnimProp";
             case 12: return "Marker";
             }
 
@@ -94,7 +95,7 @@ namespace Zartex
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidOperationException($"Failed to load mission object {i} of type {typeId}!", e);
+                        Debug.WriteLine($"Failed to load mission object {i} / {count} of type {typeId}!", e);
                     }
                 }
             }

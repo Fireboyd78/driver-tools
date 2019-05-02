@@ -12,12 +12,23 @@ namespace Zartex
 {
     public partial class NodeWidget : UserControl
     {
+        public class WireLink
+        {
+            public PictureBox Link { get; set; }
+            public WireNodeType Type { get; set; }
+
+            public WireLink(PictureBox link, WireNodeType type)
+            {
+                Link = link;
+                Type = type;
+            }
+        }
+
         public NodeWidget()
         {
             InitializeComponent();
-
-            _input = new List<PictureBox>();
-            _output = new List<PictureBox>();
+            
+            _links = new List<WireLink>();
 
             Container.MouseDown += (o, e) => NodeWidget_MouseDown(o, e);
             Container.MouseDoubleClick += (o, e) => NodeWidget_DoubleClick(o, e);
@@ -57,52 +68,44 @@ namespace Zartex
         public PaintDrawingEventArgs _line;
 
         public int nodeId;
-
-        private IList<PictureBox> _input;
-        private IList<PictureBox> _output;
+        
+        private IList<WireLink> _links;
 
         public string HeaderText
         {
             get { return Header.Text; }
             set { Header.Text = value; }
         }
-
-        public IList<PictureBox> Inputs
+        
+        public IList<WireLink> Links
         {
-            get { return _input; }
+            get { return _links; }
         }
-
-        public IList<PictureBox> Outputs
+        
+        public void AddWire(NodeWidget output, WireNodeType wireType)
         {
-            get { return _output; }
-        }
+            var link = output.nodeIn;
+            var wire = new WireLink(output.nodeIn, wireType);
 
-        public void AddInput(PictureBox input)
-        {
-            if (input.Parent != null && input.Parent.GetType() == typeof(NodeWidget))
-            {
-                _input.Add(input);
-                OnNodeAdded(new PaintNodeEventArgs(nodeIn, input));
-            }
-        }
+            _links.Add(wire);
 
-        public void AddOutput(PictureBox output)
-        {
-            if (output.Parent != null && output.Parent.GetType() == typeof(NodeWidget))
-            {
-                _output.Add(output);
-                OnNodeAdded(new PaintNodeEventArgs(output, nodeOut));
-            }
+            OnNodeAdded(new PaintNodeEventArgs(link, nodeOut) {
+                WireType = wireType,
+            });
         }
 
         public void PaintNodes(PaintEventArgs e)
         {
             //Console.WriteLine("Refreshing {0} outputs...", Outputs.Count);
 
-            foreach (PictureBox output in _output)
+            foreach (WireLink output in _links)
             {
+                var link = output.Link;
+
                 //Console.WriteLine("Refreshing {0}...", output.Parent.Name);
-                OnNodeUpdated(new PaintNodeEventArgs(output, nodeOut, e));
+                OnNodeUpdated(new PaintNodeEventArgs(link, nodeOut, e) {
+                    WireType = output.Type,
+                });
             }
 
             //Console.WriteLine("Node painting done.");
@@ -163,7 +166,7 @@ namespace Zartex
 
         private void NodeWidget_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 MouseDownLocation = PointToClient(PointToScreen(e.Location));
 
@@ -176,7 +179,7 @@ namespace Zartex
 
         private void NodeWidget_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 if (!Flowgraph.Parent.Focused)
                     Flowgraph.Parent.Focus();
@@ -219,7 +222,7 @@ namespace Zartex
         #region nodeOut methods (FIX ME!)
         private void nodeOut_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 nodeSelected = true;
             }
@@ -227,7 +230,7 @@ namespace Zartex
 
         private void nodeOut_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 if (nodeSelected)
                 {
@@ -291,7 +294,7 @@ namespace Zartex
 
         private void Properties_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 Console.WriteLine();
             }
@@ -299,7 +302,7 @@ namespace Zartex
 
         private void NodeWidget_MouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == System.Windows.Forms.MouseButtons.Left)
+            if (e.Button == MouseButtons.Left)
             {
                 if (!Flowgraph.Parent.Focused)
                     Flowgraph.Parent.Focus();
@@ -318,6 +321,37 @@ namespace Zartex
         public PictureBox ReceiverNode { get; set; }
 
         public PaintEventArgs PaintEventArgs { get; set; }
+
+        public WireNodeType WireType { get; set; }
+
+        public Color WireColor
+        {
+            get
+            {
+                switch (WireType)
+                {
+                case WireNodeType.GroupEnable:
+                case WireNodeType.OnSuccessEnable:
+                    return Color.FromArgb(128, 192, 128); // green
+                case WireNodeType.GroupDisable:
+                case WireNodeType.OnSuccessDisable:
+                    return Color.FromArgb(192, 128, 128); // red
+
+                case WireNodeType.OnFailureEnable:
+                    return Color.FromArgb(128, 192, 192); // cyan
+                case WireNodeType.OnFailureDisable:
+                    return Color.FromArgb(192, 128, 192); // pink
+
+                case WireNodeType.OnConditionEnable:
+                    return Color.FromArgb(192, 192, 128); // yellow
+                case WireNodeType.OnConditionDisable:
+                    return Color.FromArgb(128, 128, 128); // gray
+                }
+
+                // error!
+                return Color.FromArgb(255, 0, 128);
+            }
+        }
 
         public Point ReceiverScreenLocation
         {

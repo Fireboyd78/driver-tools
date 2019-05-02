@@ -57,12 +57,8 @@ namespace Zartex
         {
             InitializeComponent();
             PopulateMainMenu();
-
+            
             title = this.Text;
-
-            Console.WriteLine("Driv3r Directory: {0}\nLocale: {1}",
-                Driv3r.RootDirectory,
-                Configuration.Settings.Locale);
             
             foreach (Control control in Controls.Find("LeftMenu", true)[0].Controls)
             {
@@ -791,10 +787,18 @@ namespace Zartex
             Cursor = Cursors.Default;
         }
 
+        private bool useFlowgraph = false;
+
         private void GenerateLogicNodes()
         {
-            CreateNodes(MissionPackage.MissionData.LogicData.Nodes.Definitions);
-            //CreateLogicNodesFlowgraph(MissionPackage.LogicNodeDefinitions);
+            if (useFlowgraph)
+            {
+                CreateLogicNodesFlowgraph(MissionPackage.MissionData.LogicData.Nodes.Definitions);
+            }
+            else
+            {
+                CreateNodes(MissionPackage.MissionData.LogicData.Nodes.Definitions);
+            }
 
             // // Nest wires
             // for (int i = 0; i < nodeCount; i++)
@@ -818,7 +822,7 @@ namespace Zartex
             CreateNodes(MissionPackage.MissionData.LogicData.Actors.Definitions);
         }
 
-        public void GenerateDefinition(FlowgraphWidget flowgraph, NodeDefinition def, int x, int y)
+        public NodeWidget GenerateDefinition(FlowgraphWidget flowgraph, NodeDefinition def)
         {
             IDictionary<int, string> opcodes =
                 (def.Properties[0].TypeId == 19)
@@ -829,22 +833,21 @@ namespace Zartex
             string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
             string opcodeName = opcodes.ContainsKey(def.TypeId) ? opcodes[def.TypeId] : def.TypeId.ToString();
 
-            NodeWidget node = new NodeWidget() {
+            var node = new NodeWidget() {
                 Flowgraph = flowgraph,
-                //BackColor = Color.FromArgb(def.Byte4, def.Byte1, def.Byte2, def.Byte3),
                 HeaderText = String.Format("{0}: {1} {2}", MissionPackage.MissionData.LogicData.Nodes.Definitions.IndexOf(def), opcodeName, nodeName),
-                Left = x,
-                Top = y,
                 Tag = def
             };
+
+            var color = def.Color;
+
+            node.Properties.BackColor = Color.FromArgb(255, color.R, color.G, color.B);
 
             if (def.Properties.Count > 4)
                 node.Width += 100;
 
             flowgraph.AddNode(node);
-
-            // y += node.Height + 80;
-
+            
             for (int p = 0; p < def.Properties.Count; p++)
             {
                 NodeProperty prop = def.Properties[p];
@@ -868,27 +871,14 @@ namespace Zartex
                 Label property = new Label() {
                     Text = String.Format("{0} = {1}", propName, prop.Value),
                     Font = new Font(Font.SystemFontName, 9F, FontStyle.Regular, GraphicsUnit.Pixel),
-                    //Width = node.Properties.Width / 2 - 12,
                     TextAlign = ContentAlignment.MiddleLeft,
                     Tag = prop
                 };
 
                 node.Properties.Controls.Add(property);
             }
-
-            int oldY = y;
-            int oldX = x;
-
-            int wireId = (int)def.Properties[0].Value;
-
-            // for (int w = 0; w < MissionPackage.WireCollections[wireId].Count; w++)
-            // {
-            //     GenerateDefinition(flowgraph, MissionPackage.LogicNodeDefinitions[MissionPackage.WireCollections[wireId].Entries[w].NodeId], x, y);
-            //     y += node.Height + 50;
-            // }
-
-            y = oldY;
-            x = oldX;
+            
+            return node;
         }
 
         public void CreateLogicNodesFlowgraph(IList<NodeDefinition> definition)
@@ -915,129 +905,64 @@ namespace Zartex
                 (definition[0].Properties[0].TypeId == 19)
                 ? NodeTypes.LogicNodeTypes
                 : NodeTypes.ActorNodeTypes;
+            
+            var wireCollections = MissionPackage.MissionData.LogicData.WireCollection.WireCollections;
+            
+            var nodeLookup = new Dictionary<NodeDefinition, NodeWidget>();
 
-            int x = 3, y = 6;
-
-            //GenerateDefinition(Flowgraph, definition[0], x, y);
-
-            for (int i = 0; i < definition.Count; i++)
-                GenerateDefinition(Flowgraph, definition[i], x, y);
-
-            x = 3;
-            y = 6;
-
-            for (int i = 0; i < definition.Count; i++)
+            foreach (var def in definition.OrderBy((d) => d.Flags))
             {
-                int wireId = (int)definition[i].Properties[0].Value;
+                var node = GenerateDefinition(Flowgraph, def);
 
-                int oldY = y;
-
-                for (int w = 0; w < MissionPackage.MissionData.LogicData.WireCollection[wireId].Wires.Count; w++)
-                {
-                    Flowgraph.Nodes[i].Left = x;
-                    Flowgraph.Nodes[i].Top = y;
-
-                    Flowgraph.Nodes[MissionPackage.MissionData.LogicData.WireCollection[wireId][w].NodeId].Left = x + Flowgraph.Nodes[i].Left + 235;
-                    Flowgraph.Nodes[MissionPackage.MissionData.LogicData.WireCollection[wireId][w].NodeId].Top = y + Flowgraph.Nodes[i].Top;
-
-                    Flowgraph.LinkNodes(Flowgraph.Nodes[i], Flowgraph.Nodes[MissionPackage.MissionData.LogicData.WireCollection[wireId][w].NodeId]);
-
-                    y += 75;
-                }
-                x += Flowgraph.Nodes[i].Width + 25;
-                y = oldY + 75;
+                nodeLookup.Add(def, node);
             }
 
-            // // Build main nodes
-            // for (int i = 0; i < nodeCount; i++)
-            // {
-            //     LogicDefinition def = definition[i];
-            // 
-            //     string strName = MissionPackage.StringCollection[def.StringId];
-            //     string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
-            //     string opcodeName = opcodes.ContainsKey(def.Opcode) ? opcodes[def.Opcode] : def.Opcode.ToString();
-            // 
-            //     NodeWidget node = new NodeWidget() {
-            //         Flowgraph = Flowgraph,
-            //         //BackColor = Color.FromArgb(def.Byte4, def.Byte1, def.Byte2, def.Byte3),
-            //         HeaderText = String.Format("{0}: {1} {2}", i, opcodeName, nodeName),
-            //         Left = x,
-            //         Top = y,
-            //         Tag = def
-            //     };
-            // 
-            //     x += 350;
-            // 
-            //     // Build property (sub) nodes
-            //     for (int p = 0; p < def.Properties.Count; p++)
-            //     {
-            //         LogicProperty prop = def.Properties[p];
-            // 
-            //         string propName = MissionPackage.StringCollection[prop.StringId];
-            // 
-            //         // if (prop.Opcode == 20 && MissionPackage.HasLocale)
-            //         // {
-            //         //     int val = (int)prop.Value;
-            //         //     string localeStr = (!MissionPackage.LocaleStrings.ContainsKey(val)) ? "<NULL>" : String.Format("\"{0}\"", MissionPackage.LocaleStrings[val]);
-            //         // 
-            //         //     propName = String.Format("{0} -> {1}", propName, localeStr);
-            //         // }
-            //         // if (prop.Opcode == 7 && ((int)prop.Value) != -1)
-            //         // {
-            //         //     int val = MissionPackage.ActorDefinitions[(int)prop.Value].Opcode;
-            //         // 
-            //         //     propName = String.Format("{0} -> {1}", propName, ((LogicData.Types.ActorDefinitionTypes.ContainsKey(val)) ? LogicData.Types.ActorDefinitionTypes[val] : prop.Value.ToString()));
-            //         // }
-            // 
-            //         Label property = new Label() {
-            //             Text = String.Format("{0} = {1}", propName, prop.Value),
-            //             Font = new Font(Font.SystemFontName, 9F, FontStyle.Regular, GraphicsUnit.Pixel),
-            //             Width = node.Properties.Width / 2 - 12,
-            //             TextAlign = ContentAlignment.MiddleLeft,
-            //             Tag = prop
-            //         };
-            // 
-            //         node.Properties.Controls.Add(property);
-            //     }
-            // 
-            //     Flowgraph.AddNode(node);
-            // }
+            int x = 16, y = 16;
 
+            foreach (var kv in nodeLookup)
+            {
+                var def = kv.Key;
+                var node = kv.Value;
+
+                node.Left = x;
+                node.Top = y;
+                
+                y += (node.Height + 25);
+            }
+
+            var touchedNodes = new HashSet<NodeWidget>();
+
+            foreach (var kv in nodeLookup)
+            {
+                var def = kv.Key;
+                var node = kv.Value;
+
+                var wireId = (int)def.Properties[0].Value;
+                var wireCol = wireCollections[wireId];
+
+                var wireCollection = MissionPackage.MissionData.LogicData.WireCollection[wireId];
+                
+                x = node.Left + (node.Width + 35);
+                y = node.Top;
+                
+                for (int w = 0; w < wireCollection.Wires.Count; w++)
+                {
+                    var wire = wireCollection.Wires[w];
+                    var wireDef = definition[wire.NodeId];
+                
+                    var wireNode = nodeLookup[wireDef];
+                    
+                    wireNode.Left = x;
+                    //wireNode.Top = y;
+
+                    Flowgraph.LinkNodes(node, wireNode, (WireNodeType)wire.WireType);
+
+                    if (!touchedNodes.Contains(wireNode))
+                        touchedNodes.Add(wireNode);
+                }
+            }
             
-
-            //// Load wires (logic nodes only)
-            //for (int i = 0; i < nodeCount; i++)
-            //{
-            //    LogicDefinition def = definition[i];
-            //    LogicProperty prop = def.Properties[0];
-            //
-            //    // it's actor defs, don't try to load
-            //    if (prop.Opcode != 19) break;
-            //
-            //    int wireId = (int)prop.Value;
-            //
-            //    for (int w = 0; w < MissionPackage.WireCollections[wireId].Count; w++)
-            //    {
-            //        WireCollectionEntry wire = MissionPackage.WireCollections[wireId].Entries[w];
-            //
-            //        // int wireTypeId = definition[wire.NodeId].StringId;
-            //
-            //        // string strName = MissionPackage.StringCollection[wireTypeId];
-            //        // string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
-            //        // string opcodeName = opcodes.ContainsKey(wire.Opcode) ? opcodes[wire.Opcode] : wire.Opcode.ToString();
-            //
-            //        TreeNode wireNode = new TreeNode() {
-            //            Text = Nodes.Nodes[wire.NodeId].Text,
-            //            Tag = wire
-            //        };
-            //
-            //        Nodes.Nodes[i].Nodes[0].Nodes.Add(wireNode);
-            //        //LogicNodes.Nodes[i].Nodes[0].Collapse(false);
-            //    }
-            //}
-
             Panel1.Controls.Add(Flowgraph);
-
             Panel1.Focus();
 
             SafeAddControl(Widget);
@@ -1094,6 +1019,10 @@ namespace Zartex
             {
                 var cType = (ChunkType)magic;
 
+                var inFlowgraph = useFlowgraph;
+
+                useFlowgraph = false;
+
                 switch (cType)
                 {
                 case ChunkType.ExportedMissionObjects:
@@ -1110,6 +1039,9 @@ namespace Zartex
                     GenerateActors();
                     break;
                 case ChunkType.LogicExportNodesChunk:
+                    if (!inFlowgraph)
+                        useFlowgraph = true;
+
                     GenerateLogicNodes();
                     break;
                 case ChunkType.LogicExportWireCollections:
@@ -1126,32 +1058,6 @@ namespace Zartex
                 MessageBox.Show("No mission loaded!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
         }
         
-        private void onPaintFlowgraph(object sender, PaintEventArgs e)
-        {
-            base.OnPaint(e);
-
-            Panel Panel1 = (Panel)sender;
-            PictureBox nodeOut = ((NodeWidget)Panel1.Controls[0]).nodeOut;
-            PictureBox nodeIn = ((NodeWidget)Panel1.Controls[2]).nodeIn;
-
-            Pen pen = new Pen(Color.Black, 2F);
-
-            Point x = Panel1.PointToClient(nodeOut.Parent.PointToScreen(nodeOut.Location));
-            Point y = Panel1.PointToClient(nodeIn.Parent.PointToScreen(nodeIn.Location));
-
-            x.X += 17;
-            x.Y += 7;
-
-            y.Y += 7;
-
-
-
-            //Console.WriteLine("Drawing a line from {0} to {1}", x, y);
-
-            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            e.Graphics.DrawLine(pen, x, y);
-        }
-
         private void button2_Click(object sender, EventArgs e)
         {
             InspectorWidget Widget = new InspectorWidget();

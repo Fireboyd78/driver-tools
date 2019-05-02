@@ -48,13 +48,7 @@ namespace Zartex
         [PropertyOrder(400)]
         public virtual object Value
         {
-            get
-            {
-                if (_value == null)
-                    throw new NullReferenceException();
-
-                return _value;
-            }
+            get { return _value; }
             set { _value = value; }
         }
         
@@ -238,10 +232,15 @@ namespace Zartex
         {
             var size = stream.ReadInt32();
 
-            if (size != Size)
-                throw new InvalidOperationException("Invalid boolean property!");
-
-            Value = (stream.ReadByte() != 0);
+            if (size == Size)
+            {
+                Value = (stream.ReadByte() != 0);
+            }
+            else
+            {
+                // explicitly false
+                Value = false;
+            }
         }
 
         public override void SaveData(Stream stream)
@@ -661,8 +660,11 @@ namespace Zartex
         public override void LoadData(Stream stream)
         {
             var size = stream.ReadInt32();
+            var buffer = new byte[size];
 
-            stream.Read(Value, 0, size);
+            stream.Read(buffer, 0, size);
+
+            Value = buffer;
         }
 
         public override void SaveData(Stream stream)

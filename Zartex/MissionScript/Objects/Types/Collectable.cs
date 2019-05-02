@@ -14,18 +14,26 @@ namespace Zartex
     {
         public override int TypeId
         {
-            get { return 11; }
+            get { return 10; }
         }
 
+        public int Type { get; set; }
+
+        public float Rotation { get; set; }
         public Vector3 Position { get; set; }
 
         protected override void LoadData(Stream stream)
         {
+            Type = stream.ReadInt32();
+
+            Rotation = stream.ReadSingle();
             Position = stream.Read<Vector3>();
         }
 
         protected override void SaveData(Stream stream)
         {
+            stream.Write(Type);
+            stream.Write(Rotation);
             stream.Write(Position);
         }
     }

@@ -78,7 +78,7 @@ namespace Zartex
             { 2, "DebugText" },
             { 3, "Timer" },
             { 4, "CounterWatch" },
-            { 5, "MissionEnd" },
+            { 5, "MissionComplete" },
             { 6, "MissionFail" },
             { 7, "Comment" },
             { 8, "GroupBroadcast" },
@@ -106,16 +106,16 @@ namespace Zartex
             { 29, "OverlayClockWatch" },
 
             { 30, "ProximityCheck" },
-                
+            
             { 100, "IGCSModeControl" },
-            { 101, "CreateActor" },
-            { 102, "GoonVehicleControl" },
-            { 104, "CivilianTrafficControl" },
+            { 101, "ActorControl" },
+            { 102, "ChaserControl" },
+            { 104, "TrafficControl" },
             { 105, "RearVehicleShooting" },
             { 106, "WatchLineOfSight" },
             { 107, "SetCharacterName" },
             { 108, "RearVehicleShooting(2)" },
-            { 109, "SetVehicleGunner" },
+            { 109, "PassengerShooting" },
             { 110, "MissionStatusWatch" },
 
             { 113, "CraneControl" },
@@ -131,7 +131,7 @@ namespace Zartex
             { 126, "ArmsCrateControl" },
             { 128, "PedestrianDensityControl" },
             { 129, "ProfileControl" },
-                
+            
             { 131, "MissionStatusControl" },
             { 132, "SetConeData" },
             { 133, "Wander" },
@@ -139,7 +139,7 @@ namespace Zartex
             { 135, "HudBarInitialise" },
             { 137, "SetChaseVehicle" },
             { 138, "FollowPath" },
-                
+            
             { 140, "SetMarker" },
             { 141, "SimpleFader" },
             { 143, "ProfileQuery" },
@@ -157,8 +157,8 @@ namespace Zartex
             { 100, "Area" },
             { 101, "Switch" },
             { 102, "Prop" },
-            { 103, "Weapon" },
-            { 104, "Collectable" },
+            { 103, "Collectable" },
+            { 104, "AnimProp" },
             { 105, "Marker" },
         };
 
