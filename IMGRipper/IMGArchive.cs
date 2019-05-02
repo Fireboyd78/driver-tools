@@ -189,6 +189,7 @@ namespace IMGRipper
                 "ANIMS\\MACROS\\FEMALE_IGCS_M08B_MID_CAL_01.ANM",
                 "ANIMS\\MACROS\\FEMALE_RUN.ANM",
                 "ANIMS\\MACROS\\FEMALE_WALK.ANM",
+
                 "ANIMS\\MACROS\\MALE_2HANDED_SHOOT_CROUCHING_AHEAD.ANM",
                 "ANIMS\\MACROS\\MALE_2HANDED_SHOOT_CROUCHING_AHEAD_V2.ANM",
                 "ANIMS\\MACROS\\MALE_2HANDED_SHOOT_CROUCHING_LEFT.ANM",
@@ -307,6 +308,55 @@ namespace IMGRipper
                 "ANIMS\\MACROS\\MALE_WALK_STRAFE_RIGHT.ANM",
                 "ANIMS\\MACROS\\MALE_WALK_STRAFE_RIGHT_45.ANM",
 
+                // found in Japanese version
+                "ANIMS\\MACROS\\MALE_BUMP.ANM",
+                "ANIMS\\MACROS\\MALE_DASH.ANM",
+                "ANIMS\\MACROS\\MALE_DRAW_GUN_COPS.ANM",
+                "ANIMS\\MACROS\\MALE_FLAT_WALL.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_DOOR_OPEN_START.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_DOOR_PASSENGER_OPEN_START.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_ENTER_PASSENGER_START.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_ENTER_START.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_EXIT_CLOSE_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_EXIT_NO_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_EXIT_PASSENGER_CLOSE_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_EXIT_PASSENGER_NO_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_HIJACK.ANM",
+                "ANIMS\\MACROS\\MALE_FWD_HIJACK_DEAD.ANM",
+                "ANIMS\\MACROS\\MALE_JOG_BACKWARDS_RIGHT_45.ANM",
+                "ANIMS\\MACROS\\MALE_LADDER_CYCLE.ANM",
+                "ANIMS\\MACROS\\MALE_LADDER_IDLE.ANM",
+                "ANIMS\\MACROS\\MALE_LADDER_OFF_END.ANM",
+                "ANIMS\\MACROS\\MALE_LADDER_OFF_START.ANM",
+                "ANIMS\\MACROS\\MALE_LADDER_ON_ABOVE.ANM",
+                "ANIMS\\MACROS\\MALE_LADDER_ON_BELOW.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_DOOR_OPEN_START.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_DOOR_PASSENGER_OPEN_START.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_ENTER_PASSENGER_START.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_ENTER_START.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_EXIT_CLOSE_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_EXIT_NO_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_EXIT_PASSENGER_CLOSE_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_EXIT_PASSENGER_NO_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_HIJACK.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_HIJACK_DEAD.ANM",
+                "ANIMS\\MACROS\\MALE_SEDAN_SHOVED_TURN_AROUND.ANM",
+                "ANIMS\\MACROS\\MALE_SPORTS_ENTER_PASSENGER_START.ANM",
+                "ANIMS\\MACROS\\MALE_SPORTS_ENTER_START.ANM",
+                "ANIMS\\MACROS\\MALE_STAND_TO_KNEEL.ANM",
+                "ANIMS\\MACROS\\MALE_TANNER_WIDER_STANCE_IDLE.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_DOOR_OPEN_START.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_DOOR_PASSENGER_OPEN_START.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_ENTER_PASSENGER_START.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_ENTER_START.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_EXIT_CLOSE_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_EXIT_NO_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_EXIT_PASSENGER_CLOSE_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_EXIT_PASSENGER_NO_DOOR.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_HIJACK.ANM",
+                "ANIMS\\MACROS\\MALE_TRUCK_HIJACK_DEAD.ANM",
+                "ANIMS\\MACROS\\MALE_TURN_PEDESTRIANS.ANM",
+
                 "ANIMS\\SKELETON_MACROS\\FEMALE_SKELETON.SKM",
                 "ANIMS\\SKELETON_MACROS\\MALE_SKELETON.SKM",
 
@@ -344,12 +394,14 @@ namespace IMGRipper
                 "SKIES\\SKY_CALITASTAIL.D3S",
                 "SKIES\\SKY_CHASETHETRAIN.D3S",
                 "SKIES\\SKY_COUNTDOWN.D3S",
+                "SKIES\\SKY_DIVERSION.D3S",
                 "SKIES\\SKY_DODGEISLAND.D3S",
                 "SKIES\\SKY_HUNTED.D3S",
                 "SKIES\\SKY_IMPRESSLOMAZ.D3S",
                 "SKIES\\SKY_IMPRESSLOMAZSUNSET.D3S",
                 "SKIES\\SKY_ITAKERIDEDUSKR.D3S",
                 "SKIES\\SKY_ITAKRIDEDAWNR.D3S",
+                "SKIES\\SKY_JONESINMIAMI.D3S",
                 "SKIES\\SKY_LITTLEHAVANA.D3S",
                 "SKIES\\SKY_MOUNTAINCHASE.D3S",
                 "SKIES\\SKY_MTAKERIDEDAY.D3S",
@@ -358,6 +410,7 @@ namespace IMGRipper
                 "SKIES\\SKY_NTAKERIDEDAYR.D3S",
                 "SKIES\\SKY_POLICEHQ.D3S",
                 "SKIES\\SKY_RESCUEDUBOIS.D3S",
+                "SKIES\\SKY_ROADBLOCKS.D3S",
                 "SKIES\\SKY_RETRIBUTION.D3S",
                 "SKIES\\SKY_ROOFTOPS.D3S",
                 "SKIES\\SKY_SMASHANDRUN.D3S",
@@ -367,6 +420,7 @@ namespace IMGRipper
                 "SKIES\\SKY_SURVEILLANCE.D3S",
                 "SKIES\\SKY_TANNERESCAPES.D3S",
                 "SKIES\\SKY_THECHASE.D3S",
+                "SKIES\\SKY_THEHIT.D3S",
                 "SKIES\\SKY_THESIEGE.D3S",
                 "SKIES\\SKY_TRAPPED.D3S",
 
@@ -422,11 +476,13 @@ namespace IMGRipper
                 "FMV\\RECAP",
                 "FMV\\REFLECT",
 
+                "FMV\\T3RED",
                 "FMV\\T3RED_EU",
                 "FMV\\T3RED_US",
 
                 "FMV\\THEMAKINGOF",
 
+                "FMV\\SHADOWOPS",
                 "FMV\\SHADOWOPS_EU",
                 "FMV\\SHADOWOPS_US",
             };
@@ -548,7 +604,26 @@ namespace IMGRipper
 
             // recordings
             var padFiles = new[] {
-                "M02_COP",
+                "m02_Cop",
+                "M03_GAME_RRIGHT",
+                "M03_GAME_RLEFT",
+                "M03_GAME_FRONT",
+                "m8 Tanner at start",
+                "m10_gator_",
+                "m131fprs01.pad",
+                "m18_fabienne.pad",
+                "m19getaway2backout",
+                "m19getaway2",
+                "M22JERRICHODRIVE",
+                "M166Car.pad",
+                "M168GOON.PAD",
+                "m27_bagman_.pad",
+                "m28_car_lead_.pad",
+                "m28_bike_start.pad",
+                "m28_bike_lead_.pad",
+                "M30BARRELTRUCKPAD.pad",
+                "m180Truckroute01",
+                "m69fprs00.pad",
             };
 
             foreach (var padFile in padFiles)
@@ -582,29 +657,21 @@ namespace IMGRipper
                 "GUI\\PAUSE\\LMPAUSE",
                 "GUI\\PAUSE\\RPLYPAUSE",
                 "GUI\\PAUSE\\TARPAUSE",
-
-                // PS2 only
-                "GUI\\BOOTUP\\BOOTUP_US",
-                "GUI\\FD\\FILMDIRECTOR_US",
-                "GUI\\MAIN\\FRONT_US",
-                "GUI\\MUGAME\\MUGAME_US",
-                "GUI\\MUMAIN\\MUMAIN_US",
-                "GUI\\NAME\\NAME_US",
-                "GUI\\NOCONT\\NOCONT_US",
-
-                "GUI\\PAUSE\\D3PAUSE_US",
-                "GUI\\PAUSE\\DGPAUSE_US",
-                "GUI\\PAUSE\\LMPAUSE_US",
-                "GUI\\PAUSE\\RPLYPAUSE_US",
-                "GUI\\PAUSE\\TARPAUSE_US",
-
+                
                 // XBox only
                 "GUI\\XBLIVE_FD\\XBLIVE_FD",
                 "GUI\\XBLIVE_FD\\XBLPAUSE",
             };
 
             foreach (var guiFile in guiFiles)
+            {
                 knownFiles.Add(String.Format("{0}.MEC", guiFile));
+                knownFiles.Add(String.Format("{0}_AS.MEC", guiFile));
+                knownFiles.Add(String.Format("{0}_CH.MEC", guiFile));
+                knownFiles.Add(String.Format("{0}_KR.MEC", guiFile));
+                knownFiles.Add(String.Format("{0}_US.MEC", guiFile));
+                knownFiles.Add(String.Format("{0}_JP.MEC", guiFile));
+            }
 
             var langs = new[] {
                 "ENGLISH",
@@ -1579,6 +1646,11 @@ namespace IMGRipper
             // temporary hack
             var knownFiles = new List<String>() {
                 "GAMECONFIG.TXT",
+
+                "SLES_508.76",
+                "SLES_521.53",
+                "SLPM_657.41",
+                "SLUS_205.87",
 
                 "SYSTEM.CNF",
 
