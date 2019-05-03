@@ -239,8 +239,8 @@ namespace DSCript.Models
                 var format = stream.ReadInt32();
 
                 // packed data -- very clever!
-                Width = (short)(1 << ((format >> 24) & 0xF));
-                Height = (short)(1 << ((format >> 20) & 0xF));
+                Width = (short)(1 << ((format >> 20) & 0xF));
+                Height = (short)(1 << ((format >> 24) & 0xF));
 
                 // not 100% sure on this one
                 Type = (format >> 16) & 0xF;
@@ -283,8 +283,8 @@ namespace DSCript.Models
             {
                 var format = 0;
 
-                format |= (GetPackedBits(Width) & 0xF) << 24;
-                format |= (GetPackedBits(Height) & 0xF) << 20;
+                format |= (GetPackedBits(Width) & 0xF) << 20;
+                format |= (GetPackedBits(Height) & 0xF) << 24;
                 format |= (Type & 0xF) << 16;
                 format |= (Flags & 0xFFFF);
 
