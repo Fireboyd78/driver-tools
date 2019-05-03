@@ -278,10 +278,7 @@ namespace Antilli
             m_bitmap = textureRef.Bitmap;
 
             var tex = textureRef.Data;
-
-            var sb = new StringBuilder();
-            var col = 12;
-
+            
             var piUID = new PropertyItem("UID", null, $"{tex.UID:X8}") { ReadOnly = true };
             var piHash = new PropertyItem("Hash", null, $"{tex.Hash:X8}") { ReadOnly = true };
 
