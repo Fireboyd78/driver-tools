@@ -68,43 +68,42 @@ namespace DSCript.Spooling
 
                 if (count > 0)
                 {
-                    // helps to recompute sizes when needed
                     int dirtyIndex = -1;
 
-                    // Check to see if the size needs to be (re)calculated
-                    if (!IsDirty && _size > 0)
+                    // Check if any of the spoolers are dirty or need calculating
+                    for (int i = 0; i < count; i++)
                     {
-                        // Check if any of the spoolers are dirty
-                        // If not, we'll use the existing size
-                        for (int i = 0; i < count; i++)
-                        {
-                            var s = Children[i];
+                        var s = Children[i];
 
-                            if (s.AreChangesPending)
-                            {
-                                dirtyIndex = i;
-                                break;
-                            }
+                        if (s.AreChangesPending || (s.Offset == 0))
+                        {
+                            dirtyIndex = i;
+                            break;
                         }
                     }
-                    else
+                    
+                    if (dirtyIndex == -1)
                     {
-                        // we need to calculate the size
-                        dirtyIndex = 0;
+                        // if we need to calculate the size,
+                        // and assuming all of the children are valid,
+                        // we can start calculating at the very end
+                        if (IsDirty || (_size < size))
+                            dirtyIndex = count;
                     }
-
-                    // dirtyIndex is set when a dirty spooler is found (or if _size is not computed)
+                    
                     if (dirtyIndex > -1)
                     {
                         if (dirtyIndex > 0)
                         {
-                            // use the last clean spooler as a starting point (if applicable)
+                            // use the spooler just before the dirty one
+                            // in some cases, we use the very last one
                             var cleanSpooler = Children[dirtyIndex - 1];
 
                             size = (cleanSpooler.Offset + cleanSpooler.Size + cleanSpooler.Description.Length);
                         }
 
                         // start at our dirty spooler and recalculate all spoolers onwards
+                        // if all spoolers are clean, we won't waste any time ;)
                         for (int s = dirtyIndex; s < count; s++)
                         {
                             var spooler = Children[s];
@@ -128,6 +127,11 @@ namespace DSCript.Spooling
 
                 return (_size = size);
             }
+        }
+
+        internal void SetSizeInternal(int size)
+        {
+            _size = size;
         }
 
         public SpoolablePackage() { }
