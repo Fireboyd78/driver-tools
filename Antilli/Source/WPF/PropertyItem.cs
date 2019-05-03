@@ -20,6 +20,8 @@ namespace Antilli
 
         PropertyUpdatedCallback Callback { get; set; }
 
+        public bool ReadOnly { get; set; }
+
         public void AddToPanel(StackPanel panel, string[] items)
         {
             var label = new Label() {
@@ -35,22 +37,25 @@ namespace Antilli
 
             chooser.SelectedItem = Value;
 
-            chooser.SelectionChanged += (o, e) => {
-                var values = e.AddedItems;
-                var value = values[0] as string;
+            if (!ReadOnly)
+            {
+                chooser.SelectionChanged += (o, e) => {
+                    var values = e.AddedItems;
+                    var value = values[0] as string;
 
-                if (!String.Equals(m_value, value))
-                {
-                    if (Callback(value))
+                    if (!String.Equals(m_value, value))
                     {
-                        m_value = value;
+                        if (Callback(value))
+                        {
+                            m_value = value;
+                        }
+                        else
+                        {
+                            MessageBox.Show("What the fuck did you do?!", "Dude...", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
                     }
-                    else
-                    {
-                        MessageBox.Show("What the fuck did you do?!", "Dude...", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-            };
+                };
+            }
 
             var grid = new Grid() {
                 Margin = new Thickness(4)
@@ -75,28 +80,32 @@ namespace Antilli
             };
 
             var txtBox = new TextBox() {
-                Text = Value
+                Text = Value,
+                IsReadOnly = ReadOnly,
             };
 
             var oldBrush = txtBox.BorderBrush;
 
-            txtBox.KeyDown += (o, e) => {
-                if (e.Key == Key.Enter)
-                {
-                    if (!String.Equals(m_value, txtBox.Text))
+            if (!ReadOnly)
+            {
+                txtBox.KeyDown += (o, e) => {
+                    if (e.Key == Key.Enter)
                     {
-                        if (Callback(txtBox.Text))
+                        if (!String.Equals(m_value, txtBox.Text))
                         {
-                            m_value = txtBox.Text;
-                        }
-                        else
-                        {
-                            MessageBox.Show("Invalid value, please try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                            txtBox.Text = m_value;
+                            if (Callback(txtBox.Text))
+                            {
+                                m_value = txtBox.Text;
+                            }
+                            else
+                            {
+                                MessageBox.Show("Invalid value, please try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                txtBox.Text = m_value;
+                            }
                         }
                     }
-                }
-            };
+                };
+            }
 
             var grid = new Grid() {
                 Margin = new Thickness(4)

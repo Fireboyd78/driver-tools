@@ -142,7 +142,8 @@ namespace Antilli
 
         public class Substance
         {
-            public int Bin;
+            public RenderBinType Bin;
+
             public int Flags;
 
             public int K1;

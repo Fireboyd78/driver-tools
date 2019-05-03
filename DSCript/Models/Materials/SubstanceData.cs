@@ -17,9 +17,93 @@ using FreeImageAPI;
 
 namespace DSCript.Models
 {
+    public enum RenderBinType
+    {
+        ReflectedSky = 0,
+        Portal = 1,
+        Sky = 2,
+        Road = 3,
+        Building = 4,
+        Clutter = 5,
+        Car = 6,
+        Particle = 7,
+
+        MissionIcon = 8,
+
+        Overlay_1_0 = 9,
+        Overlay_0_5 = 10,
+        Overlay_1_5 = 11,
+
+        OverheadMap_1 = 12,
+        OverheadMap_2 = 13,
+        OverheadMap_3 = 14,
+        OverheadMap_4 = 15,
+        OverheadMap_5 = 16,
+        OverheadMap_6 = 17,
+        OverheadMap_7 = 18,
+        OverheadMap_8 = 19,
+
+        NearWater = 20,
+        FarWater = 21,
+
+        GrimeOverlay = 22,
+        CarInterior = 23,
+        LowPoly = 24,
+        CarOverlay = 25,
+
+        FarWater_2 = 26,
+        FarWater_3 = 27,
+
+        OverheadMap_9 = 28,
+        OverheadMap_10 = 29,
+
+        FullBrightOverlay = 30,
+
+        OverheadMap_11 = 31,
+        OverheadMap_12 = 32,
+
+        ShadowedParticle = 33,
+        GlowingLight = 34,
+        PostRoad = 35,
+
+        Overlay_2_0 = 36,
+
+        DrawAlphaLast = 37,
+        UntexturedSemiTransparent = 38,
+        PreWater = 39,
+
+        Overlay_0_25 = 40,
+
+        //
+        // Driver: Parallel Lines and up
+        //
+
+        Trees = 48,
+
+        Menus_0_25 = 49,
+        Menus_0_5 = 50,
+        Menus_0_75 = 51,
+        Menus_1_0 = 52,
+        Menus_1_25 = 53,
+        Menus_1_5 = 54,
+        Menus_1_75 = 55,
+        Menus_2_0 = 56,
+
+        Clouds = 57,
+        Hyperlow = 58,
+        LightFlare = 59,
+
+        OverlayMask_1 = 60,
+        OverlayMask_2 = 61,
+
+        TreeWall = 62,
+        BridgeWires = 63,
+    }
+
     public interface ISubstanceData
     {
-        int Bin { get; set; }
+        RenderBinType Bin { get; set; }
+
         int Flags { get; set; }
         
         int Mode { get; set; }
@@ -28,8 +112,6 @@ namespace DSCript.Models
         IEnumerable<ITextureData> Textures { get; }
 
         ITextureData GetTexture(int index);
-
-        string RenderBin { get; }
     }
     
     public abstract class SubstanceDataWrapper<TTextureData> : ISubstanceData
@@ -45,103 +127,13 @@ namespace DSCript.Models
             return Textures[index];
         }
 
-        public int Bin { get; set; }
+        public RenderBinType Bin { get; set; }
+
         public int Flags { get; set; }
 
         public int Mode { get; set; }
         public int Type { get; set; }
-
-        public string RenderBin
-        {
-            get
-            {
-                // what the fuck, guys
-                var lookup = new Dictionary<int, string>() {
-                    { 0, "ReflectedSky" },                              //  0
-                    { 1, "Portal" },                                    //  1
-                    
-                    { 4, "Building" },                                  // -1
-                    { 5, "Clutter" },                                   // -1
-
-                    { 3, "Road" },                                      //  6
-                    { 35, "PostRoad" },                                 //  7
-                    
-                    { 39, "PreWater" },                                 //  9
-                    { 21, "FarWater" },                                 // 10
-                    { 23, "CarInterior" },                              // 11
-                    { 6, "Car" },                                       // 12
-                    
-                    { 26, "FarWater_2" },                               // 14
-                    { 27, "FarWater_3" },                               // 15
-                    { 20, "NearWater" },                                // 16
-                    
-                    { 25, "CarOverlay" },                               // 17
-                    { 22, "GrimeOverlay" },                             // 19
-
-                    { 2, "Sky" },                                       // 21
-                    { 24, "LowPoly" },                                  // 22
-
-                    { 34, "GlowingLight" },                             // 25
-                    
-                    { 37, "DrawAlphaLast" },                            // 28
-                    { 30, "FullBrightOverlay" },                        // 29
-                    { 7, "Particle" },                                  // 30
-
-                    { 33, "ShadowedParticle" },                         // -1
-                    
-                    { 8, "MissionIcon" },                               // 32
-
-                    { 12, "OverheadMap_1" },                            // 33
-                    { 13, "OverheadMap_2" },                            // 34
-                    { 14, "OverheadMap_3" },                            // 35
-                    { 15, "OverheadMap_4" },                            // 36
-                    { 16, "OverheadMap_5" },                            // 37
-                    { 17, "OverheadMap_6" },                            // 38
-                    { 18, "OverheadMap_7" },                            // 39
-                    { 19, "OverheadMap_8" },                            // 40
-                    { 28, "OverheadMap_9" },                            // 41
-                    { 29, "OverheadMap_10" },                           // 42
-                    { 31, "OverheadMap_11" },                           // 43
-                    { 32, "OverheadMap_12" },                           // 44
-                    
-                    { 40, "Overlay_0_25" },                             // 46
-                    { 10, "Overlay_0_5" },                              // 47
-                    { 9, "Overlay_1_0" },                               // 48
-                    { 11, "Overlay_1_5" },                              // 49
-                    { 36, "Overlay_2_0" },                              // -1
-
-                    { 38, "UntexturedSemiTransparent" },                // 51
-                    
-                    // not used in Driv3r?
-                    { 48, "Trees" },
-
-                    { 49, "Menus_0_25" },
-                    { 50, "Menus_0_5" },
-                    { 51, "Menus_0_75" },
-                    { 52, "Menus_1_0" },
-                    { 53, "Menus_1_25" },
-                    { 54, "Menus_1_5" },
-                    { 55, "Menus_1_75" },
-                    { 56, "Menus_2_0" },
-
-                    { 57, "Clouds" },
-                    { 58, "Hyperlow" },
-                    { 59, "LightFlare" },
-
-                    { 60, "OverlayMask_1" },
-                    { 61, "OverlayMask_2" },
-
-                    { 62, "TreeWall" },
-                    { 63, "BridgeWires" },
-                };
-
-                if (lookup.ContainsKey(Bin))
-                    return lookup[Bin];
-
-                return "???";
-            }
-        }
-
+        
         public List<TTextureData> Textures { get; set; }
         
         public SubstanceDataWrapper()
@@ -184,17 +176,17 @@ namespace DSCript.Models
     {
         public virtual bool HasAlpha
         {
-            get { return (((Flags & 0x4) != 0) || (Bin == 37)); }
+            get { return (((Flags & 0x4) != 0) || (Bin == RenderBinType.DrawAlphaLast)); }
         }
         
         public virtual bool IsEmissive
         {
-            get { return ((Flags & 0x180) != 0 || (Bin == 30)); }
+            get { return ((Flags & 0x180) != 0 || (Bin == RenderBinType.FullBrightOverlay)); }
         }
 
         public virtual bool IsSpecular
         {
-            get { return (((Flags & 0x40) != 0) && (Mode != 0) && (Bin != 37)) || (Mode == 0x201 || Mode == 0x102); }
+            get { return (((Flags & 0x40) != 0) && (Mode != 0) && (Bin != RenderBinType.DrawAlphaLast)) || (Mode == 0x201 || Mode == 0x102); }
         }
 
         public virtual SubstanceExtraFlags ExtraFlags
@@ -250,18 +242,17 @@ namespace DSCript.Models
         {
             var result = 0;
 
-            var rst     = (resolved >> 0) & 0xFF;
+            var bin     = (resolved >> 0) & 0xFF;
             var stage   = (resolved >> 8) & 0xFFFF;
             var flags   = (resolved >> 16) & 0xFFFF;
-
-            var bin = 0;
+            
             var alpha = 0;
 
-            switch (rst)
+            switch (bin)
             {
             case 4:
                 {
-                    rst = 7;
+                    bin = 7;
                     stage = 0;
                     flags = 0;
 
@@ -270,7 +261,7 @@ namespace DSCript.Models
                 } break;
             case 18:
             case 20:
-                rst = 8;
+                bin = 8;
                 result |= 0x4000;
                 break;
             }
@@ -315,16 +306,16 @@ namespace DSCript.Models
                     v2 = 1;
             }
             
-            var rst = m_BinLookup[Bin, 1];
+            var bin = m_BinLookup[(int)Bin, 1];
 
-            if (rst == -1)
+            if (bin == -1)
             {
-                rst = 8;
+                bin = 8;
 
                 if ((Flags & 0x4000) != 0)
                 {
                     if (v2 == 0)
-                        rst = (Bin == 5) ? 20 : 18;
+                        bin = (Bin == RenderBinType.Clutter) ? 20 : 18;
                 }
             }
 
@@ -350,18 +341,18 @@ namespace DSCript.Models
             if (flags != 0)
                 stage = ((alpha == 0) ? 3 : 4);
 
-            if ((rst == 7) && ((flags & 0x80) != 0))
+            if ((bin == 7) && ((flags & 0x80) != 0))
             {
                 if ((flags & 2) != 0)
                 {
                     stage = 0;
                     flags = 0;
 
-                    rst = 4;
+                    bin = 4;
                 }
             }
 
-            return ((flags << 16) | (stage << 8) | rst);
+            return ((flags << 16) | (stage << 8) | bin);
         }
 
         public SubstanceDataPC() : base() { }

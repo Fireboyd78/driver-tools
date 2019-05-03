@@ -1044,7 +1044,7 @@ namespace Antilli
             // unhandled type or null view widget?!
             if (objId == -1 || (CurrentViewWidget == null))
                 return;
-
+            
             switch (objId)
             {
             case 0:

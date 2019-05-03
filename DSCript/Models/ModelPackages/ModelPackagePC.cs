@@ -526,7 +526,7 @@ namespace DSCript.Models
                     var _substance = Deserialize<SubstanceInfo>(stream);
 
                     var substance = new SubstanceDataPC() {
-                        Bin = _substance.Bin,
+                        Bin = (RenderBinType)_substance.Bin,
 
                         Flags = _substance.Flags,
                         

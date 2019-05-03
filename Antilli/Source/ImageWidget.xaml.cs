@@ -75,16 +75,43 @@ namespace Antilli
         public void SetMaterial(IMaterialData material)
         {
             m_bitmap = null;
+            
+            var piType = new PropertyItem("Type", delegate (string type) {
+                MaterialType mtlType = MaterialType.Group;
 
-            var sb = new StringBuilder();
-            var col = 12;
+                if (Enum.TryParse(type, out mtlType)
+                    && (material.Type != mtlType))
+                {
+                    material.Type = mtlType;
+                    AT.CurrentState.NotifyFileChange(material);
 
-            sb.AppendLine("== Material Information ==");
+                    return true;
+                }
 
-            sb.AppendColumn("Type", col, true).AppendLine("{0}", material.Type);
-            sb.AppendColumn("AnimSpeed", col, true).AppendLine("{0}", material.AnimationSpeed);
+                return false;
+            }, material.Type.ToString());
 
-            m_contentInfo = sb.ToString();
+            var piSpeed = new PropertyItem("Speed", delegate (string speed) {
+                float value = 0.0f;
+
+                if (float.TryParse(speed, out value)
+                    && (material.AnimationSpeed != value))
+                {
+                    material.AnimationSpeed = value;
+                    AT.CurrentState.NotifyFileChange(material);
+
+                    return true;
+                }
+
+                return false;
+            }, $"{material.AnimationSpeed:F2}");
+
+            propPanelItems.Children.Clear();
+
+            piType.AddToPanel(propPanelItems, Enum.GetNames(typeof(MaterialType)));
+            piSpeed.AddToPanel(propPanelItems);
+
+            m_contentInfo = String.Empty;
 
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
@@ -93,104 +120,27 @@ namespace Antilli
         public void SetSubstance(ISubstanceData substance)
         {
             m_bitmap = null;
-
-            var lookup = new Dictionary<int, string>() {
-                    { 0, "ReflectedSky" },                              //  0
-                    { 1, "Portal" },                                    //  1
-                    
-                    { 4, "Building" },                                  // -1
-                    { 5, "Clutter" },                                   // -1
-
-                    { 3, "Road" },                                      //  6
-                    { 35, "PostRoad" },                                 //  7
-                    
-                    { 39, "PreWater" },                                 //  9
-                    { 21, "FarWater" },                                 // 10
-                    { 23, "CarInterior" },                              // 11
-                    { 6, "Car" },                                       // 12
-                    
-                    { 26, "FarWater_2" },                               // 14
-                    { 27, "FarWater_3" },                               // 15
-                    { 20, "NearWater" },                                // 16
-                    
-                    { 25, "CarOverlay" },                               // 17
-                    { 22, "GrimeOverlay" },                             // 19
-
-                    { 2, "Sky" },                                       // 21
-                    { 24, "LowPoly" },                                  // 22
-
-                    { 34, "GlowingLight" },                             // 25
-                    
-                    { 37, "DrawAlphaLast" },                            // 28
-                    { 30, "FullBrightOverlay" },                        // 29
-                    { 7, "Particle" },                                  // 30
-
-                    { 33, "ShadowedParticle" },                         // -1
-                    
-                    { 8, "MissionIcon" },                               // 32
-
-                    { 12, "OverheadMap_1" },                            // 33
-                    { 13, "OverheadMap_2" },                            // 34
-                    { 14, "OverheadMap_3" },                            // 35
-                    { 15, "OverheadMap_4" },                            // 36
-                    { 16, "OverheadMap_5" },                            // 37
-                    { 17, "OverheadMap_6" },                            // 38
-                    { 18, "OverheadMap_7" },                            // 39
-                    { 19, "OverheadMap_8" },                            // 40
-                    { 28, "OverheadMap_9" },                            // 41
-                    { 29, "OverheadMap_10" },                           // 42
-                    { 31, "OverheadMap_11" },                           // 43
-                    { 32, "OverheadMap_12" },                           // 44
-                    
-                    { 40, "Overlay_0_25" },                             // 46
-                    { 10, "Overlay_0_5" },                              // 47
-                    { 9, "Overlay_1_0" },                               // 48
-                    { 11, "Overlay_1_5" },                              // 49
-                    { 36, "Overlay_2_0" },                              // -1
-
-                    { 38, "UntexturedSemiTransparent" },                // 51
-
-                    { 48, "Trees" },
-
-                    { 49, "Menus_0_25" },
-                    { 50, "Menus_0_5" },
-                    { 51, "Menus_0_75" },
-                    { 52, "Menus_1_0" },
-                    { 53, "Menus_1_25" },
-                    { 54, "Menus_1_5" },
-                    { 55, "Menus_1_75" },
-                    { 56, "Menus_2_0" },
-
-                    { 57, "Clouds" },
-                    { 58, "Hyperlow" },
-                    { 59, "LightFlare" },
-
-                    { 60, "OverlayMask_1" },
-                    { 61, "OverlayMask_2" },
-
-                    { 62, "TreeWall" },
-                    { 63, "BridgeWires" },
-                };
-
+            
             var piBin = new PropertyItem("Bin", delegate (string bin) {
-                foreach (var kv in lookup)
-                {
-                    if (String.Equals(kv.Value, bin))
-                    {
-                        substance.Bin = kv.Key;
-                        AT.CurrentState.NotifyFileChange(substance);
+                RenderBinType renderBin = RenderBinType.ReflectedSky;
 
-                        return true;
-                    }
+                if (Enum.TryParse(bin, out renderBin)
+                    && (substance.Bin != renderBin))
+                {
+                    substance.Bin = renderBin;
+                    AT.CurrentState.NotifyFileChange(substance);
+
+                    return true;
                 }
 
                 return false;
-            }, lookup[substance.Bin]);
+            }, substance.Bin.ToString());
 
             var piFlags = new PropertyItem("Flags", delegate (string flags) {
                 int value = 0;
 
-                if (Utils.TryParseNumber(flags, out value))
+                if (Utils.TryParseNumber(flags, out value)
+                    && (substance.Flags != value))
                 {
                     substance.Flags = value;
                     AT.CurrentState.NotifyFileChange(substance);
@@ -203,7 +153,7 @@ namespace Antilli
 
             propPanelItems.Children.Clear();
 
-            piBin.AddToPanel(propPanelItems, lookup.Select((kv) => kv.Value).ToArray());
+            piBin.AddToPanel(propPanelItems, Enum.GetNames(typeof(RenderBinType)));
             piFlags.AddToPanel(propPanelItems);
 
             var sb = new StringBuilder();
@@ -332,16 +282,52 @@ namespace Antilli
             var sb = new StringBuilder();
             var col = 12;
 
-            sb.AppendLine("== Texture Information ==");
+            var piUID = new PropertyItem("UID", null, $"{tex.UID:X8}") { ReadOnly = true };
+            var piHash = new PropertyItem("Hash", null, $"{tex.Hash:X8}") { ReadOnly = true };
 
-            sb.AppendColumn("UID", col, true).AppendLine($"{tex.UID:X8}");
-            sb.AppendColumn("Type", col, true).AppendLine($"{tex.Type}");
-            sb.AppendColumn("Flags", col, true).AppendLine($"0x{tex.Flags:X8}");
+            var piType = new PropertyItem("Type", delegate (string input) {
+                int value = 0;
 
-            sb.AppendColumn("Width", col, true).AppendLine($"{tex.Width}");
-            sb.AppendColumn("Height", col, true).AppendLine($"{tex.Height}");
-            
-            m_contentInfo = sb.ToString();
+                if (Utils.TryParseNumber(input, out value)
+                    && (texture.Type != value))
+                {
+                    texture.Type = value;
+                    AT.CurrentState.NotifyFileChange(texture);
+
+                    return true;
+                }
+
+                return false;
+            }, $"{tex.Type}");
+
+            var piFlags = new PropertyItem("Flags", delegate (string input) {
+                int value = 0;
+
+                if (Utils.TryParseNumber(input, out value)
+                    && (texture.Flags != value))
+                {
+                    texture.Flags = value;
+                    AT.CurrentState.NotifyFileChange(texture);
+
+                    return true;
+                }
+
+                return false;
+            }, $"{tex.Flags}");
+
+            var piWidth = new PropertyItem("Width", null, $"{tex.Width}") { ReadOnly = true };
+            var piHeight = new PropertyItem("Height", null, $"{tex.Height}") { ReadOnly = true };
+
+            propPanelItems.Children.Clear();
+
+            piUID.AddToPanel(propPanelItems);
+            piHash.AddToPanel(propPanelItems);
+            piType.AddToPanel(propPanelItems);
+            piFlags.AddToPanel(propPanelItems);
+            piWidth.AddToPanel(propPanelItems);
+            piHeight.AddToPanel(propPanelItems);
+
+            m_contentInfo = String.Empty;
 
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
