@@ -142,7 +142,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             int materialType = modelPackage.FindMaterial(mesh.Material, out material);
 
                             // build material(s)
-                            if (materialType != 0)
+                            if (materialType > 0)
                             {
                                 var mtlIdx = mesh.Material.Handle + 1;
 
