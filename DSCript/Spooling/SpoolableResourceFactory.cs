@@ -51,6 +51,12 @@ namespace DSCript.Spooling
             return resource;
         }
 
+        public static void Load<T>(T resource)
+            where T : ISpoolableResource
+        {
+            resource.Load();
+        }
+
         public static void Save<T>(T resource)
             where T : ISpoolableResource
         {

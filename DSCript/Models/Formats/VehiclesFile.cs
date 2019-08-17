@@ -70,7 +70,7 @@ namespace DSCript.Models
                 if ((ChunkType)sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
                 {
                     // make sure it's loaded!
-                    modelPackage.GetInterface().Load();
+                    SpoolableResourceFactory.Load(modelPackage);
 
                     GlobalTextures = modelPackage;
                 }
@@ -85,7 +85,7 @@ namespace DSCript.Models
                 hierarchy.Platform = PlatformType.Any;
                 hierarchy.Version = sender.Version;
 
-                hierarchy.GetInterface().Load();
+                SpoolableResourceFactory.Load(hierarchy);
 
                 Hierarchies.Add(hierarchy);
                 break;

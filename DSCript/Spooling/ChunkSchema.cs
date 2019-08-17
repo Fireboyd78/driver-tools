@@ -113,7 +113,7 @@ namespace DSCript.Spooling
                 throw new Exception("Cannot process an empty schema!");
 
             var success = false;
-            var spooler = resource.GetInterface().Spooler as SpoolablePackage;
+            var spooler = (SpoolablePackage)resource;
 
             if (spooler == null)
                 throw new Exception("Cannot process a schema on a spoolable resource that has an invalid spooler.");
