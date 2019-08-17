@@ -27,16 +27,15 @@ namespace Antilli
     public partial class OptionsDialog : ObservableWindow
     {
         protected Dictionary<string, string> m_gamePaths;
-        protected FolderBrowserDialog m_folderBrowser;
+        protected FolderSelectDialog m_folderBrowser;
         
-        protected FolderBrowserDialog FolderBrowser
+        protected FolderSelectDialog FolderBrowser
         {
             get
             {
                 if (m_folderBrowser == null)
-                    m_folderBrowser = new FolderBrowserDialog() {
-                        Description = "Please select a directory:",
-                        ShowNewFolderButton = false,
+                    m_folderBrowser = new FolderSelectDialog() {
+                        Title = "Please select a directory:",
                     };
 
                 return m_folderBrowser;
@@ -56,7 +55,7 @@ namespace Antilli
             };
 
             button.Click += (o, e) => {
-                if (FolderBrowser.ShowDialog() == FormDialogResult.OK)
+                if (FolderBrowser.ShowDialog())
                     textBox.Text = FolderBrowser.SelectedPath;
             };
         }

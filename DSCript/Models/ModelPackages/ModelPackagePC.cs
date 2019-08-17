@@ -17,6 +17,8 @@ namespace DSCript.Models
 {
     public class ModelPackage : ModelPackageResource
     {
+        public static bool SkipModelsOnLoad = false;
+
         protected void ReadVertexDeclarations(Stream stream, ref ModelPackageData detail, out List<VertexBufferInfo> decls)
         {
             var vBuffersCount = detail.VertexDeclsCount;
@@ -865,8 +867,9 @@ namespace DSCript.Models
                     LodInstances = new List<LodInstance>(detail.LodInstancesCount);
                     SubModels = new List<SubModel>(detail.SubModelsCount);
 
-                    // skip packages with no models
-                    if (detail.ModelsCount > 0)
+                    if (!SkipModelsOnLoad &&
+                        // skip packages with no models
+                        (detail.ModelsCount > 0))
                     {
                         List<VertexBufferInfo> decls = null;
 

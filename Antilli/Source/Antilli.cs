@@ -237,7 +237,7 @@ namespace Antilli
                     {
                         // see if we need to load it
                         if (!m_modelPackage.HasModels)
-                            m_modelPackage.GetInterface().Load();
+                            SpoolableResourceFactory.Load(m_modelPackage);
                     }
 
                     NotifyChange("Materials");
@@ -395,10 +395,6 @@ namespace Antilli
                 if (m_openDialog == null)
                 {
                     var filter = String.Join("|", AllFilters.Select((f) => f.ToString()));
-
-                    // TODO: don't do dumb things like this!
-                    if (DSC.VerifyGameDirectory("Driv3r", "Antilli"))
-                        RootDirectory = Driv3r.RootDirectory;
                     
                     m_openDialog = new OpenFileDialog() {
                         CheckFileExists = true,
@@ -411,6 +407,52 @@ namespace Antilli
 
                 return m_openDialog;
             }
+        }
+
+        public static string GetDirectory(GameType gameType, bool verify = false)
+        {
+            string[] names = {
+                "Driv3r",
+                "DriverPL",
+                "DriverSF",
+            };
+
+            var name = names[(int)gameType];
+
+            if (verify)
+                DSC.VerifyGameDirectory(name, "Antilli");
+
+            return DSC.Configuration.GetDirectory(name);
+        }
+        
+        public static OpenFileDialog GetOpenDialog(GameType gameType)
+        {
+            var dlg = new OpenFileDialog() {
+                CheckFileExists = true,
+                CheckPathExists = true,
+
+                InitialDirectory = Environment.CurrentDirectory,
+
+                ValidateNames = true,
+            };
+
+            if (gameType != GameType.None)
+            {
+                var gameDir = GetDirectory(gameType);
+
+                if (!String.IsNullOrEmpty(gameDir))
+                    dlg.InitialDirectory = gameDir;
+
+                switch (gameType)
+                {
+                case GameType.Driv3r:
+                case GameType.DriverPL:
+                    dlg.Filter = AllFilters[(int)gameType].ToString();
+                    break;
+                }
+            }
+
+            return dlg;
         }
         
         public static GameFileFilter FindFilter(string extension, GameFileFilter[] filters)

@@ -86,6 +86,8 @@
     <Compile Include="Source\COLLADA\FX\COLLADA-Profiles.cs" />
     <Compile Include="Source\COLLADA\FX\COLLADA-Shaders.cs" />
     <Compile Include="Source\COLLADA\FX\COLLADA-Texturing.cs" />
+    <Compile Include="Source\Extensions\SelectFolder\FolderSelectDialog.cs" />
+    <Compile Include="Source\Extensions\SelectFolder\Reflector.cs" />
     <Compile Include="Source\ModelConverter.cs" />
     <Compile Include="Source\COLLADA\COLLADA.cs" />
     <Compile Include="Source\ExportModelDialog.xaml.cs">

@@ -48,13 +48,13 @@ namespace Antilli
         //public TextureViewer TextureViewer { get; private set; }
         //public MaterialEditor MaterialEditor { get; private set; }
         //public MaterialEditor GlobalMaterialEditor { get; private set; }
-        
+
         public int CurrentTab
         {
             get { return AT.CurrentState.CurrentTab; }
             set { AT.CurrentState.CurrentTab = value; }
         }
-        
+
         public Visibility CanShowBlendWeights
         {
             get { return AT.CurrentState.CanShowBlendWeights; }
@@ -64,7 +64,7 @@ namespace Antilli
         {
             get { return AT.CurrentState.CanShowGlobals; }
         }
-        
+
         public ModelFile CurrentModelFile
         {
             get { return AT.CurrentState.ModelFile; }
@@ -104,7 +104,7 @@ namespace Antilli
                         curModel = model;
                     }
                 }
-                
+
                 return items;
             }
         }
@@ -139,7 +139,7 @@ namespace Antilli
 
                 var materials = new List<MaterialTreeItem>();
                 int count = 0;
-                
+
                 foreach (var material in globals.Materials)
                     materials.Add(new MaterialTreeItem(++count, material));
 
@@ -198,7 +198,7 @@ namespace Antilli
                 return null;
             }
         }
-        
+
         public bool ShowWaitCursor
         {
             set { Mouse.OverrideCursor = (value) ? Cursors.Wait : null; }
@@ -213,7 +213,7 @@ namespace Antilli
         {
             get { return (AT.CurrentState.CanUseGlobals) ? 1 : 2; }
         }
-        
+
         public bool IsFileOpened
         {
             get { return CurrentModelFile != null; }
@@ -251,7 +251,7 @@ namespace Antilli
         {
             get { return IsFileOpened && AreChangesPending; }
         }
-        
+
         private void UpdateFileStatus()
         {
             OnPropertyChanged("IsFileOpened");
@@ -315,7 +315,7 @@ namespace Antilli
         {
             var extension = Path.GetExtension(filename).ToLower();
             var filter = FileManager.FindFilter(extension, GameType.Driv3r, (GameFileFlags.Models | GameFileFlags.Textures));
-            
+
             if (filter.Flags == GameFileFlags.None)
             {
                 filter = FileManager.FindFilter(extension, GameType.DriverPL, (GameFileFlags.Models | GameFileFlags.Textures | GameFileFlags.Resource));
@@ -332,7 +332,7 @@ namespace Antilli
 
             var modelFile = new ModelFile();
             var setupModels = true;
-            
+
             switch (extension)
             {
             case ".dam":
@@ -494,12 +494,20 @@ namespace Antilli
         private void OnFileOpenClick()
         {
             var dialog = FileManager.OpenDialog;
-            
+
             if (dialog.ShowDialog() ?? false)
             {
                 dialog.InitialDirectory = Path.GetDirectoryName(dialog.FileName);
                 OnFileOpened(dialog.FileName);
             }
+        }
+
+        private void OnFileOpenGameClick(GameType gameType)
+        {
+            var dialog = FileManager.GetOpenDialog(gameType);
+
+            if (dialog.ShowDialog() ?? false)
+                OnFileOpened(dialog.FileName);
         }
 
         private bool AskUserPrompt(string message)
@@ -510,7 +518,7 @@ namespace Antilli
         private void OnFileSaveClick(bool saveAs)
         {
             var filename = CurrentModelFile.FileName;
-            
+
             if (saveAs)
             {
                 var name = Path.GetFileName(filename);
@@ -666,7 +674,7 @@ namespace Antilli
                     }
                 }
             }
-            
+
             // select the correct LOD
             m_lodBtnRefs[Viewer.LevelOfDetail].IsChecked = true;
         }
@@ -846,7 +854,7 @@ namespace Antilli
                 ShowWaitCursor = false;
             }
         }
-        
+
         private void ExportVehicleHierarchyVPK()
         {
             var modelFile = CurrentModelFile as Driv3rVehiclesFile;
@@ -859,7 +867,7 @@ namespace Antilli
 
             var idx = (!modelFile.HasVirtualVehicles) ? modelFile.Packages.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
 
-            var hierarchy =  modelFile.Hierarchies[idx];
+            var hierarchy = modelFile.Hierarchies[idx];
 
             var dir = Settings.ExportDirectory;
             var path = String.Format("{0}\\{1}_{2}.vpk", dir, Path.GetFileName(CurrentModelFile.FileName).Replace('.', '_'), hierarchy.UID);
@@ -870,7 +878,7 @@ namespace Antilli
 
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        
+
         private void ExportTexture(ITextureData texture)
         {
             var filename = $"{texture.Hash:X8}";
@@ -882,19 +890,160 @@ namespace Antilli
 
             if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
                 ext = "bin";
+            
+            var saveDlg = new SaveFileDialog() {
+                AddExtension = true,
+                DefaultExt = ext,
+                FileName = filename,
+                InitialDirectory = Settings.TexturesDirectory,
+                Title = "Please enter a filename",
+                ValidateNames = true,
+                OverwritePrompt = true,
+            };
 
-            filename = $"{filename}.{ext}";
+            if (saveDlg.ShowDialog() ?? false)
+                FileManager.WriteFile(saveDlg.FileName, texture.Buffer);
+        }
 
-            var path = Path.Combine(Settings.TexturesDirectory, filename);
+        private bool ExportTextures<T>(List<T> textures, string directory, bool silent = false)
+            where T : ITextureData
+        {
+            ShowWaitCursor = true;
 
-            FileManager.WriteFile(path, texture.Buffer);
+            foreach (var texture in textures)
+            {
+                var filename = $"{texture.Hash:X8}";
 
-            MessageBox.Show($"Successfully exported to '{path}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (texture.UID != 0x01010101)
+                    filename = $"{texture.UID:X8}_{texture.Hash:X8}";
+
+                var ext = "biff";
+
+                if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
+                    ext = "bin";
+
+                filename = $"{filename}.{ext}";
+
+                var path = Path.Combine(directory, filename);
+
+                FileManager.WriteFile(path, texture.Buffer);
+            }
+
+            ShowWaitCursor = false;
+
+            if (!silent)
+                MessageBox.Show("Successfully exported all textures!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            return true;
+        }
+
+        private bool ExportTextures<T>(List<T> textures, bool silent = false)
+            where T : ITextureData
+        {
+            if (textures != null)
+            {
+                var saveDlg = new FolderSelectDialog() {
+                    InitialDirectory = Settings.TexturesDirectory,
+                };
+
+                if (saveDlg.ShowDialog())
+                    return ExportTextures(textures, saveDlg.SelectedPath, silent);
+            }
+
+            return false;
         }
         
+        private bool ExportTextures(ModelPackage modelPackage, bool silent = false)
+        {
+            var textures = modelPackage?.Textures;
+
+            if (textures != null)
+                return ExportTextures(textures, silent);
+            
+            if (!silent)
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            return false;
+        }
+
+        private bool ExportGlobalTextures(bool silent = false)
+        {
+            var modelFile = CurrentModelFile as IVehiclesFile;
+
+            if (modelFile != null && modelFile.HasGlobals)
+            {
+                var globs = modelFile.GlobalTextures;
+
+                return ExportTextures(globs.Textures, silent);
+            }
+
+            if (!silent)
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            return false;
+        }
+
+        private bool ExportAllTextures(bool silent = false)
+        {
+            if (CurrentModelFile != null)
+            {
+                var total = 0;
+                var count = 0;
+
+                var saveDlg = new FolderSelectDialog() {
+                    InitialDirectory = Settings.TexturesDirectory,
+                };
+
+                if (saveDlg.ShowDialog())
+                {
+                    var directory = saveDlg.SelectedPath;
+
+                    // try to export as many textures as possible
+                    foreach (var package in CurrentModelFile.Packages)
+                    {
+                        // do we have to load it first?
+                        if (!package.HasMaterials)
+                        {
+                            // don't load the model data!
+                            ModelPackage.SkipModelsOnLoad = true;
+
+                            SpoolableResourceFactory.Load(package);
+                            ModelPackage.SkipModelsOnLoad = false;
+                        }
+
+                        var textures = package.Textures;
+
+                        if (textures != null)
+                        {
+                            if (ExportTextures(textures, directory, true))
+                                count++;
+                        }
+
+                        total++;
+                    }
+
+                    if (total != 0)
+                    {
+                        MessageBox.Show($"Successfully exported textures from {count} / {total} packages!");
+                        return true;
+                    }
+                }
+                else
+                {
+                    // fail quietly
+                    return false;
+                }
+            }
+
+            if (!silent)
+                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            return false;
+        }
+
         private void ReplaceTexture(ITextureData texture)
         {
-            OpenFileDialog replaceTexture = new OpenFileDialog() {
+            var openDlg = new OpenFileDialog() {
                 AddExtension = true,
                 CheckFileExists = true,
                 CheckPathExists = true,
@@ -903,9 +1052,9 @@ namespace Antilli
                 ValidateNames = true
             };
             
-            if (replaceTexture.ShowDialog() ?? false)
+            if (openDlg.ShowDialog() ?? false)
             {
-                var buffer = File.ReadAllBytes(replaceTexture.FileName);
+                var buffer = File.ReadAllBytes(openDlg.FileName);
 
                 var type = "biff";
 
@@ -1190,37 +1339,7 @@ namespace Antilli
         private void Initialize()
         {
             Settings.Verify();
-
-            if (!Debugger.IsAttached)
-            {
-                AppDomain.CurrentDomain.UnhandledException += (o, e) => {
-                    var exception = e.ExceptionObject as Exception;
-                    var sb = new StringBuilder();
-
-                    sb.AppendLine($"A fatal error has occurred! The program will now close.");
-                    sb.AppendLine();
-
-                    // this is literally useless
-                    if (exception is TargetInvocationException)
-                        exception = exception.InnerException;
-
-                    var stk = new StackTrace(exception, true);
-                    var stkFrame = stk.GetFrame(0);
-
-                    sb.AppendLine($"{exception.Message}");
-                    sb.AppendLine();
-
-                    MemoryCache.Dump(sb, true);
-
-                    sb.AppendLine($"===== Stack trace =====");
-                    sb.AppendLine($"{stk.ToString()}");
-                    sb.AppendLine($"=======================");
-
-                    if (MessageBox.Show(sb.ToString(), "Antilli - ERROR!", MessageBoxButton.OK, MessageBoxImage.Error) == MessageBoxResult.OK)
-                        Environment.Exit(1);
-                };
-            }
-
+            
             InitializeComponent();
 
             AT.CurrentState.PropertyChanged += (o, e) => {
@@ -1349,6 +1468,9 @@ namespace Antilli
             ApplyTransform.Unchecked += (o, e) => Viewer.ToggleTransforms();
             
             fileOpen.Click += (o, e) => OnFileOpenClick();
+            fileOpenDriv3r.Click += (o, e) => OnFileOpenGameClick(GameType.Driv3r);
+            fileOpenDriverPL.Click += (o, e) => OnFileOpenGameClick(GameType.DriverPL);
+            
             fileClose.Click += (o, e) => OnFileCloseClick();
 
             fileSave.Click += (o, e) => OnFileSaveClick(false);
@@ -1369,6 +1491,8 @@ namespace Antilli
 
             expWavefrontOBJ.Click += (o, e) => ExportWavefrontOBJ();
 
+            expAllTextures.Click += (o, e) => ExportAllTextures();
+
             /*
             blenderSync.Click += (o, e) => ConnectToBlender();
             blenderSendCmd.Click += (o, e) => SendCommandToBlender();
@@ -1376,7 +1500,10 @@ namespace Antilli
 
             mtlListExpandAll.Click += (o, e) => MaterialsList.ExpandAll(true);
             mtlListCollapseAll.Click += (o, e) => MaterialsList.ExpandAll(false);
-        
+
+            btnExportAllTextures.Click += (o, e) => ExportTextures(CurrentModelPackage);
+            btnExportAllGlobalTextures.Click += (o, e) => ExportGlobalTextures();
+
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);
             });
@@ -1519,9 +1646,6 @@ namespace Antilli
 
         public MainWindow(string[] args = null)
         {
-            Thread.CurrentThread.CurrentCulture = AT.CurrentCulture;
-            Thread.CurrentThread.CurrentUICulture = AT.CurrentCulture;
-
             Initialize();
         }
     }

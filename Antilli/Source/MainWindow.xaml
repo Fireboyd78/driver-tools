@@ -63,7 +63,12 @@
                 </LinearGradientBrush>
             </Menu.Background>
             <MenuItem Header="File" Style="{DynamicResource atDark_menuItem}">
-                <MenuItem x:Name="fileOpen" Header="Open"/>
+                <MenuItem Header="Open">
+                    <MenuItem x:Name="fileOpen" Header="File..."/>
+                    <Separator/>
+                    <MenuItem x:Name="fileOpenDriv3r" Header="Driv3r"/>
+                    <MenuItem x:Name="fileOpenDriverPL" Header="Driver Parallel Lines"/>
+                </MenuItem>
                 <Separator/>
                 <MenuItem x:Name="fileClose" Header="Close" IsEnabled="{Binding IsFileOpened}"/>
                 <Separator/>
@@ -78,6 +83,9 @@
                     <MenuItem x:Name="expAntilliScene" Header="Antilli Scene"/>
                     <MenuItem x:Name="expModelPackage" Header="Model Package"/>
                     <MenuItem x:Name="expWavefrontOBJ" Header="Wavefront OBJ"/>
+                </MenuItem>
+                <MenuItem Header="Export All">
+                    <MenuItem x:Name="expAllTextures" Header="Textures" IsEnabled="{Binding IsFileOpened}" />
                 </MenuItem>
                 <Separator/>
                 <MenuItem x:Name="fileExit" Header="Exit"/>
@@ -238,18 +246,33 @@
                     
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <GroupBox Header="Textures" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
                             <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}" SelectionChanged="OnTextureListSelectionChanged"
                                      VirtualizingStackPanel.IsVirtualizing="False"/>
                         </GroupBox>
-                        <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,5,0,0" Visibility="{Binding CanShowGlobals}">
+                        <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,4,0,0" Visibility="{Binding CanShowGlobals}">
                             <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}" SelectionChanged="OnTextureListSelectionChanged"
                                      VirtualizingStackPanel.IsVirtualizing="False"/>
                         </GroupBox>
+                        <GroupBox Header="Toolbox" Grid.Row="2" Margin="0,4,0,0">
+                            <StackPanel Orientation="Vertical" Margin="2">
+                                <Button x:Name="btnExportAllTextures" Content="Export Textures" Height="25" HorizontalAlignment="Stretch"/>
+                                <Button x:Name="btnExportAllGlobalTextures" Content="Export Globals" Height="25" HorizontalAlignment="Stretch"
+                                        Visibility="{Binding CanShowGlobals}"/>
+                                <StackPanel.Resources>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Setter Property="Margin" Value="2" />
+                                    </Style>
+                                </StackPanel.Resources>
+                            </StackPanel>
+                        </GroupBox>
+                        
+                        
                     </Grid>
 
                     <GridSplitter Grid.Column="1"
