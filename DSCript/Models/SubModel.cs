@@ -94,7 +94,7 @@ namespace DSCript.Models
 
         public static implicit operator uint(MaterialHandle obj)
         {
-            return obj;
+            return (uint)(obj.Handle | (obj.UID << 16));
         }
 
         public override string ToString()
