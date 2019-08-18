@@ -55,8 +55,8 @@ Ka 1.0000 1.0000 1.0000
 Kd 1.0000 1.0000 1.0000
 Ks 0.0000 0.0000 0.0000
 Ke 0.0000 0.0000 0.0000
-map_Ka {1}_1_1.dds
-map_Kd {1}_1_1.dds" + "\r\n";
+map_Ka {1}
+map_Kd {1}" + "\r\n";
 
         static readonly string DefaultMaterial =
 @"newmtl default_mtl
@@ -99,7 +99,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
             var objBuilder  = new StringBuilder();
 
             var header = String.Format(
-                "# Driver Model .OBJ Exporter v0.78b\r\n" +
+                "# Driver Model .OBJ Exporter v0.82b\r\n" +
                 "# Exported: {0}\r\n", DateTime.Now);
 
             objBuilder.AppendLine(header);
@@ -208,6 +208,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             if (materialType > 0)
                             {
                                 var mtlIdx = mesh.Material.Handle + 1;
+                                var mtlSrc = mesh.Material.UID;
                                 
                                 var mtlName = String.Format("{0}_{1}",
                                     (globalMaterial) ? "global_mat" : "mat",
@@ -216,18 +217,32 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                 // add material if needed
                                 if (!materials.Contains(material))
                                 {
-                                    var ddsName = String.Format("{0}_{1}", (globalMaterial) ? "global" : filename, mtlIdx);
+                                    ITextureData ddsTexture = null;
 
-                                    mtlBuilder.AppendLine(MaterialTemplate, mtlName, ddsName);
+                                    var ddsName = (globalMaterial) ? $"{mtlSrc:X4}-{mtlIdx:D4}" : $"{mtlIdx:D4}";
 
-                                    for (int s = 1, texIdx = 1; s <= material.Substances.Count; s++)
+                                    for (int s = 0; s < material.Substances.Count; s++)
                                     {
-                                        //DSC.Log("material {0} - submaterial {1} - has {2} textures", mtlIdx, s, material.Substances.Count);
+                                        var substance = material.Substances[s];
 
-                                        foreach (var texture in material.Substances[s - 1].Textures)
+                                        for (int t = 0; t < substance.Textures.Count; t++)
                                         {
-                                            var texFilename = String.Format("{0}_{1}_{2}.dds", ddsName, s, texIdx++);
-                                            FileManager.WriteFile(Path.Combine(path, texFilename), texture.Buffer);
+                                            var texture = substance.Textures[t];
+                                            
+                                            var texFmt = (texture.UID != 0x01010101) ? "{0:X8}_{1:X8}" : "#{1:X8}";
+                                            var texName = String.Format(texFmt, texture.UID, texture.Hash);
+                                            
+                                            var texFile = String.Format("{0}_{1}_{2}#{3}.dds", ddsName, (s + 1), (t + 1), texName);
+                                            var texPath = Path.Combine(path, texFile);
+
+                                            if (ddsTexture == null)
+                                            {
+                                                // include only primary texture
+                                                ddsTexture = texture;
+                                                mtlBuilder.AppendLine(MaterialTemplate, mtlName, texFile);
+                                            }
+                                            
+                                            FileManager.WriteFile(texPath, texture.Buffer);
                                         }
                                     }
 
