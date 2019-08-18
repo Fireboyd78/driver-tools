@@ -58,6 +58,19 @@ Ke 0.0000 0.0000 0.0000
 map_Ka {1}_1_1.dds
 map_Kd {1}_1_1.dds" + "\r\n";
 
+        static readonly string DefaultMaterial =
+@"newmtl default_mtl
+Ns 10.0000
+Ni 1.5000
+d 0.5000
+Tr 0.5000
+Tf 1.0000 1.0000 1.0000
+illum 2
+Ka 0.0000 0.0000 0.0000
+Kd 0.0000 0.0000 0.0000
+Ks 0.0000 0.0000 0.0000
+Ke 0.0000 0.0000 0.0000" + "\r\n";
+
         static readonly string NullMaterial =
 @"newmtl null_mtl
 Ns 10.0000
@@ -100,6 +113,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
             var modelIndex = 0;
 
             var hasNullMaterial = false;
+            var hasDummyMaterial = false;
 
             foreach (var part in modelPackage.Models)
             {
@@ -141,21 +155,68 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             MaterialDataPC material = null;
                             int materialType = modelPackage.FindMaterial(mesh.Material, out material);
 
+                            var globalMaterial = (mesh.Material.UID != modelPackage.UID);
+
+                            switch (materialType)
+                            {
+
+                            // 
+                            // Missing/Null/Undefined Material
+                            //
+                            case  0:
+                            case -1:
+                            case -128:
+                                if (!hasNullMaterial)
+                                {
+                                    mtlBuilder.AppendLine(NullMaterial);
+                                    hasNullMaterial = true;
+                                }
+
+                                // definitely not a global material
+                                globalMaterial = false;
+
+                                faces.AppendLine($"# couldn't find material: {mesh.Material}");
+                                faces.AppendLine("usemtl null_mtl");
+                                break;
+
+                            //
+                            // Default/Null Material
+                            //
+                            case -2:
+                            case -3:
+                                if (!hasDummyMaterial)
+                                {
+                                    mtlBuilder.AppendLine(DefaultMaterial);
+                                    hasDummyMaterial = true;
+                                }
+
+                                globalMaterial = false;
+
+                                faces.AppendLine("usemtl default_mtl");
+                                break;
+
+                            //
+                            // Local Material
+                            //
+                            case -4:
+                                globalMaterial = false;
+                                materialType = 2; // so the check below does not fail
+                                break;
+                            }
+
                             // build material(s)
                             if (materialType > 0)
                             {
                                 var mtlIdx = mesh.Material.Handle + 1;
-
-                                bool isGlobalTexture = (materialType == 1);
-
+                                
                                 var mtlName = String.Format("{0}_{1}",
-                                    (isGlobalTexture) ? "global_mat" : "mat",
+                                    (globalMaterial) ? "global_mat" : "mat",
                                     mtlIdx);
 
                                 // add material if needed
                                 if (!materials.Contains(material))
                                 {
-                                    var ddsName = String.Format("{0}_{1}", (isGlobalTexture) ? "global" : filename, mtlIdx);
+                                    var ddsName = String.Format("{0}_{1}", (globalMaterial) ? "global" : filename, mtlIdx);
 
                                     mtlBuilder.AppendLine(MaterialTemplate, mtlName, ddsName);
 
@@ -174,16 +235,6 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                 }
 
                                 faces.AppendFormat("usemtl {0}", mtlName).AppendLine();
-                            }
-                            else
-                            {
-                                if (!hasNullMaterial)
-                                {
-                                    mtlBuilder.AppendLine(NullMaterial);
-                                    hasNullMaterial = true;
-                                }
-
-                                faces.AppendLine("usemtl null_mtl");
                             }
 
                             var indices = new List<int>();
