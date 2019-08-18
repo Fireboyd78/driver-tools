@@ -102,11 +102,16 @@ namespace DSCript.Models
             //
             // Null Material
             //
-            if ((material.UID == 0xCCCC) || (material.Handle == 0xCCCC))
+            if ((material == 0) || (material == 0xCCCCCCCC))
                 return -3;
 
             switch (material.UID)
             {
+            //
+            // Null Material
+            //
+            case 0xCCCC:
+                return -3;
             //
             // Local Material
             //
