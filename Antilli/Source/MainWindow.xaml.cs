@@ -915,7 +915,11 @@ namespace Antilli
                 var filename = $"{texture.Hash:X8}";
 
                 if (texture.UID != 0x01010101)
-                    filename = $"{texture.UID:X8}_{texture.Hash:X8}";
+                {
+                    var uid = new UID(texture.UID, texture.Hash);
+
+                    filename = uid.ToString("_");
+                }
 
                 var ext = "biff";
 
