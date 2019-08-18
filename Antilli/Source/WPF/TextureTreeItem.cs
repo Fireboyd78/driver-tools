@@ -20,6 +20,9 @@ namespace Antilli
             var texUid = new UID(Texture.UID, Texture.Hash);
             var texName = texUid.ToString();
 
+            if (Texture.UID == 0x01010101)
+                texName = $"{Texture.Hash:X8}";
+
             Name = $"{BaseName} : {texName} : {Texture.Width}x{Texture.Height}";
         }
         
