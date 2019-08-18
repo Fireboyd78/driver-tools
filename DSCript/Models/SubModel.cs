@@ -87,6 +87,16 @@ namespace DSCript.Models
             return !lhs.Equals(rhs);
         }
 
+        public static implicit operator int(MaterialHandle obj)
+        {
+            return (obj.Handle | (obj.UID << 16));
+        }
+
+        public static implicit operator uint(MaterialHandle obj)
+        {
+            return obj;
+        }
+
         public override string ToString()
         {
             return $"{Handle:X4}:{UID:X4}";
