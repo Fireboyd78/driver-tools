@@ -359,7 +359,7 @@ namespace Antilli
             m_textureData.Buffer = buffer;
 
             if (updateHash)
-                m_textureData.Hash = (int)Memory.GetCRC32(buffer);
+                m_textureData.Handle = (int)Memory.GetCRC32(buffer);
             
             if (m_bitmap != null)
                 m_bitmap.Dispose();

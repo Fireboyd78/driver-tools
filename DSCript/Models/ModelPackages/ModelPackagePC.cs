@@ -477,14 +477,13 @@ namespace DSCript.Models
 
                     var tex = new TextureDataPC() {
                         UID = _tex.UID,
-                        Hash = _tex.Hash,
+                        Handle = _tex.Hash,
 
                         Type = _tex.Type,
+                        Flags = _tex.Flags,
 
                         Width = _tex.Width,
                         Height = _tex.Height,
-
-                        Flags = _tex.Flags,
                     };
 
                     Textures.Add(tex);
@@ -662,7 +661,7 @@ namespace DSCript.Models
 
                 var _texture = new TextureInfo() {
                     UID = texture.UID,
-                    Hash = texture.Hash,
+                    Hash = texture.Handle,
 
                     DataOffset = textureDataLength,
                     DataSize = buffer.Length,
@@ -863,21 +862,23 @@ namespace DSCript.Models
 
                     UID = detail.UID;
 
-                    Models = new List<Model>(detail.ModelsCount);
-                    LodInstances = new List<LodInstance>(detail.LodInstancesCount);
-                    SubModels = new List<SubModel>(detail.SubModelsCount);
-
-                    if (!SkipModelsOnLoad &&
-                        // skip packages with no models
-                        (detail.ModelsCount > 0))
+                    if (!SkipModelsOnLoad)
                     {
-                        List<VertexBufferInfo> decls = null;
+                        Models = new List<Model>(detail.ModelsCount);
+                        LodInstances = new List<LodInstance>(detail.LodInstancesCount);
+                        SubModels = new List<SubModel>(detail.SubModelsCount);
 
-                        ReadVertexDeclarations(stream, ref detail, out decls);
-                        ReadModels(stream, ref detail, ref decls);
+                        // skip packages with no models
+                        if (detail.ModelsCount > 0)
+                        {
+                            List<VertexBufferInfo> decls = null;
 
-                        ReadVertices(stream, ref detail, ref decls);
-                        ReadIndices(stream, ref detail);
+                            ReadVertexDeclarations(stream, ref detail, out decls);
+                            ReadModels(stream, ref detail, ref decls);
+
+                            ReadVertices(stream, ref detail, ref decls);
+                            ReadIndices(stream, ref detail);
+                        }
                     }
 
                     if (Platform != PlatformType.Wii)
@@ -966,7 +967,7 @@ namespace DSCript.Models
                         var tex = xmlDoc.CreateElement("Texture");
 
                         tex.SetAttribute("UID", texture.UID.ToString("X8"));
-                        tex.SetAttribute("Hash", texture.Hash.ToString("X8"));
+                        tex.SetAttribute("Hash", texture.Handle.ToString("X8"));
                         tex.SetAttribute("Type", texture.Type.ToString());
                         tex.SetAttribute("Width", texture.Width.ToString());
                         tex.SetAttribute("Height", texture.Height.ToString());

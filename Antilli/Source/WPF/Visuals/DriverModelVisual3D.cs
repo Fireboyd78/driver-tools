@@ -108,8 +108,7 @@ namespace Antilli
             }
 
             MaterialDataPC material = null;
-
-            Mesh.ModelPackage.FindMaterial(Mesh.Material, out material);
+            MaterialManager.Find(Mesh.Material, out material);
 
             Material = material;
 

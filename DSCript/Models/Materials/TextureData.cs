@@ -20,7 +20,7 @@ namespace DSCript.Models
     public interface ITextureData
     {
         int UID { get; set; }
-        int Hash { get; set; }
+        int Handle { get; set; }
         
         int Type { get; set; }
         int Flags { get; set; }
@@ -33,14 +33,8 @@ namespace DSCript.Models
 
     public sealed class TextureDataPC : ITextureData
     {
-        private byte[] m_buffer = null;
-#if USE_TEXTURE_CACHE
-        private int m_size = 0;
-
-        private DSCTempFile m_tempFile = null;
-#endif
         public int UID { get; set; }
-        public int Hash { get; set; }
+        public int Handle { get; set; }
 
         public int Type { get; set; }
         
@@ -48,42 +42,7 @@ namespace DSCript.Models
         public int Height { get; set; }
         
         public int Flags { get; set; }
-
-        public byte[] Buffer
-        {
-            get
-            {
-#if USE_TEXTURE_CACHE
-                if ((m_buffer == null) && (m_size != 0))
-                {
-                    if (m_tempFile != null)
-                        return m_tempFile.GetBuffer();
-                }
-#endif
-                return m_buffer;
-            }
-            set
-            {
-#if USE_TEXTURE_CACHE
-                m_size = (value != null) ? value.Length : 0;
-                
-                // cache textures larger than 512kb
-                if (m_size > 0x80000)
-                {
-                    if (m_tempFile == null)
-                        m_tempFile = new DSCTempFile();
-
-                    m_tempFile.SetBuffer(value);
-                    m_buffer = null;
-                }
-                else
-                {
-                    m_buffer = value;
-                }
-#else
-                m_buffer = value;
-#endif
-            }
-        }
+        
+        public byte[] Buffer { get; set; }
     }
 }

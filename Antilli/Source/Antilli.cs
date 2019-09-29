@@ -231,13 +231,39 @@ namespace Antilli
                 get { return m_modelPackage; }
                 set
                 {
+                    if (ReferenceEquals(m_modelPackage, value))
+                        return;
+
+                    if (m_modelPackage != null)
+                    {
+                        if (!PackageManager.IsRegistered(m_modelPackage))
+                        {
+                            m_modelPackage.FreeModels();
+                            m_modelPackage.FreeMaterials();
+                        }
+                    }
+
                     m_modelPackage = value;
 
                     if (m_modelPackage != null)
                     {
                         // see if we need to load it
                         if (!m_modelPackage.HasModels)
+                        {
                             SpoolableResourceFactory.Load(m_modelPackage);
+                        }
+                        else
+                        {
+                            // reload the materials
+                            if (!m_modelPackage.HasMaterials)
+                            {
+                                ModelPackage.SkipModelsOnLoad = true;
+
+                                SpoolableResourceFactory.Load(m_modelPackage);
+
+                                ModelPackage.SkipModelsOnLoad = false;
+                            }
+                        }
                     }
 
                     NotifyChange("Materials");

@@ -827,7 +827,7 @@ namespace Antilli
                                     {
                                         MaterialDataPC mtl = null;
 
-                                        if (modelPackage.TryFindMaterial(_subModel.Material, out mtl))
+                                        if (MaterialManager.Find(_subModel.Material, out mtl) > 0)
                                         {
                                             mtlLookup.Add(material, gMaterials.Count);
                                             gMaterials.Add(mtl);
@@ -922,7 +922,7 @@ namespace Antilli
                             var texA1 = substance.Textures[0];
                             var texA2 = new TextureDataPC() {
                                 UID = texA1.UID,
-                                Hash = texA1.Hash + 0x12345,
+                                Handle = texA1.Handle + 0x12345,
                                 Type = texA1.Type,
                                 Flags = texA1.Flags,
                                 Width = texA1.Width,
@@ -933,7 +933,7 @@ namespace Antilli
                             var texB1 = substance.Textures[1];
                             var texB2 = new TextureDataPC() {
                                 UID = texB1.UID,
-                                Hash = texB1.Hash + 0x12345,
+                                Handle = texB1.Handle + 0x12345,
                                 Type = texB1.Type,
                                 Flags = texB1.Flags,
                                 Width = texB1.Width,
@@ -955,7 +955,7 @@ namespace Antilli
                             var texA1 = substance.Textures[0];
                             var texA2 = new TextureDataPC() {
                                 UID = texA1.UID,
-                                Hash = texA1.Hash + 0x12345,
+                                Handle = texA1.Handle + 0x12345,
                                 Type = texA1.Type,
                                 Flags = texA1.Flags,
                                 Width = texA1.Width,
@@ -1108,7 +1108,7 @@ namespace Antilli
                     Debug.WriteLine("**** UNKNOWN TEXTURE FORMAT ****");
                 }
 
-                tex.Hash = (int)Memory.GetCRC32(tex.Buffer);
+                tex.Handle = (int)Memory.GetCRC32(tex.Buffer);
 
                 var sub = new SubstanceDataPC() {
                     Flags = 0x406, // HACK: generic vehicle texture

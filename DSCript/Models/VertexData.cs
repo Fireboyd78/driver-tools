@@ -11,7 +11,7 @@ using System.Text;
 
 namespace DSCript.Models
 {
-    public struct VertexData
+    public class VertexData : IDisposable
     {
         VertexDeclaration m_decl;
         byte[] m_buffer;
@@ -24,6 +24,12 @@ namespace DSCript.Models
         public byte[] Buffer
         {
             get { return m_buffer; }
+        }
+
+        void IDisposable.Dispose()
+        {
+            m_decl = null;
+            m_buffer = null;
         }
         
         // this is some of the dirtiest code I've ever written...
@@ -122,7 +128,7 @@ namespace DSCript.Models
         public VertexData(VertexDeclaration decl, byte[] buffer, int offset)
             : this(decl)
         {
-            Array.Copy(buffer, offset, m_buffer, 0, m_buffer.Length);
+            System.Buffer.BlockCopy(buffer, offset, m_buffer, 0, m_buffer.Length);
         }
     }
 }

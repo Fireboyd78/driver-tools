@@ -129,7 +129,7 @@ namespace Antilli
                     var textures = new List<String>();
 
                     foreach (var t in s.Textures)
-                        textures.Add($"{t.Hash:X8}.dds");
+                        textures.Add($"{t.Handle:X8}.dds");
 
                     substance.Textures = textures;
                 }
@@ -169,12 +169,6 @@ namespace Antilli
 
         public static AntilliModel Create(ModelPackage modelPackage)
         {
-            var modelFile = modelPackage.ModelFile as Driv3rVehiclesFile;
-
-            // not yet
-            if (modelFile == null)
-                return null;
-            
             var m = new AntilliModel() {
                 Version     = 1.05f,
 
@@ -273,7 +267,7 @@ namespace Antilli
                             {
                                 MaterialDataPC mtl = null;
 
-                                if (modelPackage.FindMaterial(msh.Material, out mtl) != 0)
+                                if (MaterialManager.Find(msh.Material, out mtl) != 0)
                                 {
                                     material = Material.Create($"mtl_{mIdx++}", mtl);
                                     material.IsGlobal = true;

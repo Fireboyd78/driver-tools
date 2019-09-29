@@ -145,16 +145,16 @@ namespace DSCript.Models
     [Flags]
     public enum SubstanceExtraFlags : int
     {
-        flag_1              = (1 << 0),
-        flag_2              = (1 << 1),
+        FLAG_1              = (1 << 0),
+        BumpMap             = (1 << 1),
 
         ColorMask           = (1 << 2),
         Damage              = (1 << 3),
         DamageWithColorMask = (1 << 4),
 
-        flag_32             = (1 << 5),
-        flag_64             = (1 << 6),
-        flag_128            = (1 << 7),
+        FLAG_32             = (1 << 5),
+        FLAG_64             = (1 << 6),
+        FLAG_128            = (1 << 7),
 
         ValidMaskBits       = (ColorMask | Damage | DamageWithColorMask),
     }

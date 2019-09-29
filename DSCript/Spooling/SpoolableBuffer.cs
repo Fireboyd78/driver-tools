@@ -122,7 +122,7 @@ namespace DSCript.Spooling
             var localBuf = new byte[m_size];
 
             // copy from existing buffer
-            Array.Copy(m_buffer, localBuf, m_size);
+            Buffer.BlockCopy(m_buffer, 0, localBuf, 0, m_size);
 
             return localBuf;
         }

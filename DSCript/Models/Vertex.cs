@@ -355,7 +355,7 @@ namespace DSCript.Models
         }
     }
     
-    public struct Vertex
+    public class Vertex
     {
         /// <summary>Gets or sets the position of the vertex.</summary>
         public Vector3 Position;

@@ -85,7 +85,6 @@ namespace Antilli
         public static readonly DependencyProperty DoubleSidedProperty;
         public static readonly DependencyProperty UseBlendWeightsProperty;
 
-        public static readonly DependencyProperty MaterialProperty;
         public static readonly DependencyProperty MeshProperty;
         public static readonly DependencyProperty ModelProperty;
 
@@ -99,16 +98,14 @@ namespace Antilli
                 new UIPropertyMetadata(true, DoubleSidedChanged));
             UseBlendWeightsProperty = DependencyProperty.Register("UseBlendWeights", typeof(bool), thisType,
                 new UIPropertyMetadata(false, UseBlendWeightsChanged));
-
-            MaterialProperty = DependencyProperty.Register("Material", typeof(MaterialDataPC), thisType,
-                new PropertyMetadata(null, MaterialChanged));
+            
             MeshProperty = DependencyProperty.Register("Mesh", typeof(AntilliMesh3D), thisType,
                 new PropertyMetadata(null, MeshChanged));
             ModelProperty = DependencyProperty.Register("Model", typeof(SubModel), thisType,
                 new PropertyMetadata(null, ModelChanged));
 
             OpacityProperty = DependencyProperty.Register("Opacity", typeof(double), thisType,
-                new UIPropertyMetadata(1.0, MaterialChanged));
+                new UIPropertyMetadata(1.0, OpacityChanged));
         }
 
         public static readonly DiffuseMaterial NullMaterial = new DiffuseMaterial() {
@@ -141,13 +138,7 @@ namespace Antilli
             get { return (bool)GetValue(UseBlendWeightsProperty); }
             set { SetValue(UseBlendWeightsProperty, value); }
         }
-
-        public MaterialDataPC Material
-        {
-            get { return (MaterialDataPC)GetValue(MaterialProperty); }
-            set { SetValue(MaterialProperty, value); }
-        }
-
+        
         public AntilliMesh3D Mesh
         {
             get { return (AntilliMesh3D)GetValue(MeshProperty); }
@@ -176,9 +167,9 @@ namespace Antilli
             ((AntilliModelVisual3D)d).OnUseBlendWeightsChanged();
         }
 
-        protected static void MaterialChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        protected static void OpacityChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            ((AntilliModelVisual3D)d).OnMaterialChanged();
+            ((AntilliModelVisual3D)d).OnOpacityChanged();
         }
 
         protected static void MeshChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -190,11 +181,10 @@ namespace Antilli
         {
             ((AntilliModelVisual3D)d).OnModelChanged();
         }
-
+        
         protected virtual void OnDoubleSidedChanged()
         {
-            if (Material != null)
-                OnMaterialChanged();
+            UpdateMaterial();
         }
 
         protected virtual void OnUseBlendWeightsChanged()
@@ -203,64 +193,69 @@ namespace Antilli
                 OnMeshChanged();
         }
 
-        protected virtual void OnMaterialChanged()
+        protected virtual void OnOpacityChanged()
+        {
+            UpdateMaterial();
+        }
+
+        protected virtual void UpdateMaterial()
         {
             var materials = new MaterialGroup();
-            
-            if (Material != null)
+            var material = Model.Material;
+
+            if ((material == 0) || (material.UID == 0xCCCC))
             {
-                var substance = Material.Substances[0];
+                materials.Children.Add(ShadowMaterial);
 
-                var eFlags = substance.ExtraFlags;
+                HasTransparency = true;
+            }
+            else
+            {
+                MaterialDataPC mtl = null;
 
-                var alpha = substance.HasAlpha;
-                var emissive = substance.IsEmissive;
-                var specular = substance.IsSpecular;
+                var package = Model.ModelPackage;
 
-                var texIdx = 0;
-
-                if (UseBlendWeights)
+                if (MaterialManager.Find(package, material, out mtl) > 0)
                 {
-                    // ColorMask = 0
-                    // Damage = 1
-                    // DamageWithColorMask = 2
-                    texIdx = (((int)substance.ExtraFlags >> 3) & 3);
-                }
+                    var substance = mtl.Substances[0];
 
-                var texInfo = substance.Textures[texIdx];
+                    var eFlags = substance.ExtraFlags;
 
-                var cTex = TextureCache.GetTexture(texInfo);
-                var texMap = cTex.Bitmap;
+                    var alpha = substance.HasAlpha;
+                    var emissive = substance.IsEmissive;
+                    var specular = substance.IsSpecular;
 
-                if (texMap == null)
-                {
-                    // null texture?
-                    materials.Children.Add(NullMaterial);
+                    var texIdx = 0;
 
-                    IsEmissive = false;
-                    HasTransparency = false;
-                }
-                else
-                {
-
-                    var transparent = (alpha && !specular);
-                    var loadFlags = (transparent || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
-
-                    var bmap = texMap.GetBitmapSource(loadFlags);
-
-                    materials.Children.Add(new DiffuseMaterial() {
-                        Brush = new ImageBrush() {
-                            Opacity = Opacity,
-                            ImageSource = bmap,
-                            TileMode = TileMode.Tile,
-                            Stretch = Stretch.Fill,
-                            ViewportUnits = BrushMappingMode.Absolute
-                        }
-                    });
-
-                    if (emissive)
+                    if (UseBlendWeights)
                     {
-                        materials.Children.Add(new EmissiveMaterial() {
+                        // ColorMask = 0
+                        // Damage = 1
+                        // DamageWithColorMask = 2
+                        texIdx = (((int)substance.ExtraFlags >> 3) & 3);
+                    }
+
+                    var texInfo = substance.Textures[texIdx];
+
+                    var cTex = TextureCache.GetTexture(texInfo);
+                    var texMap = cTex.Bitmap;
+
+                    if (texMap == null)
+                    {
+                        // null texture?
+                        materials.Children.Add(NullMaterial);
+
+                        IsEmissive = false;
+                        HasTransparency = false;
+                    }
+                    else
+                    {
+                        var transparent = (alpha && !specular);
+                        var loadFlags = (transparent || emissive) ? BitmapSourceLoadFlags.Transparency : BitmapSourceLoadFlags.Default;
+
+                        var bmap = texMap.GetBitmapSource(loadFlags);
+
+                        materials.Children.Add(new DiffuseMaterial() {
                             Brush = new ImageBrush() {
                                 Opacity = Opacity,
                                 ImageSource = bmap,
@@ -269,28 +264,41 @@ namespace Antilli
                                 ViewportUnits = BrushMappingMode.Absolute
                             }
                         });
-                    }
-                    else if (specular)
-                    {
-                        materials.Children.Add(new SpecularMaterial() {
-                            Brush = new ImageBrush() {
-                                Opacity = Opacity,
-                                ImageSource = texMap.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
-                                TileMode = TileMode.Tile,
-                                Stretch = Stretch.Fill,
-                                ViewportUnits = BrushMappingMode.Absolute
-                            },
-                            SpecularPower = 75.0
-                        });
-                    }
 
-                    IsEmissive = emissive;
-                    HasTransparency = alpha;
+                        if (emissive)
+                        {
+                            materials.Children.Add(new EmissiveMaterial() {
+                                Brush = new ImageBrush() {
+                                    Opacity = Opacity,
+                                    ImageSource = bmap,
+                                    TileMode = TileMode.Tile,
+                                    Stretch = Stretch.Fill,
+                                    ViewportUnits = BrushMappingMode.Absolute
+                                }
+                            });
+                        }
+                        else if (specular)
+                        {
+                            materials.Children.Add(new SpecularMaterial() {
+                                Brush = new ImageBrush() {
+                                    Opacity = Opacity,
+                                    ImageSource = texMap.GetBitmapSource(BitmapSourceLoadFlags.AlphaMask),
+                                    TileMode = TileMode.Tile,
+                                    Stretch = Stretch.Fill,
+                                    ViewportUnits = BrushMappingMode.Absolute
+                                },
+                                SpecularPower = 75.0
+                            });
+                        }
+
+                        IsEmissive = emissive;
+                        HasTransparency = alpha;
+                    }
                 }
-            }
-            else
-            {
-                materials.Children.Add(NullMaterial);
+                else
+                {
+                    materials.Children.Add(NullMaterial);
+                }
             }
             
             Content.Material = materials;
@@ -299,7 +307,7 @@ namespace Antilli
 
         protected virtual void OnMeshChanged()
         {
-            Content.Geometry = Mesh.ToGeometry(UseBlendWeights);
+            Content.Geometry = Mesh?.ToGeometry(UseBlendWeights);
         }
         
         protected virtual void OnModelChanged()
@@ -309,29 +317,24 @@ namespace Antilli
                 Mesh.Vertices.Clear();
                 Mesh.TriangleIndices.Clear();
             }
-            
-            var indices = new List<int>();
-            var vertices = Model.GetVertices(true, ref indices);
-            
-            var triangleIndices = new Int32Collection(indices);
-            
-            Mesh = new AntilliMesh3D(vertices, triangleIndices);
 
-            var pak = Model.ModelPackage;
-            var mtl = Model.Material;
-
-            MaterialDataPC material = null;
-
-            var result = pak.FindMaterial(mtl, out material);
-
-            Material = material;
-
-            if ((mtl.UID == 0) && (mtl.Handle == 0) || (mtl.UID == 0xCCCC))
+            if (Model != null)
             {
-                Content.Material = ShadowMaterial;
-                Content.BackMaterial = (DoubleSided) ? ShadowMaterial : null;
+                var indices = new List<int>();
+                var vertices = Model.GetVertices(true, ref indices);
 
-                HasTransparency = true;
+                var triangleIndices = new Int32Collection(indices);
+
+                Mesh = new AntilliMesh3D(vertices, triangleIndices);
+
+                UpdateMaterial();
+            }
+            else
+            {
+                Mesh = null;
+
+                Content.Material = null;
+                Content.BackMaterial = null;
             }
         }
         

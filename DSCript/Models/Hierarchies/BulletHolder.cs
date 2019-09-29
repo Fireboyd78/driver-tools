@@ -14,7 +14,7 @@ namespace DSCript.Models
         Glass = 1,
     }
 
-    public struct BulletData
+    public class BulletData
     {
         private const int PACKED_SIZE = 0x14;
         private const int UNPACKED_SIZE = 0x38; // VPK format

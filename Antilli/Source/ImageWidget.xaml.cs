@@ -160,38 +160,7 @@ namespace Antilli
             var col = 12;
             
             sb.AppendLine("== Substance Information ==");
-
-            //--sb.AppendColumn("Bin", col, true).AppendLine($"{substance.Bin} ({substance.RenderBin})");
-            //--sb.AppendColumn("Flags", col, true).AppendFormat("0x{0:X}", substance.Flags);
             
-            //--if (substance.Flags != 0)
-            //--{
-            //--    sb.Append(" (");
-            //--
-            //--    for (int i = 0, ii = 0; i < 24; i++)
-            //--    {
-            //--        var nFlg = (substance.Flags & (1 << i));
-            //--
-            //--        if (nFlg == 0)
-            //--            continue;
-            //--
-            //--        var sFlg = $"FLAG_{nFlg}";
-            //--
-            //--        if (nFlg == 4)
-            //--            sFlg = "Alpha";
-            //--
-            //--        if (ii != 0)
-            //--            sb.Append(" | ");
-            //--
-            //--        sb.Append(sFlg);
-            //--        ii++;
-            //--    }
-            //--
-            //--    sb.Append(")");
-            //--}
-
-            //--sb.AppendLine();
-
             int[] regs = {
                 (substance.Mode & 0xFF),
                 (substance.Mode >> 8),
@@ -199,11 +168,7 @@ namespace Antilli
             };
 
             var slotFlags = (substance.Type >> 8);
-
-            //sb.AppendColumn("K1", col, true).AppendLine("{0} {1}", (substance.Mode & 0xFF), (substance.Mode >> 8));
-            //sb.AppendColumn("K2", col, true).AppendLine("{0}", (substance.Type & 0xFF));
-            //sb.AppendColumn("K3", col, true).AppendLine("0x{0:X}", (substance.Type >> 8));
-
+            
             sb.AppendColumn("Registers", col, true).AppendLine($"{regs[0]} {regs[1]} {regs[2]}");
             sb.AppendColumn("SlotFlags", col, true).AppendLine($"0x{slotFlags:X}");
 
@@ -212,29 +177,24 @@ namespace Antilli
                 var substance_pc = (substance as ISubstanceDataPC);
 
                 // flags?
-                var k3 = (substance.Type >> 8);
+                var eFlags = substance_pc.ExtraFlags;
 
-                if (k3 != 0)
+                if (eFlags != 0)
                 {
                     sb.AppendLine();
                     sb.AppendLine("==== Extra Flags ====");
 
-                    if ((k3 & 0x1) != 0)
-                        sb.AppendLine("+FLAG_1");
-                    if ((k3 & 0x2) != 0)
-                        sb.AppendLine("+FLAG_2");
-                    if ((k3 & 0x4) != 0)
-                        sb.AppendLine("+ColorMask");
-                    if ((k3 & 0x8) != 0)
-                        sb.AppendLine("+Damage");
-                    if ((k3 & 0x10) != 0)
-                        sb.AppendLine("+DamageWithColorMask");
-                    if ((k3 & 0x20) != 0)
-                        sb.AppendLine("+FLAG_32");
-                    if ((k3 & 0x40) != 0)
-                        sb.AppendLine("+FLAG_64");
-                    if ((k3 & 0x80) != 0)
-                        sb.AppendLine("+FLAG_128");
+                    for (int i = 0; i < 8; i++)
+                    {
+                        int flg = (1 << i);
+
+                        if (((int)eFlags & flg) != 0)
+                        {
+                            var flgStr = Enum.GetName(typeof(SubstanceExtraFlags), flg);
+
+                            sb.AppendLine($"+{flgStr}");
+                        }
+                    }
                 }
 
                 sb.AppendLine();
@@ -280,7 +240,7 @@ namespace Antilli
             var tex = textureRef.Data;
             
             var piUID = new PropertyItem("UID", null, $"{tex.UID:X8}") { ReadOnly = true };
-            var piHash = new PropertyItem("Hash", null, $"{tex.Hash:X8}") { ReadOnly = true };
+            var piHash = new PropertyItem("Hash", null, $"{tex.Handle:X8}") { ReadOnly = true };
 
             var piType = new PropertyItem("Type", delegate (string input) {
                 int value = 0;

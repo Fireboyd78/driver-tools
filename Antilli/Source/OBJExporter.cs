@@ -153,7 +153,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                             var mesh = group.SubModels[m];
 
                             MaterialDataPC material = null;
-                            int materialType = modelPackage.FindMaterial(mesh.Material, out material);
+                            int materialType = MaterialManager.Find(mesh.Material, out material);
 
                             var globalMaterial = (mesh.Material.UID != modelPackage.UID);
 
@@ -194,14 +194,6 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
                                 faces.AppendLine("usemtl default_mtl");
                                 break;
-
-                            //
-                            // Local Material
-                            //
-                            case -4:
-                                globalMaterial = false;
-                                materialType = 2; // so the check below does not fail
-                                break;
                             }
 
                             // build material(s)
@@ -230,7 +222,7 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                             var texture = substance.Textures[t];
                                             
                                             var texFmt = (texture.UID != 0x01010101) ? "{0:X8}_{1:X8}" : "#{1:X8}";
-                                            var texName = String.Format(texFmt, texture.UID, texture.Hash);
+                                            var texName = String.Format(texFmt, texture.UID, texture.Handle);
                                             
                                             var texFile = String.Format("{0}_{1}_{2}#{3}.dds", ddsName, (s + 1), (t + 1), texName);
                                             var texPath = Path.Combine(path, texFile);

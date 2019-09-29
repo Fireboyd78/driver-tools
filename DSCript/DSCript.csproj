@@ -88,13 +88,15 @@
     <Compile Include="Models\Hierarchies\BulletHolder.cs" />
     <Compile Include="Models\Hierarchies\VehiclePart.cs" />
     <Compile Include="Models\Hierarchies\VehiclePartTypes.cs" />
+    <Compile Include="Models\Materials\MaterialHandle.cs" />
     <Compile Include="Models\Materials\MaterialData.cs" />
+    <Compile Include="Models\Materials\MaterialManager.cs" />
     <Compile Include="Models\Materials\SubstanceData.cs" />
     <Compile Include="Models\Materials\TextureData.cs" />
     <Compile Include="Models\Materials\TextureFlags.cs" />
     <Compile Include="Models\ModelPackages\Details\ModelPackageData.cs" />
     <Compile Include="Models\ModelPackages\Details\MaterialPackageData.cs" />
-    <Compile Include="Models\ModelPackages\ModelPackageDSF.cs" />
+    <Compile Include="Models\ModelPackages\PackageManager.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
     <Compile Include="Configuration\RegistryConfiguration.cs" />
     <Compile Include="Models\Formats\StandaloneTextureData.cs" />
@@ -112,7 +114,6 @@
     <Compile Include="Spooling\SpoolerCollection.cs" />
     <Compile Include="TempFile.cs" />
     <Compile Include="VectorTypes.cs" />
-    <None Include="Models\ModelPackages\ModelPackagePC_X.cs" />
     <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
     <Compile Include="Models\PrimitiveType.cs" />
     <Compile Include="Models\IndexData.cs" />

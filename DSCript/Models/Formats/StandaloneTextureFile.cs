@@ -21,7 +21,7 @@ namespace DSCript.Models
         public List<MaterialDataPC> Materials { get; set; }
         public List<SubstanceDataPC> Substances { get; set; }
         public List<TextureDataPC> Textures { get; set; }
-        
+
         protected override void Load()
         {
             var upst = Spooler.GetFirstChild(ChunkType.StandaloneTextures) as SpoolableBuffer;
@@ -30,7 +30,10 @@ namespace DSCript.Models
             if (upst == null || mdpc == null)
                 return;
 
-            var pak = SpoolableResourceFactory.Create<ModelPackage>(mdpc, true);
+            var pak = mdpc.AsResource<ModelPackage>(true);
+
+            PackageManager.Register(pak);
+
             var materials = pak.Materials;
 
             using (var f = upst.GetMemoryStream())

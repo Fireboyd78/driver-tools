@@ -65,12 +65,11 @@ namespace DSCript.Models
             case ChunkType.ModelPackagePC_X:
             case ChunkType.ModelPackageWii:
                 var modelPackage = sender.AsResource<ModelPackage>();
-                modelPackage.ModelFile = this;
-
+                
                 if ((ChunkType)sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
                 {
                     // make sure it's loaded!
-                    SpoolableResourceFactory.Load(modelPackage);
+                    PackageManager.Load(modelPackage);
 
                     GlobalTextures = modelPackage;
                 }
@@ -109,27 +108,7 @@ namespace DSCript.Models
 
             return null;
         }
-
-        public override int FindMaterial(MaterialHandle material, out IMaterialData result)
-        {
-            var globals = GlobalTextures;
-
-            if (material.UID == globals.UID)
-            {
-                if (material.Handle < globals.Materials.Count)
-                {
-                    result = globals.Materials[material.Handle];
-                    return 1;
-                }
-
-                // global material missing!
-                result = null;
-                return -1;
-            }
-
-            return base.FindMaterial(material, out result);
-        }
-
+        
         public SpooledVehiclesFile() { }
         public SpooledVehiclesFile(string filename) : base(filename) { }
     }
@@ -150,23 +129,6 @@ namespace DSCript.Models
             {
                 throw new InvalidOperationException("Can't set global textures for this type of vehicles file!");
             }
-        }
-
-        public override ModelPackage FindPackage(int uid)
-        {
-            if (HasVirtualVehicles)
-                return Packages[0];
-
-            for (int i = 0; i < Hierarchies.Count; i++)
-            {
-                var hierarchy = Hierarchies[i];
-
-                if (hierarchy.UID == uid)
-                    return Packages[i];
-            }
-
-            // TODO: Implement global package manager
-            return null;
         }
         
         public Driv3rVehiclesFile() { }

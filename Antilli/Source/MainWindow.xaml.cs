@@ -269,6 +269,9 @@ namespace Antilli
                 AT.CurrentState.ModelFile.Dispose();
                 AT.CurrentState.ModelFile = null;
 
+                TextureCache.Flush();
+                PackageManager.Clear();
+
                 Viewer.ClearModels();
                 ResetViewWidgets();
             }
@@ -332,6 +335,8 @@ namespace Antilli
 
             var modelFile = new ModelFile();
             var setupModels = true;
+
+            PackageManager.Clear();
 
             switch (extension)
             {
@@ -881,10 +886,10 @@ namespace Antilli
 
         private void ExportTexture(ITextureData texture)
         {
-            var filename = $"{texture.Hash:X8}";
+            var filename = $"{texture.Handle:X8}";
 
             if (texture.UID != 0x01010101)
-                filename = $"{texture.UID:X8}_{texture.Hash:X8}";
+                filename = $"{texture.UID:X8}_{texture.Handle:X8}";
 
             var ext = "biff";
 
@@ -912,11 +917,11 @@ namespace Antilli
 
             foreach (var texture in textures)
             {
-                var filename = $"{texture.Hash:X8}";
+                var filename = $"{texture.Handle:X8}";
 
                 if (texture.UID != 0x01010101)
                 {
-                    var uid = new UID(texture.UID, texture.Hash);
+                    var uid = new UID(texture.UID, texture.Handle);
 
                     filename = uid.ToString("_");
                 }

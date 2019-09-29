@@ -79,8 +79,6 @@ namespace DSCript.Models
         public int UID { get; set; }
 
         public int Flags { get; set; }
-
-        public ModelFile ModelFile { get; set; }
         
         public virtual MaterialPackageType MaterialPackageType
         {
@@ -152,62 +150,104 @@ namespace DSCript.Models
 
         public virtual bool HasMaterials    => Materials?.Count > 0;
         public virtual bool HasModels       => Models?.Count > 0 && (VertexBuffers != null && IndexBuffer != null);
+
+        public virtual void FreeModels()
+        {
+            if (!AreChangesPending)
+            {
+                foreach (var model in Models)
+                {
+                    model.VertexBuffer = null;
+
+                    foreach (var lod in model.Lods)
+                    {
+                        lod.Parent = null;
+
+                        foreach (var lodInst in lod.Instances)
+                        {
+                            foreach (var subModel in lodInst.SubModels)
+                                subModel.ModelPackage = null;
+
+                            lodInst.SubModels.Clear();
+                            lodInst.SubModels = null;
+                        }
+
+                        lod.Instances.Clear();
+                        lod.Instances = null;
+                    }
+                    
+                    model.Lods.Clear();
+                    model.Lods = null;
+                }
+
+                Models.Clear();
+                LodInstances.Clear();
+                SubModels.Clear();
+
+                foreach (var vBuffer in VertexBuffers)
+                {
+                    vBuffer.Vertices.Clear();
+                    vBuffer.Vertices = null;
+                }
+
+                IndexBuffer.Indices = null;
+            }
+        }
+
+        public virtual void FreeMaterials()
+        {
+            if (!AreChangesPending)
+            {
+                foreach (var material in Materials)
+                {
+                    material.Substances.Clear();
+                    material.Substances = null;
+                }
+
+                foreach (var substance in Substances)
+                {
+                    substance.Textures.Clear();
+                    substance.Textures = null;
+                }
+
+                foreach (var texture in Textures)
+                    texture.Buffer = null;
+
+                Materials.Clear();
+                Substances.Clear();
+                Textures.Clear();
+            }
+        }
         
         public virtual int FindMaterial(MaterialHandle material, out IMaterialData result)
         {
             result = null;
-
+            
             if ((material.UID == 0xFFFD) || (material.UID == UID))
             {
                 if (HasMaterials && (material.Handle < Materials.Count))
                 {
                     result = Materials[material.Handle];
-                    return -4;
+                    return 1;
                 }
 
                 // missing
                 return -1;
-            }
-            else
-            {
-                if (material.UID != UID)
-                    return ModelFile.FindMaterial(material, out result);
             }
 
             // not found
             return 0;
         }
         
-        public bool TryFindMaterial(MaterialHandle material, out IMaterialData result)
-        {
-            return (FindMaterial(material, out result) != 0);
-        }
-
         public int FindMaterial<TMaterialData>(MaterialHandle material, out TMaterialData result)
             where TMaterialData : class, IMaterialData
         {
-            IMaterialData _result = null;
+            IMaterialData mtl = null;
 
-            var type = FindMaterial(material, out _result);
+            var type = FindMaterial(material, out mtl);
 
-            if ((type != 0) && (_result != null))
-            {
-                result = (_result as TMaterialData);
-
-                if (result == null)
-                    return 0;
-
-                return type;
-            }
-
-            result = null;
+            result = (mtl as TMaterialData);
             return type;
-        }
-
-        public bool TryFindMaterial<TMaterialData>(MaterialHandle material, out TMaterialData result)
-            where TMaterialData : class, IMaterialData
-        {
-            return (FindMaterial(material, out result) != 0);
         }
     }
 }

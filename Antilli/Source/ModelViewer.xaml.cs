@@ -56,6 +56,7 @@ namespace Antilli
 
         private ModelVisual3DGroup _selectedModel;
         private List<ModelVisual3DGroup> _visuals;
+        private List<AntilliModelVisual3D> _models;
 
         private bool _applyTransforms;
         private bool _useBlendWeights;
@@ -116,6 +117,15 @@ namespace Antilli
             {
                 if (SetValue(ref _visuals, value, "Visuals"))
                 {
+                    if (_models != null)
+                    {
+                        foreach (var model in _models)
+                            model.ClearValue(AntilliModelVisual3D.ModelProperty);
+
+                        _models.Clear();
+                        _models = null;
+                    }
+
                     OnPropertyChanged("Elements");
                 }
             }
@@ -182,7 +192,7 @@ namespace Antilli
             EmissiveLayer.Children.Clear();
             TransparencyLayer.Children.Clear();
             TopmostLayer.Children.Clear();
-            
+
             Visuals = null;
         }
 
@@ -378,6 +388,11 @@ namespace Antilli
 
             if (models.Count > 0)
             {
+                // do this first, otherwise shit will get fucked up
+                Visuals = models;
+
+                _models = new List<AntilliModelVisual3D>();
+
                 // set the new model
                 foreach (var model in models)
                 {
@@ -389,10 +404,12 @@ namespace Antilli
                             TransparencyLayer.Children.Add(dmodel);
                         else
                             VisualsLayer.Children.Add(dmodel);
+
+                        _models.Add(dmodel);
                     }
                 }
 
-                Visuals = models;
+                
                 return true;
             }
             else
