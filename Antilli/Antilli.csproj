@@ -70,35 +70,38 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Source\AntilliClient.cs" />
+    <Compile Include="Source\Common\AntilliClient.cs" />
     <Compile Include="Source\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Source\COLLADA\COLLADA-DataFlow.cs" />
-    <Compile Include="Source\COLLADA\FX\COLLADA-Effects.cs" />
-    <Compile Include="Source\COLLADA\COLLADA-Extensibility.cs" />
-    <Compile Include="Source\COLLADA\COLLADA-Geometry.cs" />
-    <Compile Include="Source\COLLADA\COLLADA-Metadata.cs" />
-    <Compile Include="Source\COLLADA\COLLADA-Scene.cs" />
-    <Compile Include="Source\COLLADA\COLLADA-Transform.cs" />
-    <Compile Include="Source\COLLADA\FX\COLLADA-Materials.cs" />
-    <Compile Include="Source\COLLADA\FX\COLLADA-Profiles.cs" />
-    <Compile Include="Source\COLLADA\FX\COLLADA-Shaders.cs" />
-    <Compile Include="Source\COLLADA\FX\COLLADA-Texturing.cs" />
+    <Compile Include="Source\Extensions\BitmapExtensions.cs" />
+    <Compile Include="Source\Extensions\FreeImageAPI\FIBITMAPExtensions.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA-DataFlow.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\FX\COLLADA-Effects.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA-Extensibility.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA-Geometry.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA-Metadata.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA-Scene.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA-Transform.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\FX\COLLADA-Materials.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\FX\COLLADA-Profiles.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\FX\COLLADA-Shaders.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\FX\COLLADA-Texturing.cs" />
     <Compile Include="Source\Extensions\SelectFolder\FolderSelectDialog.cs" />
     <Compile Include="Source\Extensions\SelectFolder\Reflector.cs" />
-    <Compile Include="Source\ModelConverter.cs" />
-    <Compile Include="Source\COLLADA\COLLADA.cs" />
+    <Compile Include="Source\Models\ModelConverter.cs" />
+    <Compile Include="Source\Models\Formats\COLLADA\COLLADA.cs" />
     <Compile Include="Source\ExportModelDialog.xaml.cs">
       <DependentUpon>ExportModelDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Source\Antilli.cs" />
+    <Compile Include="Source\Common\Antilli.cs" />
     <Compile Include="Source\ImageWidget.xaml.cs">
       <DependentUpon>ImageWidget.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Source\Models\AntilliModel.cs" />
-    <Compile Include="Source\Models\AntilliScene.cs" />
+    <Compile Include="Source\Models\Formats\AntilliModel.cs" />
+    <Compile Include="Source\Models\Formats\AntilliScene.cs" />
+    <Compile Include="Source\Models\Formats\WaveFront\Legacy\ObjFile.cs" />
     <Compile Include="Source\Models\TextureCache.cs" />
     <Compile Include="Source\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>
@@ -107,29 +110,30 @@
     <Compile Include="Source\Parser\StringExtensions.cs" />
     <Compile Include="Source\Parser\TokenReader.cs" />
     <Compile Include="Source\Parser\TokenWriter.cs" />
+    <Compile Include="Source\WPF\Extensions\PointExtensions.cs" />
     <Compile Include="Source\WPF\PropertyItem.cs" />
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
     <Compile Include="Source\WPF\TextureTreeItem.cs" />
+    <Compile Include="Source\Imaging\BitmapHelper.cs" />
+    <Compile Include="Source\Imaging\BitmapSourceHelper.cs" />
+    <Compile Include="Source\WPF\Utilities\MagicConverter.cs" />
     <Compile Include="Source\WPF\Visuals\AntilliModelVisual3D.cs" />
     <None Include="Source\App.config">
       <SubType>Designer</SubType>
     </None>
-    <Compile Include="Source\ModelGroupListItem.cs" />
-    <Compile Include="Source\ModelListItem.cs" />
-    <Compile Include="Source\OBJExporter.cs" />
-    <Compile Include="Source\OBJFile.cs" />
-    <Compile Include="Source\Settings.cs" />
-    <Compile Include="Source\Extensions\Media3DExtensions.cs" />
-    <Compile Include="Source\Extensions\TreeViewExtensions.cs" />
-    <Compile Include="Source\Extensions\TypeExtensions.cs" />
-    <Compile Include="Source\WPF\BoolToVisibilityConverter.cs" />
+    <Compile Include="Source\WPF\ModelGroupListItem.cs" />
+    <Compile Include="Source\WPF\ModelListItem.cs" />
+    <Compile Include="Source\Models\Formats\WaveFront\OBJExporter.cs" />
+    <Compile Include="Source\Models\Formats\WaveFront\OBJFile.cs" />
+    <Compile Include="Source\Common\Settings.cs" />
+    <Compile Include="Source\WPF\Extensions\Media3DExtensions.cs" />
+    <Compile Include="Source\WPF\Extensions\TreeViewExtensions.cs" />
+    <Compile Include="Source\WPF\Extensions\TypeExtensions.cs" />
+    <Compile Include="Source\WPF\Utilities\BoolToVisibilityConverter.cs" />
     <Compile Include="Source\WPF\Controls\AntilliViewport3D.cs" />
     <Compile Include="Source\WPF\Controls\AntilliWindow.cs" />
     <Compile Include="Source\WPF\Controls\ObservableWindow.cs" />
-    <Compile Include="Source\WPF\Visuals\BlendModelVisual3D.cs" />
-    <Compile Include="Source\WPF\Visuals\DriverModelVisual3D.cs" />
-    <Compile Include="Source\WPF\Visuals\GeometryModelVisual3D.cs" />
     <Compile Include="Source\WPF\Visuals\VisualParentHelper.cs" />
     <Compile Include="Source\WPF\ModelVisual3DGroup.cs" />
     <Page Include="Source\ChunkEditor.xaml">
@@ -164,11 +168,11 @@
       <DependentUpon>MaterialEditor.xaml</DependentUpon>
       <SubType>Code</SubType>
     </None>
-    <Page Include="Source\MKInputBox.xaml">
+    <Page Include="Source\WPF\Widgets\MKInputBox.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="Source\MKInputBox.xaml.cs">
+    <Compile Include="Source\WPF\Widgets\MKInputBox.xaml.cs">
       <DependentUpon>MKInputBox.xaml</DependentUpon>
     </Compile>
     <Page Include="Source\ModelViewer.xaml">

@@ -33,28 +33,88 @@ namespace Antilli
 
         public static void FlushIfNeeded()
         {
-            if (Cache.Count > 75)
-                Flush();
-        }
+            var nTextures = Cache.Count;
+            var forced = false;
 
-        public static void Flush()
-        {
-            if (Cache.Count > 0)
+            if (nTextures > 75)
             {
-                DSC.Log($"Flushing {Cache.Count} textures in the cache.");
-
-                for (int i = 0; i < Cache.Count; i++)
+                if (nTextures > 250)
                 {
-                    Cache[i].Dispose();
-                    Cache[i] = null;
+                    if (nTextures > 500)
+                    {
+                        Debug.WriteLine($"**** TEXTURE CACHE IS LEAKING -- forcing a cleanup!");
+                        forced = true;
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"**** WARNING: {nTextures} cached textures are in-use!");
+                    }
                 }
 
-                Cache.Clear();
+                Flush(forced);
+            }
+        }
+
+        public static void Flush(bool forced = false)
+        {
+            var nTextures = Cache.Count;
+
+            if (nTextures > 0)
+            {
+                if (forced)
+                {
+                    Debug.WriteLine($"Flushing {nTextures} textures from the cache...");
+
+                    for (int i = 0; i < nTextures; i++)
+                    {
+                        Cache[i].Dispose();
+                        Cache[i] = null;
+                    }
+
+                    Cache.Clear();
+                }
+                else
+                {
+                    Debug.WriteLine($"Cleaning texture cache...");
+
+                    var flushed = new List<TextureReference>();
+
+                    for (int i = 0; i < nTextures; i++)
+                    {
+                        var texture = Cache[i];
+
+                        if (texture.RefCount == 0)
+                        {
+                            texture.Dispose();
+                            flushed.Add(texture);
+                        }
+                    }
+
+                    var nFlushed = flushed.Count;
+
+                    if (nFlushed != 0)
+                    {
+                        for (int i = 0; i < nFlushed; i++)
+                        {
+                            Cache.Remove(flushed[i]);
+                            nTextures--;
+                        }
+                        
+                        Debug.WriteLine($" - {nFlushed} unused textures flushed (remaining: {nTextures})");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($" - no textures flushed ({nTextures} textures still in use)");
+                    }
+                }
             }
         }
 
         static int GetCachedTextureIndex(ITextureData texture)
         {
+            if (Cache.Count == 0)
+                return -1;
+
             return Cache.FindIndex((t) => t.Data == texture);
         }
 
@@ -76,15 +136,30 @@ namespace Antilli
 
             if (idx == -1)
             {
+                // initialize the first reference
                 cachedTexture = new TextureReference(texture);
+                cachedTexture.RefCount = 1;
+
                 Cache.Add(cachedTexture);
             }
             else
             {
+                // add a new reference owner
                 cachedTexture = Cache[idx];
+                cachedTexture.RefCount++;
             }
             
             return cachedTexture;
+        }
+
+        /// <summary>
+        /// Informs the cache this texture reference is no longer being used by a previous owner.
+        /// </summary>
+        /// <param name="reference">The texture reference to release.</param>
+        public static void Release(TextureReference reference)
+        {
+            if (reference.RefCount > 0)
+                reference.RefCount--;
         }
     }
 
@@ -197,7 +272,7 @@ namespace Antilli
                     ? FreeImage.ConvertTo32Bits(b)
                     : FreeImage.ConvertTo24Bits(b);
 
-                hBitmap = FreeImage.GetHbitmap(bmap, IntPtr.Zero, false);
+                hBitmap = FreeImage.GetHbitmap(bmap, IntPtr.Zero, true);
                 m_hbitmaps[index] = hBitmap;
 
                 bmap_a.Unload();
@@ -291,9 +366,7 @@ namespace Antilli
 
                 m_format = FreeImage.GetFileTypeFromMemory(memory, size);
                 m_bitmap = FreeImage.LoadFromMemory(m_format, memory, FREE_IMAGE_LOAD_FLAGS.DEFAULT);
-
-                m_CanFreeBitmap = false;
-
+                
                 m_width = (int)FreeImage.GetWidth(m_bitmap);
                 m_height = (int)FreeImage.GetHeight(m_bitmap);
             }
@@ -315,9 +388,7 @@ namespace Antilli
             {
                 m_format = FreeImage.GetFileTypeFromStream(stream);
                 m_bitmap = FreeImage.LoadFromStream(stream, ref m_format);
-
-                m_CanFreeBitmap = true;
-
+                
                 m_width = (int)FreeImage.GetWidth(m_bitmap);
                 m_height = (int)FreeImage.GetHeight(m_bitmap);
             }
@@ -335,6 +406,8 @@ namespace Antilli
     
     public class TextureReference : IDisposable
     {
+        internal int RefCount { get; set; }
+
         BitmapReference m_bitmap = null;
         ITextureData m_textureData = null;
         
@@ -403,7 +476,8 @@ namespace Antilli
 
         ~TextureReference()
         {
-            Dispose();
+            if (RefCount < 1)
+                Dispose();
         }
     }
 }

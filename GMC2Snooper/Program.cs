@@ -1183,14 +1183,48 @@ namespace GMC2Snooper
             case TextureCompType.VQ2:
                 {
                     Debug.WriteLine("Processing VQ2!");
-                    
-                    var img = new BitmapHelper(tex.Width, tex.Height, PixelFormat.Format8bppIndexed);
-                    //var clut = Read8bppCLUT(texBuffer, clutTex, clutIdx);
 
-                    var buffer = Swizzlers.UnSwizzle8(texBuffer, tex.Width, tex.Height, tex.CLUTs[1]);
+                    var width = tex.Width >> 1;
+                    var height = tex.Height >> 1;
+                    
+                    var img = new BitmapHelper(width, height, PixelFormat.Format8bppIndexed);
+                    var clut = Read8bppCLUT(texBuffer, tex, 1);
+
+                    //var buffer = Swizzlers.UnSwizzle8(texBuffer, width, height, tex.CLUTs[2]);
+
+                    var quants = new byte[256 * 4];
+                    var texels = new byte[(width * height) * 4];
+
+                    Buffer.BlockCopy(texBuffer, tex.CLUTs[0], quants, 0, quants.Length);
+                    Buffer.BlockCopy(texBuffer, tex.CLUTs[2], texels, 0, (width * height));
+
+                    var buffer = Swizzlers.UnSwizzle8(texels, width, height, 0);
+
+                    var offset = 0;
+                    var size = Math.Min(width, height);
+
+                    // Decode texture data
+                    for (int y = 0; y < height; y += size)
+                    {
+                        for (int x = 0; x < width; x += size)
+                        {
+                            for (int y2 = 0; y2 < size; y2++)
+                            {
+                                for (int x2 = 0; x2 < size; x2++)
+                                {
+                                    var index = buffer[((quants[x2] << 1) | quants[y2])];
+                                    var dstIdx = (((y + y2) * width) + (x + x2)) * 4;
+
+                                    buffer[dstIdx] = index;
+                                }
+                            }
+
+                            offset += (size * size);
+                        }
+                    }
 
                     img.Pixels = buffer;
-                    //img.SetColorPalette(clut);
+                    img.SetColorPalette(clut);
                     
                     return img;
                 }

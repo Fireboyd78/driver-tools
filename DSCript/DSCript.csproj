@@ -25,13 +25,10 @@
   <PropertyGroup>
     <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
     <IncludeDSCLibrary>false</IncludeDSCLibrary>
-    <UsesFreeImage>true</UsesFreeImage>
+    <UsesFreeImage>false</UsesFreeImage>
   </PropertyGroup>
   <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>
-    <Reference Include="FreeImageNET">
-      <HintPath>$(FreeImageNETDir)FreeImageNET.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -41,69 +38,78 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="WindowsBase" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Configuration\DSCConfiguration.cs" />
-    <Compile Include="Extensions\FileDialogExtensions.cs" />
-    <Compile Include="Extensions\FreeImageAPI\FIBITMAPExtensions.cs" />
-    <Compile Include="Extensions\SpoolableResourceExtensions.cs" />
-    <Compile Include="Extensions\SpoolerExtensions.cs" />
+    <Compile Include="Common\Chunks\Chunk.cs" />
+    <Compile Include="Common\Chunks\ChunkTypes.cs" />
+    <Compile Include="Common\DSC.cs" />
+    <Compile Include="Common\Log.cs" />
+    <Compile Include="Config\DSCConfiguration.cs" />
+    <Compile Include="Config\IniConfiguration.cs" />
+    <Compile Include="Config\IniFile.cs" />
+    <Compile Include="Config\RegistryConfiguration.cs" />
+    <Compile Include="Data\BitAlignment.cs" />
+    <Compile Include="Data\MagicNumber.cs" />
+    <Compile Include="Data\Memory.cs" />
+    <Compile Include="Data\MemoryCache.cs" />
+    <Compile Include="Extensions\System\IO\BinaryReaderExtensions.cs" />
     <Compile Include="Extensions\System\IO\FileStreamExtensions.cs" />
-    <Compile Include="Extensions\System\TypeExtensions.cs" />
-    <Compile Include="Extensions\System\Windows\PointExtensions.cs" />
-    <Compile Include="Helpers\BitmapHelper.cs" />
-    <Compile Include="Helpers\BitmapSourceHelper.cs" />
-    <Compile Include="Helpers\DriverPL.cs" />
-    <Compile Include="DSC.cs" />
-    <Compile Include="Configuration\IniConfiguration.cs" />
-    <Compile Include="Configuration\IniFile.cs" />
-    <Compile Include="Helpers\StringHelper.cs" />
-    <Compile Include="Helpers\DDSUtils.cs" />
-    <Compile Include="IO\LocaleReader.cs" />
-    <Compile Include="IO\MECFile.cs" />
-    <Compile Include="Log.cs" />
-    <Compile Include="Chunks\Chunk.cs" />
-    <Compile Include="Chunks\ChunkTypes.cs" />
-    <Compile Include="Chunks\MagicConverter.cs" />
+    <Compile Include="Extensions\System\IO\StreamExtensions.cs" />
     <Compile Include="Extensions\System\NativeMethods.cs" />
     <Compile Include="Extensions\System\StringExtensions.cs" />
-    <Compile Include="Extensions\System\Drawing\BitmapExtensions.cs" />
-    <Compile Include="Extensions\System\IO\BinaryReaderExtensions.cs" />
-    <Compile Include="Extensions\System\IO\BinaryReaderEx.cs" />
-    <Compile Include="Extensions\System\IO\StreamExtensions.cs" />
     <Compile Include="Extensions\System\Text\StringBuilderExtensions.cs" />
-    <Compile Include="Extensions\System\Windows\Forms\MessageBoxEx.cs" />
-    <Compile Include="Extensions\System\XML\XMLExtensions.cs" />
-    <Compile Include="Helpers\Driv3r.cs" />
-    <Compile Include="Helpers\Memory.cs" />
-    <Compile Include="Models\Formats\VehiclesFile.cs" />
+    <Compile Include="Extensions\System\TypeExtensions.cs" />
+    <Compile Include="Games\Driv3r.cs" />
+    <Compile Include="Games\DriverPL.cs" />
+    <Compile Include="IO\Detail\IDetail.cs" />
+    <Compile Include="IO\Detail\IDetailProvider.cs" />
+    <Compile Include="IO\Detail\Types\PlatformType.cs" />
+    <Compile Include="IO\Formats\LocaleReader.cs" />
+    <Compile Include="IO\Formats\MECFile.cs" />
+    <Compile Include="IO\TempFile.cs" />
+    <Compile Include="Math\Matrix.cs" />
+    <Compile Include="Math\Vector.cs" />
+    <Compile Include="Math\ColorRGBA.cs" />
     <Compile Include="Models\Formats\ModelFile.cs" />
-    <Compile Include="IO\ObjFile.cs" />
-    <Compile Include="Matrix.cs" />
-    <Compile Include="Models\Hierarchies\HierarchyData.cs" />
-    <Compile Include="Models\Hierarchies\VehicleHierarchyData.cs" />
-    <Compile Include="Models\Hierarchies\BulletHolder.cs" />
-    <Compile Include="Models\Hierarchies\VehiclePart.cs" />
-    <Compile Include="Models\Hierarchies\VehiclePartTypes.cs" />
-    <Compile Include="Models\Materials\MaterialHandle.cs" />
+    <Compile Include="Models\Formats\Textures\StandaloneTextureData.cs" />
+    <Compile Include="Models\Formats\Textures\StandaloneTextureFile.cs" />
+    <Compile Include="Models\Geometry\Buffers\IndexBuffer.cs" />
+    <Compile Include="Models\Geometry\Buffers\VertexBuffer.cs" />
+    <Compile Include="Models\Geometry\Vertices\Vertex.cs" />
+    <Compile Include="Models\Geometry\Vertices\VertexData.cs" />
+    <Compile Include="Models\Geometry\Vertices\VertexDataType.cs" />
+    <Compile Include="Models\Geometry\Vertices\VertexDeclInfo.cs" />
+    <Compile Include="Models\Geometry\Vertices\VertexDeclaration.cs" />
+    <Compile Include="Models\Geometry\Vertices\VertexUsageType.cs" />
+    <Compile Include="Models\Hierarchies\HierarchyInfo.cs" />
+    <Compile Include="Models\Hierarchies\HierarchyType.cs" />
+    <Compile Include="Models\Hierarchies\PhysicsInfo.cs" />
+    <Compile Include="Models\Hierarchies\Props\PropHierarchyInfo.cs" />
+    <Compile Include="Models\Hierarchies\Vehicles\BulletHolder.cs" />
+    <Compile Include="Models\Hierarchies\Vehicles\VehicleHierarchyData.cs" />
+    <Compile Include="Models\Hierarchies\Vehicles\VehicleHierarchyInfo.cs" />
+    <Compile Include="Models\Hierarchies\Vehicles\VehiclePart.cs" />
+    <Compile Include="Models\Hierarchies\Vehicles\VehiclePartTypes.cs" />
+    <Compile Include="Models\Lod.cs" />
+    <Compile Include="Models\LodInstance.cs" />
     <Compile Include="Models\Materials\MaterialData.cs" />
+    <Compile Include="Models\Materials\MaterialHandle.cs" />
     <Compile Include="Models\Materials\MaterialManager.cs" />
     <Compile Include="Models\Materials\SubstanceData.cs" />
     <Compile Include="Models\Materials\TextureData.cs" />
     <Compile Include="Models\Materials\TextureFlags.cs" />
-    <Compile Include="Models\ModelPackages\Details\ModelPackageData.cs" />
-    <Compile Include="Models\ModelPackages\Details\MaterialPackageData.cs" />
-    <Compile Include="Models\ModelPackages\PackageManager.cs" />
-    <Compile Include="Models\ModelPackages\ModelPackagePC.cs" />
-    <Compile Include="Configuration\RegistryConfiguration.cs" />
-    <Compile Include="Models\Formats\StandaloneTextureData.cs" />
-    <Compile Include="Models\Formats\StandaloneTextureFile.cs" />
-    <Compile Include="Models\VertexBuffer.cs" />
+    <Compile Include="Models\Model.cs" />
+    <Compile Include="Models\Packages\Details\MaterialPackageData.cs" />
+    <Compile Include="Models\Packages\Details\ModelPackageData.cs" />
+    <Compile Include="Models\Packages\ModelPackagePC.cs" />
+    <Compile Include="Models\Packages\ModelPackagePS2.cs" />
+    <Compile Include="Models\Packages\ModelPackageResource.cs" />
+    <Compile Include="Models\Packages\PackageManager.cs" />
+    <Compile Include="Models\PrimitiveType.cs" />
+    <Compile Include="Models\SubModel.cs" />
     <Compile Include="Spooling\ChunkSchema.cs" />
-    <Compile Include="Spooling\Templates.cs" />
+    <Compile Include="Spooling\Extensions\SpoolableResourceExtensions.cs" />
+    <Compile Include="Spooling\Extensions\SpoolerExtensions.cs" />
     <Compile Include="Spooling\FileChunker.cs" />
     <Compile Include="Spooling\ISpoolableResource.cs" />
     <Compile Include="Spooling\SpoolableBuffer.cs" />
@@ -112,19 +118,12 @@
     <Compile Include="Spooling\SpoolableResourceFactory.cs" />
     <Compile Include="Spooling\Spooler.cs" />
     <Compile Include="Spooling\SpoolerCollection.cs" />
-    <Compile Include="TempFile.cs" />
-    <Compile Include="VectorTypes.cs" />
-    <Compile Include="Models\ModelPackages\ModelPackagePS2.cs" />
-    <Compile Include="Models\PrimitiveType.cs" />
-    <Compile Include="Models\IndexData.cs" />
-    <Compile Include="Models\SubModel.cs" />
-    <Compile Include="Models\LodInstance.cs" />
-    <Compile Include="Models\ModelPackages\ModelPackageResource.cs" />
-    <Compile Include="Models\Lod.cs" />
-    <Compile Include="Models\Model.cs" />
-    <Compile Include="Models\Vertex.cs" />
-    <Compile Include="Models\VertexData.cs" />
+    <Compile Include="Spooling\Templates.cs" />
+    <Compile Include="Utilities\DDSUtils.cs" />
+    <Compile Include="Utilities\StringHelper.cs" />
+    <Compile Include="Vehicles\Formats\VehiclesFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

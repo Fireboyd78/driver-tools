@@ -9,11 +9,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows;
-using System.Windows.Forms;
-using System.Windows.Media.Imaging;
-
-using FreeImageAPI;
 
 namespace DSCript.Models
 {

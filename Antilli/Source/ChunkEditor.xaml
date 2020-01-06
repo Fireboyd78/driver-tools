@@ -7,7 +7,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="{Binding WindowTitle, FallbackValue='Chunk Editor'}" Height="525" Width="600" MinWidth="550">
     <at:ObservableWindow.Resources>
-        <dsc:SpoolerMagicConverter x:Key="MagicConverter"/>
+        <at:SpoolerMagicConverter x:Key="MagicConverter"/>
         <CompositeCollection x:Key="CMenu" x:Shared="False">
             <MenuItem Header="Export" Click="ExportSpooler" IsEnabled="{Binding IsChunkFileOpen}"/>
             <Separator/>

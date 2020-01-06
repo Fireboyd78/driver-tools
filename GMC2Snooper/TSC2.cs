@@ -178,6 +178,8 @@ namespace GMC2Snooper
 
         public int K { get; set; }
 
+        public int Flags { get; set; }
+
         public int DataOffset { get; set; }
         
         public List<int> CLUTs { get; set; }

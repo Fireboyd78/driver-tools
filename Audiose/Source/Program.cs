@@ -668,7 +668,7 @@ namespace Audiose
                                 sample.FileName = $"{sampleName}.wav";
                             }
 
-                            smpXml.AddAttribute("File", sample.FileName);
+                            smpXml.SetAttribute("File", sample.FileName);
                         }
                         else
                         {

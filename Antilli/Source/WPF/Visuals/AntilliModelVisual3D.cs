@@ -50,16 +50,17 @@ namespace Antilli
             {
                 var pos = vertex.Position;
                 var nor = vertex.Normal;
-                
+                var uv = vertex.UV;
+
                 if (tweenVertices)
                 {
                     pos = (pos + (vertex.PositionW * TweenFactor));
                     nor = (nor + (vertex.NormalW * TweenFactor));
                 }
 
-                positions.Add(pos);
-                normals.Add(nor);
-                textureCoordinates.Add(vertex.UV);
+                positions.Add(new Point3D(pos.X, pos.Y, pos.Z));
+                normals.Add(new Vector3D(nor.X, nor.Y, nor.Z));
+                textureCoordinates.Add(new Point(uv.X, uv.Y));
             }
 
             return new MeshGeometry3D() {
@@ -238,7 +239,7 @@ namespace Antilli
                     var texInfo = substance.Textures[texIdx];
 
                     var cTex = TextureCache.GetTexture(texInfo);
-                    var texMap = cTex.Bitmap;
+                    var texMap = (cTex != null) ? cTex.Bitmap : null;
 
                     if (texMap == null)
                     {
@@ -293,6 +294,13 @@ namespace Antilli
 
                         IsEmissive = emissive;
                         HasTransparency = alpha;
+                    }
+
+                    if (cTex != null)
+                    {
+                        // since WPF uses BitmapSource for the actual texture,
+                        // we can let the texture cache know we're done with it
+                        TextureCache.Release(cTex);
                     }
                 }
                 else

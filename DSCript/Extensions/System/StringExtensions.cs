@@ -45,20 +45,5 @@ namespace System
                 cols[0],
                 String.Format("{0," + (((cols[0].Length >= column) ? column + 2 : column) - cols[0].Length) + "}", cols[1]));
         }
-
-        public static string Merge(this string[] @this)
-        {
-            return Merge(@this, 0);
-        }
-
-        public static string Merge(this string[] @this, int index)
-        {
-            var builder = new StringBuilder();
-            
-            for (int s = index; s < @this.Length; s++)
-                builder.Append(@this[s]);
-
-            return builder.ToString();
-        }
     }
 }

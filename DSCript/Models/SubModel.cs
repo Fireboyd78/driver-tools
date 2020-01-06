@@ -8,12 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
-
-using DSCript;
-
 namespace DSCript.Models
 {
     public struct IndexedPrimitive

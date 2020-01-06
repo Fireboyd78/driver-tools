@@ -269,7 +269,7 @@ namespace Antilli
                 AT.CurrentState.ModelFile.Dispose();
                 AT.CurrentState.ModelFile = null;
 
-                TextureCache.Flush();
+                TextureCache.Flush(true);
                 PackageManager.Clear();
 
                 Viewer.ClearModels();
@@ -485,12 +485,22 @@ namespace Antilli
 
             SetCurrentFile(filename);
 
+            // pre-cache all textures from the package manager (like an idiot)
+            foreach (var package in PackageManager.EnumerateAll())
+            {
+                foreach (var texture in package.Textures)
+                {
+                    // make a non-freeable reference so it won't get freed by accident
+                    TextureCache.GetTexture(texture);
+                }
+            }
+
             if (CurrentModelFile.HasModels)
             {
                 Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
                 Packages.SelectedIndex = 0;
             }
-
+            
             timer.Stop();
 
             AT.Log($"Loaded model file in {timer.ElapsedMilliseconds}ms.");
