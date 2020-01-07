@@ -130,8 +130,8 @@ namespace Antilli
         /// <returns>The cached version of the texture</returns>
         public static Texture GetTexture(ITextureData texture)
         {
-            Texture cachedTexture;
-
+            Texture cachedTexture = null;
+            
             var idx = GetCachedTextureIndex(texture);
 
             if (idx == -1)
