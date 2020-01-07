@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Audiose")]
-[assembly: AssemblyCopyright("Copyright © Mark Ludwig, 2017")]
+[assembly: AssemblyCopyright("Copyright (C) 2017-2020 Fireboyd78")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

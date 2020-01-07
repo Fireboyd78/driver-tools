@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("ZartexV2")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyCopyright("Copyright (C) 2015-2020 Fireboyd78")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

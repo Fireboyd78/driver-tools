@@ -16,7 +16,7 @@ using System.Resources;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("IMGRipper")]
-[assembly: AssemblyCopyright("Copyright © 2016 Fireboyd78")]
+[assembly: AssemblyCopyright("Copyright © 2016-2020 Fireboyd78")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

@@ -11,7 +11,7 @@ using System.Resources;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("libDSC")]
-[assembly: AssemblyCopyright("Copyright (C) 2014-2019 Fireboyd78")]
+[assembly: AssemblyCopyright("Copyright (C) 2013-2020 Fireboyd78")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -33,6 +33,6 @@ using System.Resources;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("7.0.*")]
-[assembly: AssemblyFileVersion("7.0.0.0")]
+[assembly: AssemblyVersion("8.0.*")]
+[assembly: AssemblyFileVersion("8.0.0.0")]
 [assembly: NeutralResourcesLanguage("en-US")]
