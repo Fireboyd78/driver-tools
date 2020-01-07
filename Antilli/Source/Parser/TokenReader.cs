@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -7,168 +6,36 @@ using System.Text;
 
 namespace Antilli.Parser
 {
-    public static class Tokenizer
-    {
-        public static readonly char CommentLineKey = '#';
-
-        public static bool IsCommentLine(char value)
-        {
-            return (value == CommentLineKey);
-        }
-
-        public static bool IsCommentLine(string value)
-        {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value), "Argument cannot be null.");
-
-            return IsCommentLine(value[0]);
-        }
-        
-        public static string[] SplitTokens(string str)
-        {
-            if (str == null)
-                throw new ArgumentNullException(nameof(str), "Argument cannot be null.");
-            
-            if (str.Length < 1)
-                return new[] { str };
-
-            var values = new List<String>(32);
-
-            var start = 0;
-            var length = 0;
-
-            var stringOpen = false;
-            var stringEscaped = false;
-
-            var commentOpen = false;
-
-            for (int i = 0; i < str.Length; i++)
-            {
-                var c = str[i];
-                var flags = CharUtils.GetCharFlags(c);
-
-                // break on null
-                if ((flags & CharacterTypeFlags.Null) != 0)
-                    break;
-
-                if ((flags & CharacterTypeFlags.TabOrWhitespace) != 0)
-                {
-                    // process tabs/whitespace outside of strings/comments
-                    if (!stringOpen)
-                    {
-                        if (!commentOpen)
-                        {
-                            if (length > 0)
-                                values.Add(str.Substring(start, length));
-
-                            start = (i + 1); // "ABC|  DEF" -> "ABC | DEF" -> "ABC |DEF"
-                            length = 0;
-                        }
-                        continue;
-                    }
-                }
-
-                // check for inline comments
-                if (IsCommentLine(c))
-                {
-                    commentOpen = true;
-                    continue;
-                }
-
-                if (commentOpen)
-                    continue;
-                
-                if ((flags & CharacterTypeFlags.ExtendedOperators) != 0)
-                {
-                    if (!stringOpen)
-                    {
-                        if (length > 0)
-                            values.Add(str.Substring(start, length));
-
-                        values.Add(c.ToString());
-
-                        start = (i + 1);
-                        length = 0;
-
-                        continue;
-                    }
-                }
-
-                // increase string length
-                ++length;
-
-                if ((flags & CharacterTypeFlags.Quote) != 0)
-                {
-                    if (stringOpen)
-                    {
-                        if (stringEscaped)
-                        {
-                            stringEscaped = false;
-                        }
-                        else
-                        {
-                            // complete the string (include last quote)
-                            if (length > 0)
-                                values.Add(str.Substring(start, length + 1));
-
-                            start = (i + 1); // "ABC|" -> "ABC"|
-                            length = 0;
-
-                            stringOpen = false;
-                        }
-                    }
-                    else
-                    {
-                        start = i; // |"ABC"
-                        length = 0;
-
-                        stringOpen = true;
-                    }
-                }
-                else if (stringEscaped)
-                {
-                    // not an escape sequence
-                    stringEscaped = false;
-                    continue;
-                }
-
-                if (stringOpen && (c == '\\'))
-                {
-                    stringEscaped = true;
-                    continue;
-                }
-            }
-
-            // final add
-            if (length > 0 && !commentOpen)
-                values.Add(str.Substring(start, length));
-
-            return values.ToArray();
-        }
-    }
-
     public class TokenReader : IDisposable
     {
-        private int m_line = 0;
+        protected int m_Line = 0;
+        protected int m_TokenIndex = 0;
 
-        private int m_tokenIndex = 0;
-        private string[] m_tokenBuffer;
-        
+        protected string[] m_TokenBuffer;
+
+        protected StreamReader Reader { get; set; }
+
         protected bool IsBufferEmpty
         {
-            get { return (m_tokenBuffer == null || (m_tokenBuffer.Length == 0)); }
+            get { return (m_TokenBuffer == null || (m_TokenBuffer.Length == 0)); }
         }
-        
-        protected StreamReader Reader { get; set; }
+
+        public void Dispose()
+        {
+            if (Reader != null)
+                Reader.Dispose();
+
+            m_TokenBuffer = null;
+        }
 
         public int CurrentLine
         {
-            get { return m_line; }
+            get { return m_Line; }
         }
 
         public bool EndOfLine
         {
-            get { return (m_tokenBuffer != null) ? (m_tokenIndex >= m_tokenBuffer.Length) : true; }
+            get { return (m_TokenBuffer != null) ? (m_TokenIndex >= m_TokenBuffer.Length) : true; }
         }
 
         public bool EndOfStream
@@ -184,20 +51,14 @@ namespace Antilli.Parser
         
         public int TokenIndex
         {
-            get { return m_tokenIndex; }
+            get { return m_TokenIndex; }
         }
 
         public int TokenCount
         {
-            get { return (m_tokenBuffer != null) ? m_tokenBuffer.Length : -1;}
+            get { return (m_TokenBuffer != null) ? m_TokenBuffer.Length : -1;}
         }
         
-        public void Dispose()
-        {
-            if (Reader != null)
-                Reader.Dispose();
-        }
-
         /// <summary>
         /// Reads in the tokens on the next line and returns the number of tokens loaded.
         /// </summary>
@@ -208,7 +69,7 @@ namespace Antilli.Parser
             {
                 // read in the next line of tokens
                 var line = Reader.ReadLine();
-                var startLine = ++m_line;
+                var startLine = ++m_Line;
                 
                 if (String.IsNullOrWhiteSpace(line))
                     continue;
@@ -218,11 +79,11 @@ namespace Antilli.Parser
                     continue;
 
                 // split them up into the token buffer and reset the index
-                m_tokenBuffer = Tokenizer.SplitTokens(line);
-                m_tokenIndex = 0;
+                m_TokenBuffer = Tokenizer.SplitTokens(line);
+                m_TokenIndex = 0;
 
                 // return number of tokens brought in
-                return m_tokenBuffer.Length;
+                return m_TokenBuffer.Length;
             }
 
             // end of stream
@@ -233,7 +94,7 @@ namespace Antilli.Parser
         {
             // verifies index into the buffer is accessible
             if (!IsBufferEmpty)
-                return (tokenIndex < m_tokenBuffer.Length);
+                return (tokenIndex < m_TokenBuffer.Length);
 
             return false;
         }
@@ -248,7 +109,7 @@ namespace Antilli.Parser
         public string GetToken(int index)
         {
             if (CheckToken(index))
-                return (m_tokenBuffer[index]);
+                return (m_TokenBuffer[index]);
 
             // failed to get token :(
             return null;
@@ -256,16 +117,20 @@ namespace Antilli.Parser
         
         public string PopToken(int offset = 0)
         {
-            m_tokenIndex += offset;
+            m_TokenIndex += offset;
 
             // don't let the user pop too many values
-            if (m_tokenIndex < 0)
+            if (m_TokenIndex < 0)
                 throw new InvalidOperationException("PopToken() -- offset caused negative index, too many values popped!");
             
-            return GetToken(m_tokenIndex++);
+            return GetToken(m_TokenIndex++);
         }
-
-        private string ReadTokenInternal()
+        
+        /// <summary>
+        /// Reads the next valid token from the buffer and increments the token index.
+        /// </summary>
+        /// <returns>The next valid token from the buffer; otherwise, null.</returns>
+        public string ReadToken()
         {
             string token = null;
 
@@ -280,20 +145,9 @@ namespace Antilli.Parser
                     NextLine();
                 }
 
-                token = GetToken(m_tokenIndex++);
+                token = GetToken(m_TokenIndex++);
             }
 
-            return token;
-        }
-        
-        /// <summary>
-        /// Reads the next valid token from the buffer and increments the token index.
-        /// </summary>
-        /// <returns>The next valid token from the buffer; otherwise, null.</returns>
-        public string ReadToken()
-        {
-            var token = ReadTokenInternal();
-            
             return token;
         }
 
@@ -303,22 +157,22 @@ namespace Antilli.Parser
         /// <returns>The next token from the buffer; otherwise, null.</returns>
         public string PeekToken()
         {
-            return GetToken(m_tokenIndex);
+            return GetToken(m_TokenIndex);
         }
 
         public string PeekToken(int offset)
         {
-            return GetToken(m_tokenIndex + offset);
+            return GetToken(m_TokenIndex + offset);
         }
 
         public bool Seek(int offset)
         {
-            m_tokenIndex += offset;
+            m_TokenIndex += offset;
 
-            if (m_tokenIndex < 0)
+            if (m_TokenIndex < 0)
                 throw new InvalidOperationException("Seek() -- offset caused negative index!");
 
-            return CheckToken(m_tokenIndex);
+            return CheckToken(m_TokenIndex);
         }
 
         public int FindPattern(string[] tokens, int index)
@@ -328,16 +182,16 @@ namespace Antilli.Parser
 
             // do not look past the end of the line
             // the user may decide to move to the next line if necessary
-            if (EndOfLine || ((index + tokens.Length) >= m_tokenBuffer.Length))
+            if (EndOfLine || ((index + tokens.Length) >= m_TokenBuffer.Length))
                 return -1;
 
             // index into the tokens we're looking for
             var tokenIndex = 0;
 
             // iterate through the tokens available in the buffer
-            for (int i = index; i < m_tokenBuffer.Length; i++)
+            for (int i = index; i < m_TokenBuffer.Length; i++)
             {
-                if (m_tokenBuffer[i] == tokens[tokenIndex])
+                if (m_TokenBuffer[i] == tokens[tokenIndex])
                 {
                     // stop when the pattern is found
                     if ((tokenIndex + 1) == tokens.Length)
@@ -367,7 +221,7 @@ namespace Antilli.Parser
         
         public int FindNextPattern(string[] tokens)
         {
-            return FindPattern(tokens, m_tokenIndex);
+            return FindPattern(tokens, m_TokenIndex);
         }
 
         public bool MatchToken(string matchToken, string nestedToken)
@@ -382,7 +236,7 @@ namespace Antilli.Parser
             var match = false;
             var token = "";
 
-            while (!match && (token = ReadTokenInternal()) != null)
+            while (!match && (token = ReadToken()) != null)
             {
                 if (token == matchToken)
                 {

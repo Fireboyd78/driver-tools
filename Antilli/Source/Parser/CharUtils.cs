@@ -6,7 +6,7 @@ using System.Text;
 namespace Antilli.Parser
 {
     [Flags]
-    internal enum CharacterTypeFlags : int
+    public enum CharacterTypeFlags : int
     {
         Null = (1 << 0),
 
@@ -43,13 +43,13 @@ namespace Antilli.Parser
         Unknown = (1 << 15),
     }
 
-    internal sealed class CharUtils
+    public static class CharUtils
     {
         // fast lookup
-        internal static bool IsLookupReady = false;
-        internal static int[] LookupTypes = new int[128];
+        private static bool IsLookupReady = false;
+        private static int[] LookupTypes = new int[128];
 
-        internal static void MapLookupTypes()
+        private static void MapLookupTypes()
         {
             // map once
             if (IsLookupReady)
@@ -113,13 +113,13 @@ namespace Antilli.Parser
             IsLookupReady = true;
         }
 
-        internal static CharacterTypeFlags GetCharFlags(int value)
+        public static CharacterTypeFlags GetCharFlags(int value)
         {
             MapLookupTypes();
             return ((value >= 0) && (value <= 127)) ? (CharacterTypeFlags)LookupTypes[value] : CharacterTypeFlags.Unknown;
         }
 
-        internal static bool HasCharFlags(int value, CharacterTypeFlags charFlags)
+        public static bool HasCharFlags(int value, CharacterTypeFlags charFlags)
         {
             return ((GetCharFlags(value) & charFlags) != 0);
         }

@@ -9,22 +9,10 @@ namespace Antilli.Parser
 {
     public class TokenWriter : IDisposable
     {
-        private int m_line = 0;
-        private int m_tokenIndex = 0;
+        protected int m_Line = 0;
+        protected int m_TokenIndex = 0;
 
         protected StreamWriter Writer { get; set; }
-
-        public int CurrentLine
-        {
-            get { return m_line; }
-        }
-
-        public int TokenIndex
-        {
-            get { return m_tokenIndex; }
-        }
-
-        public int IndentLevel { get; set; }
 
         public void Dispose()
         {
@@ -35,22 +23,34 @@ namespace Antilli.Parser
             }
         }
 
-        public void NextLine()
+        public int CurrentLine
+        {
+            get { return m_Line; }
+        }
+
+        public int TokenIndex
+        {
+            get { return m_TokenIndex; }
+        }
+
+        public int IndentLevel { get; set; }
+        
+        public void AppendLine()
         {
             Writer.WriteLine();
-            m_tokenIndex = -1;
+            m_TokenIndex = -1;
         }
 
         public void Write(string token)
         {
-            if (m_tokenIndex == -1)
+            if (m_TokenIndex == -1)
             {
                 for (int i = 0; i < IndentLevel; i++)
                     Writer.Write('\t');
 
-                m_tokenIndex = 0;
+                m_TokenIndex = 0;
             }
-            else if (m_tokenIndex > 0)
+            else if (m_TokenIndex > 0)
             {
                 Writer.Write(' ');
             }
@@ -61,7 +61,7 @@ namespace Antilli.Parser
         public void WriteLine(string token)
         {
             Write(token);
-            NextLine();
+            AppendLine();
         }
         
         public TokenWriter(Stream stream)
