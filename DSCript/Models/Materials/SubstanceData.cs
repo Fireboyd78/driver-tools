@@ -140,18 +140,19 @@ namespace DSCript.Models
     [Flags]
     public enum SubstanceExtraFlags : int
     {
-        FLAG_1              = (1 << 0),
-        BumpMap             = (1 << 1),
+        FLAG_1                      = (1 << 0),
+        BumpMap                     = (1 << 1),
 
-        ColorMask           = (1 << 2),
-        Damage              = (1 << 3),
-        DamageWithColorMask = (1 << 4),
+        ColorMask                   = (1 << 2),
+        Damage                      = (1 << 3),
+        DamageAndColorMask          = (Damage | ColorMask),
+        DamageAndColorMaskAlphaMaps = (1 << 4),
+        
+        FLAG_32                     = (1 << 5),
+        FLAG_64                     = (1 << 6),
+        FLAG_128                    = (1 << 7),
 
-        FLAG_32             = (1 << 5),
-        FLAG_64             = (1 << 6),
-        FLAG_128            = (1 << 7),
-
-        ValidMaskBits       = (ColorMask | Damage | DamageWithColorMask),
+        ValidMaskBits               = (ColorMask | Damage | DamageAndColorMaskAlphaMaps),
     }
 
     public interface ISubstanceDataPC

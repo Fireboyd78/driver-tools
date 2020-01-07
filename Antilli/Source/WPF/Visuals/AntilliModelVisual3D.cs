@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -191,7 +192,10 @@ namespace Antilli
         protected virtual void OnUseBlendWeightsChanged()
         {
             if (Mesh != null)
+            {
                 OnMeshChanged();
+                UpdateMaterial();
+            }
         }
 
         protected virtual void OnOpacityChanged()
@@ -230,10 +234,14 @@ namespace Antilli
 
                     if (UseBlendWeights)
                     {
-                        // ColorMask = 0
-                        // Damage = 1
-                        // DamageWithColorMask = 2
-                        texIdx = (((int)substance.ExtraFlags >> 3) & 3);
+                        if (eFlags.HasFlag(SubstanceExtraFlags.DamageAndColorMaskAlphaMaps))
+                        {
+                            texIdx = 2;
+                        }
+                        else if ((eFlags & (SubstanceExtraFlags.DamageAndColorMask)) != 0)
+                        {
+                            texIdx = 1;
+                        }
                     }
 
                     var texInfo = substance.Textures[texIdx];

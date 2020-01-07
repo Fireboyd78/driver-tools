@@ -915,9 +915,9 @@ namespace Antilli
                             substance.Flags |= 0x180;
                         }
 
-                        if (substance.ExtraFlags == (SubstanceExtraFlags.Damage | SubstanceExtraFlags.ColorMask))
+                        if (substance.ExtraFlags == SubstanceExtraFlags.DamageAndColorMask)
                         {
-                            substance.Type = (int)(SubstanceExtraFlags.DamageWithColorMask) << 8;
+                            substance.Type = (int)(SubstanceExtraFlags.DamageAndColorMaskAlphaMaps) << 8;
 
                             var texA1 = substance.Textures[0];
                             var texA2 = new TextureDataPC() {
