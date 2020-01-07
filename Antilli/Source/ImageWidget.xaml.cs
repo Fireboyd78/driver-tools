@@ -48,7 +48,7 @@ namespace Antilli
         #endregion
         
         string m_contentInfo;
-        BitmapReference m_bitmap;
+        TextureBitmap m_bitmap;
         int m_imageLoadFlags;
         
         public string ContentInfo

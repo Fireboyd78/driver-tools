@@ -24,11 +24,11 @@ namespace Antilli
 {
     public static class TextureCache
     {
-        static List<TextureReference> Cache;
+        static List<Texture> Cache;
 
         static TextureCache()
         {
-            Cache = new List<TextureReference>();
+            Cache = new List<Texture>();
         }
 
         public static void FlushIfNeeded()
@@ -77,7 +77,7 @@ namespace Antilli
                 {
                     Debug.WriteLine($"Cleaning texture cache...");
 
-                    var flushed = new List<TextureReference>();
+                    var flushed = new List<Texture>();
 
                     for (int i = 0; i < nTextures; i++)
                     {
@@ -128,16 +128,16 @@ namespace Antilli
         /// </summary>
         /// <param name="texture">The texture to get a cached version of</param>
         /// <returns>The cached version of the texture</returns>
-        public static TextureReference GetTexture(ITextureData texture)
+        public static Texture GetTexture(ITextureData texture)
         {
-            TextureReference cachedTexture;
+            Texture cachedTexture;
 
             var idx = GetCachedTextureIndex(texture);
 
             if (idx == -1)
             {
                 // initialize the first reference
-                cachedTexture = new TextureReference(texture);
+                cachedTexture = new Texture(texture);
                 cachedTexture.RefCount = 1;
 
                 Cache.Add(cachedTexture);
@@ -156,36 +156,29 @@ namespace Antilli
         /// Informs the cache this texture reference is no longer being used by a previous owner.
         /// </summary>
         /// <param name="reference">The texture reference to release.</param>
-        public static void Release(TextureReference reference)
+        public static void Release(Texture reference)
         {
             if (reference.RefCount > 0)
                 reference.RefCount--;
         }
     }
 
-    public class BitmapReference : IDisposable
+    public class TextureBitmap : IDisposable
     {
-        private static Dictionary<int, BitmapReference> m_BitmapCache 
-            = new Dictionary<int, BitmapReference>();
+        private static Dictionary<int, TextureBitmap> m_BitmapCache 
+            = new Dictionary<int, TextureBitmap>();
 
-        private static Dictionary<BitmapReference, int> m_BitmapLookup
-            = new Dictionary<BitmapReference, int>();
+        private static Dictionary<TextureBitmap, int> m_BitmapLookup
+            = new Dictionary<TextureBitmap, int>();
 
         private IntPtr[] m_hbitmaps = new IntPtr[3];
         private BitmapSource[] m_bitmaps = new BitmapSource[3];
 
         private FIBITMAP m_bitmap;
         private FREE_IMAGE_FORMAT m_format;
-
-        private bool m_CanFreeBitmap;
-
+        
         private int m_width;
         private int m_height;
-        
-        public FIBITMAP Bitmap
-        {
-            get { return m_bitmap; }
-        }
         
         public int Width
         {
@@ -217,17 +210,14 @@ namespace Antilli
                 IntPtr hBitmap = m_hbitmaps[i];
 
                 if (hBitmap != IntPtr.Zero)
-                {
-                    FreeImage.FreeHbitmap(hBitmap);
                     NativeMethods.DeleteObject(hBitmap);
-                }
 
                 m_hbitmaps[i] = IntPtr.Zero;
                 m_bitmaps[i] = null;
             }
-
-            if (m_CanFreeBitmap)
-                m_bitmap.Unload();
+            
+            if (!m_bitmap.IsNull)
+                FreeImage.UnloadEx(ref m_bitmap);
         }
 
         public bool Update()
@@ -235,50 +225,64 @@ namespace Antilli
             if (m_bitmap.IsNull)
                 return false;
 
-            //--var bmap_a = FreeImage.GetChannel(m_bitmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
-            //--
-            //--for (int i = 0; i < 3; i++)
-            //--{
-            //--    IntPtr hBitmap = m_hbitmaps[i];
-            //--
-            //--    if (hBitmap != IntPtr.Zero)
-            //--        FreeImage.FreeHbitmap(hBitmap);
-            //--
-            //--    var b = (i > 1) ? bmap_a : m_bitmap;
-            //--    var bmap = ((i & 1) != 0) ? FreeImage.ConvertTo32Bits(b) : FreeImage.ConvertTo24Bits(b);
-            //--    
-            //--    m_hbitmaps[i] = FreeImage.GetHbitmap(bmap, IntPtr.Zero, false);
-            //--    bmap.Unload();
-            //--}
-            //--
-            //--bmap_a.Unload();
             return true;
         }
 
-        public IntPtr GetHBitmap(BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
+        public bool GetHBitmap(out IntPtr hBitmap, BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
         {
-            var index = (int)flags;
-            var hBitmap = m_hbitmaps[index];
-
-            if (hBitmap == IntPtr.Zero)
+            if (m_bitmap.IsNull)
             {
-                var bmap_a = FreeImage.GetChannel(m_bitmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
-
-                var b = flags.HasFlag(BitmapSourceLoadFlags.AlphaMask)
-                    ? bmap_a
-                    : m_bitmap;
-
-                var bmap = flags.HasFlag(BitmapSourceLoadFlags.Transparency)
-                    ? FreeImage.ConvertTo32Bits(b)
-                    : FreeImage.ConvertTo24Bits(b);
-
-                hBitmap = FreeImage.GetHbitmap(bmap, IntPtr.Zero, true);
-                m_hbitmaps[index] = hBitmap;
-
-                bmap_a.Unload();
+                hBitmap = IntPtr.Zero;
+                return false;
             }
 
-            return hBitmap;
+            var index = (int)flags;
+            var dib = m_hbitmaps[index];
+            
+            if (dib == IntPtr.Zero)
+            {
+                var image = m_bitmap;
+                var unload = false;
+                
+                if (flags.HasFlag(BitmapSourceLoadFlags.AlphaMask))
+                {
+                    image = FreeImage.GetChannel(m_bitmap, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+
+                    if (image.IsNull)
+                    {
+                        // that didn't work :(
+                        image = m_bitmap;
+                    }
+                    else
+                    {
+                        unload = true;
+                    }
+                }
+                
+                var bmap = flags.HasFlag(BitmapSourceLoadFlags.Transparency)
+                    ? FreeImage.ConvertTo32Bits(image)
+                    : FreeImage.ConvertTo24Bits(image);
+
+                try
+                {
+                    dib = FreeImage.GetHbitmap(bmap, IntPtr.Zero, false);
+                    m_hbitmaps[index] = dib;
+
+                    FreeImage.UnloadEx(ref bmap);
+
+                    if (unload)
+                        FreeImage.UnloadEx(ref image);
+                }
+                catch (Exception)
+                {
+                    // silently fail
+                    hBitmap = IntPtr.Zero;
+                    return false;
+                }
+            }
+
+            hBitmap = dib;
+            return true;
         }
         
         public BitmapSource GetBitmapSource(BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
@@ -286,39 +290,43 @@ namespace Antilli
             if (m_bitmap.IsNull)
                 return null;
 
-            var result = m_bitmaps[(int)flags];
+            var index = (int)flags;
+            var result = m_bitmaps[index];
 
             if (result == null)
             {
-                var hbitmap = GetHBitmap(flags);
-
-                try
+                var hBitmap = IntPtr.Zero;
+                
+                if (GetHBitmap(out hBitmap, flags))
                 {
-                    result = Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                        hbitmap,
-                        IntPtr.Zero,
-                        Int32Rect.Empty,
-                        BitmapSizeOptions.FromEmptyOptions());
+                    try
+                    {
+                        result = Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                            hBitmap,
+                            IntPtr.Zero,
+                            Int32Rect.Empty,
+                            BitmapSizeOptions.FromEmptyOptions());
 
-                    result.Freeze();
+                        result.Freeze();
 
-                    m_bitmaps[(int)flags] = result;
-                }
-                catch (Win32Exception)
-                {
-                    result = null;
+                        m_bitmaps[index] = result;
+                    }
+                    catch (Win32Exception)
+                    {
+                        result = null;
+                    }
                 }
             }
 
             return result;
         }
 
-        public static BitmapReference Create(byte[] buffer)
+        public static TextureBitmap Create(byte[] buffer)
         {
             if ((buffer == null) || (buffer.Length == 0))
                 return null;
 
-            BitmapReference result = null;
+            TextureBitmap result = null;
             
             var hash = (int)Memory.GetCRC32(buffer);
 
@@ -330,7 +338,7 @@ namespace Antilli
 
             try
             {
-                result = new BitmapReference(ptr, buffer.Length);
+                result = new TextureBitmap(ptr, buffer.Length);
 
                 // make sure it initializes properly
                 if (result.Update())
@@ -356,7 +364,7 @@ namespace Antilli
             return result;
         }
         
-        protected BitmapReference(IntPtr hImage, int size)
+        protected TextureBitmap(IntPtr hImage, int size)
         {
             var memory = FIMEMORY.Zero;
 
@@ -382,7 +390,7 @@ namespace Antilli
             }
         }
 
-        protected BitmapReference(Stream stream)
+        protected TextureBitmap(Stream stream)
         {
             try
             {
@@ -397,18 +405,13 @@ namespace Antilli
                 Dispose();
             }
         }
-
-        ~BitmapReference()
-        {
-            Dispose();
-        }
     }
     
-    public class TextureReference : IDisposable
+    public class Texture : IDisposable
     {
         internal int RefCount { get; set; }
 
-        BitmapReference m_bitmap = null;
+        TextureBitmap m_bitmap = null;
         ITextureData m_textureData = null;
         
         public ITextureData Data
@@ -416,12 +419,12 @@ namespace Antilli
             get { return m_textureData; }
         }
 
-        public BitmapReference Bitmap
+        public TextureBitmap Bitmap
         {
             get
             {
                 if (m_bitmap == null)
-                    m_bitmap = BitmapReference.Create(m_textureData.Buffer);
+                    m_bitmap = TextureBitmap.Create(m_textureData.Buffer);
 
                 return m_bitmap;
             }
@@ -439,7 +442,7 @@ namespace Antilli
 
             if ((buffer != null) && (buffer.Length != 0))
             {
-                m_bitmap = BitmapReference.Create(buffer);
+                m_bitmap = TextureBitmap.Create(buffer);
 
                 if (m_bitmap != null)
                 {
@@ -466,15 +469,18 @@ namespace Antilli
 
             if (m_textureData != null)
                 m_textureData = null;
+
+            // finalizer doesn't serve a purpose anymore
+            GC.SuppressFinalize(this);
         }
 
-        internal TextureReference(ITextureData texture)
+        internal Texture(ITextureData texture)
         {
             m_textureData = texture;
             m_bitmap = null;
         }
 
-        ~TextureReference()
+        ~Texture()
         {
             if (RefCount < 1)
                 Dispose();

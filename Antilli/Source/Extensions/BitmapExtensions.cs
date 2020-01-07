@@ -14,7 +14,7 @@ using System.Windows.Media.Imaging;
 
 using Interop = System.Windows.Interop;
 
-namespace System.Drawing
+namespace Antilli
 {
     public static class BitmapExtensions
     {
@@ -23,19 +23,25 @@ namespace System.Drawing
         /// <summary>
         /// Converts a <see cref="System.Drawing.Bitmap"/> into a WPF <see cref="BitmapSource"/>.
         /// </summary>
-        /// <remarks>Uses GDI to do the conversion. Hence the call to the marshalled DeleteObject.
+        /// <remarks>
+        /// Uses GDI to do the conversion. Hence the call to the marshalled DeleteObject.
         /// </remarks>
         /// <param name="source">The source bitmap.</param>
+        /// <param name="flags">The flags to use when loading the bitmap.</param>
         /// <returns>A BitmapSource</returns>
-        public static BitmapSource ToBitmapSource(this Bitmap source)
+        public static BitmapSource ToBitmapSource(this Bitmap source, BitmapSourceLoadFlags flags = BitmapSourceLoadFlags.Default)
         {
-            BitmapSource bitSrc = null;
+            BitmapSource result = null;
 
-            IntPtr hBitmap = source.GetHbitmap();
+            var color = (flags.HasFlag(BitmapSourceLoadFlags.Transparency))
+                            ? Color.Transparent
+                            : Color.Black;
+            
+            IntPtr hBitmap = source.GetHbitmap(color);
 
             try
             {
-                bitSrc = Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                result = Interop.Imaging.CreateBitmapSourceFromHBitmap(
                     hBitmap,
                     IntPtr.Zero,
                     Int32Rect.Empty,
@@ -43,14 +49,14 @@ namespace System.Drawing
             }
             catch (Win32Exception)
             {
-                bitSrc = null;
+                result = null;
             }
             finally
             {
                 NativeMethods.DeleteObject(hBitmap);
             }
 
-            return bitSrc;
+            return result;
         }
     }
 }

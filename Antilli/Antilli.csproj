@@ -76,7 +76,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Source\Extensions\BitmapExtensions.cs" />
-    <Compile Include="Source\Extensions\FreeImageAPI\FIBITMAPExtensions.cs" />
     <Compile Include="Source\Models\Formats\COLLADA\COLLADA-DataFlow.cs" />
     <Compile Include="Source\Models\Formats\COLLADA\FX\COLLADA-Effects.cs" />
     <Compile Include="Source\Models\Formats\COLLADA\COLLADA-Extensibility.cs" />

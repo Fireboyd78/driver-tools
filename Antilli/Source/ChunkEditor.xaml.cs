@@ -456,13 +456,17 @@ namespace Antilli
             var fibitmap = BitmapHelper.GetFIBITMAP(((SpoolableBuffer)CurrentSpooler).GetBuffer());
             var fibitmap24 = FreeImage.ConvertTo24Bits(fibitmap);
 
-            var isNull = fibitmap.Unload();
-
-            Debug.Assert(isNull, "MEMORY LEAK!!!", "The FIBITMAP was not released properly!");
-
-            using (var bitmap = fibitmap24.ToBitmap(true))
+            try
             {
-                CurrentImage = (bitmap != null) ? bitmap.ToBitmapSource() : null;
+                using (var bitmap = FreeImage.GetBitmap(fibitmap24))
+                {
+                    CurrentImage = (bitmap != null) ? bitmap.ToBitmapSource() : null;
+                }
+            }
+            finally
+            {
+                FreeImage.UnloadEx(ref fibitmap);
+                FreeImage.UnloadEx(ref fibitmap24);
             }
         }
 
