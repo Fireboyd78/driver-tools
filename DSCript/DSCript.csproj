@@ -107,6 +107,10 @@
     <Compile Include="Models\Packages\PackageManager.cs" />
     <Compile Include="Models\PrimitiveType.cs" />
     <Compile Include="Models\SubModel.cs" />
+    <Compile Include="Parser\CharUtils.cs" />
+    <Compile Include="Parser\Tokenizer.cs" />
+    <Compile Include="Parser\TokenReader.cs" />
+    <Compile Include="Parser\TokenWriter.cs" />
     <Compile Include="Spooling\ChunkSchema.cs" />
     <Compile Include="Spooling\Extensions\SpoolableResourceExtensions.cs" />
     <Compile Include="Spooling\Extensions\SpoolerExtensions.cs" />

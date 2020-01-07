@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Antilli.Parser
+namespace DSCript.Parser
 {
     public static class Tokenizer
     {

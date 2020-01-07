@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace Antilli.Parser
+namespace DSCript.Parser
 {
     public class TokenWriter : IDisposable
     {

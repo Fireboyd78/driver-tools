@@ -105,10 +105,6 @@
     <Compile Include="Source\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Source\Parser\CharUtils.cs" />
-    <Compile Include="Source\Parser\StringExtensions.cs" />
-    <Compile Include="Source\Parser\TokenReader.cs" />
-    <Compile Include="Source\Parser\TokenWriter.cs" />
     <Compile Include="Source\WPF\Extensions\PointExtensions.cs" />
     <Compile Include="Source\WPF\PropertyItem.cs" />
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Antilli.Parser
+namespace DSCript.Parser
 {
     [Flags]
     public enum CharacterTypeFlags : int
