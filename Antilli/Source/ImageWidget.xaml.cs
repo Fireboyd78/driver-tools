@@ -240,7 +240,7 @@ namespace Antilli
             var tex = textureRef.Data;
             
             var piUID = new PropertyItem("UID", null, $"{tex.UID:X8}") { ReadOnly = true };
-            var piHash = new PropertyItem("Hash", null, $"{tex.Handle:X8}") { ReadOnly = true };
+            var piHash = new PropertyItem("Handle", null, $"{tex.Handle:X8}") { ReadOnly = true };
 
             var piType = new PropertyItem("Type", delegate (string input) {
                 int value = 0;
