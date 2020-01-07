@@ -1355,12 +1355,10 @@ namespace Antilli
             return dialog;
         }
         
-        private void Initialize()
+        public void Initialize()
         {
             Settings.Verify();
             
-            InitializeComponent();
-
             AT.CurrentState.PropertyChanged += (o, e) => {
                 //Debug.WriteLine($">> State change: '{e.PropertyName}'");
                 OnPropertyChanged(e.PropertyName);
@@ -1665,7 +1663,7 @@ namespace Antilli
 
         public MainWindow(string[] args = null)
         {
-            Initialize();
+            InitializeComponent();
         }
     }
 }
