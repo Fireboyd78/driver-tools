@@ -843,7 +843,7 @@ namespace Zartex
 
             node.Properties.BackColor = Color.FromArgb(255, color.R, color.G, color.B);
 
-            if (def.Properties.Count > 4)
+            if ((node.HeaderText.Length > 24) || (def.Properties.Count > 4))
                 node.Width += 100;
 
             flowgraph.AddNode(node);
