@@ -28,45 +28,45 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.Container = new System.Windows.Forms.SplitContainer();
+            this.Dialog = new System.Windows.Forms.SplitContainer();
             this.Header = new System.Windows.Forms.Label();
+            this.Properties = new System.Windows.Forms.FlowLayoutPanel();
             this.nodeOut = new System.Windows.Forms.PictureBox();
             this.nodeIn = new System.Windows.Forms.PictureBox();
-            this.Properties = new System.Windows.Forms.FlowLayoutPanel();
-            ((System.ComponentModel.ISupportInitialize)(this.Container)).BeginInit();
-            this.Container.Panel1.SuspendLayout();
-            this.Container.Panel2.SuspendLayout();
-            this.Container.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.Dialog)).BeginInit();
+            this.Dialog.Panel1.SuspendLayout();
+            this.Dialog.Panel2.SuspendLayout();
+            this.Dialog.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nodeOut)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nodeIn)).BeginInit();
             this.SuspendLayout();
             // 
-            // Container
+            // Dialog
             // 
-            this.Container.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.Dialog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.Container.BackColor = System.Drawing.Color.Black;
-            this.Container.Location = new System.Drawing.Point(18, 0);
-            this.Container.Margin = new System.Windows.Forms.Padding(0);
-            this.Container.Name = "Container";
-            this.Container.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            this.Dialog.BackColor = System.Drawing.Color.Black;
+            this.Dialog.Location = new System.Drawing.Point(18, 0);
+            this.Dialog.Margin = new System.Windows.Forms.Padding(0);
+            this.Dialog.Name = "Dialog";
+            this.Dialog.Orientation = System.Windows.Forms.Orientation.Horizontal;
             // 
-            // Container.Panel1
+            // Dialog.Panel1
             // 
-            this.Container.Panel1.BackColor = System.Drawing.Color.Transparent;
-            this.Container.Panel1.Controls.Add(this.Header);
-            this.Container.Panel1.Padding = new System.Windows.Forms.Padding(1, 1, 1, 0);
+            this.Dialog.Panel1.BackColor = System.Drawing.Color.Transparent;
+            this.Dialog.Panel1.Controls.Add(this.Header);
+            this.Dialog.Panel1.Padding = new System.Windows.Forms.Padding(1, 1, 1, 0);
             // 
-            // Container.Panel2
+            // Dialog.Panel2
             // 
-            this.Container.Panel2.BackColor = System.Drawing.Color.Transparent;
-            this.Container.Panel2.Controls.Add(this.Properties);
-            this.Container.Panel2.Padding = new System.Windows.Forms.Padding(1);
-            this.Container.Size = new System.Drawing.Size(164, 125);
-            this.Container.SplitterDistance = 25;
-            this.Container.SplitterWidth = 1;
-            this.Container.TabIndex = 0;
+            this.Dialog.Panel2.BackColor = System.Drawing.Color.Transparent;
+            this.Dialog.Panel2.Controls.Add(this.Properties);
+            this.Dialog.Panel2.Padding = new System.Windows.Forms.Padding(1);
+            this.Dialog.Size = new System.Drawing.Size(164, 150);
+            this.Dialog.SplitterDistance = 30;
+            this.Dialog.SplitterWidth = 1;
+            this.Dialog.TabIndex = 0;
             // 
             // Header
             // 
@@ -76,10 +76,21 @@
             this.Header.Location = new System.Drawing.Point(1, 1);
             this.Header.Margin = new System.Windows.Forms.Padding(0);
             this.Header.Name = "Header";
-            this.Header.Size = new System.Drawing.Size(162, 24);
+            this.Header.Size = new System.Drawing.Size(162, 29);
             this.Header.TabIndex = 0;
             this.Header.Text = "Logic Node";
             this.Header.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // Properties
+            // 
+            this.Properties.BackColor = System.Drawing.SystemColors.ControlLight;
+            this.Properties.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.Properties.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.25F);
+            this.Properties.Location = new System.Drawing.Point(1, 1);
+            this.Properties.Name = "Properties";
+            this.Properties.Padding = new System.Windows.Forms.Padding(2);
+            this.Properties.Size = new System.Drawing.Size(162, 117);
+            this.Properties.TabIndex = 0;
             // 
             // nodeOut
             // 
@@ -105,17 +116,6 @@
             this.nodeIn.TabIndex = 2;
             this.nodeIn.TabStop = false;
             // 
-            // Properties
-            // 
-            this.Properties.BackColor = System.Drawing.SystemColors.ControlLight;
-            this.Properties.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.Properties.Font = new System.Drawing.Font("Microsoft Sans Serif", 7.25F);
-            this.Properties.Location = new System.Drawing.Point(1, 1);
-            this.Properties.Name = "Properties";
-            this.Properties.Padding = new System.Windows.Forms.Padding(2);
-            this.Properties.Size = new System.Drawing.Size(162, 97);
-            this.Properties.TabIndex = 0;
-            // 
             // NodeWidget
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -124,18 +124,18 @@
             this.BackColor = System.Drawing.Color.Transparent;
             this.Controls.Add(this.nodeIn);
             this.Controls.Add(this.nodeOut);
-            this.Controls.Add(this.Container);
+            this.Controls.Add(this.Dialog);
             this.DoubleBuffered = true;
             this.Name = "NodeWidget";
-            this.Size = new System.Drawing.Size(200, 125);
+            this.Size = new System.Drawing.Size(200, 150);
             this.DoubleClick += new System.EventHandler(this.NodeWidget_DoubleClick);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.NodeWidget_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.NodeWidget_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.NodeWidget_MouseUp);
-            this.Container.Panel1.ResumeLayout(false);
-            this.Container.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.Container)).EndInit();
-            this.Container.ResumeLayout(false);
+            this.Dialog.Panel1.ResumeLayout(false);
+            this.Dialog.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.Dialog)).EndInit();
+            this.Dialog.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.nodeOut)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nodeIn)).EndInit();
             this.ResumeLayout(false);
@@ -144,7 +144,7 @@
 
         #endregion
 
-        private System.Windows.Forms.SplitContainer Container;
+        private System.Windows.Forms.SplitContainer Dialog;
         public System.Windows.Forms.Label Header;
         public System.Windows.Forms.PictureBox nodeOut;
         public System.Windows.Forms.PictureBox nodeIn;

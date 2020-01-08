@@ -30,9 +30,9 @@ namespace Zartex
             
             _links = new List<WireLink>();
 
-            Container.MouseDown += (o, e) => NodeWidget_MouseDown(o, e);
-            Container.MouseDoubleClick += (o, e) => NodeWidget_DoubleClick(o, e);
-            Container.MouseMove += (o, e) => NodeWidget_MouseMove(o, e);
+            Dialog.MouseDown += (o, e) => NodeWidget_MouseDown(o, e);
+            Dialog.MouseDoubleClick += (o, e) => NodeWidget_DoubleClick(o, e);
+            Dialog.MouseMove += (o, e) => NodeWidget_MouseMove(o, e);
 
             Header.MouseDown += (o, e) => NodeWidget_MouseDown(o, e);
             Header.MouseDoubleClick += (o, e) => NodeWidget_DoubleClick(o, e);
