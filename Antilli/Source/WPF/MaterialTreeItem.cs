@@ -13,23 +13,10 @@ namespace Antilli
             "Material",
             "Animation",
         };
+        
+        public string Name { get; }
 
-        protected int Id;
-
-        public string Name
-        {
-            get
-            {
-                var name = $"[{Id}]: {s_MaterialTypes[(int)Material.Type]}";
-                
-                if (Material.Type == MaterialType.Animated)
-                    name = $"{Name} ({Material.Substances.Count()} frames)";
-
-                return name;
-            }
-        }
-
-        public IMaterialData Material { get; private set; }
+        public IMaterialData Material { get; }
 
         public List<SubstanceTreeItem> Substances
         {
@@ -48,8 +35,14 @@ namespace Antilli
 
         public MaterialTreeItem(int id, MaterialDataPC material)
         {
-            Id = id;
             Material = material;
-        }
+
+            var name = s_MaterialTypes[(int)Material.Type];
+
+            if (Material.Type == MaterialType.Animated)
+                name += $" ({Material.Substances.Count()} frames)";
+
+            Name = $"[{id}]: {name}";
+}
     }
 }

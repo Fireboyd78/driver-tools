@@ -208,6 +208,8 @@ namespace Antilli
             ModelFile m_modelFile;
             ModelPackage m_modelPackage;
 
+            bool m_unregisterModelPackage;
+
             bool m_useGlobals;
             bool m_useBlendWeights;
 
@@ -236,10 +238,18 @@ namespace Antilli
 
                     if (m_modelPackage != null)
                     {
+                        if (m_unregisterModelPackage)
+                        {
+                            PackageManager.UnRegister(m_modelPackage);
+                            m_unregisterModelPackage = false;
+                        }
+
                         if (!PackageManager.IsRegistered(m_modelPackage))
                         {
-                            m_modelPackage.FreeModels();
-                            m_modelPackage.FreeMaterials();
+                            if (m_modelPackage.HasModels)
+                                m_modelPackage.FreeModels();
+                            if (m_modelPackage.HasMaterials)
+                                m_modelPackage.FreeMaterials();
                         }
                     }
 
@@ -264,6 +274,12 @@ namespace Antilli
                                 ModelPackage.SkipModelsOnLoad = false;
                             }
                         }
+                    }
+
+                    if (PackageManager.IsRegisterable(m_modelPackage))
+                    {
+                        PackageManager.Register(m_modelPackage);
+                        m_unregisterModelPackage = (m_modelPackage.UID != 0); // stupid hacks
                     }
 
                     NotifyChange("Materials");

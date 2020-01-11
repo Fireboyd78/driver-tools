@@ -208,7 +208,7 @@ namespace Antilli
             var materials = new MaterialGroup();
             var material = Model.Material;
 
-            if ((material == 0) || (material.UID == 0xCCCC))
+            if (material.UID == 0xCCCC)
             {
                 materials.Children.Add(ShadowMaterial);
 

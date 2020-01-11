@@ -36,7 +36,7 @@ namespace DSCript.Models
             //
             Packages.Clear();
         }
-
+        
         public static bool IsRegistered(ModelPackage package)
         {
             if (package == null)
@@ -46,7 +46,20 @@ namespace DSCript.Models
             
             return ReferenceEquals(package, Find(uid));
         }
-        
+
+        public static bool IsRegisterable(ModelPackage package)
+        {
+            if (package == null)
+                return false;
+
+            var uid = package.UID;
+
+            if (IsValidUID(uid))
+                return !Packages.ContainsKey(uid);
+
+            return false;
+        }
+
         public static ModelPackage Find(int uid)
         {
             ModelPackage package = null;
@@ -69,32 +82,48 @@ namespace DSCript.Models
                     Packages.Add(uid, package);
             }
         }
-        
+
+        public static bool Register(ModelPackage package, int uid)
+        {
+            if (Packages.ContainsKey(uid))
+                return false;
+
+            Packages.Add(uid, package);
+            return true;
+        }
+
         public static bool Register(ModelPackage package)
         {
             var uid = package.UID;
 
             if (IsValidUID(uid))
             {
-                if (Packages.ContainsKey(uid))
-                    throw new InvalidOperationException("Cannot register a package more than once.");
+                if (Register(package, uid))
+                    return true;
 
-                Packages.Add(uid, package);
+                throw new InvalidOperationException("Cannot register a package more than once.");
+            }
+
+            return false;
+        }
+
+        public static bool UnRegister(int uid)
+        {
+            if (Packages.ContainsKey(uid))
+            {
+                Packages.Remove(uid);
                 return true;
             }
 
             return false;
         }
-        
+
         public static bool UnRegister(ModelPackage package)
         {
             var uid = package.UID;
 
             if (IsValidUID(uid))
-            {
-                if (Packages.ContainsKey(uid))
-                    Packages.Remove(uid);
-            }
+                return UnRegister(uid);
 
             return false;
         }

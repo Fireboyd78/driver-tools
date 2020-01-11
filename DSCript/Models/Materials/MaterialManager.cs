@@ -29,7 +29,7 @@ namespace DSCript.Models
             //
             // Null Material
             //
-            if ((material == 0) || (material == 0xCCCCCCCC))
+            if (material == 0xCCCCCCCC)
                 return -3;
 
             // material is local to its model package?

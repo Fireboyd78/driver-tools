@@ -107,8 +107,8 @@
                         <TextBlock Text="{Binding Name}" Tag="{Binding Model}">
                             <TextBlock.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Path=Model.Children[0].Material}"/>
-                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Path=Model.Children[0].Material}"/>
+                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Path=Model.Children[0].Model}"/>
+                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Path=Model.Children[0].Model}"/>
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
                         </TextBlock>
@@ -122,8 +122,8 @@
                         <TextBlock Text="Model">
                             <TextBlock.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Material}"/>
-                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Material}"/>
+                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Model}"/>
+                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Model}"/>
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
                         </TextBlock>

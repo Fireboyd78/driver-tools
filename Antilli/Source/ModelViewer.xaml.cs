@@ -274,42 +274,55 @@ namespace Antilli
             }
         }
 
+        private bool FindMaterial(SubModel model, out IMaterialData material)
+        {
+            var package = model.ModelPackage;
+            
+            return (MaterialManager.Find(package, model.Material, out material) > 0);
+        }
+
         private void ViewModelTexture(object sender, RoutedEventArgs e)
         {
-            var material = ((MenuItem)e.Source).Tag as IMaterialData;
+            var visual = ((MenuItem)e.Source).Tag as SubModel;
 
-            if (material == null)
+            IMaterialData material = null;
+
+            if (FindMaterial(visual, out material))
+            {
+                var substance = material.GetSubstance(0);
+                var texIdx = 0;
+
+                // HACK: make sure we can retrieve the damage texture!
+                if (substance is ISubstanceDataPC)
+                {
+                    var substance_pc = (substance as SubstanceDataPC);
+                    var mayHaveDamage = (substance_pc.Textures.Count >= 4);
+
+                    texIdx = (UseBlendWeights && mayHaveDamage) ? 2 : 0;
+                }
+
+                AT.CurrentState.QueryTextureSelect(substance.GetTexture(texIdx));
+            }
+            else
             {
                 MessageBox.Show("No texture assigned!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
             }
-
-            var substance = material.GetSubstance(0);
-            var texIdx = 0;
-
-            // HACK: make sure we can retrieve the damage texture!
-            if (substance is ISubstanceDataPC)
-            {
-                var substance_pc = (substance as SubstanceDataPC);
-                var mayHaveDamage = (substance_pc.Textures.Count >= 4);
-
-                texIdx = (UseBlendWeights && mayHaveDamage) ? 2 : 0;
-            }
-
-            AT.CurrentState.QueryTextureSelect(substance.GetTexture(texIdx));
         }
 
         private void ViewModelMaterial(object sender, RoutedEventArgs e)
         {
-            var material = ((MenuItem)e.Source).Tag as IMaterialData;
+            var visual = ((MenuItem)e.Source).Tag as SubModel;
 
-            if (material == null)
+            IMaterialData material = null;
+
+            if (FindMaterial(visual, out material))
+            {
+                AT.CurrentState.QueryMaterialSelect(material);
+            }
+            else
             {
                 MessageBox.Show("No material assigned!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
             }
-
-            AT.CurrentState.QueryMaterialSelect(material);
         }
 
         List<Model> m_partsGroups;
