@@ -149,80 +149,54 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
 
                         for (int m = 0; m < group.SubModels.Count; m++)
                         {
-                            var mesh = group.SubModels[m];
+                            var model = group.SubModels[m];
+                            var material = model.Material;
 
-                            MaterialDataPC material = null;
-                            int materialType = MaterialManager.Find(mesh.Material, out material);
+                            MaterialDataPC mtl = null;
+                            
+                            int materialType = MaterialManager.Find(material, out mtl);
 
-                            var globalMaterial = (mesh.Material.UID != modelPackage.UID);
-
+                            var globalMaterial = (material.UID != modelPackage.UID);
+                            
                             switch (materialType)
                             {
-
-                            // 
-                            // Missing/Null/Undefined Material
                             //
-                            case  0:
-                            case -1:
-                            case -128:
-                                if (!hasNullMaterial)
-                                {
-                                    mtlBuilder.AppendLine(NullMaterial);
-                                    hasNullMaterial = true;
-                                }
-
-                                // definitely not a global material
+                            // Local Material
+                            //
+                            case -4:
+                                materialType = modelPackage.FindMaterial(material, out mtl);
                                 globalMaterial = false;
-
-                                faces.AppendLine($"# couldn't find material: {mesh.Material}");
-                                faces.AppendLine("usemtl null_mtl");
-                                break;
-
-                            //
-                            // Default/Null Material
-                            //
-                            case -2:
-                            case -3:
-                                if (!hasDummyMaterial)
-                                {
-                                    mtlBuilder.AppendLine(DefaultMaterial);
-                                    hasDummyMaterial = true;
-                                }
-
-                                globalMaterial = false;
-
-                                faces.AppendLine("usemtl default_mtl");
                                 break;
                             }
 
                             // build material(s)
                             if (materialType > 0)
                             {
-                                var mtlIdx = mesh.Material.Handle + 1;
-                                var mtlSrc = mesh.Material.UID;
-                                
+                                var mtlIdx = material.Handle + 1;
+                                var mtlSrc = material.UID;
+
                                 var mtlName = String.Format("{0}_{1}",
                                     (globalMaterial) ? "global_mat" : "mat",
                                     mtlIdx);
 
                                 // add material if needed
-                                if (!materials.Contains(material))
+                                if (!materials.Contains(mtl))
                                 {
                                     ITextureData ddsTexture = null;
 
                                     var ddsName = (globalMaterial) ? $"{mtlSrc:X4}-{mtlIdx:D4}" : $"{mtlIdx:D4}";
 
-                                    for (int s = 0; s < material.Substances.Count; s++)
+                                    for (int s = 0; s < mtl.Substances.Count; s++)
                                     {
-                                        var substance = material.Substances[s];
+                                        var substance = mtl.Substances[s];
 
                                         for (int t = 0; t < substance.Textures.Count; t++)
                                         {
                                             var texture = substance.Textures[t];
-                                            
+
                                             var texFmt = (texture.UID != 0x01010101) ? "{0:X8}_{1:X8}" : "#{1:X8}";
                                             var texName = String.Format(texFmt, texture.UID, texture.Handle);
-                                            
+
                                             var texFile = String.Format("{0}_{1}_{2}#{3}.dds", ddsName, (s + 1), (t + 1), texName);
                                             var texPath = Path.Combine(path, texFile);
 
@@ -232,19 +206,57 @@ Ke 0.0000 0.0000 0.0000" + "\r\n";
                                                 ddsTexture = texture;
                                                 mtlBuilder.AppendLine(MaterialTemplate, mtlName, texFile);
                                             }
-                                            
+
                                             FileManager.WriteFile(texPath, texture.Buffer);
                                         }
                                     }
 
-                                    materials.Add(material);
+                                    materials.Add(mtl);
                                 }
-
+                                
                                 faces.AppendFormat("usemtl {0}", mtlName).AppendLine();
+                            }
+                            else
+                            {
+                                // actually a null material (like vehicle shadows)
+                                if (material == 0)
+                                    materialType = -3;
+
+                                switch (materialType)
+                                {
+                                // 
+                                // Missing/Null/Undefined Material
+                                //
+                                case 0:
+                                case -1:
+                                case -128:
+                                    if (!hasNullMaterial)
+                                    {
+                                        mtlBuilder.AppendLine(NullMaterial);
+                                        hasNullMaterial = true;
+                                    }
+
+                                    faces.AppendLine($"# couldn't find material: {material}");
+                                    faces.AppendLine("usemtl null_mtl");
+                                    break;
+                                //
+                                // Default/Null Material
+                                //
+                                case -2:
+                                case -3:
+                                    if (!hasDummyMaterial)
+                                    {
+                                        mtlBuilder.AppendLine(DefaultMaterial);
+                                        hasDummyMaterial = true;
+                                    }
+
+                                    faces.AppendLine("usemtl default_mtl");
+                                    break;
+                                }
                             }
 
                             var indices = new List<int>();
-                            var vertices = mesh.GetVertices(true, ref indices);
+                            var vertices = model.GetVertices(true, ref indices);
                             
                             var vCount = vertices.Count;
                             var tCount = indices.Count;
