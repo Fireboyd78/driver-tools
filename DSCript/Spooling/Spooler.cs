@@ -245,16 +245,6 @@ namespace DSCript.Spooling
             }
 
         }
-
-        /// <summary>
-        /// Gets or sets the magic number for this spooler.
-        /// </summary>
-        [Obsolete("Use the 'Context' property instead -- this is the original, incorrect name.")]
-        public int Magic
-        {
-            get { return Context; }
-            set { Context = value; }
-        }
         
         /// <summary>
         /// Gets the absolute position of this spooler, relative to its parent.
@@ -302,16 +292,6 @@ namespace DSCript.Spooling
 
                 _version = value;
             }
-        }
-
-        /// <summary>
-        /// Gets or sets the reserved byte for this spooler.
-        /// </summary>
-        [Obsolete("Use the 'Version' property instead -- this is the original, incorrect name.")]
-        public byte Reserved
-        {
-            get { return Version; }
-            set { Version = value; }
         }
         
         /// <summary>
