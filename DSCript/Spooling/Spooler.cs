@@ -153,7 +153,12 @@ namespace DSCript.Spooling
         /// 256-byte alignment (e.g. 0x3 -> 0x100)
         /// </summary>
         Align256    = 0x8,
-        
+
+        /// <summary>
+        /// 1024-byte alignment (e.g. 0x3 -> 0x400)
+        /// </summary>
+        Align1024   = 0xA,
+
         /// <summary>
         /// 2048-byte alignment (e.g. 0x3 -> 0x800)
         /// </summary>
@@ -162,7 +167,7 @@ namespace DSCript.Spooling
         /// <summary>
         /// 4096-byte alignment (e.g. 0x3 -> 0x1000)
         /// </summary>
-        Align4096   = 0xC
+        Align4096   = 0xC,
     }
     
     /// <summary>
