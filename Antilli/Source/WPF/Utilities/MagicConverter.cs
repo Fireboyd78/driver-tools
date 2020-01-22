@@ -11,6 +11,8 @@ using System.Text;
 
 using System.Windows.Data;
 
+using DSCript.Spooling;
+
 namespace Antilli
 {
     public static class MagicConverter
@@ -38,15 +40,15 @@ namespace Antilli
             return new String(ToCharArray(magic));
         }   
     }
-
-    [ValueConversion(typeof(int), typeof(string))]
+    
+    [ValueConversion(typeof(SpoolerContext), typeof(string))]
     public class SpoolerMagicConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is int)
+            if (value is SpoolerContext)
             {
-                var val = (int)value;
+                int val = (SpoolerContext)value;
                 return String.Format("[{0}]", (val > 255) ? Encoding.UTF8.GetString(BitConverter.GetBytes(val)).Trim('\0') : String.Format("0x{0:X}", val));
             }
 

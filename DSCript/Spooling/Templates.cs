@@ -12,63 +12,57 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolableBuffer() {
-                    Context     = (int)ChunkType.ModelPackagePC,
+                    Context     = ChunkType.ModelPackagePC,
                     Version     = 6,
                     Description = "Renderer model package"
                 };
             }
         }
-            
 
         public static SpoolableBuffer StandaloneTextures
         {
             get
             {
                 return new SpoolableBuffer() {
-                    Context     = (int)ChunkType.StandaloneTextures,
+                    Context     = ChunkType.StandaloneTextures,
                     Description = "Standalone textures"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer VehicleHierarchy
         {
             get
             {
                 return new SpoolableBuffer() {
-                    Context     = (int)ChunkType.VehicleHierarchy,
+                    Context     = ChunkType.VehicleHierarchy,
                     Description = "Vehicle Hierarchy"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer ExtraCharacterData
         {
             get
             {
                 return new SpoolableBuffer() {
-                    Context     = (int)ChunkType.ExtraCharacterData,
+                    Context     = ChunkType.ExtraCharacterData,
                     Description = "Extra Character Data package"
                 };
             }
         }
-
-            
-
+        
         public static SpoolableBuffer SkeletonData
         {
             get
             {
                 return new SpoolableBuffer() {
-                    Context     = (int)ChunkType.CharacterSkeletons,
+                    Context     = ChunkType.CharacterSkeletons,
                     Description = "Skeleton package"
                 };
             }
         }
-            
-
+        
         #region Mission files (.MPC)
         public static SpoolableBuffer MissionSummary
         {
@@ -76,51 +70,47 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align2048,
-                    Context     = (int)ChunkType.MissionSummary,
+                    Context     = ChunkType.MissionSummary,
                     Description = "Mission summary"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionObjects
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align16,
-                    Context     = (int)ChunkType.ExportedMissionObjects,
+                    Context     = ChunkType.ExportedMissionObjects,
                     Description = "Exported Mission Objects"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionPropHandles
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align16,
-                    Context     = (int)ChunkType.ExportedMissionPropHandles,
+                    Context     = ChunkType.ExportedMissionPropHandles,
                     Description = "Exported Mission Prop Handles"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionStringCollection
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportStringCollection,
+                    Context     = ChunkType.LogicExportStringCollection,
                     Description = "String Collection"
                 };
             }
         }
-            
 
         public static SpoolableBuffer MissionSoundBankTable
         {
@@ -128,64 +118,59 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportSoundBank,
+                    Context     = ChunkType.LogicExportSoundBank,
                     Description = "Sound Bank Table"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionActorDefinitions
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportActorDefinitions,
+                    Context     = ChunkType.LogicExportActorDefinitions,
                     Description = "Actor definitions table"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionActorProperties
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportPropertiesTable,
+                    Context     = ChunkType.LogicExportPropertiesTable,
                     Description = "Actor properties table"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionActorSetTable
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportActorSetTable,
+                    Context     = ChunkType.LogicExportActorSetTable,
                     Description = "Actor Set Table"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionLogicNodeDefinitions
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportNodeDefinitionsTable,
+                    Context     = ChunkType.LogicExportNodeDefinitionsTable,
                     Description = "Logic node definitions table"
                 };
             }
         }
-            
 
         public static SpoolableBuffer MissionLogicNodeProperties
         {
@@ -193,38 +178,35 @@ namespace DSCript.Spooling
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context       = (int)ChunkType.LogicExportPropertiesTable,
+                    Context       = ChunkType.LogicExportPropertiesTable,
                     Description = "Logic node properties table"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionScriptCounters
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportScriptCounters,
+                    Context     = ChunkType.LogicExportScriptCounters,
                     Description = "Script Counters"
                 };
             }
         }
-            
-
+        
         public static SpoolableBuffer MissionWireCollection
         {
             get
             {
                 return new SpoolableBuffer() {
                     Alignment   = SpoolerAlignment.Align4,
-                    Context     = (int)ChunkType.LogicExportWireCollections,
+                    Context     = ChunkType.LogicExportWireCollections,
                     Description = "Wire Collection"
                 };
             }
         }
-            
         #endregion
     }
 
@@ -235,7 +217,7 @@ namespace DSCript.Spooling
             get
             {
                 return new SpoolablePackage() {
-                    Context     = (int)ChunkType.UnifiedPackage,
+                    Context     = ChunkType.UnifiedPackage,
                     Description = "Unified Packager"
                 };
             }
@@ -247,7 +229,7 @@ namespace DSCript.Spooling
             {
                 return new SpoolablePackage() {
                     Alignment   = SpoolerAlignment.Align2048,
-                    Context     = (int)ChunkType.UnifiedPackage,
+                    Context     = ChunkType.UnifiedPackage,
                     Description = "Exported Mission"
                 };
             }

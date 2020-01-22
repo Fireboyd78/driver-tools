@@ -61,6 +61,7 @@
     <Compile Include="Extensions\System\TypeExtensions.cs" />
     <Compile Include="Games\Driv3r.cs" />
     <Compile Include="Games\DriverPL.cs" />
+    <Compile Include="IO\Detail\Extensions\DetailProviderExtensions.cs" />
     <Compile Include="IO\Detail\IDetail.cs" />
     <Compile Include="IO\Detail\IDetailProvider.cs" />
     <Compile Include="IO\Detail\Types\PlatformType.cs" />

@@ -90,31 +90,6 @@ namespace DSCript.Models
             }
             set { Flags = value; }
         }
-
-        TDetail IDetailProvider.Deserialize<TDetail>(Stream stream)
-        {
-            return Deserialize<TDetail>(stream);
-        }
-
-        void IDetailProvider.Serialize<TDetail>(Stream stream, ref TDetail detail)
-        {
-            Serialize(stream, ref detail);
-        }
-        
-        protected TDetail Deserialize<TDetail>(Stream stream)
-            where TDetail : IDetail, new()
-        {
-            var result = new TDetail();
-            result.Deserialize(stream, this);
-
-            return result;
-        }
-
-        protected void Serialize<TDetail>(Stream stream, ref TDetail detail)
-            where TDetail : IDetail
-        {
-            detail.Serialize(stream, this);
-        }
         
         public List<Model> Models { get; set; }
         public List<LodInstance> LodInstances { get; set; }

@@ -48,7 +48,7 @@ namespace DSCript.Models
                 var package = SpoolableResourceFactory.Create<ModelPackage>(sender);
 
                 // register global package
-                if ((ChunkType)sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
+                if (sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
                     PackageManager.Load(package);
                 
                 Packages.Add(package);

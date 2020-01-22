@@ -28,7 +28,7 @@ namespace DSCript.Spooling
         public int Offset;
         public byte Version;
         public byte StrLen;
-        public SpoolerAlignment Alignment;
+        public byte Alignment;
         public byte Reserved;
         public int Size;
     }
@@ -298,27 +298,19 @@ namespace DSCript.Spooling
 
                 if (_stream.PeekInt32() == (int)ChunkType.Chunk)
                 {
-                    spooler = new SpoolablePackage(entry.Size) {
-                        Alignment   = entry.Alignment,
+                    spooler = new SpoolablePackage(ref entry) {
                         Description = description,
-                        Context     = entry.Context,
-                        Offset      = entry.Offset,
-                        Version     = entry.Version,
                     };
 
                     ReadChunk((SpoolablePackage)spooler);
                 }
                 else
                 {
-                    spooler = new SpoolableBuffer(entry.Size) {
-                        Alignment   = entry.Alignment,
+                    spooler = new SpoolableBuffer(ref entry) {
                         Description = description,
-                        Context     = entry.Context,
-                        Offset      = entry.Offset,
-                        Version     = entry.Version,
 
                         FileOffset  = ((int)baseOffset + entry.Offset),
-                        FileChunker = this
+                        FileChunker = this,
                     };
                 }
 
@@ -381,7 +373,7 @@ namespace DSCript.Spooling
                 }
 
                 // write description where applicable
-                if (entry.StrLen > 0)
+                if (!String.IsNullOrEmpty(entry.Description))
                 {
                     stream.Position = (baseOffset + (entry.Offset + entry.Size));
                     stream.Write(entry.Description);

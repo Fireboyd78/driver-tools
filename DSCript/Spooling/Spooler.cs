@@ -15,7 +15,7 @@ namespace DSCript.Spooling
             return (ChunkType)context.m_value;
         }
 
-        public static implicit operator int (SpoolerContext context)
+        public static implicit operator int(SpoolerContext context)
         {
             return context.m_value;
         }
@@ -27,20 +27,12 @@ namespace DSCript.Spooling
 
         public static implicit operator SpoolerContext(ChunkType chunkType)
         {
-            return new SpoolerContext((int)chunkType);
+            return new SpoolerContext(chunkType);
         }
 
         public static implicit operator SpoolerContext(string context)
         {
-            if (context == null || context.Length != 4)
-                throw new ArgumentException("Context string must be 4 characters long and cannot be null.", nameof(context));
-
-            var c1 = context[0];
-            var c2 = context[1];
-            var c3 = context[2];
-            var c4 = context[3];
-
-            return new SpoolerContext((c4 << 24) | (c3 << 16) | (c2 << 8) | (c1 << 0));
+            return new SpoolerContext(context);
         }
 
         private unsafe int FastCompare(string value)
@@ -115,25 +107,47 @@ namespace DSCript.Spooling
 
         public override string ToString()
         {
-            var str = "";
+            // TODO: make a proper formatter
+            //
+            //var str = "";
+            //
+            //if (m_value > 0)
+            //{
+            //    for (int b = 0; b < 4; b++)
+            //    {
+            //        var c = (char)((m_value >> (b * 8)) & 0xFF);
+            //
+            //        if (c != '\0')
+            //            str += c;
+            //    }
+            //}
+            //
+            //return str;
 
-            if (m_value > 0)
-            {
-                for (int b = 0; b < 4; b++)
-                {
-                    var c = (char)((m_value >> (b * 8)) & 0xFF);
-
-                    if (c != '\0')
-                        str += c;
-                }
-            }
-
-            return str;
+            return m_value.ToString();
         }
-
-        private SpoolerContext(int context)
+        
+        public SpoolerContext(int context)
         {
             m_value = context;
+        }
+
+        public SpoolerContext(ChunkType chunkType)
+        {
+            m_value = (int)chunkType;
+        }
+
+        public SpoolerContext(string context)
+        {
+            if (context == null || context.Length != 4)
+                throw new ArgumentException("Context string must be 4 characters long and cannot be null.", nameof(context));
+
+            var c1 = context[0];
+            var c2 = context[1];
+            var c3 = context[2];
+            var c4 = context[3];
+
+            m_value = ((c4 << 24) | (c3 << 16) | (c2 << 8) | (c1 << 0));
         }
     }
 
@@ -177,8 +191,8 @@ namespace DSCript.Spooling
     {
         private SpoolerAlignment _alignment = SpoolerAlignment.Align4096;
         
-        private int _context;
-        private byte _version;
+        private SpoolerContext _context;
+        private int _version;
 
         private string _description;
 
@@ -187,9 +201,9 @@ namespace DSCript.Spooling
             return new ChunkEntry() {
                 Context     = spooler.Context,
                 Offset      = spooler.Offset,
-                Version     = spooler.Version,
-                StrLen      = spooler.StrLen,
-                Alignment   = spooler.Alignment,
+                Version     = (byte)spooler.Version,
+                StrLen      = (byte)spooler.Description.Length,
+                Alignment   = (byte)spooler.Alignment,
                 Reserved    = 0xFB, // ;)
                 Size        = spooler.Size,
             };
@@ -238,12 +252,12 @@ namespace DSCript.Spooling
         /// <summary>
         /// Gets or sets the context of this spooler.
         /// </summary>
-        public int Context
+        public SpoolerContext Context
         {
             get { return _context; }
             set
             {
-                if (_context != value)
+                if (!_context.Equals(value))
                     IsModified = true;
 
                 _context = value;
@@ -287,7 +301,7 @@ namespace DSCript.Spooling
         /// <summary>
         /// Gets or sets the version of this spooler.
         /// </summary>
-        public byte Version
+        public int Version
         {
             get { return _version; }
             set
@@ -299,14 +313,6 @@ namespace DSCript.Spooling
             }
         }
         
-        /// <summary>
-        /// Gets the length of the description for this spooler.
-        /// </summary>
-        public byte StrLen
-        {
-            get { return (byte)Description.Length; }
-        }
-
         /// <summary>
         /// Gets or sets the byte-alignment of this spooler.
         /// </summary>
@@ -365,6 +371,15 @@ namespace DSCript.Spooling
             // make sure we detach from our parent
             if (Parent != null)
                 Parent.Children.Remove(this);
+        }
+
+        protected Spooler() { }
+        protected Spooler(ref ChunkEntry entry)
+        {
+            Alignment = (SpoolerAlignment)entry.Alignment;
+            Context = entry.Context;
+            Offset = entry.Offset;
+            Version = entry.Version;
         }
     }
 }

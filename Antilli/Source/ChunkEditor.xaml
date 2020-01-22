@@ -41,7 +41,7 @@
         <ContextMenu x:Key="SMenu" ItemsSource="{StaticResource CMenu}"/>
         <DataTemplate x:Key="SpoolerTemplate">
             <StackPanel Orientation="Horizontal" Margin="0">
-                <Label FontWeight="Bold" Content="{Binding Magic, Converter={StaticResource MagicConverter}}" Padding="2"/>
+                <Label FontWeight="Bold" Content="{Binding Context, Converter={StaticResource MagicConverter}}" Padding="2"/>
                 <TextBlock Text="{Binding Description}" Foreground="{StaticResource atDark_fg}" VerticalAlignment="Center" Padding="2"/>
             </StackPanel>
         </DataTemplate>

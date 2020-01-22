@@ -689,7 +689,7 @@ namespace Antilli
         {
             var spooler = new SpoolableBuffer() {
                 Context = ModelPackageResource.GetChunkId(modelPackage.Platform, version),
-                Version = (byte)version,
+                Version = version,
                 Alignment = SpoolerAlignment.Align4096,
                 Description = "Custom model package",
             };
@@ -1131,7 +1131,7 @@ namespace Antilli
             var resource = (ISpoolableResource)modelPackage;
 
             resource.Spooler = new SpoolableBuffer() {
-                Context = (int)ChunkType.ModelPackagePC,
+                Context = ChunkType.ModelPackagePC,
                 Alignment = SpoolerAlignment.Align4096,
                 Version = 6,
                 Description = "Custom model package",

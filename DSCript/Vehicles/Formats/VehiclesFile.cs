@@ -66,7 +66,7 @@ namespace DSCript.Models
             case ChunkType.ModelPackageWii:
                 var modelPackage = sender.AsResource<ModelPackage>();
                 
-                if ((ChunkType)sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
+                if (sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
                 {
                     // make sure it's loaded!
                     PackageManager.Load(modelPackage);

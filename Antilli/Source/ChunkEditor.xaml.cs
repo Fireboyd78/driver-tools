@@ -128,7 +128,7 @@ namespace Antilli
         
         private bool IsFilterApproved(Spooler spooler)
         {
-            return String.IsNullOrEmpty(SearchFilter) || ((SpoolerContext)spooler.Context).CompareTo(SearchFilter) != -1;
+            return String.IsNullOrEmpty(SearchFilter) || (spooler.Context.CompareTo(SearchFilter) != -1);
         }
 
         private IEnumerable<Spooler> EnumerateFilteredSpoolers(SpoolablePackage root)
@@ -299,11 +299,10 @@ namespace Antilli
 
                 sb.AppendColumn("Offset",       col, true).AppendLine("0x{0:X}", CurrentSpooler.BaseOffset);
                 sb.AppendColumn("Version",      col, true).AppendLine(CurrentSpooler.Version);
-                sb.AppendColumn("StrLen",       col, true).AppendLine(CurrentSpooler.StrLen);
                 sb.AppendColumn("Alignment",    col, true).AppendLine(1 << (int)CurrentSpooler.Alignment);
                 sb.AppendColumn("Size",         col, true).AppendLine("0x{0:X}", CurrentSpooler.Size);
 
-                if (CurrentSpooler.Context == (int)ChunkType.BuildInfo)
+                if (CurrentSpooler.Context == ChunkType.BuildInfo)
                 {
                     sb.AppendLine();
 
@@ -753,7 +752,7 @@ namespace Antilli
 
             if (CurrentSpooler != null)
             {
-                if (CurrentSpooler.Context == (int)ChunkType.ResourceTextureDDS)
+                if (CurrentSpooler.Context == ChunkType.ResourceTextureDDS)
                 {
                     LoadDDS();
                     return;

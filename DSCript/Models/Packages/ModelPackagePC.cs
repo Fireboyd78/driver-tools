@@ -36,7 +36,7 @@ namespace DSCript.Models
                 // Populate vertex declarations
                 for (int vB = 0; vB < vBuffersCount; vB++)
                 {
-                    var decl = Deserialize<VertexBufferInfo>(stream);
+                    var decl = this.Deserialize<VertexBufferInfo>(stream);
 
                     // mark uninitialized
                     decl.Type = 0xABCDEF;
@@ -58,7 +58,7 @@ namespace DSCript.Models
             {
                 var _decl = decls[vB];
 
-                Serialize(stream, ref _decl);
+                this.Serialize(stream, ref _decl);
             }
         }
 
@@ -169,7 +169,7 @@ namespace DSCript.Models
             {
                 var offset = (int)stream.Position;
 
-                var _subModel = Deserialize<SubModelInfo>(stream);
+                var _subModel = this.Deserialize<SubModelInfo>(stream);
 
                 var subModel = new SubModel() {
                     ModelPackage        = this,
@@ -200,7 +200,7 @@ namespace DSCript.Models
             {
                 var offset = (int)stream.Position;
 
-                var _lodInstance = Deserialize<LodInstanceInfo>(stream);
+                var _lodInstance = this.Deserialize<LodInstanceInfo>(stream);
 
                 var lodInstance = new LodInstance() {
                     Transform = _lodInstance.Transform,
@@ -239,7 +239,7 @@ namespace DSCript.Models
                 if (VertexBuffers == null)
                     throw new InvalidOperationException("Uh-oh! There's no vertex buffers for the models to use!");
 
-                var _model = Deserialize<ModelInfo>(stream);
+                var _model = this.Deserialize<ModelInfo>(stream);
 
                 var vBufferIdx = _model.BufferIndex;
                 var vBuffer = vBuffers[vBufferIdx];
@@ -281,7 +281,7 @@ namespace DSCript.Models
                 // 7 LODs per model
                 for (int k = 0; k < 7; k++)
                 {
-                    var _lod = Deserialize<LodInfo>(stream);
+                    var _lod = this.Deserialize<LodInfo>(stream);
                     
                     var lod = new Lod(k) {
                         Parent = model,
@@ -347,7 +347,7 @@ namespace DSCript.Models
                     Material = subModel.Material,
                 };
 
-                Serialize(stream, ref _subModel);
+                this.Serialize(stream, ref _subModel);
             }
 
             //
@@ -381,7 +381,7 @@ namespace DSCript.Models
                     },
                 };
 
-                Serialize(stream, ref _lodInst);
+                this.Serialize(stream, ref _lodInst);
             }
 
             //
@@ -405,7 +405,7 @@ namespace DSCript.Models
                     Reserved = 0,
                 };
 
-                Serialize(stream, ref _model);
+                this.Serialize(stream, ref _model);
 
                 stream.Write(model.BoundingBox);
 
@@ -428,7 +428,7 @@ namespace DSCript.Models
                         Reserved = 0,
                     };
 
-                    Serialize(stream, ref _lod);
+                    this.Serialize(stream, ref _lod);
                 }
             }
         }
@@ -472,7 +472,7 @@ namespace DSCript.Models
                 for (int t = 0; t < info.TexturesCount; t++)
                 {
                     var offset = (int)stream.Position;
-                    var _tex = Deserialize<TextureInfo>(stream);
+                    var _tex = this.Deserialize<TextureInfo>(stream);
 
                     var tex = new TextureDataPC() {
                         UID = _tex.UID,
@@ -507,7 +507,7 @@ namespace DSCript.Models
                 for (int t = 0; t < info.TextureLookupCount; t++)
                 {
                     var offset = (int)stream.Position;
-                    var lookup = Deserialize<ReferenceInfo<TextureDataPC>>(stream);
+                    var lookup = this.Deserialize<ReferenceInfo<TextureDataPC>>(stream);
                     
                     lookup.Reference = luTextures[lookup.Offset];
 
@@ -523,15 +523,15 @@ namespace DSCript.Models
                 for (int s = 0; s < info.SubstancesCount; s++)
                 {
                     var offset = (int)stream.Position;
-                    var _substance = Deserialize<SubstanceInfo>(stream);
+                    var _substance = this.Deserialize<SubstanceInfo>(stream);
 
                     var substance = new SubstanceDataPC() {
                         Bin = (RenderBinType)_substance.Bin,
 
                         Flags = _substance.Flags,
                         
-                        Mode = (_substance.R1 | (_substance.R2 << 8)),
-                        Type = (_substance.R3 | (_substance.TextureFlags << 8)),
+                        Mode = (_substance.TS1 | (_substance.TS2 << 8)),
+                        Type = (_substance.TS3 | (_substance.TextureFlags << 8)),
                     };
 
                     substance.Textures = luTextureRefs
@@ -554,7 +554,7 @@ namespace DSCript.Models
                 for (int s = 0; s < info.SubstanceLookupCount; s++)
                 {
                     var offset = (int)stream.Position;
-                    var lookup = Deserialize<ReferenceInfo<SubstanceDataPC>>(stream);
+                    var lookup = this.Deserialize<ReferenceInfo<SubstanceDataPC>>(stream);
 
                     lookup.Reference = luSubstances[lookup.Offset];
 
@@ -569,7 +569,7 @@ namespace DSCript.Models
 
                 for (int m = 0; m < info.MaterialsCount; m++)
                 {
-                    var _material = Deserialize<MaterialInfo>(stream);
+                    var _material = this.Deserialize<MaterialInfo>(stream);
 
                     var material = new MaterialDataPC() {
                         Type = (MaterialType)_material.Type,
@@ -675,7 +675,7 @@ namespace DSCript.Models
                     Reserved = 0,
                 };
 
-                Serialize(stream, ref _texture);
+                this.Serialize(stream, ref _texture);
                 
                 luTextureOffsets.Add(texture, _texture.DataOffset);
                 luTextureSizes.Add(_texture.DataOffset, _texture.DataSize);
@@ -694,7 +694,7 @@ namespace DSCript.Models
                 var offset = (int)(stream.Position - detail.MaterialDataOffset);
                 var lookup = new ReferenceInfo<TextureDataPC>(texture, luTextures[texture]);
 
-                Serialize(stream, ref lookup);
+                this.Serialize(stream, ref lookup);
 
                 luTextureRefs.Add(offset, lookup);
             }
@@ -722,9 +722,9 @@ namespace DSCript.Models
 
                     Flags = substance.Flags,
 
-                    R1 = (byte)(substance.Mode & 0xFF),
-                    R2 = (byte)((substance.Mode >> 8) & 0xFF),
-                    R3 = (byte)(substance.Type & 0xFF),
+                    TS1 = (byte)(substance.Mode & 0xFF),
+                    TS2 = (byte)((substance.Mode >> 8) & 0xFF),
+                    TS3 = (byte)(substance.Type & 0xFF),
 
                     TextureFlags = (byte)((substance.Type >> 8) & 0xFF),
 
@@ -734,7 +734,7 @@ namespace DSCript.Models
                     Reserved = 0,
                 };
 
-                Serialize(stream, ref _substance);
+                this.Serialize(stream, ref _substance);
             }
 
             //
@@ -748,7 +748,7 @@ namespace DSCript.Models
                 var offset = (int)(stream.Position - detail.MaterialDataOffset);
                 var lookup = new ReferenceInfo<SubstanceDataPC>(substance, luSubstances[substance]);
 
-                Serialize(stream, ref lookup);
+                this.Serialize(stream, ref lookup);
 
                 luSubstanceRefs.Add(offset, lookup);
             }
@@ -778,7 +778,7 @@ namespace DSCript.Models
                     AnimationSpeed = material.AnimationSpeed,
                 };
 
-                Serialize(stream, ref _material);
+                this.Serialize(stream, ref _material);
             }
 
             //
@@ -806,7 +806,7 @@ namespace DSCript.Models
 
             stream.Position = detail.MaterialDataOffset;
 
-            Serialize(stream, ref info);
+            this.Serialize(stream, ref info);
 
             // cleanup
             luSubstances.Clear();
@@ -857,7 +857,7 @@ namespace DSCript.Models
                     if (Platform == PlatformType.Wii)
                         StreamExtensions.UseBigEndian = true;
 
-                    var detail = Deserialize<ModelPackageData>(stream);
+                    var detail = this.Deserialize<ModelPackageData>(stream);
 
                     UID = detail.UID;
 
@@ -926,7 +926,7 @@ namespace DSCript.Models
                 //
 
                 stream.Position = 0;
-                Serialize(stream, ref detail);
+                this.Serialize(stream, ref detail);
 
                 buffer = stream.ToArray();
             }

@@ -92,32 +92,7 @@ namespace DSCript.Models
                 return nBullets;
             }
         }
-
-        TDetail IDetailProvider.Deserialize<TDetail>(Stream stream)
-        {
-            return Deserialize<TDetail>(stream);
-        }
-
-        void IDetailProvider.Serialize<TDetail>(Stream stream, ref TDetail detail)
-        {
-            Serialize(stream, ref detail);
-        }
-
-        protected TDetail Deserialize<TDetail>(Stream stream)
-            where TDetail : IDetail, new()
-        {
-            var result = new TDetail();
-            result.Deserialize(stream, this);
-
-            return result;
-        }
-
-        protected void Serialize<TDetail>(Stream stream, ref TDetail detail)
-            where TDetail : IDetail
-        {
-            detail.Serialize(stream, this);
-        }
-
+        
         protected override void Load()
         {
             using (var stream = Spooler.GetMemoryStream())
@@ -130,7 +105,7 @@ namespace DSCript.Models
                 if (header.Type != 6)
                     throw new InvalidOperationException("Cannot load vehicle hierarchy data -- invalid hierarchy type!");
 
-                var vInfo = Deserialize<VehicleHierarchyInfo>(stream);
+                var vInfo = this.Deserialize<VehicleHierarchyInfo>(stream);
 
                 UID = header.UID;
                 Flags = vInfo.Flags;
@@ -214,7 +189,7 @@ namespace DSCript.Models
                 //
                 
                 var pdlOffset = (int)stream.Position;
-                var pdl = Deserialize<PhysicsInfo>(stream);
+                var pdl = this.Deserialize<PhysicsInfo>(stream);
                 
                 PDLEntries = new List<PDLEntry>(pdl.T1Count);
 

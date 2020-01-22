@@ -29,12 +29,12 @@ namespace Antilli
 {
     public class ModelGroupListItem
     {
-        public string Text
-        {
-            get { return (!IsNull) ? UID.ToString() : "<NULL>"; }
-        }
+        public ModelPackage ModelPackage { get; private set; }
+        public List<Model> Models { get; private set; }
 
-        public UID UID { get; private set; }
+        public UID UID { get; }
+
+        public bool Flagged { get; }
         
         public bool IsNull
         {
@@ -53,9 +53,22 @@ namespace Antilli
             }
         }
 
-        public ModelPackage ModelPackage { get; private set; }
-        public List<Model> Models { get; private set; }
+        public string Text
+        {
+            get
+            {
+                if (IsNull)
+                    return "<NULL>";
 
+                var name = UID.ToString();
+
+                if (Flagged)
+                    name += " *";
+
+                return name;
+            }
+        }
+        
         public ModelGroupListItem(ModelPackage modelPackage, Model modelBasis)
         {
             ModelPackage = modelPackage;
@@ -67,16 +80,39 @@ namespace Antilli
 
             for (int p = startIndex; p < ModelPackage.Models.Count; p++)
             {
-                Model part = ModelPackage.Models[p];
+                var model = ModelPackage.Models[p];
 
-                if (part.UID != UID)
-                    continue;
+                // merge common models together
+                if (model.UID != UID)
+                    break;
 
-                do
-                    Models.Add(part);
-                while (++p < ModelPackage.Models.Count && (part = ModelPackage.Models[p]).UID == UID);
+#if DEBUG
+                var flagged = true;
 
-                break;
+                switch (model.VertexType)
+                {
+                case 0:
+                    flagged = (model.Flags != 0);
+                    break;
+                case 1:
+                case 2:
+                case 5:
+                case 6:
+                case 7:
+                    flagged = (model.Flags <= 0) || (model.Flags > 2);
+                    break;
+                case 4: // hmm
+                    flagged = true;
+                    break;
+                }
+
+                if (flagged)
+                {
+                    DSC.Log($"**** Model {model.UID}[{p - startIndex}]: type {model.VertexType}, flags {model.Flags}");
+                    Flagged = true;
+                }
+#endif
+                Models.Add(model);
             }
         }
     }

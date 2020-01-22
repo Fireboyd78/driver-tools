@@ -114,6 +114,17 @@ namespace DSCript.Models
         
         static int GetD3VertexDeclType(int type)
         {
+            /*
+                0 = world?
+                1 = static
+                2 = fullbright?
+                3 = invisible?
+                4 = halfbright?
+                5 = vehicle
+                6 = character
+                7 = hyperlow?
+                8 = ?
+            */
             switch (type)
             {
             case 2:

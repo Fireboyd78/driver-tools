@@ -449,6 +449,22 @@ namespace DSCript.Models
                 }
             }
         }
+
+        public int HeaderSize
+        {
+            get
+            {
+                switch (Version)
+                {
+                case 1:
+                case 9:
+                    return 0x44;
+                case 6:
+                    return 0x48;
+                }
+                return 0x28; // no model/material info
+            }
+        }
         
         public int ModelSize
         {
@@ -594,22 +610,21 @@ namespace DSCript.Models
             MaterialPackage = new MaterialPackageData(MaterialPackageType.Unknown);
         }
 
-        public ModelPackageData(int version, int uid, int nParts, int nGroups, int nMeshes, int nIndices, int nVertexDecls)
+        public ModelPackageData(int version, int uid, int nModels, int nInstances, int nSubModels, int nIndices, int nVertexDecls)
             : this(version)
         {
-            Version = version;
             UID = uid;
 
-            ModelsCount = nParts;
-            ModelsOffset = Memory.Align(0x44, 128);
+            ModelsCount = nModels;
+            ModelsOffset = Memory.Align(HeaderSize, 128);
 
             // only calculate offsets if there's model data
             if (ModelsCount > 0)
             {
-                LodInstancesCount = nGroups;
+                LodInstancesCount = nInstances;
                 LodInstancesOffset = Memory.Align(ModelsOffset + (ModelsCount * ModelSize), 128);
 
-                SubModelsCount = nMeshes;
+                SubModelsCount = nSubModels;
                 SubModelsOffset = LodInstancesOffset + (LodInstancesCount * LodInstanceSize);
 
                 IndicesCount = nIndices;

@@ -111,7 +111,31 @@ namespace Antilli
             piType.AddToPanel(propPanelItems, Enum.GetNames(typeof(MaterialType)));
             piSpeed.AddToPanel(propPanelItems);
 
-            m_contentInfo = String.Empty;
+            var sb = new StringBuilder();
+            var col = 12;
+
+            //
+            // quick and dirty debug information
+            //
+            var idx = 0;
+
+            foreach (var substance in material.Substances)
+            {
+                sb.AppendLine($"== Substance {++idx} ==");
+
+                int[] regs = {
+                    (substance.Mode & 0xFF),
+                    (substance.Mode >> 8),
+                    (substance.Type & 0xFF),
+                };
+
+                var slotFlags = (substance.Type >> 8);
+
+                sb.AppendColumn("Registers", col, true).AppendLine($"{regs[0]} {regs[1]} {regs[2]}");
+                sb.AppendColumn("SlotFlags", col, true).AppendLine($"0x{slotFlags:X}");
+            }
+            
+            m_contentInfo = sb.ToString();
 
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
@@ -204,22 +228,36 @@ namespace Antilli
                 sb.AppendColumn("Specular", col, true).AppendLine(substance_pc.IsSpecular);
                 sb.AppendColumn("Emissive", col, true).AppendLine(substance_pc.IsEmissive);
 
-                //--sb.AppendLine();
-                //--sb.AppendLine("==== Debug Information ====");
+#if DEBUG
+                sb.AppendLine();
+                sb.AppendLine("==== Debug Information ====");
                 
-                //--var resolved = substance_pc.GetResolvedData();
-                //--
-                //--var rst = (resolved >> 0) & 0xFF;
-                //--var stage = (resolved >> 8) & 0xFFFF;
-                //--var flags = (resolved >> 16) & 0xFFFF;
-                //--
-                //--sb.AppendColumn("Resolved", col, true).AppendLine("0x{0:X6} ; Resolved value by Driv3r", resolved);
-                //--sb.AppendColumn(".rst", col, true).AppendLine("0x{0:X2}", rst);
-                //--sb.AppendColumn(".stage", col, true).AppendLine("0x{0:X2}", stage);
-                //--sb.AppendColumn(".flags", col, true).AppendLine("0x{0:X2}", flags);
-                //--
-                //--sb.AppendLine();
-                //--sb.AppendColumn("FlagsTest", col, true).AppendLine("0x{0:X6} ; Flags from resolved data", substance_pc.GetCompiledFlags(resolved));    
+                var data = substance_pc.GetData(false);
+
+                // resolve it over and over again
+                for (int i = 0; i < 4; i++)
+                {
+                    SubstanceInfo.Resolve(ref data);
+
+                    sb.AppendColumn($"Resolved ({i + 1})", col, true).AppendLine();
+                    sb.AppendColumn(".bin", col, true).AppendLine("{0}", data.Bin);
+                    sb.AppendColumn(".flg", col, true).AppendLine("0x{0:X2}", data.Flags);
+                    sb.AppendColumn(".ts1", col, true).AppendLine("{0}", data.TS1);
+                    sb.AppendColumn(".ts2", col, true).AppendLine("{0}", data.TS2);
+                    sb.AppendColumn(".ts3", col, true).AppendLine("{0}", data.TS3);
+                    sb.AppendColumn(".tsf", col, true).AppendLine("0x{0:X2}", data.TextureFlags);
+
+                    SubstanceInfo.Compile(ref data);
+
+                    sb.AppendColumn($"Compiled ({i + 1})", col, true).AppendLine();
+                    sb.AppendColumn(".bin", col, true).AppendLine("{0}", data.Bin);
+                    sb.AppendColumn(".flg", col, true).AppendLine("0x{0:X2}", data.Flags);
+                    sb.AppendColumn(".ts1", col, true).AppendLine("{0}", data.TS1);
+                    sb.AppendColumn(".ts2", col, true).AppendLine("{0}", data.TS2);
+                    sb.AppendColumn(".ts3", col, true).AppendLine("{0}", data.TS3);
+                    sb.AppendColumn(".tsf", col, true).AppendLine("0x{0:X2}", data.TextureFlags);
+                }
+#endif
             }
 
             m_contentInfo = sb.ToString();

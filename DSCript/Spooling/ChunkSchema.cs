@@ -64,7 +64,7 @@ namespace DSCript.Spooling
                 {
                     var s = spooler.Children[idx];
 
-                    if ((ChunkType)s.Context == kv.Key)
+                    if (s.Context == kv.Key)
                     {
                         spoolers.Add(s);
                     }
@@ -132,7 +132,7 @@ namespace DSCript.Spooling
                     {
                         var s = spooler.Children[idx];
 
-                        if ((ChunkType)s.Context == kv.Key)
+                        if (s.Context == kv.Key)
                         {
                             setValues.Add(kv.Value, s);
                         }

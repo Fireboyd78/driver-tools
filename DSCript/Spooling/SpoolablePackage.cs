@@ -139,5 +139,11 @@ namespace DSCript.Spooling
         {
             _size = size;
         }
+
+        public SpoolablePackage(ref ChunkEntry entry)
+            : base(ref entry)
+        {
+            _size = entry.Size;
+        }
     }
 }

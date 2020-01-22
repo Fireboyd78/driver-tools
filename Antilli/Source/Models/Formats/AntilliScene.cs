@@ -234,32 +234,7 @@ namespace Antilli
 
         public VertexBuffer VertexBuffer { get; set; }
         public IndexBuffer IndexBuffer { get; set; }
-
-        TDetail IDetailProvider.Deserialize<TDetail>(Stream stream)
-        {
-            return Deserialize<TDetail>(stream);
-        }
-
-        void IDetailProvider.Serialize<TDetail>(Stream stream, ref TDetail detail)
-        {
-            Serialize(stream, ref detail);
-        }
-
-        protected TDetail Deserialize<TDetail>(Stream stream)
-            where TDetail : IDetail, new()
-        {
-            var result = new TDetail();
-            result.Deserialize(stream, this);
-
-            return result;
-        }
-
-        protected void Serialize<TDetail>(Stream stream, ref TDetail detail)
-            where TDetail : IDetail
-        {
-            detail.Serialize(stream, this);
-        }
-
+        
         protected ModelType GetModelType(int vertexType)
         {
             switch (vertexType)
@@ -287,7 +262,7 @@ namespace Antilli
             {
                 var model = Models[i];
 
-                Serialize(stream, ref model);
+                this.Serialize(stream, ref model);
             }
 
             //
@@ -369,7 +344,7 @@ namespace Antilli
 
             for (int i = 0; i < modelsCount; i++)
             {
-                var model = Deserialize<Model>(stream);
+                var model = this.Deserialize<Model>(stream);
 
                 Models.Add(model);
             }

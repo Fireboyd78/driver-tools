@@ -342,7 +342,7 @@ namespace Antilli
             {
             case ".dam":
                 modelFile.SpoolerLoaded += (s, e) => {
-                    if (s.Context == (int)ChunkType.CharacterSkeletons)
+                    if (s.Context == ChunkType.CharacterSkeletons)
                     {
                         var skel = s as SpoolableBuffer;
 
