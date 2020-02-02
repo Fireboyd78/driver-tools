@@ -194,7 +194,7 @@ namespace GMC2Snooper.PS2
             if (unpackHandler == null)
                 throw new ArgumentNullException(nameof(unpackHandler), "Unpack handler cannot be null.");
 
-            Code = stream.ReadStruct<VifTag>();
+            Code = stream.Read<VifTag>();
 
             var imdt = new VifImmediate(Code.IMDT);
             var cmd = new VifCommand(Code.CMD);
@@ -250,7 +250,7 @@ namespace GMC2Snooper.PS2
                 break;
 
             case VifCommandType.StMask:
-                Mask = stream.ReadStruct<VifWriteMask>();
+                Mask = stream.Read<VifWriteMask>();
                 break;
 
             case VifCommandType.StRow:

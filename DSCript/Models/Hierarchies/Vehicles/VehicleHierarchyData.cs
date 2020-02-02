@@ -22,42 +22,64 @@ namespace DSCript.Models
         public static readonly MagicNumber VPKBulletMagic = "BULL";
         public static readonly int VPKBulletVersion = 2;
         
-        public class CenterPoint
+        public class CenterPoint : IDetail
         {
             public Vector4 Position { get; set; }
             public Vector4 Rotation { get; set; }
+
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                Position = stream.Read<Vector4>();
+                Rotation = stream.Read<Vector4>();
+            }
+
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                stream.Write(Position);
+                stream.Write(Rotation);
+            }
         }
 
-        public class MarkerPoint
+        public class MarkerPoint : IDetail
         {
             public Vector4 Position { get; set; }
             public Vector4 Rotation { get; set; }
+
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                Position = stream.Read<Vector4>();
+
+                // thank god Reflections did this, otherwise we'd be f*$%ed!
+                if (provider.Version == 1)
+                    Rotation = stream.Read<Vector4>();
+            }
+
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                stream.Write(Position);
+
+                if (provider.Version == 1)
+                    stream.Write(Rotation);
+            }
         }
 
         // bounding box? collision plane?
-        public class Thing3
+        public class Thing3 : IDetail
         {
             public Matrix44 Transform { get; set; }
             public Vector4 Unknown { get; set; }
-        }
-        
-        public class PDLData
-        {
-            public Vector4 Position { get; set; }
-            public Matrix44 Transform { get; set; }
-            
-            public int Unknown1 { get; set; }
 
-            public Vector3 Unknown2 { get; set; }
-        }
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                Transform = stream.Read<Matrix44>();
+                Unknown = stream.Read<Vector4>();
+            }
 
-        public class PDLEntry
-        {
-            public float Unknown { get; set; }
-
-            public int Reserved { get; set; }
-
-            public List<PDLData> Children { get; set; }
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                stream.Write(Transform);
+                stream.Write(Unknown);
+            }
         }
         
         public ModelPackageResource ModelPackage { get; set; }
@@ -69,7 +91,7 @@ namespace DSCript.Models
         public List<Thing3> T3Entries { get; set; }
         public List<Matrix44> PivotPoints { get; set; }
 
-        public List<PDLEntry> PDLEntries { get; set; }
+        public List<PhysicsCollisionModel> CollisionModels { get; set; }
 
         public List<BulletHolder> BulletHolders { get; set; }
 
@@ -130,10 +152,7 @@ namespace DSCript.Models
                 
                 for (int i = 0; i < vInfo.T2Count; i++)
                 {
-                    var point = new CenterPoint() {
-                        Position = stream.Read<Vector4>(),
-                        Rotation = stream.Read<Vector4>(),
-                    };
+                    var point = this.Deserialize<CenterPoint>(stream);
                     
                     CenterPoints.Add(point);
                 }
@@ -146,10 +165,9 @@ namespace DSCript.Models
                 
                 for (int i = 0; i < vInfo.T3Count; i++)
                 {
-                    T3Entries.Add(new Thing3() {
-                        Transform = stream.Read<Matrix44>(),
-                        Unknown = stream.Read<Vector4>(),
-                    });
+                    var t3 = this.Deserialize<Thing3>(stream);
+
+                    T3Entries.Add(t3);
                 }
 
                 //
@@ -160,13 +178,7 @@ namespace DSCript.Models
 
                 for (int i = 0; i < vInfo.T1Count; i++)
                 {
-                    var point = new MarkerPoint() {
-                        Position = stream.Read<Vector4>(),
-                    };
-
-                    // thank god Reflections did this, otherwise we'd be f*$%ed!
-                    if (Version == 1)
-                        point.Rotation = stream.Read<Vector4>();
+                    var point = this.Deserialize<MarkerPoint>(stream);
 
                     MarkerPoints.Add(point);
                 }
@@ -189,69 +201,9 @@ namespace DSCript.Models
                 //
                 
                 var pdlOffset = (int)stream.Position;
-                var pdl = this.Deserialize<PhysicsInfo>(stream);
-                
-                PDLEntries = new List<PDLEntry>(pdl.T1Count);
+                var pdl = this.Deserialize<PhysicsData>(stream);
 
-                var pdlLookup = new Dictionary<int, int>();
-                var pdlData = new List<PDLData>();
-
-                //
-                // PDL.Thing2 data
-                //
-
-                stream.Position = pdlOffset + pdl.T2Offset;
-                
-                for (int i = 0; i < pdl.T2Count; i++)
-                {
-                    var ptr = (int)stream.Position;
-
-                    var data = new PDLData() {
-                        Position = stream.Read<Vector4>(),
-                        Transform = stream.Read<Matrix44>(),
-                        Unknown1 = stream.ReadInt32(),
-                        Unknown2 = stream.Read<Vector3>(),
-                    };
-
-                    pdlLookup.Add(ptr, i);
-                    pdlData.Add(data);
-                }
-
-                //
-                // PDL.Thing1 data
-                //
-
-                stream.Position = pdlOffset + pdl.T1Offset;
-                
-                for (int i = 0; i < pdl.T1Count; i++)
-                {
-                    var ptr = (int)stream.Position;
-                    
-                    var count = stream.ReadInt32();
-                    var offset = stream.ReadInt32() + ptr;
-                    var unknown = stream.ReadSingle();
-                    var reserved = stream.ReadInt32();
-                    
-                    List<PDLData> children = null;
-
-                    if (count != 0)
-                    {
-                        var childrenIdx = -1;
-
-                        if (pdlLookup.TryGetValue(offset, out childrenIdx))
-                            children = pdlData.GetRange(childrenIdx, count);
-
-                        if (children == null)
-                            throw new InvalidOperationException("Failed to get physics data children!");
-                    }
-                    var entry = new PDLEntry() {
-                        Children = children,
-                        Unknown = unknown,
-                        Reserved = reserved,
-                    };
-
-                    PDLEntries.Add(entry);
-                }
+                CollisionModels = pdl.CollisionModels;
 
                 //
                 // Bullet data
@@ -389,11 +341,11 @@ namespace DSCript.Models
                     
                     if (hasPhysics)
                     {
-                        var phy = PDLEntries[part.PhysicsId];
+                        var phy = CollisionModels[part.PhysicsId];
 
                         fs.Write(phy.Children.Count);
-                        fs.Write(phy.Unknown);
-                        fs.Write(phy.Reserved);
+                        fs.Write(phy.Zestiness);
+                        fs.Write(phy.Flags);
 
                         if (version == 3)
                         {
@@ -406,9 +358,9 @@ namespace DSCript.Models
                             fs.Write(pdl.Position);
                             fs.Write(pdl.Transform);
                             
-                            fs.Write(pdl.Unknown1);
+                            fs.Write(pdl.Material);
 
-                            fs.Write(pdl.Unknown2);
+                            fs.Write(pdl.Unknown);
                         }
                     }
 

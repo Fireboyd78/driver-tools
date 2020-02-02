@@ -18,12 +18,18 @@ namespace Antilli
     {
         public enum ModelType
         {
-            Vehicle     = 1,
-            Character   = 2,
-            Static      = 3,
-            Prop        = 4,
-        }
+            World,
 
+            Static,
+            StaticLit,
+            StaticUnlit,
+
+            Vehicle,
+            Character,
+
+            HyperLow,
+        }
+        
         public class Model : IDetail
         {
             public UID UID;
@@ -220,6 +226,153 @@ namespace Antilli
             }
         }
 
+        public class Material : IDetail
+        {
+            public MaterialType Type;
+
+            public float AnimationSpeed;
+            
+            public List<Substance> Substances { get; set; }
+            
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                Type = (MaterialType)stream.ReadInt32();
+                AnimationSpeed = stream.ReadSingle();
+
+                var count = stream.ReadInt32();
+
+                Substances = new List<Substance>(count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var substance = provider.Deserialize<Substance>(stream);
+
+                    Substances.Add(substance);
+                }
+            }
+
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                stream.Write((int)Type);
+                stream.Write(AnimationSpeed);
+
+                var count = Substances.Count;
+
+                stream.Write(count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var substance = Substances[i];
+
+                    provider.Serialize(stream, ref substance);
+                }
+            }
+        }
+        
+        public class Substance : IDetail
+        {
+            public RenderBinType RenderBin;
+            public int RenderFlags;
+
+            // TBD
+            public int ShaderType;
+            public int ShaderFlags;
+
+            public List<Texture> Textures { get; set; }
+            
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                var info1 = stream.ReadInt32();
+                var info2 = stream.ReadInt32();
+                
+                RenderBin = (RenderBinType)(info1 & 0xFF);
+                RenderFlags = ((info1 >> 8) & 0xFFFFFF);
+                
+                ShaderType = (info2 & 0xFF);
+                ShaderFlags = ((info2 >> 8) & 0xFFFFFF);
+
+                var count = stream.ReadInt32();
+
+                for (int i = 0; i < count; i++)
+                {
+                    var texture = provider.Deserialize<Texture>(stream);
+
+                    Textures.Add(texture);
+                }
+            }
+
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                var info1 = ((int)RenderBin & 0xFF) | ((RenderFlags & 0xFFFFFF) << 8);
+                var info2 = (ShaderType & 0xFF) | ((ShaderFlags & 0xFFFFFF) << 8);
+
+                var count = Textures.Count;
+
+                stream.Write(info1);
+                stream.Write(info2);
+
+                stream.Write(count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    var texture = Textures[i];
+
+                    provider.Serialize(stream, ref texture);
+                }
+            }
+        }
+
+        public class Texture : IDetail
+        {
+            public int UID;
+            public int Handle;
+            
+            public int Type;
+
+            public short Width;
+            public short Height;
+
+            public int Flags;
+
+            public byte[] Buffer { get; set; }
+
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                UID = stream.ReadInt32();
+                Handle = stream.ReadInt32();
+
+                Type = stream.ReadInt32();
+
+                Width = stream.ReadInt16();
+                Height = stream.ReadInt16();
+
+                Flags = stream.ReadInt32();
+
+                var length = stream.ReadInt32();
+                var buffer = new byte[length];
+
+                stream.Read(buffer, 0, length);
+            }
+
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                stream.Write(UID);
+                stream.Write(Handle);
+
+                stream.Write(Type);
+
+                stream.Write(Width);
+                stream.Write(Height);
+
+                stream.Write(Flags);
+
+                var length = Buffer.Length;
+
+                stream.Write(length);
+                stream.Write(Buffer, 0, length);
+            }
+        }
+
         public static readonly MagicNumber Magic = "ANTILLI!";
 
         PlatformType IDetailProvider.Platform => PlatformType.Any;
@@ -239,9 +392,11 @@ namespace Antilli
         {
             switch (vertexType)
             {
+            case 0: return ModelType.World;
             case 1: return ModelType.Static;
             case 5: return ModelType.Vehicle;
             case 6: return ModelType.Character;
+            case 7: return ModelType.HyperLow;
             }
 
             throw new InvalidDataException($"Vertex type {vertexType} not implemented!");

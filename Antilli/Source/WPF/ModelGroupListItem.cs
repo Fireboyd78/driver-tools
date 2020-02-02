@@ -33,6 +33,8 @@ namespace Antilli
         public List<Model> Models { get; private set; }
 
         public UID UID { get; }
+        
+        public string Tag { get; }
 
         public bool Flagged { get; }
         
@@ -62,6 +64,9 @@ namespace Antilli
 
                 var name = UID.ToString();
 
+                if (!String.IsNullOrEmpty(Tag))
+                    name += $"[{Tag}]";
+
                 if (Flagged)
                     name += " *";
 
@@ -77,7 +82,7 @@ namespace Antilli
             Models = new List<Model>();
 
             int startIndex = ModelPackage.Models.IndexOf(modelBasis);
-
+            
             for (int p = startIndex; p < ModelPackage.Models.Count; p++)
             {
                 var model = ModelPackage.Models[p];
@@ -87,6 +92,9 @@ namespace Antilli
                     break;
 
 #if DEBUG
+                if (String.IsNullOrEmpty(Tag))
+                    Tag = $"{model.VertexType}:{model.Flags}";
+
                 var flagged = true;
 
                 switch (model.VertexType)
@@ -101,7 +109,11 @@ namespace Antilli
                 case 7:
                     flagged = (model.Flags <= 0) || (model.Flags > 2);
                     break;
-                case 4: // hmm
+
+                // hmm
+                case 3:
+                case 4:
+                case 8:
                     flagged = true;
                     break;
                 }

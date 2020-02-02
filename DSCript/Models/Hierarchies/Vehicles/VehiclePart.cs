@@ -55,6 +55,6 @@ namespace DSCript.Models
         public VehicleHierarchyData.CenterPoint CenterPoint { get; set; }
         public VehicleHierarchyData.Thing3 Thing3 { get; set; }
 
-        public VehicleHierarchyData.PDLEntry CollisionModel { get; set; }
+        public PhysicsCollisionModel CollisionModel { get; set; }
     }
 }

@@ -45,8 +45,6 @@
       <DependentUpon>BMPViewer.cs</DependentUpon>
     </Compile>
     <Compile Include="CLUT.cs" />
-    <Compile Include="GEO2.cs" />
-    <Compile Include="GMC2.cs" />
     <Compile Include="ImageExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -56,9 +54,6 @@
     <Compile Include="PS2\VifParser.cs" />
     <Compile Include="PS2\VifTag.cs" />
     <Compile Include="Swizzlers.cs" />
-    <Compile Include="TSC2.cs" />
-    <Compile Include="TSC2Texture.cs" />
-    <Compile Include="Types.cs" />
     <Compile Include="PS2\Vif.cs" />
   </ItemGroup>
   <ItemGroup>

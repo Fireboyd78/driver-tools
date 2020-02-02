@@ -10,35 +10,13 @@ using System.Text;
 using System.Windows.Forms;
 
 using DSCript;
+using DSCript.Models;
 using DSCript.Spooling;
 
 using GMC2Snooper.PS2;
 
 namespace GMC2Snooper
 {
-    public static class StreamExtensions
-    {
-        public static T ReadStruct<T>(this Stream stream)
-        {
-            var length = Marshal.SizeOf(typeof(T));
-
-            return stream.ReadStruct<T>(length);
-        }
-
-        public static T ReadStruct<T>(this Stream stream, int length)
-        {
-            var data = new byte[length];
-            var ptr = Marshal.AllocHGlobal(length);
-
-            stream.Read(data, 0, length);
-            Marshal.Copy(data, 0, ptr, length);
-
-            var t = (T)Marshal.PtrToStructure(ptr, typeof(T));
-
-            Marshal.FreeHGlobal(ptr);
-            return t;
-        }
-    }
     class Program
     {
         static VifParser VIF;
@@ -344,7 +322,7 @@ namespace GMC2Snooper
                         case 2:
                             UV.X = vtx.X;
                             UV.Y = vtx.Y;
-                            UV.Scale(32.0f);
+                            //UV /= 32.0f;
                             break;
                         }
                     } break;
@@ -371,7 +349,7 @@ namespace GMC2Snooper
 
                             // finish up the UV's
                             UV.Y = vtx.W;
-                            UV.Scale(32.0f);
+                            //UV /= 32.0f;
                             break;
                         }
                     } break;
@@ -412,7 +390,7 @@ namespace GMC2Snooper
         {
             public List<LodHolder> Lods;
 
-            public ModelHolder(Model model)
+            public ModelHolder(ModelPS2 model)
             {
                 Lods = new List<LodHolder>(model.Lods.Count);
             }
@@ -457,7 +435,7 @@ namespace GMC2Snooper
                 *ptr = value;
         }
 
-        public static List<Vertex> ReadVertices(int index, int count, SubModel subModel, Vector4 scale)
+        public static List<Vertex> ReadVertices(int index, int count, SubModelPS2 subModel, Vector4 scale)
         {
             var stride = VIF.Cycle.Length;
             var vertices = new List<Vertex>(count);
@@ -481,7 +459,8 @@ namespace GMC2Snooper
 
                 //--sb.AppendLine();
 
-                vertex.ApplyScale(scale);
+                // TODO: ?
+                //vertex.ApplyScale(scale);
 
                 //--if (subModel.Flags == 1)
                 //--{
@@ -504,6 +483,10 @@ namespace GMC2Snooper
             }
 
             VxCount = 0;
+
+            var itof = new Func<long, float>((val) => {
+                return Convert.ToSingle(val)/* / 128.0f*/;
+            });
             
             switch (packType)
             {
@@ -511,7 +494,7 @@ namespace GMC2Snooper
                 for (int i = 0; i < values.Length; i++)
                 {
                     var val = values[i][0];
-                    var fV = Convert.ToSingle(val) / 128.0f;
+                    var fV = itof(val);
                     
                     SetVertex(i, 0, masked, fV);
                     SetVertex(i, 1, masked, fV);
@@ -528,8 +511,8 @@ namespace GMC2Snooper
                     var x = values[i][0];
                     var y = values[i][1];
 
-                    var fX = Convert.ToSingle(x) / 128.0f;
-                    var fY = Convert.ToSingle(y) / 128.0f;
+                    var fX = itof(x);
+                    var fY = itof(y);
                     
                     SetVertex(i, 0, masked, fX);
                     SetVertex(i, 1, masked, fY);
@@ -547,9 +530,9 @@ namespace GMC2Snooper
                     var y = values[i][1];
                     var z = values[i][2];
 
-                    var fX = Convert.ToSingle(x) / 128.0f;
-                    var fY = Convert.ToSingle(y) / 128.0f;
-                    var fZ = Convert.ToSingle(z) / 128.0f;
+                    var fX = itof(x);
+                    var fY = itof(y);
+                    var fZ = itof(z);
                     
                     SetVertex(i, 0, masked, fX);
                     SetVertex(i, 1, masked, fY);
@@ -568,10 +551,10 @@ namespace GMC2Snooper
                     var z = values[i][2];
                     var w = values[i][3];
                     
-                    var fX = Convert.ToSingle(x) / 128.0f;
-                    var fY = Convert.ToSingle(y) / 128.0f;
-                    var fZ = Convert.ToSingle(z) / 128.0f;
-                    var fW = Convert.ToSingle(w) / 128.0f;
+                    var fX = itof(x);
+                    var fY = itof(y);
+                    var fZ = itof(z);
+                    var fW = itof(w);
                     
                     SetVertex(i, 0, masked, fX);
                     SetVertex(i, 1, masked, fY);
@@ -1156,11 +1139,11 @@ namespace GMC2Snooper
             
             switch (tex.CompType)
             {
-            case TextureCompType.RGBA:
+            case PS2TextureCompType.RGBA:
                 {
                     return new BitmapHelper(texBuffer, tex.Width, tex.Height, tex.CLUTs[0], PixelFormat.Format32bppArgb);
                 }
-            case TextureCompType.PAL8:
+            case PS2TextureCompType.PAL8:
                 {
                     var img = new BitmapHelper(texBuffer, tex.Width, tex.Height, tex.CLUTs[1], PixelFormat.Format8bppIndexed);
                     var clut = Read8bppCLUT(texBuffer, clutTex, clutIdx);
@@ -1170,7 +1153,7 @@ namespace GMC2Snooper
 
                     return img;
                 }
-            case TextureCompType.PAL4:
+            case PS2TextureCompType.PAL4:
                 {
                     var img = new BitmapHelper(texBuffer, tex.Width, tex.Height, tex.CLUTs[1], PixelFormat.Format8bppIndexed);
                     var clut = Read4bppCLUT(texBuffer, clutTex, clutIdx);
@@ -1180,7 +1163,7 @@ namespace GMC2Snooper
 
                     return img;
                 }
-            case TextureCompType.VQ2:
+            case PS2TextureCompType.VQ2:
                 {
                     Debug.WriteLine("Processing VQ2!");
 
@@ -1228,7 +1211,7 @@ namespace GMC2Snooper
                     
                     return img;
                 }
-            case TextureCompType.VQ4:
+            case PS2TextureCompType.VQ4:
                 {
                     Debug.WriteLine("Processing VQ4!");
 
@@ -1242,12 +1225,12 @@ namespace GMC2Snooper
 
                     return img;
                 }
-            case TextureCompType.HY2:
-            case TextureCompType.HY2f:
+            case PS2TextureCompType.HY2:
+            case PS2TextureCompType.HY2f:
                 {
 
                 } break;
-            case TextureCompType.VQ4f:
+            case PS2TextureCompType.VQ4f:
                 {
                     Debug.WriteLine("Processing VQ4f as PAL8!");
 
@@ -1434,7 +1417,7 @@ namespace GMC2Snooper
                         }
                     });
 
-                    if (substance.Type == SubstanceType.Blended)
+                    if (substance.Type == PS2SubstanceType.Blended)
                     {
                         processAll = false;
 

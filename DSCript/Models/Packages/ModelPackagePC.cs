@@ -717,22 +717,12 @@ namespace DSCript.Models
                 var textureRefsOffset = (textureRefsCount > 0)
                     ? luTextureRefs.Single((kv) => kv.Value.Reference == textures[0]).Key : 0;
 
-                var _substance = new SubstanceInfo() {
-                    Bin = (byte)substance.Bin,
+                var _substance = substance.GetData(false);
 
-                    Flags = substance.Flags,
+                _substance.TextureRefsCount = textureRefsCount;
+                _substance.TextureRefsOffset = textureRefsOffset;
 
-                    TS1 = (byte)(substance.Mode & 0xFF),
-                    TS2 = (byte)((substance.Mode >> 8) & 0xFF),
-                    TS3 = (byte)(substance.Type & 0xFF),
-
-                    TextureFlags = (byte)((substance.Type >> 8) & 0xFF),
-
-                    TextureRefsCount = textureRefsCount,
-                    TextureRefsOffset = textureRefsOffset,
-
-                    Reserved = 0,
-                };
+                _substance.Reserved = 0;
 
                 this.Serialize(stream, ref _substance);
             }

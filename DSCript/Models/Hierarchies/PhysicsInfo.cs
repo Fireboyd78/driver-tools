@@ -6,19 +6,19 @@ namespace DSCript.Models
     {
         public static readonly string Magic = "PDL001.002.003a";
 
-        public int T1Count;
-        public int T2Count;
+        public int CollisionModelsCount;
+        public int PrimitivesCount;
 
-        public int T1Offset;
-        public int T2Offset;
+        public int CollisionModelsOffset;
+        public int PrimitivesOffset;
         
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
         {
-            T1Count = stream.ReadInt32();
-            T2Count = stream.ReadInt32();
+            CollisionModelsCount = stream.ReadInt32();
+            PrimitivesCount = stream.ReadInt32();
 
-            T1Offset = stream.ReadInt32();
-            T2Offset = stream.ReadInt32();
+            CollisionModelsOffset = stream.ReadInt32();
+            PrimitivesOffset = stream.ReadInt32();
 
             var check = stream.ReadString(16);
 
@@ -28,11 +28,11 @@ namespace DSCript.Models
 
         void IDetail.Serialize(Stream stream, IDetailProvider provider)
         {
-            stream.Write(T1Count);
-            stream.Write(T2Count);
+            stream.Write(CollisionModelsCount);
+            stream.Write(PrimitivesCount);
 
-            stream.Write(T1Offset);
-            stream.Write(T2Offset);
+            stream.Write(CollisionModelsOffset);
+            stream.Write(PrimitivesOffset);
 
             stream.Write(Magic + "\0");
         }
