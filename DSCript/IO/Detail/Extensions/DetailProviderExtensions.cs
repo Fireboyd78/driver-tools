@@ -20,13 +20,13 @@ namespace DSCript
         }
 
         public static void Serialize<TDetail>(this IDetailProvider provider, Stream stream, TDetail detail)
-            where TDetail : class, IDetail
+            where TDetail : IDetail
         {
             detail.Serialize(stream, provider);
         }
 
         public static void Serialize<TDetail>(this IDetailProvider provider, Stream stream, ref TDetail detail)
-            where TDetail : struct, IDetail
+            where TDetail : IDetail
         {
             detail.Serialize(stream, provider);
         }
