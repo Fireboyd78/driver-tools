@@ -146,6 +146,9 @@ namespace IMGRipper
             public int Index { get; set; }
             public int DataIndex { get; set; }
 
+            public bool Lumped { get; set; }
+            public int LumpIndex { get; set; }
+
             public Entry EntryData { get; set; }
         }
         
@@ -2401,6 +2404,42 @@ namespace IMGRipper
             }
         }
 
+        private static int PackFileInMemory(FileDescriptor file, string filename, Stream stream)
+        {
+            var entryData = file.EntryData;
+            var length = entryData.Length;
+
+            using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, length, FileOptions.SequentialScan))
+            {
+                if (fs.Length != length)
+                    throw new InvalidOperationException($"FATAL ERROR: File size for '{file.FileName}' was changed before the archive could be built!");
+
+                // seek to the file offset and write all data
+                stream.Position = entryData.FileOffset;
+
+                const int maxSize = 0x2C000000;
+
+                if (length < maxSize)
+                {
+                    var buffer = new byte[length];
+                    fs.Read(buffer, 0, buffer.Length);
+
+                    stream.Write(buffer);
+                }
+                else if (length > maxSize)
+                {
+                    var splitSize = (length - maxSize);
+
+                    for (int w = 0; w < maxSize; w += 0x100000)
+                        stream.Write(fs.ReadBytes(0x100000));
+
+                    stream.Write(fs.ReadBytes(splitSize));
+                }
+            }
+
+            return length;
+        }
+
         public static void BuildArchive(string configFile, string outputDir)
         {
             var inputDir = Path.GetDirectoryName(configFile);
@@ -2450,6 +2489,8 @@ namespace IMGRipper
                 var archive = "";
 
                 var type = -1;
+                var version = -1;
+
                 var source = "";
 
                 var files = new List<FileDescriptor>();
@@ -2519,7 +2560,7 @@ namespace IMGRipper
                     case IMGVersion.IMG4:
                     case IMGVersion.PSP:
                         {
-                            var entryData = ((IMGVersion)type == IMGVersion.PSP)
+                            Entry entryData = ((IMGVersion)type == IMGVersion.PSP)
                                 ? new PSPEntry()
                                 : new Entry();
 
@@ -2530,14 +2571,28 @@ namespace IMGRipper
                                 if ((IMGVersion)type == IMGVersion.IMG2)
                                     throw new InvalidOperationException($"IMG2 archives do not support filename hashes! (line {line})");
 
-                                // detect xbox archives (TODO: implement support)
+                                var fileIndex = 1;
+
+                                // detect xbox archives
                                 if (input.Length > 2)
                                 {
                                     if ((IMGVersion)type != IMGVersion.IMG4)
                                         throw new InvalidOperationException($"Malformed entry @ line {line} has invalid syntax for version {type}!");
 
-                                    // no xbox support yet :(
-                                    throw new InvalidOperationException($"XBox archives are currently not supported for compilation.");
+                                    var lump = int.Parse(input[fileIndex++], NumberStyles.Integer);
+
+                                    if (lump < 0)
+                                        throw new InvalidOperationException($"Lump index out of range -- non-negative number required (line {line})");
+
+                                    // for now...
+                                    if (lump > 9)
+                                    {
+                                        Program.WriteVerbose($"File '{filename}' wanted unsupported lump ({lump})!");
+                                        lump = 9;
+                                    }
+
+                                    result.Lumped = true;
+                                    result.LumpIndex = lump;
                                 }
 
                                 var strHash = input[0];
@@ -2551,7 +2606,7 @@ namespace IMGRipper
                                 if (!uint.TryParse(val, style, CultureInfo.InvariantCulture, out hash))
                                     throw new InvalidOperationException($"Malformed entry @ line {line} has invalid hash '{strHash}'.");
 
-                                filename = input[1];
+                                filename = input[fileIndex];
                                 entryData.FileNameHash = hash;   
                             }
                             else
@@ -2611,7 +2666,6 @@ namespace IMGRipper
                             throw new InvalidOperationException($"Invalid archive type '{v}', must be an integer.");
                     } },
                     { "version", (v) => {
-                        int version = -1;
                         if (!int.TryParse(v, out version))
                             throw new InvalidOperationException($"Invalid archive version '{v}', must be an integer.");
 
@@ -2753,6 +2807,9 @@ namespace IMGRipper
                 var headerSize = (int)bufferSize;
 
                 bufferSize = MemoryHelper.Align(bufferSize, 2048);
+
+                var lumpFiles = new int[10];
+                var lumpSizes = new long[10];
                 
                 // calculate file offsets + buffer size
                 for (int i = 0; i < files.Count; i++)
@@ -2763,12 +2820,29 @@ namespace IMGRipper
                     file.Index = i;
 
                     var entryData = file.EntryData;
+                    var entryOffset = (file.Lumped) ? lumpSizes[file.LumpIndex] : bufferSize;
 
                     // will set 'Offset' accordingly
-                    entryData.FileOffset = bufferSize;
+                    entryData.FileOffset = entryOffset;
 
-                    bufferSize += entryData.Length;
-                    bufferSize = MemoryHelper.Align(bufferSize, 2048);
+                    // setup next entry
+                    entryOffset += entryData.Length;
+                    entryOffset = MemoryHelper.Align(entryOffset, 2048);
+
+                    if (file.Lumped)
+                    {
+                        // lumped files
+                        var lump = file.LumpIndex;
+
+                        file.DataIndex = lumpFiles[lump]++;
+
+                        lumpSizes[lump] = entryOffset;
+                    }
+                    else
+                    {
+                        // packed archive
+                        bufferSize = entryOffset;
+                    }
                 }
 
                 if ((IMGVersion)type == IMGVersion.PSP)
@@ -2786,6 +2860,8 @@ namespace IMGRipper
                 var archiveDir = Path.Combine(outputDir, "Build");
                 var archiveFileName = Path.Combine(archiveDir, archive);
 
+                var lumpName = Path.GetFileNameWithoutExtension(archive);
+
                 if (!Program.VerboseLog)
                     Console.Write("> ");
 
@@ -2795,7 +2871,7 @@ namespace IMGRipper
                 if (!Directory.Exists(archiveDir))
                     Directory.CreateDirectory(archiveDir);
 
-                using (var fs = new FileStream(archiveFileName, FileMode.Create, FileAccess.Write, FileShare.Read, (1024 * 1024), FileOptions.SequentialScan))
+                using (var fs = new FileStream(archiveFileName, FileMode.Create, FileAccess.Write, FileShare.Read, 8000, FileOptions.SequentialScan))
                 {
                     fs.SetLength(bufferSize);
 
@@ -2830,13 +2906,14 @@ namespace IMGRipper
                     // write out files + build lookup table
                     using (var ms = new MemoryStream(headerSize - listOffset))
                     {
+                        var lumps = new Stream[10];
+                        var idx = 0;
+
                         // process sequentially through the files
                         // we use the data index so write caching doesn't slow us down
                         // but in the header, it'll write wherever needed (PSP archives are weird)
                         foreach (var file in files.OrderBy((f) => f.DataIndex))
                         {
-                            var idx = file.DataIndex;
-                            
                             var entryData = file.EntryData;
                             var filename = Path.Combine(source, file.FileName);
 
@@ -2892,7 +2969,13 @@ namespace IMGRipper
                             case IMGVersion.IMG4:
                                 {
                                     ms.Write(entryData.FileNameHash);
-                                    ms.Write(entryData.Offset);
+
+                                    var offset = entryData.Offset;
+
+                                    if (file.Lumped)
+                                        offset = (file.LumpIndex & 0xFF) | (offset << 8);
+
+                                    ms.Write(offset);
                                     ms.Write(entryData.Length);
                                 } break;
                             case IMGVersion.PSP:
@@ -2906,35 +2989,38 @@ namespace IMGRipper
                                 } break;
                             }
 
-                            var length = entryData.Length;
+                            Stream ls = fs;
 
-                            // read file data into the archive
-                            using (var ffs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, length, FileOptions.SequentialScan))
+                            if (file.Lumped)
                             {
-                                if (ffs.Length != length)
-                                    throw new InvalidOperationException($"FATAL ERROR: File size for '{file.FileName}' was changed before the archive could be built!");
-
-                                // seek to the file offset and write all data
-                                fs.Position = entryData.FileOffset;
+                                var lump = file.LumpIndex;
                                 
-                                const int maxSize = 0x2C000000;
-
-                                if (length < maxSize)
+                                if ((ls = lumps[lump]) == null)
                                 {
-                                    var buffer = new byte[length];
-                                    ffs.Read(buffer, 0, buffer.Length);
+                                    var lumpFile = Path.Combine(archiveDir, $"{lumpName}.L{lump:D2}");
 
-                                    fs.Write(buffer);
+                                    Program.WriteVerbose($"Creating lump file '{lumpFile}'...");
+                                    lumps[lump] = (ls = File.Create(lumpFile, 1024, FileOptions.SequentialScan));
+
+                                    ls.SetLength(lumpSizes[lump]);
                                 }
-                                else if (length > maxSize)
-                                {
-                                    var splitSize = (length - maxSize);
+                            }
 
-                                    for (int w = 0; w < maxSize; w += 0x100000)
-                                        fs.Write(ffs.ReadBytes(0x100000));
+                            PackFileInMemory(file, filename, ls);
+                            idx++;
+                        }
 
-                                    fs.Write(ffs.ReadBytes(splitSize));
-                                }
+                        // commit lump data
+                        for (int l = 0; l < 10; l++)
+                        {
+                            var ls = lumps[l];
+
+                            if (ls != null)
+                            {
+                                ls.Flush();
+                                ls.Dispose();
+
+                                lumps[l] = null;
                             }
                         }
 
@@ -2947,16 +3033,17 @@ namespace IMGRipper
 
                     switch ((IMGVersion)type)
                     {
-                    case IMGVersion.IMG2:
+                        case IMGVersion.IMG2:
                         {
                             for (int i = 0; i < listData.Length; i++)
                             {
                                 listData[i] += decKey;
                                 decKey += 11;
                             }
-                        } break;
-                    case IMGVersion.IMG3:
-                    case IMGVersion.IMG4:
+                        }
+                        break;
+                        case IMGVersion.IMG3:
+                        case IMGVersion.IMG4:
                         {
                             byte key = 21;
 
@@ -2976,7 +3063,8 @@ namespace IMGRipper
                                     key = 21;
                                 }
                             }
-                        } break;
+                        }
+                        break;
                     }
 
                     // write list size if needed
