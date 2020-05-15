@@ -129,15 +129,12 @@ namespace DSCript
         {
             var size = 0L;
 
-            if (Directory.Exists(TempDirectory))
+            for (int handle = 0; handle < _nextTempHandle; handle++)
             {
-                var files = from file in Directory.GetFiles(TempDirectory)
-                            select new FileInfo(file);
+                var tempFile = _tempFiles[handle];
 
-                foreach (var file in files)
-                    size += file.Length;
-
-                return size;
+                if (tempFile != null)
+                    size += tempFile.Length;
             }
             
             return size;
@@ -258,29 +255,7 @@ namespace DSCript
         {
             // Setup temp directory
             if (!Directory.Exists(TempDirectory))
-            {
                 Directory.CreateDirectory(TempDirectory);
-            }
-            else
-            {
-                // this might be dangerous if multiple instances of a DSCript program are running...
-                var files = Directory.GetFiles(TempDirectory);
-
-                if (files.Length > 0)
-                {
-                    DSC.Log("Cleaning up temp directory...");
-
-                    int count = 0;
-
-                    foreach (var file in files)
-                    {
-                        File.Delete(file);
-                        ++count;
-                    }
-
-                    DSC.Log("Cleaned out {0} files from temp directory.", count);
-                }
-            }
         }
     }
 }
