@@ -76,6 +76,7 @@
     <Compile Include="Models\Hierarchies\PhysicsCollisionModel.cs" />
     <Compile Include="Models\Hierarchies\PhysicsData.cs" />
     <Compile Include="Models\Hierarchies\PhysicsPrimitive.cs" />
+    <Compile Include="Models\Materials\PaletteData.cs" />
     <Compile Include="Models\PS2\Details\LodInfo.cs" />
     <Compile Include="Models\PS2\Details\LodInstanceInfo.cs" />
     <Compile Include="Models\PS2\Details\ModelInfo.cs" />
@@ -121,8 +122,7 @@
     <Compile Include="Models\Materials\Details\TextureInfo.cs" />
     <Compile Include="Models\Details\SubModelInfo.cs" />
     <Compile Include="Models\Details\VertexBufferInfo.cs" />
-    <Compile Include="Models\Packages\ModelPackagePC.cs" />
-    <Compile Include="Models\Packages\ModelPackagePS2.cs" />
+    <Compile Include="Models\Packages\ModelPackage.cs" />
     <Compile Include="Models\Packages\ModelPackageResource.cs" />
     <Compile Include="Models\Packages\PackageManager.cs" />
     <Compile Include="Models\PrimitiveType.cs" />

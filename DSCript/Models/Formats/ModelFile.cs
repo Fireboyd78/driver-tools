@@ -44,6 +44,8 @@ namespace DSCript.Models
             {
             case ChunkType.ModelPackagePC:
             case ChunkType.ModelPackagePC_X:
+            case ChunkType.ModelPackagePS2:
+            case ChunkType.ModelPackageXbox:
             case ChunkType.ModelPackageWii:
                 var package = SpoolableResourceFactory.Create<ModelPackage>(sender);
 

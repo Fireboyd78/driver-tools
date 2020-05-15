@@ -56,6 +56,8 @@ namespace DSCript.Models
         {
             get { return (HasModels || HasHierarchies); }
         }
+
+        protected bool UsesSpoolSystem = false;
         
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
@@ -63,6 +65,8 @@ namespace DSCript.Models
             {
             case ChunkType.ModelPackagePC:
             case ChunkType.ModelPackagePC_X:
+            case ChunkType.ModelPackagePS2:
+            case ChunkType.ModelPackageXbox:
             case ChunkType.ModelPackageWii:
                 var modelPackage = sender.AsResource<ModelPackage>();
                 
@@ -72,6 +76,7 @@ namespace DSCript.Models
                     PackageManager.Load(modelPackage);
 
                     GlobalTextures = modelPackage;
+                    UsesSpoolSystem = true;
                 }
                 else
                 {
@@ -80,12 +85,16 @@ namespace DSCript.Models
                 break;
             case ChunkType.VehicleHierarchy:
                 var hierarchy = sender.AsResource<VehicleHierarchyData>();
-
+                
                 hierarchy.Platform = PlatformType.Any;
                 hierarchy.Version = sender.Version;
 
+                // DPL on XBox doesn't tell us correct version :(
+                if (UsesSpoolSystem && (hierarchy.Version == 0))
+                    hierarchy.Version = 1;
+                
                 SpoolableResourceFactory.Load(hierarchy);
-
+                
                 Hierarchies.Add(hierarchy);
                 break;
             }

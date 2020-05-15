@@ -78,7 +78,7 @@ namespace DSCript.Models
                 // get substances
                 for (int s = 0; s < _m.NumSubstances; s++)
                 {
-                    stream.Position = _m.SubstanceRefsOffset + (s * tsc2Header.LookupSize);
+                    stream.Position = _m.SubstanceRefsOffset + (s * tsc2Header.ReferenceSize);
                     stream.Position = stream.ReadInt32() + tsc2Offset;
 
                     var _s = stream.Read<SubstanceDataPS2.Detail>();
@@ -92,7 +92,7 @@ namespace DSCript.Models
                     // get textures
                     for (int t = 0; t < _s.NumTextures; t++)
                     {
-                        stream.Position = _s.TextureRefsOffset + (t * tsc2Header.LookupSize);
+                        stream.Position = _s.TextureRefsOffset + (t * tsc2Header.ReferenceSize);
                         stream.Position = stream.ReadInt32() + tsc2Offset;
                         
                         var _t = stream.Read<TextureDataPS2.Detail>();

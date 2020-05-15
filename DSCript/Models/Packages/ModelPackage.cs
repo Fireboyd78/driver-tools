@@ -452,14 +452,18 @@ namespace DSCript.Models
 
                 Materials = new List<MaterialDataPC>(info.MaterialsCount);
                 Substances = new List<SubstanceDataPC>(info.SubstancesCount);
+                Palettes = new List<PaletteData>(info.PalettesCount);
                 Textures = new List<TextureDataPC>(info.TexturesCount);
 
                 var luSubstanceRefs = new SortedDictionary<int, ReferenceInfo<SubstanceDataPC>>();
+                var luPaletteRefs = new SortedDictionary<int, ReferenceInfo<PaletteData>>();
                 var luTextureRefs = new SortedDictionary<int, ReferenceInfo<TextureDataPC>>();
 
                 var luSubstances = new Dictionary<int, SubstanceDataPC>();
+                var luPalettes = new Dictionary<int, PaletteData>();
                 var luTextures = new Dictionary<int, TextureDataPC>();
-                
+
+                var luPaletteOffsets = new Dictionary<PaletteData, int>();
                 var luTextureOffsets = new Dictionary<TextureDataPC, int>();
                 var luTextureSizes = new Dictionary<int, int>();
 
@@ -502,9 +506,9 @@ namespace DSCript.Models
                 // Texture references
                 //
 
-                stream.Position = (matDataOffset + info.TextureLookupOffset);
+                stream.Position = (matDataOffset + info.TextureRefsOffset);
 
-                for (int t = 0; t < info.TextureLookupCount; t++)
+                for (int t = 0; t < info.TextureRefsCount; t++)
                 {
                     var offset = (int)stream.Position;
                     var lookup = this.Deserialize<ReferenceInfo<TextureDataPC>>(stream);
@@ -512,6 +516,87 @@ namespace DSCript.Models
                     lookup.Reference = luTextures[lookup.Offset];
 
                     luTextureRefs.Add(offset - matDataOffset, lookup);
+                }
+
+                //
+                // Xbox texture size HACKS
+                //
+                if (Platform == PlatformType.Xbox)
+                {
+                    if (info.DataSize == 0)
+                        throw new InvalidOperationException("Can't calculate xbox texture data size!");
+
+                    var texDataSize = (info.DataSize - info.TextureDataOffset);
+
+                    TextureDataPC last = null;
+
+                    var dummy = new TextureDataPC() { UID = -1, Handle = -1 };
+
+                    // temporarily use a dummy for the last entry
+                    luTextureOffsets.Add(dummy, texDataSize);
+
+                    foreach (var lu in luTextureOffsets)
+                    {
+                        var texture = lu.Key;
+
+                        if (last != null)
+                        {
+                            var offset = luTextureOffsets[last];
+                            var size = luTextureSizes[offset];
+
+                            if (size == 0)
+                                luTextureSizes[offset] = (luTextureOffsets[texture] - offset);
+                        }
+
+                        last = texture;
+                    }
+
+                    luTextureOffsets.Remove(dummy);
+                    dummy = null;
+                }
+
+                if (info.HasPalettes)
+                {
+                    //
+                    // Palettes
+                    //
+
+                    stream.Position = (matDataOffset + info.PalettesOffset);
+
+                    for (int s = 0; s < info.PalettesCount; s++)
+                    {
+                        var offset = (int)stream.Position;
+                        var _palette = stream.Read<D3DResource>();
+
+                        var palette = new PaletteData()
+                        {
+                            Common = _palette.Common,
+                            Format = _palette.Format,
+                        };
+
+                        Palettes.Add(palette);
+
+                        luPalettes.Add(offset - matDataOffset, palette);
+
+                        if (!luPaletteOffsets.ContainsKey(palette))
+                            luPaletteOffsets.Add(palette, _palette.Data + info.DataSize);
+                    }
+
+                    //
+                    // Palette references
+                    //
+
+                    stream.Position = (matDataOffset + info.PaletteRefsOffset);
+
+                    for (int s = 0; s < info.PaletteRefsCount; s++)
+                    {
+                        var offset = (int)stream.Position;
+                        var lookup = this.Deserialize<ReferenceInfo<PaletteData>>(stream);
+
+                        lookup.Reference = luPalettes[lookup.Offset];
+
+                        luPaletteRefs.Add(offset - matDataOffset, lookup);
+                    }
                 }
 
                 //
@@ -534,6 +619,15 @@ namespace DSCript.Models
                         Type = (_substance.TS3 | (_substance.TextureFlags << 8)),
                     };
 
+                    if (_substance.PaletteRefsCount != 0)
+                    {
+                        substance.Palettes = luPaletteRefs
+                            .Where((kv) => kv.Key >= _substance.PaletteRefsOffset)
+                            .Take(_substance.PaletteRefsCount)
+                            .Select((kv) => kv.Value.Reference)
+                            .ToList();
+                    }
+
                     substance.Textures = luTextureRefs
                         .Where((kv) => kv.Key >= _substance.TextureRefsOffset)
                         .Take(_substance.TextureRefsCount)
@@ -549,9 +643,9 @@ namespace DSCript.Models
                 // Substance references
                 //
 
-                stream.Position = (matDataOffset + info.SubstanceLookupOffset);
+                stream.Position = (matDataOffset + info.SubstanceRefsOffset);
 
-                for (int s = 0; s < info.SubstanceLookupCount; s++)
+                for (int s = 0; s < info.SubstanceRefsCount; s++)
                 {
                     var offset = (int)stream.Position;
                     var lookup = this.Deserialize<ReferenceInfo<SubstanceDataPC>>(stream);
@@ -586,33 +680,127 @@ namespace DSCript.Models
                 }
 
                 // populate texture buffers
-                foreach (var lu in luTextureOffsets)
+                foreach (var texture in Textures)
                 {
-                    var texture = lu.Key;
+                    var texOffset = luTextureOffsets[texture];
 
-                    var offset = (texDataOffset + lu.Value);
-                    var size = luTextureSizes[lu.Value];
+                    var offset = (texDataOffset + texOffset);
+                    var size = luTextureSizes[texOffset];
 
-                    // thanks, reflections!
-                    if (size == 0)
+                    if (Platform == PlatformType.Xbox)
                     {
-                        var header = default(DDSHeader);
+                        if (size == 0)
+                            throw new InvalidOperationException("Xbox texture size was not resolved!");
+
+                        // copy image data
+                        var data = new byte[size];
 
                         stream.Position = offset;
-
-                        if (!DDSUtils.GetHeaderInfo(stream, ref header))
-                            throw new InvalidDataException("Can't determine data size of texture!");
-
-                        size = (DDSHeader.SizeOf + DDSUtils.GetDataSize(ref header) + 4);
+                        stream.Read(data, 0, size);
+                        
+                        texture.Buffer = data;
                     }
+                    else
+                    {
+                        // thanks, reflections!
+                        if (size == 0)
+                        {
+                            var header = default(DDSHeader);
 
-                    var buffer = new byte[size];
+                            stream.Position = offset;
 
-                    stream.Position = offset;
-                    stream.Read(buffer, 0, size);
+                            if (!DDSUtils.GetHeaderInfo(stream, ref header))
+                                throw new InvalidDataException("Can't determine data size of texture!");
 
-                    texture.Buffer = buffer;
+                            size = (DDSHeader.SizeOf + DDSUtils.GetDataSize(ref header) + 4);
+                        }
+
+                        var buffer = new byte[size];
+
+                        stream.Position = offset;
+                        stream.Read(buffer, 0, size);
+
+                        texture.Buffer = buffer;
+                    }
                 }
+
+                // here we go...build DDS wrappers + depalettize textures
+                if (Platform == PlatformType.Xbox)
+                {
+                    var luSwizzledTextures = new HashSet<byte[]>();
+
+                    // paletted textures...again
+                    foreach (var substance in Substances)
+                    {
+                        foreach (var texture in substance.Textures)
+                        {
+                            var data = texture.Buffer;
+
+                            if (luSwizzledTextures.Contains(data))
+                                continue;
+
+                            var format = (D3DFormat)((texture.Flags >> 8) & 0xFF);
+                            var mipmaps = (texture.Flags >> 16) & 0xF;
+
+                            var width = texture.Width;
+                            var height = texture.Height;
+
+                            if (DDSUtils.HasPalette(format))
+                            {
+                                var bpp = DDSUtils.GetBytesPerPixel(format);
+
+                                if (bpp != 4)
+                                    throw new InvalidOperationException("can't process palettes!");
+
+                                var palettes = new List<byte[]>();
+
+                                foreach (var palette in substance.Palettes)
+                                {
+                                    stream.Position = matDataOffset + luPaletteOffsets[palette];
+
+                                    var pal = DDSUtils.GetPalette(format, stream, width, height);
+
+                                    if (pal == null)
+                                        throw new InvalidOperationException("can't process palette!");
+
+                                    palettes.Add(pal);
+                                }
+
+                                var clut = new byte[256 * bpp];
+
+                                if (palettes.Count >= 4)
+                                {
+                                    for (int i = 0; i < 256; i++)
+                                    {
+                                        var idx = (i * bpp);
+
+                                        clut[idx + 0] = palettes[2][idx + 0]; // B
+                                        clut[idx + 1] = palettes[1][idx + 1]; // G
+                                        clut[idx + 2] = palettes[0][idx + 2]; // R
+                                        clut[idx + 3] = palettes[3][idx + 3]; // A
+                                    }
+                                }
+                                else
+                                {
+                                    //if (palettes.Count > 1)
+                                    //    throw new InvalidOperationException($"Can't process {palettes.Count} palettes!");
+
+                                    clut = palettes[0];
+                                }
+
+                                // override the data
+                                data = DDSUtils.Depalettize(data, width, height, bpp, clut);
+                            }
+
+                            var buffer = DDSUtils.EncodeTexture(format, width, height, mipmaps, data);
+
+                            texture.Buffer = buffer;
+
+                            luSwizzledTextures.Add(buffer);
+                        }
+                    }
+                }
+
 
                 // lookup tables no longer needed
                 luSubstances.Clear();
@@ -687,7 +875,7 @@ namespace DSCript.Models
             // Texture references
             //
 
-            stream.Position = (detail.MaterialDataOffset + info.TextureLookupOffset);
+            stream.Position = (detail.MaterialDataOffset + info.TextureRefsOffset);
 
             foreach (var texture in Textures)
             {
@@ -697,6 +885,13 @@ namespace DSCript.Models
                 this.Serialize(stream, ref lookup);
 
                 luTextureRefs.Add(offset, lookup);
+            }
+
+            if (info.HasPalettes)
+            {
+                // TODO?
+                if (info.PalettesCount > 0)
+                    Debug.WriteLine($"WARNING: Skipping palette data!");
             }
 
             //
@@ -731,7 +926,7 @@ namespace DSCript.Models
             // Substance references
             //
 
-            stream.Position = (detail.MaterialDataOffset + info.SubstanceLookupOffset);
+            stream.Position = (detail.MaterialDataOffset + info.SubstanceRefsOffset);
 
             foreach (var substance in Substances)
             {
@@ -851,7 +1046,7 @@ namespace DSCript.Models
 
                     UID = detail.UID;
 
-                    if (!SkipModelsOnLoad)
+                    if ((Platform != PlatformType.Xbox) && !SkipModelsOnLoad)
                     {
                         Models = new List<Model>(detail.ModelsCount);
                         LodInstances = new List<LodInstance>(detail.LodInstancesCount);

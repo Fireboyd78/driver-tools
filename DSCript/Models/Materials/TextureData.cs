@@ -39,5 +39,10 @@ namespace DSCript.Models
         public int Flags { get; set; }
         
         public byte[] Buffer { get; set; }
+
+        public override int GetHashCode()
+        {
+            return (Handle << 1) & ~UID;
+        }
     }
 }

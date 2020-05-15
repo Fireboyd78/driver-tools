@@ -34,9 +34,11 @@ namespace DSCript.Models
             UID = stream.ReadInt32();
             Hash = stream.ReadInt32();
 
-            // skip 0xF00(1,4) header?
             if (provider.Version != 6)
-                stream.Position += 8;
+            {
+                Type = stream.ReadInt32() & 0xFF;
+                stream.Position += 4; // (1,4)
+            }
 
             DataOffset = stream.ReadInt32();
             DataSize = stream.ReadInt32();
@@ -50,10 +52,10 @@ namespace DSCript.Models
                 Height = (short)(1 << ((format >> 24) & 0xF));
 
                 // not 100% sure on this one
-                Type = (format >> 16) & 0xF;
+                //Type = (format >> 16) & 0xF;
 
-                // TODO: figure this stuff out
-                Flags = (format & 0xFFFF);
+                // packed D3DFORMAT
+                Flags = (format & 0xFFFFF);
 
                 Reserved = stream.ReadInt32();
             }
@@ -77,7 +79,7 @@ namespace DSCript.Models
 
             if (provider.Version != 6)
             {
-                stream.Write(0xF00);
+                stream.Write(0xF00 | (Type & 0xFF));
 
                 stream.Write((short)1);
                 stream.Write((short)4);
@@ -92,8 +94,7 @@ namespace DSCript.Models
 
                 format |= (GetPackedBits(Width) & 0xF) << 20;
                 format |= (GetPackedBits(Height) & 0xF) << 24;
-                format |= (Type & 0xF) << 16;
-                format |= (Flags & 0xFFFF);
+                format |= (Flags & 0xFFFFF);
 
                 stream.Write(format);
                 stream.Write(Reserved);

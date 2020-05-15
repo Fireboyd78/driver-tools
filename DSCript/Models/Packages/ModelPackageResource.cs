@@ -100,6 +100,7 @@ namespace DSCript.Models
 
         public List<MaterialDataPC> Materials { get; set; }
         public List<SubstanceDataPC> Substances { get; set; }
+        public List<PaletteData> Palettes { get; set; }
         public List<TextureDataPC> Textures { get; set; }
 
         public virtual bool HasMaterials    => Materials?.Count > 0;
@@ -160,15 +161,22 @@ namespace DSCript.Models
 
                 foreach (var substance in Substances)
                 {
+                    substance.Palettes.Clear();
+                    substance.Palettes = null;
+
                     substance.Textures.Clear();
                     substance.Textures = null;
                 }
+
+                foreach (var palette in Palettes)
+                    palette.Buffer = null;
 
                 foreach (var texture in Textures)
                     texture.Buffer = null;
 
                 Materials.Clear();
                 Substances.Clear();
+                Palettes.Clear();
                 Textures.Clear();
             }
         }

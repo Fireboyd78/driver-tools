@@ -20,6 +20,7 @@ namespace DSCript.Models
 
         public List<MaterialDataPC> Materials { get; set; }
         public List<SubstanceDataPC> Substances { get; set; }
+        public List<PaletteData> Palettes { get; set; }
         public List<TextureDataPC> Textures { get; set; }
 
         protected override void Load()
@@ -63,6 +64,7 @@ namespace DSCript.Models
                 }
 
                 Substances = pak.Substances;
+                Palettes = pak.Palettes;
                 Textures = pak.Textures;
             }
         }

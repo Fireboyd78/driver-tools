@@ -108,28 +108,29 @@ namespace DSCript.Models
         public int MaterialsCount;
         public int MaterialsOffset;
 
-        public int SubstanceLookupCount;
-        public int SubstanceLookupOffset;
+        public int SubstanceRefsCount;
+        public int SubstanceRefsOffset;
 
         public int SubstancesCount;
         public int SubstancesOffset;
 
-        public int PaletteInfoLookupCount;
-        public int PaletteInfoLookupOffset;
+        public int PaletteRefsCount;
+        public int PaletteRefsOffset;
 
-        public int PaletteInfoCount;
-        public int PaletteInfoOffset;
+        public int PalettesCount;
+        public int PalettesOffset;
 
-        public int TextureLookupCount;
-        public int TextureLookupOffset;
+        public int TextureRefsCount;
+        public int TextureRefsOffset;
         
         public int TexturesCount;
         public int TexturesOffset;
         
         public int TextureDataOffset;
+
         public int DataSize;
 
-        public bool HasPaletteInfo;
+        public bool HasPalettes;
         
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
         {
@@ -153,9 +154,8 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x48 : 0x38;
                 case MaterialPackageType.Xbox:
-                    return 0x48;
+                    return (HasPalettes) ? 0x48 : 0x38;
                 case MaterialPackageType.PS2:
                     return 0x14;
                 }
@@ -170,7 +170,7 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x10 : 0x18;
+                    return (HasPalettes) ? 0x10 : 0x18;
                 case MaterialPackageType.PS2:
                 case MaterialPackageType.Xbox:
                     return 0x10;
@@ -186,12 +186,22 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x1C : 0x20;
                 case MaterialPackageType.Xbox:
-                    return 0x1C;
+                    return (HasPalettes) ? 0x1C : 0x20;
                 case MaterialPackageType.PS2:
                     return 0xC;
                 }
+                return 0;
+            }
+        }
+
+        public int PaletteSize
+        {
+            get
+            {
+                if (HasPalettes)
+                    return 0x14;
+
                 return 0;
             }
         }
@@ -212,14 +222,14 @@ namespace DSCript.Models
             }
         }
 
-        public int LookupSize
+        public int ReferenceSize
         {
             get
             {
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                    return (HasPaletteInfo) ? 0x4 : 0x8;
+                    return (HasPalettes) ? 0x4 : 0x8;
                 case MaterialPackageType.Xbox:
                 case MaterialPackageType.PS2:
                     return 0x4;
@@ -234,11 +244,11 @@ namespace DSCript.Models
 
             MaterialsOffset = HeaderSize;
 
-            SubstanceLookupOffset = MaterialsOffset + (MaterialsCount * MaterialSize);
-            SubstancesOffset = SubstanceLookupOffset + (SubstanceLookupCount * LookupSize);
+            SubstanceRefsOffset = MaterialsOffset + (MaterialsCount * MaterialSize);
+            SubstancesOffset = SubstanceRefsOffset + (SubstanceRefsCount * ReferenceSize);
 
-            TextureLookupOffset = SubstancesOffset + (SubstancesCount * SubstanceSize);
-            TexturesOffset = TextureLookupOffset + (TextureLookupCount * LookupSize);
+            TextureRefsOffset = SubstancesOffset + (SubstancesCount * SubstanceSize);
+            TexturesOffset = TextureRefsOffset + (TextureRefsCount * ReferenceSize);
 
             TextureDataOffset = Memory.Align(TexturesOffset + (TexturesCount * TextureSize), alignment);
         }
@@ -251,9 +261,9 @@ namespace DSCript.Models
             if (PackageType == MaterialPackageType.PS2)
             {
                 MaterialsCount = stream.ReadInt16();
-                SubstanceLookupCount = stream.ReadInt16();
+                SubstanceRefsCount = stream.ReadInt16();
                 SubstancesCount = stream.ReadInt16();
-                TextureLookupCount = stream.ReadInt16();
+                TextureRefsCount = stream.ReadInt16();
                 TexturesCount = stream.ReadInt16();
 
                 // skip version
@@ -272,24 +282,23 @@ namespace DSCript.Models
                 MaterialsCount = stream.ReadInt32();
                 MaterialsOffset = stream.ReadInt32();
 
-                SubstanceLookupCount = stream.ReadInt32();
-                SubstanceLookupOffset = stream.ReadInt32();
+                SubstanceRefsCount = stream.ReadInt32();
+                SubstanceRefsOffset = stream.ReadInt32();
 
                 SubstancesCount = stream.ReadInt32();
                 SubstancesOffset = stream.ReadInt32();
 
-                // TODO: process palette information (used on Xbox & possibly DPL PC?)
-                if (HasPaletteInfo)
+                if (HasPalettes)
                 {
-                    PaletteInfoLookupCount = stream.ReadInt32();
-                    PaletteInfoLookupOffset = stream.ReadInt32();
+                    PaletteRefsCount = stream.ReadInt32();
+                    PaletteRefsOffset = stream.ReadInt32();
 
-                    PaletteInfoCount = stream.ReadInt32();
-                    PaletteInfoOffset = stream.ReadInt32();
+                    PalettesCount = stream.ReadInt32();
+                    PalettesOffset = stream.ReadInt32();
                 }
 
-                TextureLookupCount = stream.ReadInt32();
-                TextureLookupOffset = stream.ReadInt32();
+                TextureRefsCount = stream.ReadInt32();
+                TextureRefsOffset = stream.ReadInt32();
 
                 TexturesCount = stream.ReadInt32();
                 TexturesOffset = stream.ReadInt32();
@@ -306,9 +315,9 @@ namespace DSCript.Models
             if (PackageType == MaterialPackageType.PS2)
             {
                 stream.Write((short)MaterialsCount);
-                stream.Write((short)SubstanceLookupCount);
+                stream.Write((short)SubstanceRefsCount);
                 stream.Write((short)SubstancesCount);
-                stream.Write((short)TextureLookupCount);
+                stream.Write((short)TextureRefsCount);
                 stream.Write((short)TexturesCount);
                 stream.Write((short)Version);
             }
@@ -318,28 +327,22 @@ namespace DSCript.Models
 
                 stream.Write(MaterialsCount);
                 stream.Write(MaterialsOffset);
-                stream.Write(SubstanceLookupCount);
-                stream.Write(SubstanceLookupOffset);
+                stream.Write(SubstanceRefsCount);
+                stream.Write(SubstanceRefsOffset);
                 stream.Write(SubstancesCount);
                 stream.Write(SubstancesOffset);
                 
-                if (HasPaletteInfo)
+                if (HasPalettes)
                 {
-                    switch (PackageType)
-                    {
-                    case MaterialPackageType.PC:
-                        {
-                            // no palette info present
-                            for (int i = 0; i < 4; i++)
-                                stream.Write(0);
-                        } break;
-                    case MaterialPackageType.Xbox:
-                        throw new NotImplementedException();
-                    }
+                    stream.Write(PaletteRefsCount);
+                    stream.Write(PaletteRefsOffset);
+
+                    stream.Write(PalettesCount);
+                    stream.Write(PalettesOffset);
                 }
 
-                stream.Write(TextureLookupCount);
-                stream.Write(TextureLookupOffset);
+                stream.Write(TextureRefsCount);
+                stream.Write(TextureRefsOffset);
                 stream.Write(TexturesCount);
                 stream.Write(TexturesOffset);
 
@@ -349,7 +352,7 @@ namespace DSCript.Models
         }
 
         public MaterialPackageData(MaterialPackageType packageType) : this(packageType, false) { }
-        public MaterialPackageData(MaterialPackageType packageType, bool hasPaletteInfo)
+        public MaterialPackageData(MaterialPackageType packageType, bool hasPalettes)
         {
             PackageType = packageType;
             Version = -1;
@@ -365,7 +368,8 @@ namespace DSCript.Models
                 break;
             }
             
-            HasPaletteInfo = hasPaletteInfo;
+            // Xbox always has palette info
+            HasPalettes = hasPalettes | (PackageType == MaterialPackageType.Xbox);
 
             MaterialsCount = 0;
             MaterialsOffset = 0;
@@ -373,20 +377,20 @@ namespace DSCript.Models
             SubstancesCount = 0;
             SubstancesOffset = 0;
 
-            SubstanceLookupCount = 0;
-            SubstanceLookupOffset = 0;
+            SubstanceRefsCount = 0;
+            SubstanceRefsOffset = 0;
 
-            PaletteInfoLookupCount = 0;
-            PaletteInfoLookupOffset = 0;
+            PaletteRefsCount = 0;
+            PaletteRefsOffset = 0;
 
-            PaletteInfoCount = 0;
-            PaletteInfoOffset = 0;
+            PalettesCount = 0;
+            PalettesOffset = 0;
 
             TexturesCount = 0;
             TexturesOffset = 0;
 
-            TextureLookupCount = 0;
-            TextureLookupOffset = 0;
+            TextureRefsCount = 0;
+            TextureRefsOffset = 0;
 
             TextureDataOffset = 0;
             DataSize = 0;
@@ -396,22 +400,22 @@ namespace DSCript.Models
             : this(packageType, nMaterials, nSubMaterials, nTextures, false)
         { }
 
-        public MaterialPackageData(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures, bool hasPaletteInfo)
-            : this(packageType, hasPaletteInfo)
+        public MaterialPackageData(MaterialPackageType packageType, int nMaterials, int nSubMaterials, int nTextures, bool hasPalettes)
+            : this(packageType, hasPalettes)
         {
             MaterialsCount = nMaterials;
 
-            SubstanceLookupCount = nSubMaterials;
+            SubstanceRefsCount = nSubMaterials;
             SubstancesCount = nSubMaterials;
 
-            TextureLookupCount = nTextures;
+            TextureRefsCount = nTextures;
             TexturesCount = nTextures;
 
             GenerateOffsets();
         }
 
         public MaterialPackageData(MaterialPackageType packageType, Stream stream) : this(packageType, stream, false) { }
-        public MaterialPackageData(MaterialPackageType packageType, Stream stream, bool hasPaletteInfo) : this(packageType, hasPaletteInfo)
+        public MaterialPackageData(MaterialPackageType packageType, Stream stream, bool hasPalettes) : this(packageType, hasPalettes)
         {
             Read(stream);
         }

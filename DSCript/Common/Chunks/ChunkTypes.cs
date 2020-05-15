@@ -29,7 +29,17 @@ namespace DSCript
         /// [MDWI] - Wii model package
         /// </summary>
         ModelPackageWii = 0x4957444D,
-        
+
+        /// <summary>
+        /// [MDXB] - Xbox model package
+        /// </summary>
+        ModelPackageXbox = 0x4258444D,
+
+        /// <summary>
+        /// [GMC2] - PS2 model package
+        /// </summary>
+        ModelPackagePS2 = 0x32434D47,
+
         /// <summary>
         /// [0x0] - A block that acts as a unifiable package for various data types
         /// </summary>

@@ -81,6 +81,8 @@ namespace DSCript.Models
 
         SubstanceExtraFlags ExtraFlags { get; }
 
+        List<PaletteData> Palettes { get; }
+
         SubstanceInfo GetData(bool resolve);
     }
 
@@ -106,6 +108,8 @@ namespace DSCript.Models
             get { return (SubstanceExtraFlags)(Type >> 8); }
         }
 
+        public List<PaletteData> Palettes { get; set; }
+
         public SubstanceInfo GetData(bool resolve)
         {
             var substance = new SubstanceInfo() {
@@ -125,7 +129,10 @@ namespace DSCript.Models
 
             return substance;
         }
-        
-        public SubstanceDataPC() : base() { }
+
+        public SubstanceDataPC() : base()
+        {
+            Palettes = new List<PaletteData>();
+        }
     }
 }
