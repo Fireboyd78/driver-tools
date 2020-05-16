@@ -77,6 +77,7 @@
     <Compile Include="Models\Hierarchies\PhysicsData.cs" />
     <Compile Include="Models\Hierarchies\PhysicsPrimitive.cs" />
     <Compile Include="Models\Materials\PaletteData.cs" />
+    <Compile Include="Models\Materials\Details\PaletteInfo.cs" />
     <Compile Include="Models\PS2\Details\LodInfo.cs" />
     <Compile Include="Models\PS2\Details\LodInstanceInfo.cs" />
     <Compile Include="Models\PS2\Details\ModelInfo.cs" />

@@ -169,7 +169,7 @@ namespace DSCript.Models
                 }
 
                 foreach (var palette in Palettes)
-                    palette.Buffer = null;
+                    palette.Data = null;
 
                 foreach (var texture in Textures)
                     texture.Buffer = null;
