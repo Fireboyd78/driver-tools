@@ -130,7 +130,7 @@ namespace Audiose
 
                                     Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
 
-                                    Unknown1 = sampleInfo.Unk_0B,
+                                    ClearAfter = sampleInfo.Unk_0B,
                                     Unknown2 = sampleInfo.Unk_0C,
                                 };
                                 
@@ -1265,27 +1265,26 @@ namespace Audiose
 
                 var check = fs.ReadInt32();
 
-                // PS2
-                if (check == 22050)
+                switch (check)
                 {
+                // PS2
+                case 16000:
+                case 22050:
                     listOffset = 12;
                     platform = 0;
-                }
+                    break;
                 // Xbox
-                else if (check == 2048)
-                {
+                case 2048:
                     listOffset = 4;
                     platform = 1;
-                }
+                    break;
                 // PC
-                else if (check == 2)
-                {
+                case 2:
                     listOffset = 16;
                     platform = 2;
-                }
-                else
-                {
-                    Console.WriteLine("WARNING: Unknown XA audio file format, please report this!");
+                    break;
+                default:
+                    Console.WriteLine($"WARNING: Unknown XA audio file format ({check}), please report this!");
                     return ParseResult.Failure;
                 }
                 

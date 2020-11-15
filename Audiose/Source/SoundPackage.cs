@@ -677,7 +677,7 @@ namespace Audiose
 
         public int Flags { get; set; }
 
-        public int Unknown1 { get; set; }
+        public int ClearAfter { get; set; }
         public int Unknown2 { get; set; }
 
         public byte[] Buffer { get; set; }
@@ -710,7 +710,7 @@ namespace Audiose
                 if (!IsPS1Format)
                 {
                     elem.SetAttribute("Flags", $"{Flags:D}");
-                    elem.SetAttribute("Unk1", $"{Unknown1:D}");
+                    elem.SetAttribute("ClearAfter", $"{ClearAfter:D}");
                     elem.SetAttribute("Unk2", $"{Unknown2:D}");
                 }
             }
@@ -736,8 +736,9 @@ namespace Audiose
                 case "Flags":
                     Flags = int.Parse(value);
                     break;
-                case "Unk1":
-                    Unknown1 = int.Parse(value);
+                case "Unk1": // backwards compat
+                case "ClearAfter":
+                    ClearAfter = int.Parse(value);
                     break;
                 case "Unk2":
                     Unknown2 = int.Parse(value);
@@ -1021,7 +1022,7 @@ namespace Audiose
 
                                 Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
 
-                                Unknown1 = sampleInfo.Unk_0B,
+                                ClearAfter = sampleInfo.Unk_0B,
                                 Unknown2 = sampleInfo.Unk_0C,
                             };
                             
@@ -1120,7 +1121,7 @@ namespace Audiose
                                 Size = sampleSizes[s],
                                 SampleRate = (ushort)sample.SampleRate,
                                 Flags = (byte)sample.Flags,
-                                Unk_0B = (byte)sample.Unknown1,
+                                Unk_0B = (byte)sample.ClearAfter,
                                 Unk_0C = sample.Unknown2,
                             };
 
