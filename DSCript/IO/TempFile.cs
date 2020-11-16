@@ -84,11 +84,13 @@ namespace DSCript
                 throw new ArgumentNullException(nameof(buffer), "Buffer cannot be null!");
 
             Length = buffer.Length;
-
             FileStream.SetLength(Length);
 
-            FileStream.Position = 0;
-            FileStream.Write(buffer, 0, buffer.Length);
+            if (Length > 0)
+            {
+                FileStream.Position = 0;
+                FileStream.Write(buffer, 0, Length);
+            }
         }
 
         public void ClearBuffer()
@@ -96,7 +98,10 @@ namespace DSCript
             VerifyAccess();
 
             if (Length > 0)
+            {
                 FileStream.SetLength(0);
+                Length = 0;
+            }
         }
 
         public DSCTempFile()

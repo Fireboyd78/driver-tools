@@ -49,89 +49,19 @@ namespace DSCript.Spooling
         /// </summary>
         internal FileChunker FileChunker { get; set; }
 
-        /// <summary>
-        /// Returns the buffer directly. Intended for internal use only.
-        /// </summary>
-        /// <returns>A direct copy of the buffer.</returns>
-        internal byte[] GetBufferInternal()
+        public override bool AreChangesPending
         {
-            if (m_buffer == null)
+            get
             {
-                if (FileChunker != null)
-                {
-                    var buffer = FileChunker.GetBuffer(this);
+                if (Offset > 0)
+                    return base.AreChangesPending;
 
-                    m_size = (buffer != null) ? buffer.Length : 0;
-                    
-                    if (m_size > MaxBufferSize)
-                    {
-                        GetTempFileReady();
-
-                        m_tempFile.SetBuffer(buffer);
-                        m_buffer = null;
-                    }
-                    else
-                    {
-                        m_buffer = buffer;
-                    }
-
-                    // once you extract, you can't go back (lol)
-                    DetachChunker();
-
-                    // return the local copy?
-                    if (m_buffer == null)
-                        return buffer;
-                }
-                else if (m_tempFile != null)
-                {
-                    // retrieve buffer from temp file
-                    return m_tempFile.GetBuffer();
-                }
-                else
-                {
-                    // return an empty buffer of '_size' length - what could POSSIBLY go wrong?
-                    return new byte[m_size];
-                }
+                // offset needs to be calculated
+                return true;
             }
-
-            return m_buffer;
         }
 
-        /// <summary>
-        /// Returns a <see cref="MemoryStream"/> based on a local copy of the buffer. Changes made to the local copy will not reflect upon the buffer attached to the spooler.
-        /// </summary>
-        /// <returns>A <see cref="MemoryStream"/> based on a local copy of the buffer. local copy of the buffer.</returns>
-        /// <remarks>This method is a shortcut for creating a new <see cref="MemoryStream"/> using the <see cref="GetBuffer()"/> method.</remarks>
-        public MemoryStream GetMemoryStream()
-        {
-            return new MemoryStream(GetBuffer());
-        }
-
-        /// <summary>
-        /// Returns a local copy of the buffer. Changes made to the local copy will not reflect upon the buffer attached to the spooler.
-        /// </summary>
-        /// <returns>A local copy of the buffer.</returns>
-        public byte[] GetBuffer()
-        {
-            var buffer = GetBufferInternal();
-
-            // check if we're receiving an unattached buffer (temp file buffer, empty buffer, etc.)
-            if (m_buffer == null)
-                return buffer;
-
-            var localBuf = new byte[m_size];
-
-            // copy from existing buffer
-            Buffer.BlockCopy(m_buffer, 0, localBuf, 0, m_size);
-
-            return localBuf;
-        }
-
-        /// <summary>
-        /// Sets the content of the buffer. If this spooler is attached to a parent, the parent will adjust its size accordingly.
-        /// </summary>
-        /// <param name="buffer">The buffer containing the new data.</param>
-        public void SetBuffer(byte[] buffer)
+        internal void SetRawBuffer(byte[] buffer)
         {
             m_size = (buffer != null) ? buffer.Length : 0;
 
@@ -154,10 +84,74 @@ namespace DSCript.Spooling
 
             // Don't forget to detach from the chunker
             DetachChunker();
+        }
 
-            // set our dirty flag
-            IsDirty = true;
-            IsModified = true;
+        internal byte[] GetRawBuffer(bool detach = false)
+        {
+            if (m_buffer != null)
+                return m_buffer;
+
+            var buffer = new byte[m_size];
+
+            if (FileChunker != null)
+            {
+                buffer = FileChunker.GetBuffer(this);
+
+                if (detach)
+                    SetRawBuffer(buffer);
+            }
+            else if (m_tempFile != null)
+            {
+                // retrieve buffer from temp file
+                buffer = m_tempFile.GetBuffer();
+            }
+
+            return buffer;
+        }
+
+        /// <summary>
+        /// Returns a <see cref="MemoryStream"/> based on a local copy of the buffer. Changes made to the local copy will not reflect upon the buffer attached to the spooler.
+        /// </summary>
+        /// <returns>A <see cref="MemoryStream"/> based on a local copy of the buffer. local copy of the buffer.</returns>
+        /// <remarks>This method is a shortcut for creating a new <see cref="MemoryStream"/> using the <see cref="GetBuffer()"/> method.</remarks>
+        public MemoryStream GetMemoryStream()
+        {
+            var buffer = GetBuffer();
+
+            return (FileChunker.HACK_BigEndian)
+                ? new BigEndianMemoryStream(buffer)
+                : new MemoryStream(buffer);
+        }
+
+        /// <summary>
+        /// Returns a local copy of the buffer. Changes made to the local copy will not reflect upon the buffer attached to the spooler.
+        /// </summary>
+        /// <returns>A local copy of the buffer.</returns>
+        public byte[] GetBuffer()
+        {
+            var buffer = GetRawBuffer(true);
+
+            if (Object.ReferenceEquals(buffer, m_buffer))
+            {
+                buffer = new byte[m_size];
+
+                // copy from existing buffer
+                Buffer.BlockCopy(m_buffer, 0, buffer, 0, m_size);
+            }
+
+            return buffer;
+        }
+
+        /// <summary>
+        /// Sets the content of the buffer. If this spooler is attached to a parent, the parent will adjust its size accordingly.
+        /// </summary>
+        /// <param name="buffer">The buffer containing the new data.</param>
+        public void SetBuffer(byte[] buffer)
+        {
+            SetRawBuffer(buffer);
+            NotifyChanges();
+
+            Offset = 0;
         }
 
         /// <summary>

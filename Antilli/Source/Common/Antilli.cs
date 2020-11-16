@@ -205,7 +205,7 @@ namespace Antilli
                 get { return CurrentTab == 2; }
             }
             
-            ModelFile m_modelFile;
+            IModelFile m_modelFile;
             ModelPackage m_modelPackage;
 
             bool m_unregisterModelPackage;
@@ -215,7 +215,7 @@ namespace Antilli
 
             public AntilliClient BlenderClient { get; set; }
             
-            public ModelFile ModelFile
+            public IModelFile ModelFile
             {
                 get { return m_modelFile; }
                 set
@@ -579,6 +579,9 @@ namespace Antilli
                 return true;
             case 0x20534444:
                 result = "dds";
+                return true;
+            case 0x20AF30:
+                result = "tpl";
                 return true;
             }
 

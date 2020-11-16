@@ -375,7 +375,7 @@ namespace Antilli
 
         public static readonly MagicNumber Magic = "ANTILLI!";
 
-        PlatformType IDetailProvider.Platform => PlatformType.Any;
+        PlatformType IDetailProvider.Platform => PlatformType.Generic;
 
         public int Version { get; set; }
 

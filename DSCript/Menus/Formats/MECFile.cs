@@ -4,21 +4,10 @@ using System.Linq;
 using System.Text;
 
 using DSCript.Models;
+using DSCript.Spooling;
 
-namespace DSCript.Spooling
+namespace DSCript.Menus
 {
-    internal class MenuPackageData : SpoolableResource<SpoolablePackage>
-    {
-        protected override void Load()
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void Save()
-        {
-            throw new NotImplementedException();
-        }
-    }
 
     internal class MECFile : FileChunker
     {

@@ -2,20 +2,17 @@
 {
     public enum PlatformType : int
     {
-        PC      = 0,
+        Generic,
+
+        PC,
         
-        Console = 1,
-            PS2     = (Console + 1),
-            Xbox    = (Console + 2),
-        
-        Mobile  = 4,
-            PSP     = (Mobile + 1),
-        
-        NextGen = 8,
-            PS3     = (NextGen + 1),
-            Xbox360 = (NextGen + 2),
-            Wii     = (NextGen + 3),
-        
-        Any     = -1,
+        PS2,
+        PS3,
+        PSP,
+
+        Xbox,
+        Xbox360,
+
+        Wii,
     }
 }

@@ -20,10 +20,38 @@ namespace DSCript.Spooling
     /// <param name="sender">The spooler who triggered this event.</param>
     /// <param name="e">The event arguments accompanying the spooler.</param>
     public delegate void SpoolerEventHandler(Spooler sender, EventArgs e);
-    
+
+    [StructLayout(LayoutKind.Sequential, Size = 0xC)]
+    public struct ChunkHeader
+    {
+        public static readonly int SizeOf = Marshal.SizeOf(typeof(ChunkHeader));
+        public static readonly int Magic = (int)ChunkType.Chunk;
+
+        public int Size;
+        public int Count;
+        public int Version;
+
+        public static void WriteTo(Stream stream, SpoolablePackage chunk)
+        {
+            var header = new ChunkHeader(chunk);
+
+            stream.Write(Magic);
+            stream.Write(header, SizeOf);
+        }
+
+        public ChunkHeader(SpoolablePackage chunk)
+        {
+            Size = chunk.Size;
+            Count = chunk.Children.Count;
+            Version = Chunk.Version;
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential, Pack = 1, Size = 0x10)]
     public struct ChunkEntry
     {
+        public static readonly int SizeOf = Marshal.SizeOf(typeof(ChunkEntry));
+
         public int Context;
         public int Offset;
         public byte Version;
@@ -33,10 +61,42 @@ namespace DSCript.Spooling
         public int Size;
     }
 
-    public class FileChunker : IDisposable
+    public interface IFileChunker : IDisposable
+    {
+        string FileName { get; }
+
+        bool IsCompressed { get; set; }
+        bool IsLoaded { get; }
+
+        bool AreChangesPending { get; }
+
+        bool CanLoad { get; }
+        bool CanSave { get; }
+
+        SpoolerCollection Children { get; }
+        SpoolablePackage Content { get; }
+
+        event EventHandler FileLoadBegin;
+        event EventHandler FileLoadEnd;
+        event EventHandler FileSaveBegin;
+        event EventHandler FileSaveEnd;
+
+        event SpoolerEventHandler SpoolerLoaded;
+
+        void CommitChanges();
+
+        bool Load(string filename);
+
+        bool Save();
+        bool Save(string filename, bool updateStream = true);
+    }
+
+    public class FileChunker : IFileChunker
     {
         private SpoolablePackage _content;
         private FileStream _stream;
+
+        public static bool HACK_BigEndian { get; set; }
 
         /// <summary>
         /// Gets the filename of the chunker, if applicable. A null value means nothing was loaded.
@@ -55,7 +115,7 @@ namespace DSCript.Spooling
         /// Gets or sets if the chunker uses LZW-compression.
         /// </summary>
         public bool IsCompressed { get; set; }
-        
+
         /// <summary>
         /// Determines whether or not the chunker can load a file.
         /// </summary>
@@ -103,7 +163,7 @@ namespace DSCript.Spooling
         /// An event that is called when a spooler is loaded from a file. The event args are unused.
         /// </summary>
         public event SpoolerEventHandler SpoolerLoaded;
-        
+
         /// <summary>
         /// An event that is called prior to the chunker loading a file. The event args are unused.
         /// </summary>
@@ -219,6 +279,9 @@ namespace DSCript.Spooling
 
             if (IsCompressed)
             {
+                if (HACK_BigEndian)
+                    throw new InvalidDataException("Big-Endian file chunkers with compression are unsupported!");
+
                 var comType = _stream.ReadInt32();
                 var bufferSize = _stream.ReadInt32(); // aligned to 2048-bytes
                 var dataSize = _stream.ReadInt32(); // size of compressed data (incl. header)
@@ -250,55 +313,66 @@ namespace DSCript.Spooling
 
         private void ReadChunk(SpoolablePackage parent)
         {
-            var baseOffset = _stream.Position;
-            var entriesOffset = baseOffset + 0x10;
-
+            var offset = _stream.Position;
             var magic = _stream.ReadInt32();
 
-            if (magic != (int)ChunkType.Chunk)
-                throw new Exception("Bad magic - cannot not load chunk file!");
+            if (magic != ChunkHeader.Magic)
+                throw new Exception("Invalid chunk header -- bad magic!");
 
-            var size = _stream.ReadInt32();
-            var count = _stream.ReadInt32();
-            var version = _stream.ReadInt32();
+            var info = _stream.Read<ChunkHeader>();
 
             // does chunk contain LZW-compressed data?
-            if ((version & 0x80000000) != 0)
+            if ((info.Version & 0x80000000) != 0)
             {
                 IsCompressed = true;
-                version &= 0x7FFFFFFF;
+                info.Version &= 0x7FFFFFFF;
             }
 
-            if (version != Chunk.Version)
+            if (info.Version != Chunk.Version)
                 throw new Exception("Unsupported version - cannot load chunk file!");
 
-            parent.SetSizeInternal(size);
-            
+            parent.SetSizeInternal(info.Size);
+
+            var count = info.Count;
+            var entries = new List<ChunkEntry>(count);
+
             DSC.Update($"Processing {count} chunks...");
-            
+
+            for (int i = 0; i < count; i++)
+            {
+                var entry = _stream.Read<ChunkEntry>();
+
+                entries.Add(entry);
+            }
+
             for (int i = 0, idx = 1; i < count; i++, idx++)
             {
-                DSC.Update($"Loading chunk {idx} / {count}", (idx / (double)count) * 100.0);
+                DSC.Update($"Loading chunk {idx} / {count}", (idx / (double)info.Count) * 100.0);
 
-                _stream.Position = (entriesOffset + (i * 0x10));
+                var data = entries[i];
+                var dataOffset = (int)(offset + data.Offset);
 
-                var entry = _stream.Read<ChunkEntry>(0x10);
+                if (Enum.IsDefined(typeof(ChunkType), data.Context))
+                    DSC.Update($" - {(ChunkType)data.Context}");
 
-                string description  = null;
-                
-                if (entry.StrLen > 0)
+                string description = null;
+
+                if (data.StrLen > 0)
                 {
-                    _stream.Position = (baseOffset + (entry.Offset + entry.Size));
-                    description = _stream.ReadString(entry.StrLen);
+                    _stream.Position = (dataOffset + data.Size);
+                    description = _stream.ReadString(data.StrLen);
+
+                    DSC.Update($" - '{description}'");
                 }
 
-                _stream.Position = (baseOffset + entry.Offset);
+                _stream.Position = dataOffset;
 
                 Spooler spooler = null;
 
-                if (_stream.PeekInt32() == (int)ChunkType.Chunk)
+                if (_stream.PeekInt32() == ChunkHeader.Magic)
                 {
-                    spooler = new SpoolablePackage(ref entry) {
+                    spooler = new SpoolablePackage(ref data)
+                    {
                         Description = description,
                     };
 
@@ -306,20 +380,18 @@ namespace DSCript.Spooling
                 }
                 else
                 {
-                    spooler = new SpoolableBuffer(ref entry) {
+                    spooler = new SpoolableBuffer(ref data)
+                    {
                         Description = description,
 
-                        FileOffset  = ((int)baseOffset + entry.Offset),
+                        FileOffset = ((int)offset + data.Offset),
                         FileChunker = this,
                     };
                 }
 
-                spooler.IsDirty = false;
                 spooler.IsModified = false;
 
                 parent.Children.Add(spooler);
-
-                parent.IsDirty = false;
                 parent.IsModified = false;
 
                 OnSpoolerLoaded(spooler, EventArgs.Empty);
@@ -335,37 +407,49 @@ namespace DSCript.Spooling
         /// <exception cref="T:System.EndOfStreamException">Thrown when the amount of chunked data exceeds the length of the stream.</exception>
         public static void WriteChunk(Stream stream, SpoolablePackage chunk)
         {
-            var baseOffset = stream.Position;
-            var count = chunk.Children.Count;
+            var offset = stream.Position;
 
-            stream.Write((int)ChunkType.Chunk);
-            stream.Write(chunk.Size);
-            stream.Write(count);
-            stream.Write(Chunk.Version);
+            if (chunk.AreChangesPending)
+                chunk.CommitChanges();
 
-            var entryStart = (baseOffset + 0x10);
+            var spoolers = chunk.Children;
+            var count = spoolers.Count;
 
-            DSC.Update($"Writing {count} chunks...");
+            ChunkHeader.WriteTo(stream, chunk);
+
+            var entries = new List<ChunkEntry>(count);
+
+            DSC.Update($"Processing {count} chunks...");
+
+            for (int i = 0; i < count; i++)
+            {
+                var entry = (ChunkEntry)spoolers[i];
+
+                stream.Write(entry);
+                entries.Add(entry);
+            }
 
             // write chunk entries
             for (int i = 0, idx = 1; i < count; i++, idx++)
             {
                 DSC.Update($"Writing chunk {idx} / {count}", (idx / (double)count) * 100.0);
 
-                stream.Position = (entryStart + (i * 0x10));
+                var spooler = spoolers[i];
 
-                var entry = chunk.Children[i];
-                
-                stream.Write((ChunkEntry)entry);
-                stream.Position = (baseOffset + entry.Offset);
+                var data = entries[i];
+                var dataOffset = (offset + data.Offset);
 
-                if (entry is SpoolablePackage)
+                stream.Position = dataOffset;
+
+                if (spooler is SpoolablePackage)
                 {
-                    WriteChunk(stream, (SpoolablePackage)entry);
+                    WriteChunk(stream, (SpoolablePackage)spooler);
                 }
-                else if (entry is SpoolableBuffer)
+                else if (spooler is SpoolableBuffer)
                 {
-                    stream.Write(((SpoolableBuffer)entry).GetBufferInternal());
+                    var buffer = ((SpoolableBuffer)spooler).GetRawBuffer();
+
+                    stream.Write(buffer);
                 }
                 else
                 {
@@ -373,10 +457,10 @@ namespace DSCript.Spooling
                 }
 
                 // write description where applicable
-                if (!String.IsNullOrEmpty(entry.Description))
+                if (!String.IsNullOrEmpty(spooler.Description))
                 {
-                    stream.Position = (baseOffset + (entry.Offset + entry.Size));
-                    stream.Write(entry.Description);
+                    stream.Position = (dataOffset + data.Size);
+                    stream.Write(spooler.Description);
                 }
             }
         }
@@ -391,6 +475,9 @@ namespace DSCript.Spooling
             using (var fs = File.Create(filename))
             {
                 DSC.Update($"Writing chunk file: '{filename}'");
+
+                if (chunk.AreChangesPending)
+                    chunk.CommitChanges();
 
                 fs.SetLength(chunk.Size);
 

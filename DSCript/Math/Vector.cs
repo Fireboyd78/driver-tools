@@ -8,6 +8,29 @@ using System.Windows;
 
 namespace DSCript
 {
+    public static class VectorUtils
+    {
+        public static float[] Split(string input, int count)
+        {
+            return Split(input, count, CultureInfo.CurrentCulture);
+        }
+
+        public static float[] Split(string input, int count, IFormatProvider provider)
+        {
+            var vals = input.Split(',');
+
+            if (vals.Length != count)
+                throw new InvalidOperationException($"Invalid vector[{count}] value '{vals}'");
+
+            var result = new float[count];
+
+            for (int i = 0; i < count; i++)
+                result[i] = float.Parse(vals[i], provider);
+
+            return result;
+        }
+    }
+
     public struct Vector2 : IEquatable<Vector2>
     {
         public float X;
@@ -123,6 +146,16 @@ namespace DSCript
         public static bool operator !=(Vector2 left, Vector2 right)
         {
             return !left.Equals(right);
+        }
+
+        public static Vector2 Parse(string value)
+        {
+            var vals = VectorUtils.Split(value, 2);
+
+            return new Vector2() {
+                X = vals[0],
+                Y = vals[1],
+            };
         }
         
         public override string ToString()
@@ -270,6 +303,18 @@ namespace DSCript
         public override string ToString()
         {
             return $"{X:F4},{Y:F4},{Z:F4}";
+        }
+
+        public static Vector3 Parse(string value)
+        {
+            var vals = VectorUtils.Split(value, 3);
+
+            return new Vector3()
+            {
+                X = vals[0],
+                Y = vals[1],
+                Z = vals[2],
+            };
         }
 
         public Vector3(float x, float y, float z)
@@ -421,6 +466,19 @@ namespace DSCript
         public override string ToString()
         {
             return $"{X:F4},{Y:F4},{Z:F4},{W:F4}";
+        }
+
+        public static Vector4 Parse(string value)
+        {
+            var vals = VectorUtils.Split(value, 4);
+
+            return new Vector4()
+            {
+                X = vals[0],
+                Y = vals[1],
+                Z = vals[2],
+                W = vals[3],
+            };
         }
 
         public Vector4(float x, float y, float z, float w)

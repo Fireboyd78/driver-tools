@@ -37,6 +37,7 @@ using FreeImageAPI;
 using DSCript;
 using DSCript.Models;
 using DSCript.Spooling;
+using DSCript.Menus;
 
 namespace Antilli
 {
@@ -65,7 +66,7 @@ namespace Antilli
             get { return AT.CurrentState.CanShowGlobals; }
         }
 
-        public ModelFile CurrentModelFile
+        public IModelFile CurrentModelFile
         {
             get { return AT.CurrentState.ModelFile; }
         }
@@ -333,7 +334,7 @@ namespace Antilli
             var timer = new Stopwatch();
             timer.Start();
 
-            var modelFile = new ModelFile();
+            IModelFile modelFile = new ModelFile();
             var setupModels = true;
 
             PackageManager.Clear();
@@ -457,6 +458,18 @@ namespace Antilli
                     }
                 };
                 break;
+            case ".mec":
+                var menuFile = new MenuPackageFile();
+                menuFile.FileLoadEnd += (o, e) => {
+                    if (AskUserOption("Would you like to dump the XML menu tree?"))
+                    {
+                        var menuDef = menuFile.MenuData;
+
+                        menuDef.WriteTo(Path.ChangeExtension(filename, ".mec.xml"));
+                    }
+                };
+                modelFile = menuFile;
+                break;
             case ".vvs":
             case ".vvv":
                 LoadDriv3rVehicles(filename);
@@ -497,7 +510,8 @@ namespace Antilli
 
             if (CurrentModelFile.HasModels)
             {
-                Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
+                // R.I.P. (2013 - 2020)
+                //Viewer.Viewport.InfiniteSpin = Settings.InfiniteSpin;
                 Packages.SelectedIndex = 0;
             }
             
@@ -528,6 +542,11 @@ namespace Antilli
         private bool AskUserPrompt(string message)
         {
             return MessageBox.Show(message, "Antilli", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+        }
+
+        private bool AskUserOption(string message)
+        {
+            return MessageBox.Show(message, "Antilli", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
         }
 
         private void OnFileSaveClick(bool saveAs)
@@ -1062,6 +1081,12 @@ namespace Antilli
 
         private void ReplaceTexture(ITextureData texture)
         {
+            if (texture.Flags == -666)
+            {
+                MessageBox.Show("Can't do that, sorry!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             var openDlg = new OpenFileDialog() {
                 AddExtension = true,
                 CheckFileExists = true,
@@ -1400,6 +1425,11 @@ namespace Antilli
 
                     switch (e.Key)
                     {
+                    case Key.B:
+                        var status = (FileChunker.HACK_BigEndian = !FileChunker.HACK_BigEndian) ? "enabled" : "disabled";
+
+                        MessageBox.Show($"Big-endian mode {status}.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                        break;
                     case Key.X:
                         var modelPackage = ModelConverter.Convert(CurrentModelPackage, 6);
 

@@ -622,6 +622,9 @@ namespace DSCript
             header.Width = width;
             header.Height = height;
 
+            header.PixelFormat.Size = DDSPixelFormat.SizeOf;
+            header.Caps = 0x1000;
+
             // calculate mipmaps?
             if (mipmaps == -1)
             {
@@ -635,11 +638,10 @@ namespace DSCript
             {
                 header.Flags |= DDSFlags.MipMapCount;
                 header.MipMapCount = mipmaps;
+
+                header.Caps |= 0x400000;
+                header.Caps |= 0x8;
             }
-
-            header.PixelFormat.Size = DDSPixelFormat.SizeOf;
-
-            header.Caps = 0x1000;
 
             switch (format)
             {
@@ -652,7 +654,7 @@ namespace DSCript
                     header.PixelFormat.GBitMask = (0xFF << 8);
                     header.PixelFormat.BBitMask = (0xFF << 0);
 
-                    header.Caps |= 0x400000;
+                    header.Caps |= 0x2; // ???
                     break;
 
                 case D3DFormat.DXT1:

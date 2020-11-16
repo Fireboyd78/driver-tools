@@ -87,7 +87,6 @@ namespace DSCript.Spooling
 
         internal void SetDirtyFlag()
         {
-            spoolablePackage.IsDirty = true;
             spoolablePackage.IsModified = true;
         }
 

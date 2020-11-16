@@ -14,7 +14,7 @@ using DSCript.Spooling;
 
 namespace DSCript.Models
 {
-    public interface IVehiclesFile : IModelPackagesFile
+    public interface IVehiclesFile : IModelFile
     {
         bool HasGlobals { get; }
         bool HasHierarchies { get; }
@@ -86,7 +86,7 @@ namespace DSCript.Models
             case ChunkType.VehicleHierarchy:
                 var hierarchy = sender.AsResource<VehicleHierarchyData>();
                 
-                hierarchy.Platform = PlatformType.Any;
+                hierarchy.Platform = PlatformType.Generic;
                 hierarchy.Version = sender.Version;
 
                 // DPL on XBox doesn't tell us correct version :(

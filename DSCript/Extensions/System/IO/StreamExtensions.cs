@@ -142,24 +142,29 @@ namespace System.IO
             if (count == 0)
                 return;
 
-            var bufLen = buffer.Length;
+            var length = buffer.Length;
+
+            if (length == 0)
+                throw new ArgumentOutOfRangeException("buffer", buffer, "The specified buffer is empty and cannot be used to fill data into the stream.");
+
+            var data = new byte[count];
             var offset = 0;
 
-            if (bufLen == 0)
-                throw new ArgumentOutOfRangeException("buffer", buffer, "The specified buffer is empty and cannot be used to fill data into the stream.");
-            
             while (offset < count)
             {
-                if ((offset + bufLen) > count)
+                if ((offset + length) > count)
                 {
-                    if ((bufLen = (count - offset)) == 0)
+                    length = (count - offset);
+
+                    if (length == 0)
                         break;
                 }
 
-                stream.Write(buffer, 0, bufLen);
-
-                offset += bufLen;
+                Buffer.BlockCopy(buffer, 0, data, offset, length);
+                offset += length;
             }
+
+            stream.Write(data, 0, count);
         }
 
         /// <summary>
@@ -221,8 +226,10 @@ namespace System.IO
         #region Read methods
         internal static int Read(this Stream stream, byte[] buffer)
         {
-            stream.Read(buffer, 0, buffer.Length);
-            return (buffer != null) ? 1 : -1;
+            if (buffer == null)
+                throw new ArgumentNullException(nameof(buffer), "Buffer cannot be null.");
+
+            return stream.Read(buffer, 0, buffer.Length);
         }
 
         public static byte[] ReadAllBytes(this Stream stream)
@@ -240,6 +247,11 @@ namespace System.IO
             stream.Read(buffer);
 
             return buffer;
+        }
+
+        public static bool ReadBool(this Stream stream)
+        {
+            return (stream.ReadByte() == 1);
         }
 
         public static char ReadChar(this Stream stream)
@@ -368,27 +380,29 @@ namespace System.IO
             char curChar;
 
             while ((curChar = stream.ReadChar()) != '\0')
-            {
                 str += curChar;
-            }
 
             return str;
         }
 
         public static string ReadString(this Stream stream, int count)
         {
+            if (count == 0)
+                return String.Empty;
+
             var buf = stream.ReadBytes(count);
             var length = 0;
 
             for (int i = 0; i < count; i++)
             {
-                var c = buf[i];
-
-                if (c == '\0')
+                if (buf[i] == '\0')
                     break;
 
                 ++length;
             }
+
+            if (length == 0)
+                return String.Empty;
 
             return Encoding.UTF8.GetString(buf, 0, length);
         }
@@ -421,8 +435,13 @@ namespace System.IO
             }
             else
             {
-                stream.Write(BitConverter.GetBytes(value), 0, sizeof(byte));
+                stream.WriteByte((byte)value);
             }
+        }
+
+        public static void WriteBool(this Stream stream, bool value)
+        {
+            stream.WriteByte((byte)(value ? 1 : 0));
         }
 
         public static void WriteFloat(this Stream stream, double value)

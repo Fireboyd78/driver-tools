@@ -14,17 +14,14 @@ using DSCript.Spooling;
 
 namespace DSCript.Models
 {
-    public interface IModelPackagesFile
+    public interface IModelFile : IFileChunker
     {
         List<ModelPackage> Packages { get; }
-        
-        bool Load(string filename);
 
-        bool Save();
-        bool Save(string filename, bool updateStream = false);
+        bool HasModels { get; }
     }
 
-    public class ModelFile : FileChunker, IModelPackagesFile
+    public class ModelFile : FileChunker, IModelFile
     {
         public List<ModelPackage> Packages { get; }
         
@@ -40,10 +37,17 @@ namespace DSCript.Models
         
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
-            switch ((ChunkType)sender.Context)
+            var type = (ChunkType)sender.Context;
+
+            switch (type)
             {
-            case ChunkType.ModelPackagePC:
             case ChunkType.ModelPackagePC_X:
+                if (sender.Version == 3)
+                    break; // DSF - unhandled for now
+                
+                goto case ChunkType.ModelPackagePC;
+
+            case ChunkType.ModelPackagePC:
             case ChunkType.ModelPackagePS2:
             case ChunkType.ModelPackageXbox:
             case ChunkType.ModelPackageWii:

@@ -42,7 +42,7 @@ namespace DSCript.Models
 
         public override int GetHashCode()
         {
-            return (Handle << 1) & ~UID;
+            return ((Handle << 1) + UID) * 95;
         }
     }
 }

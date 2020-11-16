@@ -68,11 +68,12 @@
     <Compile Include="IO\Detail\IDetailProvider.cs" />
     <Compile Include="IO\Detail\Types\PlatformType.cs" />
     <Compile Include="IO\Formats\LocaleReader.cs" />
-    <Compile Include="IO\Formats\MECFile.cs" />
+    <Compile Include="Menus\Formats\MECFile.cs" />
     <Compile Include="IO\TempFile.cs" />
     <Compile Include="Math\Matrix.cs" />
     <Compile Include="Math\Vector.cs" />
     <Compile Include="Math\ColorRGBA.cs" />
+    <Compile Include="Menus\Formats\MenuPackageFile.cs" />
     <Compile Include="Models\Hierarchies\PhysicsCollisionModel.cs" />
     <Compile Include="Models\Hierarchies\PhysicsData.cs" />
     <Compile Include="Models\Hierarchies\PhysicsPrimitive.cs" />
@@ -142,6 +143,7 @@
     <Compile Include="Parser\Tokenizer.cs" />
     <Compile Include="Parser\TokenReader.cs" />
     <Compile Include="Parser\TokenWriter.cs" />
+    <Compile Include="Spooling\Extensions\BigEndianMemoryStream.cs" />
     <Compile Include="Spooling\ChunkSchema.cs" />
     <Compile Include="Spooling\Extensions\SpoolableResourceExtensions.cs" />
     <Compile Include="Spooling\Extensions\SpoolerExtensions.cs" />
@@ -159,6 +161,8 @@
     <Compile Include="Vehicles\Formats\VehiclesFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Menus\Details\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

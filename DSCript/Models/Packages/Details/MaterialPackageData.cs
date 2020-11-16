@@ -10,11 +10,12 @@ namespace DSCript.Models
 {
     public enum MaterialPackageType : int
     {
-        PC = 0x504D4350,   // 'PCMP'
-        PS2 = 0x32435354,   // 'TSC2'
-        Xbox = 0x504D4258,   // 'XBMP'
-
         Unknown = -1,
+
+        PC      = 0x504D4350,   // 'PCMP'
+        PS2     = 0x32435354,   // 'TSC2'
+        Xbox    = 0x504D4258,   // 'XBMP'
+        Wii     = 0x504D4E58,   // 'XNMP'
     }
 
     public enum RenderBinType
@@ -131,7 +132,7 @@ namespace DSCript.Models
         public int DataSize;
 
         public bool HasPalettes;
-        
+
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
         {
             PackageType = (MaterialPackageType)stream.ReadInt32();
@@ -154,10 +155,12 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                case MaterialPackageType.Xbox:
                     return (HasPalettes) ? 0x48 : 0x38;
                 case MaterialPackageType.PS2:
                     return 0x14;
+                case MaterialPackageType.Xbox:
+                case MaterialPackageType.Wii:
+                    return 0x48;
                 }
                 return 0;
             }
@@ -173,6 +176,7 @@ namespace DSCript.Models
                     return (HasPalettes) ? 0x10 : 0x18;
                 case MaterialPackageType.PS2:
                 case MaterialPackageType.Xbox:
+                case MaterialPackageType.Wii:
                     return 0x10;
                 }
                 return 0;
@@ -186,10 +190,12 @@ namespace DSCript.Models
                 switch (PackageType)
                 {
                 case MaterialPackageType.PC:
-                case MaterialPackageType.Xbox:
                     return (HasPalettes) ? 0x1C : 0x20;
                 case MaterialPackageType.PS2:
                     return 0xC;
+                case MaterialPackageType.Xbox:
+                case MaterialPackageType.Wii:
+                    return 0x1C;
                 }
                 return 0;
             }
@@ -217,6 +223,8 @@ namespace DSCript.Models
                     return 0x20;
                 case MaterialPackageType.PS2:
                     return 0x28;
+                case MaterialPackageType.Wii:
+                    return 0x30;
                 }
                 return 0;
             }
@@ -230,8 +238,9 @@ namespace DSCript.Models
                 {
                 case MaterialPackageType.PC:
                     return (HasPalettes) ? 0x4 : 0x8;
-                case MaterialPackageType.Xbox:
                 case MaterialPackageType.PS2:
+                case MaterialPackageType.Xbox:
+                case MaterialPackageType.Wii:
                     return 0x4;
                 }
                 return 0;
@@ -359,6 +368,9 @@ namespace DSCript.Models
 
             switch (PackageType)
             {
+            case MaterialPackageType.Wii:
+                Version = 1;
+                break;
             case MaterialPackageType.PS2:
             case MaterialPackageType.Xbox:
                 Version = 2;
@@ -368,7 +380,7 @@ namespace DSCript.Models
                 break;
             }
             
-            // Xbox always has palette info
+            // Xbox always has palettes
             HasPalettes = hasPalettes | (PackageType == MaterialPackageType.Xbox);
 
             MaterialsCount = 0;

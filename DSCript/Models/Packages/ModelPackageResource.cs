@@ -14,7 +14,6 @@ using DSCript.Spooling;
 
 namespace DSCript.Models
 {
-
     public interface IMaterialPackage : ISpoolableResource
     {
         int UID { get; }
@@ -58,7 +57,7 @@ namespace DSCript.Models
         public int UID { get; set; }
 
         public int Flags { get; set; }
-        
+
         public virtual MaterialPackageType MaterialPackageType
         {
             get

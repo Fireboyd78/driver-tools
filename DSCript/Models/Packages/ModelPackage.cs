@@ -18,6 +18,22 @@ namespace DSCript.Models
     {
         public static bool SkipModelsOnLoad = false;
 
+        public static PlatformType GetPlatformType(ChunkType context)
+        {
+            switch (context)
+            {
+            case ChunkType.ModelPackagePC:
+            case ChunkType.ModelPackagePC_X:
+                return PlatformType.PC;
+
+            case ChunkType.ModelPackagePS2:     return PlatformType.PS2;
+            case ChunkType.ModelPackageXbox:    return PlatformType.Xbox;
+            case ChunkType.ModelPackageWii:     return PlatformType.Wii;
+            }
+
+            return PlatformType.Generic;
+        }
+
         protected void ReadVertexDeclarations(Stream stream, ref ModelPackageData detail, out List<VertexBufferInfo> decls)
         {
             var vBuffersCount = detail.VertexDeclsCount;
@@ -237,7 +253,10 @@ namespace DSCript.Models
             for (int p = 0; p < detail.ModelsCount; p++)
             {
                 if (VertexBuffers == null)
-                    throw new InvalidOperationException("Uh-oh! There's no vertex buffers for the models to use!");
+                {
+                    //throw new InvalidOperationException("Uh-oh! There's no vertex buffers for the models to use!");
+                    continue;
+                }
 
                 var _model = this.Deserialize<ModelInfo>(stream);
 
@@ -433,6 +452,309 @@ namespace DSCript.Models
             }
         }
 
+        private bool ProcessTextures_Xbox()
+        {
+            // here we go...build DDS wrappers + depalettize textures
+            var luSwizzledTextures = new HashSet<byte[]>();
+            var luPalettedTextures = new HashSet<TextureDataPC>();
+
+            // combine palettes and insert new textures
+            foreach (var substance in Substances)
+            {
+                var nPalettes = substance.Palettes.Count;
+
+                if (nPalettes == 0)
+                    continue;
+
+                var nCluts = 0;
+                var textures = new List<TextureDataPC>();
+
+                if (nPalettes == 8)
+                {
+                    var texA1 = substance.Textures[0];
+
+                    var texA2 = new TextureDataPC()
+                    {
+                        UID = texA1.UID,
+                        Handle = texA1.Handle + 1,
+                        Type = texA1.Type,
+                        Flags = texA1.Flags,
+                        Width = texA1.Width,
+                        Height = texA1.Height,
+                        Buffer = texA1.Buffer,
+                    };
+
+                    var texB1 = new TextureDataPC()
+                    {
+                        UID = texA2.UID,
+                        Handle = texA2.Handle + 1,
+                        Type = texA2.Type,
+                        Flags = texA2.Flags,
+                        Width = texA2.Width,
+                        Height = texA2.Height,
+                        Buffer = texA2.Buffer,
+                    };
+
+                    var texB2 = new TextureDataPC()
+                    {
+                        UID = texB1.UID,
+                        Handle = texB1.Handle + 1,
+                        Type = texB1.Type,
+                        Flags = texB1.Flags,
+                        Width = texB1.Width,
+                        Height = texB1.Height,
+                        Buffer = texB1.Buffer,
+                    };
+
+                    textures = new List<TextureDataPC>()
+                            {
+                                //texA1,
+                                texA2,
+                                texB1,
+                                texB2,
+                            };
+
+                    nCluts = 2;
+                }
+                else if (nPalettes == 4)
+                {
+                    var texA1 = substance.Textures[0];
+
+                    var texA2 = new TextureDataPC()
+                    {
+                        UID = texA1.UID,
+                        Handle = texA1.Handle + 1,
+                        Type = texA1.Type,
+                        Flags = texA1.Flags,
+                        Width = texA1.Width,
+                        Height = texA1.Height,
+                        Buffer = texA1.Buffer,
+                    };
+
+                    textures = new List<TextureDataPC>()
+                            {
+                                //texA1,
+                                texA2,
+                            };
+
+                    nCluts = 1;
+                }
+                else if (nPalettes > 1)
+                {
+                    var tex = substance.Textures[0];
+
+                    for (int n = 1; n < nPalettes; n++)
+                    {
+                        var child = new TextureDataPC()
+                        {
+                            UID = tex.UID,
+                            Handle = tex.Handle + 1,
+                            Type = tex.Type,
+                            Flags = tex.Flags,
+                            Width = tex.Width,
+                            Height = tex.Height,
+                            Buffer = tex.Buffer,
+                        };
+
+                        textures.Add(child);
+                        tex = child;
+                    }
+                }
+                else
+                {
+                    var tex = substance.Textures[0];
+                    var num = 1;
+
+                    if (luPalettedTextures.Contains(tex))
+                    {
+                        var idx = Textures.IndexOf(tex);
+
+                        while (idx != -1)
+                        {
+                            var clone = new TextureDataPC()
+                            {
+                                UID = tex.UID,
+                                Handle = tex.Handle + num++,
+                                Type = tex.Type,
+                                Flags = tex.Flags,
+                                Width = tex.Width,
+                                Height = tex.Height,
+                                Buffer = tex.Buffer,
+                            };
+
+                            tex = clone;
+
+                            var next = Textures.FindIndex((t) => t.GetHashCode() == tex.GetHashCode());
+
+                            if (next == -1)
+                            {
+                                idx++;
+                                break;
+                            }
+
+                            idx = next;
+                        }
+
+                        Textures.Insert(idx, tex);
+                        substance.Textures[0] = tex;
+                    }
+
+                    // don't allow dupes
+                    luPalettedTextures.Add(tex);
+                }
+
+                // replace palettes
+                if (nCluts > 0)
+                {
+                    var cluts = new List<PaletteData>();
+
+                    for (int n = 0; n < nCluts; n++)
+                    {
+                        var idx = (n * 4);
+
+                        // copy the red channel and prepare a mask
+                        var clut = substance.Palettes[idx].Clone();
+                        var mask = new PaletteData(clut.Count);
+
+                        for (int k = 1; k < 4; k++)
+                        {
+                            // merge green/blue/alpha
+                            clut.Merge(substance.Palettes[idx + k], k);
+
+                            // setup mask
+                            var m = (k - 1);
+
+                            mask.Merge(substance.Palettes[idx + m], m);
+                            mask.Blend(substance.Palettes[3], m);
+                        }
+
+                        // and finally, set the mask up by using the alpha
+                        mask.ToAlphaMask();
+
+                        cluts.Add(clut);
+                        cluts.Add(mask);
+                    }
+
+                    var index = Palettes.IndexOf(substance.Palettes[0]);
+
+                    foreach (var palette in substance.Palettes)
+                        Palettes.Remove(palette);
+
+                    Palettes.InsertRange(index, cluts);
+
+                    substance.Palettes.Clear();
+                    substance.Palettes = cluts;
+                }
+
+                // add additional textures
+                if (textures.Count > 0)
+                {
+                    var tex = substance.Textures[0];
+                    var idx = Textures.IndexOf(tex) + 1;
+
+                    foreach (var texture in textures)
+                    {
+                        Textures.Insert(idx++, texture);
+                        substance.Textures.Add(texture);
+                    }
+                }
+            }
+
+            // process textures into the DDS format
+            foreach (var substance in Substances)
+            {
+                var palettes = substance.Palettes;
+                var textures = substance.Textures;
+
+                var numPalettes = palettes.Count;
+                var numTextures = textures.Count;
+
+                var useFirstPalette = false;
+
+                if ((numPalettes > 0) && (numPalettes != numTextures))
+                {
+                    if (numPalettes > 1)
+                        throw new InvalidOperationException("URGENT: FIXME!!!");
+
+                    useFirstPalette = true;
+                }
+
+                for (int n = 0; n < numTextures; n++)
+                {
+                    var texture = textures[n];
+                    var data = texture.Buffer;
+
+                    if (luSwizzledTextures.Contains(data))
+                        continue;
+
+                    var format = (D3DFormat)((texture.Flags >> 8) & 0xFF);
+                    var mipmaps = (texture.Flags >> 16) & 0xF;
+
+                    var width = texture.Width;
+                    var height = texture.Height;
+
+                    if (DDSUtils.HasPalette(format))
+                    {
+                        var bpp = DDSUtils.GetBytesPerPixel(format);
+
+                        if (bpp != 4)
+                            throw new InvalidOperationException("can't process palettes!");
+
+                        var palette = palettes[(useFirstPalette) ? 0 : n];
+
+                        // override the data
+                        data = DDSUtils.Depalettize(data, width, height, bpp, palette.Data);
+                        mipmaps = 0; // ooooo that's dirty
+                    }
+
+                    var buffer = DDSUtils.EncodeTexture(format, width, height, mipmaps, data);
+
+                    texture.Buffer = buffer;
+
+                    luSwizzledTextures.Add(buffer);
+                }
+            }
+
+            // cleanup
+            luSwizzledTextures.Clear();
+            return true;
+        }
+
+        private bool ProcessTextures_Wii()
+        {
+            foreach (var texture in Textures)
+            {
+                texture.UID = 0x01010101;
+
+                // mark of the devil!!!
+                texture.Flags = -666;
+            }
+
+            return true;
+        }
+
+        private bool ProcessTextures_PS2()
+        {
+            // TODO
+            return false;
+        }
+
+        private bool ProcessTextures()
+        {
+            switch (Platform)
+            {
+            case PlatformType.PS2:
+                return ProcessTextures_PS2();
+            case PlatformType.Xbox:
+                return ProcessTextures_Xbox();
+            case PlatformType.Wii:
+                return ProcessTextures_Wii();
+            }
+
+            // assume absolutely nothing went wrong :)
+            return true;
+        }
+
         protected void ReadMaterials(Stream stream, ref ModelPackageData detail)
         {
             var matDataOffset = detail.MaterialDataOffset;
@@ -480,7 +802,7 @@ namespace DSCript.Models
 
                     var tex = new TextureDataPC() {
                         UID = _tex.UID,
-                        Handle = _tex.Hash,
+                        Handle = _tex.Handle,
 
                         Type = _tex.Type,
                         Flags = _tex.Flags,
@@ -519,12 +841,17 @@ namespace DSCript.Models
                 }
 
                 //
-                // Xbox texture size HACKS
+                // texture size HACKS
                 //
-                if (Platform == PlatformType.Xbox)
+                if ((Platform == PlatformType.Xbox) || (Platform == PlatformType.Wii))
                 {
                     if (info.DataSize == 0)
-                        throw new InvalidOperationException("Can't calculate xbox texture data size!");
+                    {
+                        if (info.PalettesCount > 0)
+                            throw new InvalidOperationException("Can't calculate texture data size!");
+
+                        info.DataSize = (Spooler.Size - matDataOffset);
+                    }
 
                     var texDataSize = (info.DataSize - info.TextureDataOffset);
 
@@ -557,6 +884,12 @@ namespace DSCript.Models
 
                 if (info.HasPalettes)
                 {
+                    if (info.PackageType != MaterialPackageType.Xbox)
+                    {
+                        if ((info.PalettesCount + info.PaletteRefsCount) != 0)
+                            throw new InvalidOperationException($"Palette format has not been documented yet for this platform ({Platform})!");
+                    }
+
                     //
                     // Palettes
                     //
@@ -692,308 +1025,39 @@ namespace DSCript.Models
                     var offset = (texDataOffset + texOffset);
                     var size = luTextureSizes[texOffset];
 
-                    if (Platform == PlatformType.Xbox)
+                    if (size == 0)
                     {
-                        if (size == 0)
-                            throw new InvalidOperationException("Xbox texture size was not resolved!");
-
-                        // copy image data
-                        var data = new byte[size];
-
-                        stream.Position = offset;
-                        stream.Read(data, 0, size);
-                        
-                        texture.Buffer = data;
-                    }
-                    else
-                    {
-                        // thanks, reflections!
-                        if (size == 0)
+                        switch (Platform)
+                        {
+                        case PlatformType.PC:
                         {
                             var header = default(DDSHeader);
 
                             stream.Position = offset;
 
-                            if (!DDSUtils.GetHeaderInfo(stream, ref header))
-                                throw new InvalidDataException("Can't determine data size of texture!");
+                            if (DDSUtils.GetHeaderInfo(stream, ref header))
+                                size = (DDSHeader.SizeOf + DDSUtils.GetDataSize(ref header) + 4);
+                        } break;
 
-                            size = (DDSHeader.SizeOf + DDSUtils.GetDataSize(ref header) + 4);
+                        case PlatformType.Xbox:
+                        case PlatformType.Wii:
+                            throw new InvalidOperationException("Texture size was not resolved!");
                         }
+                    }
 
-                        var buffer = new byte[size];
+                    var data = new byte[size];
 
+                    if (size != 0)
+                    {
+                        // copy image data
                         stream.Position = offset;
-                        stream.Read(buffer, 0, size);
-
-                        texture.Buffer = buffer;
+                        stream.Read(data, 0, size);
                     }
+
+                    texture.Buffer = data;
                 }
 
-                // here we go...build DDS wrappers + depalettize textures
-                if (Platform == PlatformType.Xbox)
-                {
-                    var luSwizzledTextures = new HashSet<byte[]>();
-                    var luPalettedTextures = new HashSet<TextureDataPC>();
-
-                    // combine palettes and insert new textures
-                    foreach (var substance in Substances)
-                    {
-                        var nPalettes = substance.Palettes.Count;
-
-                        if (nPalettes == 0)
-                            continue;
-
-                        var nCluts = 0;
-                        var textures = new List<TextureDataPC>();
-
-                        if (nPalettes == 8)
-                        {
-                            var texA1 = substance.Textures[0];
-
-                            var texA2 = new TextureDataPC()
-                            {
-                                UID = texA1.UID,
-                                Handle = texA1.Handle + 1,
-                                Type = texA1.Type,
-                                Flags = texA1.Flags,
-                                Width = texA1.Width,
-                                Height = texA1.Height,
-                                Buffer = texA1.Buffer,
-                            };
-
-                            var texB1 = new TextureDataPC()
-                            {
-                                UID = texA2.UID,
-                                Handle = texA2.Handle + 1,
-                                Type = texA2.Type,
-                                Flags = texA2.Flags,
-                                Width = texA2.Width,
-                                Height = texA2.Height,
-                                Buffer = texA2.Buffer,
-                            };
-
-                            var texB2 = new TextureDataPC()
-                            {
-                                UID = texB1.UID,
-                                Handle = texB1.Handle + 1,
-                                Type = texB1.Type,
-                                Flags = texB1.Flags,
-                                Width = texB1.Width,
-                                Height = texB1.Height,
-                                Buffer = texB1.Buffer,
-                            };
-
-                            textures = new List<TextureDataPC>()
-                            {
-                                //texA1,
-                                texA2,
-                                texB1,
-                                texB2,
-                            };
-
-                            nCluts = 2;
-                        }
-                        else if (nPalettes == 4)
-                        {
-                            var texA1 = substance.Textures[0];
-
-                            var texA2 = new TextureDataPC()
-                            {
-                                UID = texA1.UID,
-                                Handle = texA1.Handle + 1,
-                                Type = texA1.Type,
-                                Flags = texA1.Flags,
-                                Width = texA1.Width,
-                                Height = texA1.Height,
-                                Buffer = texA1.Buffer,
-                            };
-
-                            textures = new List<TextureDataPC>()
-                            {
-                                //texA1,
-                                texA2,
-                            };
-
-                            nCluts = 1;
-                        }
-                        else if (nPalettes > 1)
-                        {
-                            var tex = substance.Textures[0];
-
-                            for (int n = 1; n < nPalettes; n++)
-                            {
-                                var child = new TextureDataPC()
-                                {
-                                    UID = tex.UID,
-                                    Handle = tex.Handle + 1,
-                                    Type = tex.Type,
-                                    Flags = tex.Flags,
-                                    Width = tex.Width,
-                                    Height = tex.Height,
-                                    Buffer = tex.Buffer,
-                                };
-
-                                textures.Add(child);
-                                tex = child;
-                            }
-                        }
-                        else
-                        {
-                            var tex = substance.Textures[0];
-                            var num = 1;
-
-                            if (luPalettedTextures.Contains(tex))
-                            {
-                                var idx = Textures.IndexOf(tex);
-                                
-                                while (idx != -1)
-                                {
-                                    var clone = new TextureDataPC()
-                                    {
-                                        UID = tex.UID,
-                                        Handle = tex.Handle + num++,
-                                        Type = tex.Type,
-                                        Flags = tex.Flags,
-                                        Width = tex.Width,
-                                        Height = tex.Height,
-                                        Buffer = tex.Buffer,
-                                    };
-
-                                    tex = clone;
-
-                                    var next = Textures.FindIndex((t) => t.GetHashCode() == tex.GetHashCode());
-
-                                    if (next == -1)
-                                    {
-                                        idx++;
-                                        break;
-                                    }
-
-                                    idx = next;
-                                }
-
-                                Textures.Insert(idx, tex);
-                                substance.Textures[0] = tex;
-                            }
-
-                            // don't allow dupes
-                            luPalettedTextures.Add(tex);
-                        }
-
-                        // replace palettes
-                        if (nCluts > 0)
-                        {
-                            var cluts = new List<PaletteData>();
-
-                            for (int n = 0; n < nCluts; n++)
-                            {
-                                var idx = (n * 4);
-
-                                // copy the red channel and prepare a mask
-                                var clut = substance.Palettes[idx].Clone();
-                                var mask = new PaletteData(clut.Count);
-
-                                for (int k = 1; k < 4; k++)
-                                {
-                                    // merge green/blue/alpha
-                                    clut.Merge(substance.Palettes[idx + k], k);
-
-                                    // setup mask
-                                    var m = (k - 1);
-
-                                    mask.Merge(substance.Palettes[idx + m], m);
-                                    mask.Blend(substance.Palettes[3], m);
-                                }
-
-                                // and finally, set the mask up by using the alpha
-                                mask.ToAlphaMask();
-
-                                cluts.Add(clut);
-                                cluts.Add(mask);
-                            }
-
-                            var index = Palettes.IndexOf(substance.Palettes[0]);
-
-                            foreach (var palette in substance.Palettes)
-                                Palettes.Remove(palette);
-
-                            Palettes.InsertRange(index, cluts);
-
-                            substance.Palettes.Clear();
-                            substance.Palettes = cluts;
-                        }
-
-                        // add additional textures
-                        if (textures.Count > 0)
-                        {
-                            var tex = substance.Textures[0];
-                            var idx = Textures.IndexOf(tex) + 1;
-
-                            foreach (var texture in textures)
-                            {
-                                Textures.Insert(idx++, texture);
-                                substance.Textures.Add(texture);
-                            }
-                        }
-                    }
-
-                    // process textures into the DDS format
-                    foreach (var substance in Substances)
-                    {
-                        var palettes = substance.Palettes;
-                        var textures = substance.Textures;
-                        
-                        var numPalettes = palettes.Count;
-                        var numTextures = textures.Count;
-
-                        var useFirstPalette = false;
-
-                        if ((numPalettes > 0) && (numPalettes != numTextures))
-                        {
-                            if (numPalettes > 1)
-                                throw new InvalidOperationException("URGENT: FIXME!!!");
-
-                            useFirstPalette = true;
-                        }
-
-                        for (int n = 0; n < numTextures; n++)
-                        {
-                            var texture = textures[n];
-                            var data = texture.Buffer;
-
-                            if (luSwizzledTextures.Contains(data))
-                                continue;
-
-                            var format = (D3DFormat)((texture.Flags >> 8) & 0xFF);
-                            var mipmaps = (texture.Flags >> 16) & 0xF;
-
-                            var width = texture.Width;
-                            var height = texture.Height;
-
-                            if (DDSUtils.HasPalette(format))
-                            {
-                                var bpp = DDSUtils.GetBytesPerPixel(format);
-
-                                if (bpp != 4)
-                                    throw new InvalidOperationException("can't process palettes!");
-
-                                var palette = palettes[(useFirstPalette) ? 0 : n];
-
-                                // override the data
-                                data = DDSUtils.Depalettize(data, width, height, bpp, palette.Data);
-                            }
-
-                            var buffer = DDSUtils.EncodeTexture(format, width, height, mipmaps, data);
-
-                            texture.Buffer = buffer;
-
-                            luSwizzledTextures.Add(buffer);
-                        }
-                    }
-
-                    // cleanup
-                    luSwizzledTextures.Clear();
-                }
+                ProcessTextures();
 
                 // lookup tables no longer needed
                 luSubstances.Clear();
@@ -1041,7 +1105,7 @@ namespace DSCript.Models
 
                 var _texture = new TextureInfo() {
                     UID = texture.UID,
-                    Hash = texture.Handle,
+                    Handle = texture.Handle,
 
                     DataOffset = textureDataLength,
                     DataSize = buffer.Length,
@@ -1226,6 +1290,18 @@ namespace DSCript.Models
 
             using (var stream = Spooler.GetMemoryStream())
             {
+                // initialize everything as empty
+                Models = new List<Model>();
+                LodInstances = new List<LodInstance>();
+                SubModels = new List<SubModel>();
+
+                VertexBuffers = new List<VertexBuffer>();
+
+                Materials = new List<MaterialDataPC>();
+                Substances = new List<SubstanceDataPC>();
+                Palettes = new List<PaletteData>();
+                Textures = new List<TextureDataPC>();
+
                 if (Platform == PlatformType.PS2)
                 {
                     LoadPS2(stream);
@@ -1309,7 +1385,9 @@ namespace DSCript.Models
                 buffer = stream.ToArray();
             }
 
+            Debug.WriteLine($"buffer length: {buffer.Length:X8}");
             Array.Resize(ref buffer, Memory.Align(buffer.Length, 4096));
+            Debug.WriteLine($">> aligned: {buffer.Length:X8}");
 
             Spooler.SetBuffer(buffer);
         }

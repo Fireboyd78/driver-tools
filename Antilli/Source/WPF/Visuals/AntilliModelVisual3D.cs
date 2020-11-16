@@ -246,7 +246,7 @@ namespace Antilli
 
                     var texInfo = substance.Textures[texIdx];
 
-                    var cTex = TextureCache.GetTexture(texInfo);
+                    var cTex = (texInfo.Flags != -666) ? TextureCache.GetTexture(texInfo) : null;
                     var texMap = (cTex != null) ? cTex.Bitmap : null;
 
                     if (texMap == null)

@@ -227,9 +227,10 @@ namespace DSCript.Spooling
             set
             {
                 var str = value;
+                var dirty = false;
 
                 if (_description != null && _description != str)
-                    IsDirty = true;
+                    dirty = true;
 
                 if (str != null)
                 {
@@ -244,7 +245,7 @@ namespace DSCript.Spooling
                     _description = String.Empty;
                 }
 
-                if (IsDirty)
+                if (dirty)
                     IsModified = true;
             }
         }
@@ -277,12 +278,15 @@ namespace DSCript.Spooling
                 {
                     int offset = Offset;
 
-                    var parent = Parent;
-
-                    while (parent != null)
+                    if (offset > 0)
                     {
-                        offset += parent.Offset;
-                        parent = parent.Parent;
+                        var parent = Parent;
+
+                        while (parent != null)
+                        {
+                            offset += parent.Offset;
+                            parent = parent.Parent;
+                        }
                     }
 
                     return offset;
