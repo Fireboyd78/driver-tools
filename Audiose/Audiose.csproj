@@ -38,9 +38,16 @@
     <Compile Include="Source\ADPCM.cs" />
     <Compile Include="Source\ArgInfo.cs" />
     <Compile Include="Source\Config.cs" />
-    <Compile Include="Source\SoundPackage.cs" />
+    <Compile Include="Source\ISerializer.cs" />
+    <Compile Include="Source\PS1BankFile.cs" />
+    <Compile Include="Source\RIFF.cs" />
+    <Compile Include="Source\SamplerData.cs" />
+    <Compile Include="Source\SoundBank.cs" />
+    <Compile Include="Source\SoundDatabase.cs" />
     <Compile Include="Source\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Source\SoundSample.cs" />
+    <Compile Include="Source\VAG.cs" />
     <Compile Include="Source\XMFile.cs" />
   </ItemGroup>
   <ItemGroup>

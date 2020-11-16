@@ -37,7 +37,7 @@ namespace Audiose
         
         static ParseResult ParseData()
         {
-            var gsdFile = new GSDFile();
+            var soundDb = new SoundDatabase();
             
             if (Config.Extract)
             {
@@ -192,15 +192,15 @@ namespace Audiose
                         }
 
                         // always assume DPL's format
-                        gsdFile.Type = GSDFormatType.BK31;
-                        gsdFile.Banks = new List<SoundBank>(gsdBanks);
+                        soundDb.Type = SoundBankFormat.BK31;
+                        soundDb.Banks = new List<SoundBank>(gsdBanks);
 
                         if (Config.Compile)
                         {
                             if (String.IsNullOrEmpty(Config.OutDir))
                                 Config.OutDir = Path.GetDirectoryName(Config.Input);
 
-                            gsdFile.SaveBinary(Path.Combine(Config.OutDir, String.Format("{0}.gsd", Path.GetFileName(Config.Input))));
+                            soundDb.SaveBinary(Path.Combine(Config.OutDir, String.Format("{0}.gsd", Path.GetFileName(Config.Input))));
                         }
                         else
                         {
@@ -210,7 +210,7 @@ namespace Audiose
                                     Path.GetFileNameWithoutExtension(Config.Input));
                             }
 
-                            gsdFile.DumpAllBanks(Config.OutDir);
+                            soundDb.UnpackBanks(Config.OutDir);
                         }
                     }
                     else
@@ -229,21 +229,21 @@ namespace Audiose
                 {
                 case FileType.BinaryData:
                     {
-                        gsdFile.LoadBinary(Config.Input);
+                        soundDb.LoadBinary(Config.Input);
 
                         if (Config.Compile)
                         {
                             if (String.IsNullOrEmpty(Config.OutDir))
                                 Config.OutDir = Path.GetDirectoryName(Config.Input);
 
-                            gsdFile.SaveBinary(Path.Combine(Config.OutDir, GSDName));
+                            soundDb.SaveBinary(Path.Combine(Config.OutDir, GSDName));
                         }
                         else
                         {
                             if (String.IsNullOrEmpty(Config.OutDir))
                                 Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), DefaultOutput);
 
-                            gsdFile.DumpAllBanks(Config.OutDir);
+                            soundDb.UnpackBanks(Config.OutDir);
                         }
                     }
                     break;
@@ -255,12 +255,12 @@ namespace Audiose
                             return ParseResult.Failure;
                         }
 
-                        gsdFile.LoadXml(Config.Input);
+                        soundDb.LoadXml(Config.Input);
 
                         if (String.IsNullOrEmpty(Config.OutDir))
                             Config.OutDir = Path.GetDirectoryName(Config.Input);
 
-                        gsdFile.SaveBinary(Path.Combine(Config.OutDir, GSDName));
+                        soundDb.SaveBinary(Path.Combine(Config.OutDir, GSDName));
                     }
                     break;
                 default:
@@ -274,7 +274,7 @@ namespace Audiose
             return ParseResult.Success;
         }
 
-        static ParseResult ParseDataPS1()
+        static ParseResult ParseDriverPS1Sounds()
         {
             var ps1 = new PS1BankFile();
 
@@ -305,17 +305,17 @@ namespace Audiose
             return ParseResult.Success;
         }
 
-        static unsafe ParseResult ParseDriver2Music()
+        static unsafe ParseResult ParseDriverPS1Music()
         {
             if (Config.Extract)
             {
-                Console.WriteLine("'Extract' argument is invalid for Driver 2 music data.");
+                Console.WriteLine("'Extract' argument is invalid for Driver PS1 music data.");
                 return ParseResult.Failure;
             }
 
             if (Config.Compile)
             {
-                Console.WriteLine("Cannot compile Driver 2 music data, operation unsupported.");
+                Console.WriteLine("Cannot compile Driver PS1 music data, operation unsupported.");
                 return ParseResult.Failure;
             }
             
@@ -332,7 +332,7 @@ namespace Audiose
 
                 if (((count * 8) + 4) != check)
                 {
-                    Console.WriteLine("Sorry, this doesn't seem to be a valid Driver 2 music file.");
+                    Console.WriteLine("Sorry, this doesn't seem to be a valid Driver PS1 music file.");
                     return ParseResult.Failure;
                 }
 
@@ -341,7 +341,7 @@ namespace Audiose
 
                 if (fs.ReadInt32() > size)
                 {
-                    Console.WriteLine("Possibly corrupt Driver 2 music data (file size mismatch).");
+                    Console.WriteLine("Possibly corrupt Driver PS1 music data (file size mismatch).");
                     return ParseResult.Failure;
                 }
 
@@ -625,11 +625,11 @@ namespace Audiose
                 var xmlDoc = new XmlDocument();
                 var xmlRoot = xmlDoc.CreateElement("PS1MusicDatabase");
 
-                xmlRoot.SetAttribute("Version", "2"); // Driver 2
+                xmlRoot.SetAttribute("Version", "3");
 
                 for (int i = 0; i < count; i++)
                 {
-                    var moduleXml = xmlDoc.CreateElement("MusicModule");
+                    var moduleXml = xmlDoc.CreateElement("TrackerModule");
 
                     var moduleFile = Path.Combine("Modules", $"{i:D2}", "mod.xm");
                     var moduleDir = Path.GetDirectoryName(moduleFile);
@@ -1383,7 +1383,7 @@ namespace Audiose
             return ParseResult.Success;
         }
 
-        static ParseResult ParseRSBData()
+        static ParseResult ParseDriverPCSounds()
         {
             if (Config.Extract)
             {
@@ -1505,13 +1505,13 @@ namespace Audiose
 
             switch (Config.InputType)
             {
+            case FileType.Bin:
+                return ParseDriverPS1Music();
             case FileType.Blk:
             case FileType.Sbk:
-                return ParseDataPS1();
+                return ParseDriverPS1Sounds();
             case FileType.Rsb:
-                return ParseRSBData();
-            case FileType.Bin:
-                return ParseDriver2Music();
+                return ParseDriverPCSounds();
             case FileType.Xa:
                 return ParseXA();
             }
