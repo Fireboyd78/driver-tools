@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,12 +16,152 @@ namespace IMGRipper
         public static bool NoFMV = false;
         public static bool ListOnly = false;
         public static bool Overwrite = false;
+        public static bool SuperHasher9000 = false;
         
         static readonly string DefaultOutput = @".\Data\";
         static readonly string LookupTable = @".\magicnums.txt";
         
         static string InputFile { get; set; }
         static string OutputDir { get; set; }
+
+        static void RunSuperHasher9000TM()
+        {
+            Console.WriteLine("<<< SUPER HASHER 9000(tm) >>>");
+
+            var readLine = new Func<string>(() => {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write("> ");
+
+                Console.ResetColor();
+
+                return Console.ReadLine();
+            });
+
+            var respond = new Action<string>((s) => {
+                Console.WriteLine($"{s}");
+            });
+
+            var line = "";
+            var endItAll = false;
+
+            while (!endItAll && (line = readLine()) != null)
+            {
+                if (line.Length == 0)
+                {
+                    respond("Please enter something.");
+                    continue;
+                }
+
+                switch (line[0])
+                {
+                case '%':
+                    respond($"Hasher mode: {(CustomHasher.PSPMode ? "Driver76" : "Jenkins")}");
+                    continue;
+                case '?':
+                {
+                    var sb = new StringBuilder();
+                    var num = 0;
+
+                    foreach (var hash in CustomHasher.Missing.OrderBy((k) => $"{k:X8}"))
+                    {
+                        if ((num % 10) == 0.0)
+                        {
+                            if (num > 0)
+                                sb.AppendLine();
+
+                            sb.Append($" - ");
+                        }
+
+                        sb.Append($"{hash:X8} ");
+                        num++;
+                    }
+
+                    sb.AppendLine();
+
+                    if (num > 0)
+                    {
+                        respond($"{num} unknown hashes:");
+                        respond(sb.ToString());
+                    }
+                    else
+                    {
+                        respond("No missing hashes loaded.");
+                    }
+                } continue;
+                case '@':
+                {
+                    var file = line.Substring(1).Replace("\"", "");
+
+                    respond("Loading...");
+
+                    try
+                    {
+                        var img = new IMGArchive();
+
+                        img.LoadFile(file);
+
+                        // setup the hasher method
+                        CustomHasher.PSPMode = (img.Version == IMGVersion.PSP) ? true : false;
+
+                        respond("Done.");
+                    }
+                    catch (Exception e)
+                    {
+                        respond($"Error: {e.Message}");
+                    }
+                } continue;
+                default:
+                {
+                    var hash = 0u;
+
+                    if (line[0] == '$')
+                    {
+                        try
+                        {
+                            hash = uint.Parse(line.Substring(1), NumberStyles.HexNumber);
+                        }
+                        catch (Exception)
+                        {
+                            respond("Invalid hexadecimal hash.");
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        switch (line)
+                        {
+                        case "help":
+                            respond("I'm afraid I can't do that, Dave.");
+                            continue;
+                        case "exit":
+                            endItAll = true;
+                            respond("Bye!");
+                            continue;
+                        }
+
+                        hash = CustomHasher.GetHash(line);
+                    }
+
+                    if (CustomHasher.Lookup.ContainsKey(hash))
+                    {
+                        respond($"{hash:X8} : '{line}'");
+                    }
+                    else
+                    {
+                        if (CustomHasher.Missing.Contains(hash))
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkGreen;
+                            Console.WriteLine("You found a missing hash!");
+
+                            Console.ResetColor();
+                        }
+
+                        respond($"{hash:X8} : (unknown)");
+                    }
+                } continue;
+                }
+            }
+        }
 
         #region WriteVerbose methods
         public static void WriteVerbose(string value)
@@ -48,6 +189,13 @@ namespace IMGRipper
                 {
                     if (arg.StartsWith("/") || arg.StartsWith("-"))
                     {
+                        if (String.Equals(arg, "--"))
+                        {
+                            WriteVerbose("SuperHasher9000 enabled.");
+                            SuperHasher9000 = true;
+                            break;
+                        }
+
                         switch (arg.ToLower().TrimStart('/', '-'))
                         {
                         case "b":
@@ -97,6 +245,12 @@ namespace IMGRipper
                 if (error)
                 {
                     Console.WriteLine("Terminating....");
+                    return;
+                }
+
+                if (SuperHasher9000)
+                {
+                    RunSuperHasher9000TM();
                     return;
                 }
 

@@ -17,6 +17,9 @@ namespace IMGRipper
     {
         public static bool PSPMode = false;
 
+        public static Dictionary<uint, string> Lookup = new Dictionary<uint, string>();
+        public static HashSet<uint> Missing = new HashSet<uint>();
+
         public static uint GetHash(string value)
         {
             var hash = 0u;
@@ -362,6 +365,8 @@ namespace IMGRipper
 
                 "ANIMS\\SKELETON_MACROS\\FEMALE_SKELETON.SKM",
                 "ANIMS\\SKELETON_MACROS\\MALE_SKELETON.SKM",
+
+                "FONTS\\FONT.BNK",
 
                 "FMV\\CONTROLSCREENBG.XMV",
                 "FMV\\FRONTEND.XMV",
@@ -735,68 +740,61 @@ namespace IMGRipper
                 "CITIES\\AIEXPORT",
                 "CITIES\\LEVELS.TXT",
 
-                "FMV\\EXTRAS\\GPTRAILER.XMV",
-                "FMV\\EXTRAS\\BOCRASHES.XMV",
-                "FMV\\EXTRAS\\BOCHASES.XMV",
-                "FMV\\EXTRAS\\INTERVIEW.XMV",
-
-                "FMV\\MISSION_1_2.XMV",
-                "FMV\\MISSION_1_3.XMV",
-                "FMV\\MISSION_1_4.XMV",
-                "FMV\\MISSION_1_35.XMV",
-                "FMV\\MISSION_2_1.XMV",
-                "FMV\\MISSION_2_2.XMV",
-                "FMV\\MISSION_2_3.XMV",
-                "FMV\\MISSION_3_1.XMV",
-                "FMV\\MISSION_3_2.XMV",
-                "FMV\\MISSION_4_1.XMV",
-                "FMV\\MISSION_4_2.XMV",
-                "FMV\\MISSION_4_3.XMV",
-                "FMV\\MISSION_5_1.XMV",
-                "FMV\\MISSION_6_3.XMV",
-                "FMV\\MISSION_7_2.XMV",
-                "FMV\\MISSION_9_1.XMV",
-                "FMV\\MISSION_9_2.XMV",
-                "FMV\\MISSION_9_3.XMV",
-                "FMV\\MISSION_10_2.XMV",
-                "FMV\\MISSION_10_3.XMV",
-                "FMV\\MISSION_11_1.XMV",
-                "FMV\\MISSION_11_2.XMV",
-                "FMV\\MISSION_12_1.XMV",
-                "FMV\\MISSION_12_2.XMV",
-                "FMV\\MISSION_12_3.XMV",
-                "FMV\\MISSION_12_4.XMV",
-
-                "FMV\\OBJECTIVES_1978.XMV",
-                "FMV\\OBJECTIVES_2006.XMV",
-
-                "FMV\\SCENE1.XMV",
-                "FMV\\SCENE2.XMV",
-                "FMV\\SCENE3.XMV",
-                "FMV\\SCENE4.XMV",
-                "FMV\\SCENE5.XMV",
-                "FMV\\SCENE6.XMV",
-                "FMV\\SCENE7.XMV",
-                "FMV\\SCENE8.XMV",
-                "FMV\\SCENE8B.XMV",
-                "FMV\\SCENE9.XMV",
-                "FMV\\SCENE10.XMV",
-                "FMV\\SCENE11.XMV",
-                "FMV\\SCENE12.XMV",
-                "FMV\\SCENE13.XMV",
-                "FMV\\SCENE14.XMV",
-                "FMV\\SCENE15.XMV",
-                "FMV\\SCENE16.XMV",
-
-                "FMV\\TITLESCREEN.XMV",
-                "FMV\\THEMAKINGOF.XMV",
-
                 "FONTS\\70S\\FONT.BNK",
                 "FONTS\\90S\\FONT.BNK",
 
                 "INPUT\\FRONTEND.TXT",
                 "INPUT\\SIMULATION.TXT",
                 "INPUT\\VISUALS.TXT",
+
+
+                "LifeEvents\\Now\\base\\Base_Bear_Cage.mpc",
+                "LifeEvents\\Now\\base\\Base_Bishop.mpc",
+                "LifeEvents\\Now\\base\\Base_Candy.mpc",
+                "LifeEvents\\Now\\base\\Base_Corrigan.mpc",
+                "LifeEvents\\Now\\base\\Base_Gate_Crasher.mpc",
+                "LifeEvents\\Now\\base\\Base_Gauntlet.mpc",
+                "LifeEvents\\Now\\base\\Base_Incidentals_Now.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_09.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_10.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_10.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_11.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_11.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_12.mpc",
+                "LifeEvents\\Now\\base\\Base_Pot_12.mpc",
+                "LifeEvents\\Now\\base\\Base_Ram_Raider.mpc",
+                "LifeEvents\\Now\\base\\Base_Riding_Shotgun.mpc",
+                "LifeEvents\\Now\\base\\Base_Rush_Hour.mpc",
+                "LifeEvents\\Now\\base\\Base_Slink.mpc",
+                "LifeEvents\\Now\\base\\Base_Tailgate.mpc",
+                "LifeEvents\\Now\\base\\Base_The_Mexican.mpc",
+                "LifeEvents\\Now\\base\\base_01.mpc",
+
+                "LifeEvents\\Then\\base\\Base_Circuit_Breaker.mpc",
+                "LifeEvents\\Then\\base\\Base_Gift_Wrapped.mpc",
+                "LifeEvents\\Then\\base\\Base_Incidentals_Then.mpc",
+                "LifeEvents\\Then\\base\\Base_Jail_Break.mpc",
+                "LifeEvents\\Then\\base\\Base_Last_Chance.mpc",
+                "LifeEvents\\Then\\base\\Base_Pot_02.mpc",
+                "LifeEvents\\Then\\base\\Base_Pot_03.mpc",
+                "LifeEvents\\Then\\base\\Base_Pot_04.mpc",
+                "LifeEvents\\Then\\base\\Base_Pot_05.mpc",
+                "LifeEvents\\Then\\base\\Base_Pot_07.mpc",
+                "LifeEvents\\Then\\base\\Base_Ransom.mpc",
+                "LifeEvents\\Then\\base\\Base_Repoman.mpc",
+                "LifeEvents\\Then\\base\\Base_Turning_the_screw.mpc",
+                "LifeEvents\\Then\\base\\base_01.mpc",
+                "LifeEvents\\Then\\base\\base_Demo.mpc",
+                "LifeEvents\\Then\\base\\base_Gunman.mpc",
+                "LifeEvents\\Then\\base\\base_Hot_Wheels.mpc",
+                "LifeEvents\\Then\\base\\base_Nickel_and_Dime.mpc",
+                "LifeEvents\\Then\\base\\base_Wheelman.mpc",
+
+                "LifeEvents\\dev\\demo.sp",
+                "LifeEvents\\dev\\incidentalsthen.sp",
+                "LifeEvents\\dev\\incidentalsnow.sp",
+
+                "LifeEvents\\test_nyc_then_missions.sp",
 
                 "MUSIC\\A.XA",
                 "MUSIC\\B.XA",
@@ -821,7 +819,215 @@ namespace IMGRipper
                 "VEHICLES\\VVARS.TXT",
             };
 
+            var vehicleConfigs = new[] {
+                "00_albion",
+                "00_albion_racer",
+                "00_antilli_vo3",
+                "00_atlus",
+                "00_atlus_racer",
+                "00_challenger",
+                "00_challenger_cargo_trailer",
+                "00_challenger_flatbed_trailer",
+                "00_challenger_tanker_trailer",
+                "00_colonna",
+                "00_colonna_racer",
+                "00_enforcer",
+                "00_eurotech_lifter",
+                "00_hotrod",
+                "00_indiana",
+                "00_kramer",
+                "00_kramer_racer",
+                "00_miyagi",
+                "00_montara",
+                "00_mutsumi_1000r",
+                "00_mx2000",
+                "00_mx2000_racer",
+                "00_negotiator",
+                "00_nomad",
+                "00_nomad_racer",
+                "00_olympic",
+                "00_paramedic",
+                "00_prestige",
+                "00_prestige_racer",
+                "00_safari",
+                "00_schweizer",
+                "00_schweizer_racer",
+                "00_security_van",
+                "00_teramo",
+                "00_teramo_racer",
+                "00_zenda",
+                "00_zenda_racer",
+                "07_ardenne",
+                "07_ardenne_racer",
+                "07_bonsai",
+                "07_bonsai_racer",
+                "07_brooklyn",
+                "07_brooklyn_racer",
+                "07_bus",
+                "07_chauffeur",
+                "07_chopper",
+                "07_citation",
+                "07_courier",
+                "07_coyote",
+                "07_coyote_racer",
+                "07_delivery_van",
+                "07_dolva",
+                "07_dolva_flatbed",
+                "07_dozer",
+                "07_eagle",
+                "07_eagle_racer",
+                "07_eurotech_lifter",
+                "07_fairview",
+                "07_firetruck",
+                "07_grand_valley",
+                "07_kenilworth",
+                "07_land_roamer",
+                "07_meat_wagon",
+                "07_melizzano",
+                "07_melizzano_racer",
+                "07_raven",
+                "07_raven_racer",
+                "07_refuse_truck",
+                "07_regina",
+                "07_regina_racer",
+                "07_rhapsody",
+                "07_rosalita",
+                "07_san_marino",
+                "07_san_marino_racer",
+                "07_san_marino_spyder",
+                "07_san_marino_spyder_racer",
+                "07_school_bus",
+                "07_sol_aire",
+                "07_traveller",
+                "07_wayfarer",
+                "07_wombat",
+                "07_woody",
+                "07_wrecker",
+                "07_yamashita_900",
+                "07_mission_truck",
+                "07_prison_bus",
+                "00_ram_raider",
+                "00_prison_van",
+                "00_pimp_wagon",
+                "07_the_mexicans_ride",
+                "07_swift_van",
+                "00_antilli_vo3_special",
+                "07_ardenne_punk",
+                "07_brooklyn_punk",
+                "07_coyote_punk",
+                "07_eagle_punk",
+                "00_olympic_punk",
+                "00_nomad_turbo",
+                "07_wayfarer_turbo",
+            };
+
+            foreach (var vehicleConfig in vehicleConfigs)
+                knownFiles.Add(String.Format("Vehicles\\Configs\\{0}.VO3", vehicleConfig));
+
+            var fmvFiles = new[] {
+                "FMV\\EXTRAS\\GPTRAILER",
+                "FMV\\EXTRAS\\BOCRASHES",
+                "FMV\\EXTRAS\\BOCHASES",
+                "FMV\\EXTRAS\\INTERVIEW",
+
+                "FMV\\MISSION_1_1",
+                "FMV\\MISSION_1_2",
+                "FMV\\MISSION_1_3",
+                "FMV\\MISSION_1_4",
+                "FMV\\MISSION_1_35",
+                "FMV\\MISSION_2_1",
+                "FMV\\MISSION_2_2",
+                "FMV\\MISSION_2_3",
+                "FMV\\MISSION_3_1",
+                "FMV\\MISSION_3_2",
+                "FMV\\MISSION_4_1",
+                "FMV\\MISSION_4_2",
+                "FMV\\MISSION_4_3",
+                "FMV\\MISSION_5_1",
+                "FMV\\MISSION_6_3",
+                "FMV\\MISSION_7_2",
+                "FMV\\MISSION_9_1",
+                "FMV\\MISSION_9_2",
+                "FMV\\MISSION_9_3",
+                "FMV\\MISSION_10_2",
+                "FMV\\MISSION_10_3",
+                "FMV\\MISSION_11_1",
+                "FMV\\MISSION_11_2",
+                "FMV\\MISSION_12_1",
+                "FMV\\MISSION_12_2",
+                "FMV\\MISSION_12_3",
+                "FMV\\MISSION_12_4",
+
+                "FMV\\OBJECTIVES_1978",
+                "FMV\\OBJECTIVES_2006",
+
+                "FMV\\objectives_10_1",
+                "FMV\\objectives_10_2",
+                "FMV\\objectives_10_3",
+                "FMV\\objectives_10_4",
+                "FMV\\objectives_11_1",
+                "FMV\\objectives_11_2",
+                "FMV\\objectives_11_3",
+                "FMV\\objectives_12_1",
+                "FMV\\objectives_12_3",
+                "FMV\\objectives_12_4",
+                "FMV\\objectives_1_2",
+                "FMV\\objectives_1_3",
+                "FMV\\objectives_1_35",
+                "FMV\\objectives_1_4",
+                "FMV\\objectives_2_1",
+                "FMV\\objectives_2_2",
+                "FMV\\objectives_2_3",
+                "FMV\\objectives_2_4",
+                "FMV\\objectives_3_1",
+                "FMV\\objectives_3_2",
+                "FMV\\objectives_4_1",
+                "FMV\\objectives_4_2",
+                "FMV\\objectives_4_3",
+                "FMV\\objectives_5_1",
+                "FMV\\objectives_6_1",
+                "FMV\\objectives_6_2",
+                "FMV\\objectives_6_3",
+                "FMV\\objectives_7_1",
+                "FMV\\objectives_7_2",
+                "FMV\\objectives_8_1",
+                "FMV\\objectives_8_2",
+                "FMV\\objectives_9_1",
+                "FMV\\objectives_9_2",
+                "FMV\\objectives_9_3",
+                "FMV\\objectives_9_4",
+
+                "FMV\\SCENE1",
+                "FMV\\SCENE2",
+                "FMV\\SCENE3",
+                "FMV\\SCENE4",
+                "FMV\\SCENE5",
+                "FMV\\SCENE6",
+                "FMV\\SCENE7",
+                "FMV\\SCENE8",
+                "FMV\\SCENE8B",
+                "FMV\\SCENE9",
+                "FMV\\SCENE10",
+                "FMV\\SCENE11",
+                "FMV\\SCENE12",
+                "FMV\\SCENE13",
+                "FMV\\SCENE14",
+                "FMV\\SCENE15",
+                "FMV\\SCENE16",
+
+                "FMV\\TITLESCREEN",
+                "FMV\\THEMAKINGOF",
+            };
+
+            foreach (var fmv in fmvFiles)
+            {
+                knownFiles.Add(String.Format("{0}.SBN", fmv));
+                knownFiles.Add(String.Format("{0}.XMV", fmv));
+            }
+
             var igcsFiles = new[] {
+                "MUSIC\\01_2_IGCS_1",
+
                 "MUSIC\\01_2_TUT_01",
                 "MUSIC\\01_2_TUT_02",
                 "MUSIC\\01_2_TUT_03",
@@ -838,6 +1044,37 @@ namespace IMGRipper
                 "MUSIC\\01_2_TUT_NAG_02A",
                 "MUSIC\\01_2_TUT_NAG_02B",
                 "MUSIC\\01_2_TUT_NAG_02C",
+
+                "MUSIC\\01_3_SLINK_01",
+                "MUSIC\\01_3_SLINK_02",
+                "MUSIC\\01_3_SLINK_03",
+                "MUSIC\\01_3_SLINK_04",
+                "MUSIC\\01_3_SLINK_05",
+                "MUSIC\\01_3_SLINK_06",
+                "MUSIC\\01_3_SLINK_07",
+                "MUSIC\\01_3_SLINK_08",
+                "MUSIC\\01_3_SLINK_09",
+
+                "MUSIC\\02_1_SLINK_202",
+                "MUSIC\\02_2_MEX_02",
+                "MUSIC\\02_3_GMAN_01",
+
+                "MUSIC\\03_1_MEX_02",
+                "MUSIC\\03_2_RACEC_201",
+                "MUSIC\\03_2_RACEC_202",
+                "MUSIC\\03_2_RACEC_203",
+                "MUSIC\\03_2_RACEC_204",
+                
+                "MUSIC\\04_3_TK_CANDY_01",
+                "MUSIC\\04_3_TK_CANDY_02",
+                "MUSIC\\04_3_TK_CANDY_03",
+                "MUSIC\\04_3_TK_CANDY_04",
+
+                "MUSIC\\06_3_CAROLOTTI_01",
+                "MUSIC\\06_3_COLUMBIAN_01",
+                "MUSIC\\10_3_CONTACT_01",
+                "MUSIC\\12_1_IGCS",
+                "MUSIC\\12_4_MARIA_01",
             };
 
             var guiFiles = new[] {
@@ -890,32 +1127,32 @@ namespace IMGRipper
                 "DAY",
                 "NIGHT",
             };
-            
+
+            var moodTypes = new[] {
+                "BEGINNING_MOOD",
+                "EARLY_MOOD",
+                "MOOD",
+                "LATE_MOOD",
+                "END_MOOD",
+            };
+
             foreach (var era in eras)
             {
                 foreach (var platform in platforms)
                     knownFiles.Add(String.Format("CITIES\\NYC_{0}_{1}.D4C", era, platform));
 
                 knownFiles.Add(String.Format("LIFEEVENTS\\NYC_{0}_MISSIONS.SP", era));
+                knownFiles.Add(String.Format("LIFEEVENTS\\NYC_{0}_NO_MISSIONS.SP", era));
+                knownFiles.Add(String.Format("LIFEEVENTS\\NYC_{0}_NO_COPS.SP", era));
+
                 knownFiles.Add(String.Format("LITTER\\{0}\\LITTER.D4L", era));
 
                 int m = 1;
-                int mEnd = 5;
-
+                
                 foreach (var mood in moods)
                 {
-                    while (m <= mEnd)
-                    {
-                        knownFiles.Add(String.Format("MOODS\\{0:D2}_{1}_{2}_BEGINNING_MOOD.TXT", m, era, mood));
-                        knownFiles.Add(String.Format("MOODS\\{0:D2}_{1}_{2}_EARLY_MOOD.TXT", m, era, mood));
-                        knownFiles.Add(String.Format("MOODS\\{0:D2}_{1}_{2}_MOOD.TXT", m, era, mood));
-                        knownFiles.Add(String.Format("MOODS\\{0:D2}_{1}_{2}_LATE_MOOD.TXT", m, era, mood));
-                        knownFiles.Add(String.Format("MOODS\\{0:D2}_{1}_{2}_END_MOOD.TXT", m, era, mood));
-
-                        ++m;
-                    }
-
-                    mEnd *= 2;
+                    foreach (var moodType in moodTypes)
+                        knownFiles.Add(String.Format("MOODS\\{0:D2}_{1}_{2}_{3}.TXT", m++, era, mood, moodType));
                 }
 
                 knownFiles.Add(String.Format("MOODS\\DAYNIGHTCYCLE_{0}.TXT", era));
@@ -944,6 +1181,9 @@ namespace IMGRipper
 
                 foreach (var lang in langs)
                 {
+                    foreach (var fmvFile in fmvFiles)
+                        knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\{2}.TXT", terr, lang, fmvFile));
+
                     knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\FONTS\\FONT.BNK", terr, lang));
 
                     knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\FONTS\\70S\\FONT.BNK", terr, lang));
@@ -963,7 +1203,10 @@ namespace IMGRipper
                         knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\{2}.TXT", terr, lang, guiFile));
 
                     foreach (var igcsFile in igcsFiles)
+                    {
                         knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\{2}.XA", terr, lang, igcsFile));
+                        knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\{2}.TXT", terr, lang, igcsFile));
+                    }
 
                     knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\SOUNDS\\CHRSOUND.DAT", terr, lang));
                     knownFiles.Add(String.Format("TERRITORY\\{0}\\LOCALE\\{1}\\SOUNDS\\SOUND.GSD", terr, lang));
@@ -1011,11 +1254,13 @@ namespace IMGRipper
                 "Development\\DebugMenus\\MainDebugMenu.txt",
                 "Development\\DebugMenus\\PersistentValues.txt",
                 "Development\\DebugMenus\\Locations.txt",
+                "Development\\DebugMenus\\Positions.txt",
                 "Development\\DebugMenus\\BuildInfo.txt",
                 "Development\\DebugMenus\\LifeSystem.txt",
                 "Development\\DebugMenus\\MoodSettings.txt",
                 "Development\\DebugMenus\\PropSettingsMenu.txt",
                 "Development\\DebugMenus\\LodDistances.txt",
+                "Development\\DebugMenus\\WeaponSettings.txt",
                 "Development\\DebugMenus\\WeaponSettings70.txt",
                 "Development\\DebugMenus\\WeaponSettings00.txt",
                 "Development\\DebugMenus\\LightingMenu.txt",
@@ -1650,17 +1895,16 @@ namespace IMGRipper
             var knownFiles = new List<String>() {
                 "GAMECONFIG.TXT",
 
+                "SLUS_205.87",
                 "SLES_508.76",
                 "SLES_521.53",
+                "SLES_535.56",
                 "SLPM_657.41",
-                "SLUS_205.87",
 
                 "SYSTEM.CNF",
 
                 "FMV\\ATARI.XMV",
                 "FMV\\CREDITS.XMV",
-
-                "FONTS\\FONT.BNK",
 
                 "OVERLAYS\\LOADING.GFX",
                 "OVERLAYS\\WHITE.GFX",
@@ -1709,6 +1953,8 @@ namespace IMGRipper
 
                 sb.AppendLine($"0x{key:X8},{name}");
                 HashLookup.Add(key, name);
+
+                CustomHasher.Lookup.Add(key, name);
             }
 
             File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "out_files.txt"), sb.ToString());
@@ -1724,6 +1970,9 @@ namespace IMGRipper
                 var name = HashLookup[filenameHash];
                 return name;
             }
+
+            if (!CustomHasher.Missing.Contains(filenameHash))
+                CustomHasher.Missing.Add(filenameHash);
 
             return null;
         }
@@ -1880,7 +2129,7 @@ namespace IMGRipper
             }
         }
         
-        private void LoadFile(string filename)
+        public void LoadFile(string filename)
         {
             using (var fs = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
