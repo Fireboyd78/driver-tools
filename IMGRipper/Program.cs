@@ -11,6 +11,9 @@ namespace IMGRipper
 {
     class Program
     {
+        public static readonly AppDomain Domain = AppDomain.CurrentDomain;
+        public static readonly string Directory = Domain.BaseDirectory;
+
         public static bool BuildArchive = false;
         public static bool VerboseLog = false;
         public static bool NoFMV = false;
@@ -18,8 +21,8 @@ namespace IMGRipper
         public static bool Overwrite = false;
         public static bool SuperHasher9000 = false;
         
-        static readonly string DefaultOutput = @".\Data\";
-        static readonly string LookupTable = @".\magicnums.txt";
+        static readonly string DefaultOutput = "Data";
+        static readonly string LookupTable = Path.Combine(Directory, "magicnums.txt");
         
         static string InputFile { get; set; }
         static string OutputDir { get; set; }
