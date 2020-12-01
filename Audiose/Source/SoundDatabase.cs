@@ -326,6 +326,7 @@ namespace Audiose
                         var emptyBank = new SoundBank()
                         {
                             Index = -1,
+                            SubDirectory = Path.Combine("Banks", $"{i:D2}"),
                         };
 
                         Banks.Add(emptyBank);

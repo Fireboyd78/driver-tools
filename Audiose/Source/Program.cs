@@ -115,6 +115,9 @@ namespace Audiose
 
                             bankInfo.CopyTo(bank);
 
+                            if (bank.Index != -1)
+                                bank.SubDirectory = Path.Combine("Banks", $"{bank.Index:D2}");
+
                             for (int s = 0; s < bank.Samples.Capacity; s++)
                             {
                                 ms.Position = gsdOffset + ((s * bankDetail.SampleSize) + bankDetail.HeaderSize);
@@ -188,6 +191,7 @@ namespace Audiose
                             gsdBanks[i] = new SoundBank() {
                                 Index = index,
                                 Samples = new List<SoundSample>(),
+                                SubDirectory = Path.Combine("Banks", $"{i:D2}"),
                             };
                         }
 
@@ -205,10 +209,7 @@ namespace Audiose
                         else
                         {
                             if (String.IsNullOrEmpty(Config.OutDir))
-                            {
-                                Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), DefaultOutput,
-                                    Path.GetFileNameWithoutExtension(Config.Input));
-                            }
+                                Config.OutDir = Path.Combine(Path.GetDirectoryName(Config.Input), $"{Path.GetFileNameWithoutExtension(Config.Input)}_Data");
 
                             soundDb.UnpackBanks(Config.OutDir);
                         }
