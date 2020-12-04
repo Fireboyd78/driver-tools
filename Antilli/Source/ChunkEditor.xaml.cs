@@ -159,24 +159,78 @@ namespace Antilli
             yield break;
         }
 
-        private void AddSpoolersDeadlyRecurse(SpoolablePackage s, ItemsControl t)
+        private void SpoolerItem_Expanded(object sender, RoutedEventArgs e)
         {
-            foreach (var c in EnumerateFilteredSpoolers(s))
+            var targetNode = e.OriginalSource as SpoolerListItem;
+
+            if (targetNode != null && !targetNode.FullyLoaded)
             {
-                if (c is SpoolablePackage)
+                // delay expansion so we don't run out of memory ;)
+                foreach (var item in targetNode.Items.OfType<SpoolerListItem>())
                 {
-                    var package = (SpoolablePackage)c;
-                    var pNode = new SpoolerListItem(package);
+                    // skip ones that don't need expansion
+                    if (item.FullyLoaded)
+                        continue;
 
-                    t.Items.Add(pNode);
+                    var spoo = item.Spooler as SpoolablePackage;
 
-                    AddSpoolersDeadlyRecurse(package, pNode);
+                    // we only care for spooled packages
+                    if (spoo == null)
+                        continue;
+
+                    // are all of the children present?
+                    if (item.Items.Count != spoo.Children.Count)
+                    {
+                        // add the delayed child nodes
+                        foreach (var s in EnumerateFilteredSpoolers(spoo))
+                            AddSpoolerToNode(s, item);
+                    }
                 }
-                else
-                {
-                    t.Items.Add(new SpoolerListItem(c));
-                }
+
+                // delayed expansion complete! :)
+                targetNode.Expanded -= SpoolerItem_Expanded;
+                targetNode.FullyLoaded = true;
             }
+        }
+
+        private void AddSpoolerToNode(Spooler spooler, ItemsControl node)
+        {
+            var childNode = new SpoolerListItem(spooler);
+
+            if (spooler is SpoolablePackage)
+            {
+                var package = (SpoolablePackage)spooler;
+
+                // populate the "fake" child nodes (only expand them as needed)
+                foreach (var child in EnumerateFilteredSpoolers(package))
+                {
+                    var fakeNode = new SpoolerListItem(child);
+
+                    if (child is SpoolablePackage)
+                    {
+                        var c = (SpoolablePackage)child;
+
+                        // unless it's an empty chunk, it will require delayed expansion
+                        fakeNode.FullyLoaded = (c.Children.Count == 0);
+                    }
+                    else
+                    {
+                        fakeNode.FullyLoaded = true;
+                    }
+
+                    childNode.Items.Add(fakeNode);
+                }
+
+                // delay recursion until user opens node for the first time
+                childNode.Expanded += SpoolerItem_Expanded;
+            }
+            else
+            {
+                // no further action needed
+                childNode.FullyLoaded = true;
+            }
+
+            node.Items.Add(childNode);
         }
 
         private void UpdateSpoolers()
@@ -185,10 +239,13 @@ namespace Antilli
 
             Debug.WriteLine($"Updating spoolers using search filter '{m_filterString}'...");
 
+            // remove any previous items
             ChunkList.Items.Clear();
             ChunkList.UpdateLayout();
 
-            AddSpoolersDeadlyRecurse(LoadedChunk, ChunkList);
+            // populate our new items
+            foreach (var c in EnumerateFilteredSpoolers(LoadedChunk))
+                AddSpoolerToNode(c, ChunkList);
         }
 
         private void DelayUpdateSpoolers()
@@ -292,7 +349,7 @@ namespace Antilli
 
                 sb.AppendColumn("Type",      col, true);
 
-                if (magic > 255)
+                if (magic == 0 || magic > 255)
                     sb.AppendLine((ChunkType)magic);
                 else
                     sb.AppendLine("Vehicle Container (ID:{0})", magic);
@@ -830,6 +887,8 @@ namespace Antilli
     public class SpoolerListItem : TreeViewItem
     {
         public Spooler Spooler { get; set; }
+
+        public bool FullyLoaded { get; set; }
 
         public SpoolerListItem(Spooler spooler)
         {
