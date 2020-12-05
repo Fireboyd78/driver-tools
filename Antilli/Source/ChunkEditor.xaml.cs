@@ -882,17 +882,6 @@ namespace Antilli
                     ExportChunkFile();
             };
 
-            KeyDown += (o, e) => {
-                switch (e.Key)
-                {
-                case Key.T:
-                    {
-                        _inTextureMode = !_inTextureMode;
-                        OnPropertyChanged("Spoolers");
-                    } break;
-                }
-            };
-
             tbSearchFilter.TextChanged += (o, e) => QueueFilterUpdate(tbSearchFilter.Text);
         }
     }
