@@ -369,6 +369,16 @@ namespace Antilli
                     sb.AppendLine("Build Info:\r\n");
                     sb.Append(encoding.GetString(buffer));
                 }
+                else if (CurrentSpooler.Context == 0x444D4244) // DBMD
+                {
+                    sb.AppendLine("\r\n"); // 2 newlines
+
+                    var buffer = ((SpoolableBuffer)CurrentSpooler).GetBuffer();
+                    var encoding = (buffer.Length > 1 && buffer[1] == 0) ? Encoding.Unicode : Encoding.UTF8;
+
+                    // dump debug matxml container
+                    sb.AppendLine(encoding.GetString(buffer));
+                }
 
                 return sb.ToString();
             }
@@ -748,7 +758,10 @@ namespace Antilli
                 ValidateNames = true,
                 OverwritePrompt = true,
             };
-            
+
+            if (CurrentSpooler.Context == 0x444D4244) // DBMD
+                saveDlg.DefaultExt = ".debugmat.xml";
+
             if (saveDlg.ShowDialog() ?? false)
             {
                 Mouse.OverrideCursor = Cursors.Wait;
