@@ -111,7 +111,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" MinWidth="175"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="1*" MinWidth="280"/>
+                <ColumnDefinition Width="4*" MinWidth="280"/>
             </Grid.ColumnDefinitions>
 
             <GroupBox Header="Chunks" Margin="5,5,2,5">
