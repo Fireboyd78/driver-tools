@@ -182,7 +182,7 @@ namespace Antilli
                     if (item.Items.Count != spoo.Children.Count)
                     {
                         // add the delayed child nodes
-                        foreach (var s in EnumerateFilteredSpoolers(spoo))
+                        foreach (var s in spoo.Children)
                             AddSpoolerToNode(s, item);
                     }
                 }
@@ -202,7 +202,7 @@ namespace Antilli
                 var package = (SpoolablePackage)spooler;
 
                 // populate the "fake" child nodes (only expand them as needed)
-                foreach (var child in EnumerateFilteredSpoolers(package))
+                foreach (var child in package.Children)
                 {
                     var fakeNode = new SpoolerListItem(child);
 
