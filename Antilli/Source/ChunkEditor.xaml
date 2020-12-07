@@ -9,6 +9,7 @@
     <at:ObservableWindow.Resources>
         <at:SpoolerMagicConverter x:Key="MagicConverter"/>
         <CompositeCollection x:Key="CMenu" x:Shared="False">
+            <MenuItem Header="Go to parent" Click="FindSpoolerParent" Visibility="{Binding CanFindSpoolerParent}"/>
             <MenuItem Header="Export" Click="ExportSpooler" IsEnabled="{Binding IsChunkFileOpen}"/>
             <Separator/>
             <MenuItem Header="Cut" Click="CutSpooler" IsEnabled="{Binding CanModifySpooler}"/>

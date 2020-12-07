@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -233,6 +232,42 @@ namespace Antilli
             node.Items.Add(childNode);
         }
 
+        private Stack<SpoolablePackage> ParentQueue = null;
+
+        private void ProcessFilterQueue(Stack<SpoolablePackage> stack)
+        {
+            Debug.WriteLine($"Processing filter queue...");
+
+            var child = stack.Pop();
+            var items = ChunkList.Items;
+
+            while (items != null)
+            {
+                SpoolerListItem itemNode = null;
+
+                foreach (var item in items.OfType<SpoolerListItem>())
+                {
+                    if (ReferenceEquals(item.Spooler, child))
+                    {
+                        itemNode = item;
+                        items = itemNode.Items;
+                        break;
+                    }
+                }
+
+                if (itemNode == null)
+                    break;
+
+                itemNode.IsExpanded = true;
+                itemNode.IsSelected = true;
+
+                child = (stack.Count > 0) ? stack.Pop() : null;
+
+                if (child == null)
+                    break;
+            }
+        }
+
         private void UpdateSpoolers()
         {
             Dispatcher.VerifyAccess();
@@ -243,9 +278,18 @@ namespace Antilli
             ChunkList.Items.Clear();
             ChunkList.UpdateLayout();
 
-            // populate our new items
-            foreach (var c in EnumerateFilteredSpoolers(LoadedChunk))
-                AddSpoolerToNode(c, ChunkList);
+            if (LoadedChunk != null)
+            {
+                // populate our new items
+                foreach (var c in EnumerateFilteredSpoolers(LoadedChunk))
+                    AddSpoolerToNode(c, ChunkList);
+
+                if (ParentQueue != null)
+                {
+                    ProcessFilterQueue(ParentQueue);
+                    ParentQueue = null;
+                }
+            }
         }
 
         private void DelayUpdateSpoolers()
@@ -277,7 +321,21 @@ namespace Antilli
                 UpdateSpoolers();
             }
         }
-        
+
+        public Visibility CanFindSpoolerParent
+        {
+            get
+            {
+                if (!String.IsNullOrEmpty(SearchFilter))
+                {
+                    if (CurrentSpooler != null && CurrentSpooler.Parent != null)
+                        return Visibility.Visible;
+                }
+
+                return Visibility.Collapsed;
+            }
+        }
+
         public Visibility CanReplaceSpooler
         {
             get
@@ -318,6 +376,7 @@ namespace Antilli
                     OnPropertyChanged("SpoolerInfo");
                     OnPropertyChanged("CanModifySpooler");
                     OnPropertyChanged("CanReplaceSpooler");
+                    OnPropertyChanged("CanFindSpoolerParent");
                 }
             }
         }
@@ -845,7 +904,36 @@ namespace Antilli
                 e.Handled = true;
             }
         }
-        
+
+        private void FindSpoolerParent(object sender, RoutedEventArgs e)
+        {
+            var spooler = CurrentSpoolerItem.Spooler;
+            var parent = spooler.Parent;
+
+            // nothing to do
+            if (parent == null)
+                return;
+
+            var stack = new Stack<SpoolablePackage>();
+
+            stack.Push(parent);
+
+            while (parent.Parent != null)
+            {
+                parent = parent.Parent;
+
+                stack.Push(parent);
+            }
+
+            var root = stack.Pop();
+
+            if (stack.Count > 0 && ReferenceEquals(root, LoadedChunk))
+            {
+                tbSearchFilter.Text = "";
+                ParentQueue = stack;
+            }
+        }
+
         protected override void OnClosing(CancelEventArgs e)
         {
             if (!CloseChunkFile())
