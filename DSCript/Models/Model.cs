@@ -132,9 +132,9 @@ namespace DSCript.Models
         {
             Lods = new List<Lod>(7);
 
-            // reserve space for the data
+            // pre-allocate the data
             for (int i = 0; i < 7; i++)
-                Lods.Add(null);
+                Lods.Add(new Lod(i));
         }
     }
 }
