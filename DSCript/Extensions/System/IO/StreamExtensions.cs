@@ -147,6 +147,7 @@ namespace System.IO
             if (length == 0)
                 throw new ArgumentOutOfRangeException("buffer", buffer, "The specified buffer is empty and cannot be used to fill data into the stream.");
 
+#if OLD_FILL_STYLE
             var data = new byte[count];
             var offset = 0;
 
@@ -165,6 +166,23 @@ namespace System.IO
             }
 
             stream.Write(data, 0, count);
+#else
+            var offset = 0;
+
+            while (offset < count)
+            {
+                if ((offset + length) > count)
+                {
+                    length = (count - offset);
+
+                    if (length == 0)
+                        break;
+                }
+
+                stream.Write(buffer, 0, length);
+                offset += length;
+            }
+#endif
         }
 
         /// <summary>
@@ -181,7 +199,7 @@ namespace System.IO
             stream.Fill(bytes, length);
         }
 
-        #region Peek methods
+#region Peek methods
         public static int PeekByte(this Stream stream)
         {
             var b = stream.ReadByte();
@@ -221,9 +239,9 @@ namespace System.IO
 
             return i;
         } 
-        #endregion
+#endregion
 
-        #region Read methods
+#region Read methods
         internal static int Read(this Stream stream, byte[] buffer)
         {
             if (buffer == null)
@@ -424,9 +442,9 @@ namespace System.IO
 
             return Encoding.Unicode.GetString(buf, 0, length);
         }
-        #endregion
+#endregion
 
-        #region Write methods
+#region Write methods
         public static void WriteByte(this Stream stream, int value)
         {
             if (value > 255)
@@ -520,6 +538,6 @@ namespace System.IO
         {
             stream.Write(BitConverter.GetBytes(value), 0, sizeof(double));
         }
-        #endregion
+#endregion
     }
 }
