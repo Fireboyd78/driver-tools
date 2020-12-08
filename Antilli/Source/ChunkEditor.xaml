@@ -129,7 +129,9 @@
                         <RowDefinition Height="1*"/>
                         <RowDefinition Height="50"/>
                     </Grid.RowDefinitions>
-                    <TreeView Name="ChunkList" SelectedItemChanged="SpoolerSelected"/>
+                    <TreeView Name="ChunkList" SelectedItemChanged="SpoolerSelected"
+                              VirtualizingStackPanel.IsVirtualizing="True"
+                              VirtualizingStackPanel.VirtualizationMode="Recycling"/>
                     <Grid Grid.Row="1">
                         <Grid.Background>
                             <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
