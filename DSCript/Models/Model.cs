@@ -87,8 +87,23 @@ namespace DSCript.Models
 
     public struct BBox
     {
+        public static readonly Vector4 VectorZero = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+
         public Vector4 V11, V12, V13, V14;
         public Vector4 V21, V22, V23, V24;
+
+        public void SetDefaults()
+        {
+            V11 = VectorZero;
+            V12 = VectorZero;
+            V13 = VectorZero;
+            V14 = VectorZero;
+
+            V21 = VectorZero;
+            V22 = VectorZero;
+            V23 = VectorZero;
+            V24 = VectorZero;
+        }
     }
 
     public class Model
@@ -111,7 +126,6 @@ namespace DSCript.Models
 
         public BBox BoundingBox;
 
-        public Vector4[] Transform = new Vector4[8];
         public List<Lod> Lods { get; set; }
 
         public Model()

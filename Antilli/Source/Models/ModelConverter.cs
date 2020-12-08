@@ -742,7 +742,8 @@ namespace Antilli
 
                     Flags = _model.Flags,
                     Scale = _model.Scale,
-                    Transform = _model.Transform,
+
+                    BoundingBox = _model.BoundingBox,
                 };
 
                 gModels.Add(model);
@@ -1067,15 +1068,7 @@ namespace Antilli
                 };
 
                 // TODO: properly calculate bounding box
-                for (int i = 0; i < 8; i++)
-                {
-                    model.Transform[i] = new Vector4() {
-                        X = 0.0f,
-                        Y = 0.0f,
-                        Z = 0.0f,
-                        W = 1.0f,
-                    };
-                }
+                model.BoundingBox.SetDefaults();
             }
             
             modelPackage.Materials = new List<MaterialDataPC>();

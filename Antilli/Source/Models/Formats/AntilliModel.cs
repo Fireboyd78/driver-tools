@@ -58,10 +58,9 @@ namespace Antilli
         {
             public UID UID;
 
-            public Vector4 V1;
+            public Vector4 Scale;
 
-            public Matrix44 Transform1;
-            public Matrix44 Transform2;
+            public BBox BoundingBox;
 
             public List<LodInstance> Lods;
         }
@@ -192,33 +191,12 @@ namespace Antilli
             
             foreach (var mdl in modelPackage.Models)
             {
-                var t11 = mdl.Transform[0];
-                var t12 = mdl.Transform[1];
-                var t13 = mdl.Transform[2];
-                var t14 = mdl.Transform[3];
-
-                var t21 = mdl.Transform[4];
-                var t22 = mdl.Transform[5];
-                var t23 = mdl.Transform[6];
-                var t24 = mdl.Transform[7];
-
                 var model = new Model() {
                     UID = mdl.UID,
 
-                    V1 = mdl.Scale,
+                    Scale = mdl.Scale,
 
-                    Transform1 = new Matrix44(
-                        t11.X, t11.Y, t11.Z, t11.W,
-                        t12.X, t12.Y, t12.Z, t12.W,
-                        t13.X, t13.Y, t13.Z, t13.W,
-                        t14.X, t14.Y, t14.Z, t14.W
-                    ),
-                    Transform2 = new Matrix44(
-                        t21.X, t21.Y, t21.Z, t21.W,
-                        t22.X, t22.Y, t22.Z, t22.W,
-                        t23.X, t23.Y, t23.Z, t23.W,
-                        t24.X, t24.Y, t24.Z, t24.W
-                    ),
+                    BoundingBox = mdl.BoundingBox,
                 };
 
                 models.Add(model);
