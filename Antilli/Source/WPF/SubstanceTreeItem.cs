@@ -40,6 +40,8 @@ namespace Antilli
 
         public ISubstanceData Substance { get; }
 
+        public IMaterialPackage Owner { get; set; }
+
         public List<TextureTreeItem> Textures
         {
             get

@@ -7,6 +7,8 @@
                     xmlns:at="clr-namespace:Antilli"
                     mc:Ignorable="d">
 
+    <at:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
     <SolidColorBrush x:Key="atDark_fg" Color="#FFC8C8C8"/>
     <SolidColorBrush x:Key="atDark_textHighlight" Color="#FFF0F0F0"/>
     <SolidColorBrush x:Key="atDark_bgLight" Color="#42000000"/>

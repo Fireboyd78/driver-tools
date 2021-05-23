@@ -15,6 +15,8 @@ namespace Antilli
 
         public ITextureData Texture { get; }
 
+        public IMaterialPackage Owner { get; set; }
+
         public void UpdateName()
         {
             var texUid = new UID(Texture.UID, Texture.Handle);

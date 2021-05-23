@@ -56,14 +56,9 @@ namespace Antilli
             set { AT.CurrentState.CurrentTab = value; }
         }
 
-        public Visibility CanShowBlendWeights
+        public bool CanUseBlendWeights
         {
-            get { return AT.CurrentState.CanShowBlendWeights; }
-        }
-
-        public Visibility CanShowGlobals
-        {
-            get { return AT.CurrentState.CanShowGlobals; }
+            get { return AT.CurrentState.CanUseBlendWeights; }
         }
 
         public IModelFile CurrentModelFile
@@ -110,192 +105,40 @@ namespace Antilli
             }
         }
 
-        public List<MaterialTreeItem> Materials
-        {
-            get
-            {
-                if (CurrentModelPackage == null || !CurrentModelPackage.HasMaterials)
-                    return null;
-
-                var materials = new List<MaterialTreeItem>();
-                int count = 0;
-
-                foreach (var material in CurrentModelPackage.Materials)
-                    materials.Add(new MaterialTreeItem(++count, material));
-
-                return materials;
-            }
-        }
-
-        public List<MaterialTreeItem> GlobalMaterials
-        {
-            get
-            {
-                var modelFile = CurrentModelFile as IVehiclesFile;
-
-                if (modelFile == null || !modelFile.HasGlobals)
-                    return null;
-
-                var globals = modelFile.GlobalTextures;
-
-                var materials = new List<MaterialTreeItem>();
-                int count = 0;
-
-                foreach (var material in globals.Materials)
-                    materials.Add(new MaterialTreeItem(++count, material));
-
-                return materials;
-            }
-        }
-
-        public List<TextureTreeItem> Textures
-        {
-            get
-            {
-                if (CurrentModelPackage == null || !CurrentModelPackage.HasMaterials)
-                    return null;
-
-                var textures = new List<TextureTreeItem>();
-                int count = 0;
-
-                foreach (var texture in CurrentModelPackage.Textures)
-                    textures.Add(new TextureTreeItem(count++, texture));
-
-                return textures;
-            }
-        }
-
-        public List<TextureTreeItem> GlobalTextures
-        {
-            get
-            {
-                var modelFile = CurrentModelFile as IVehiclesFile;
-
-                if (modelFile == null || !modelFile.HasGlobals)
-                    return null;
-
-                var globals = modelFile.GlobalTextures;
-
-                var textures = new List<TextureTreeItem>();
-                int count = 0;
-
-                foreach (var texture in globals.Textures)
-                    textures.Add(new TextureTreeItem(count++, texture));
-
-                return textures;
-            }
-        }
-
-        public ImageWidget CurrentViewWidget
-        {
-            get
-            {
-                switch (CurrentTab)
-                {
-                case 1: return MaterialViewWidget;
-                case 2: return TextureViewWidget;
-                }
-
-                return null;
-            }
-        }
-
         public bool ShowWaitCursor
         {
             set { Mouse.OverrideCursor = (value) ? Cursors.Wait : null; }
         }
 
-        public bool IsViewWidgetVisible
-        {
-            get { return CurrentViewWidget != null; }
-        }
-
-        public int MatTexRowSpan
-        {
-            get { return (AT.CurrentState.CanUseGlobals) ? 1 : 2; }
-        }
-
         public bool IsFileOpened
         {
-            get { return CurrentModelFile != null; }
+            get { return AT.CurrentState.IsFileOpened; }
         }
-
-        private bool m_isFileDirty;
 
         public bool IsFileDirty
         {
-            get { return m_isFileDirty; }
-            set
-            {
-                if (m_isFileDirty != value)
-                {
-                    m_isFileDirty = value;
-
-                    if (IsFileOpened)
-                    {
-                        var filename = CurrentModelFile.FileName;
-
-                        SubTitle = (m_isFileDirty) ? $"{filename} *" : filename;
-                    }
-
-                    UpdateFileStatus();
-                }
-            }
-        }
-
-        public bool AreChangesPending
-        {
-            get { return IsFileOpened && (IsFileDirty || CurrentModelFile.AreChangesPending); }
+            get { return AT.CurrentState.IsFileDirty; }
+            set { AT.CurrentState.IsFileDirty = value; }
         }
 
         public bool CanSaveFile
         {
-            get { return IsFileOpened && AreChangesPending; }
-        }
-
-        private void UpdateFileStatus()
-        {
-            OnPropertyChanged("IsFileOpened");
-            OnPropertyChanged("CanSaveFile");
-        }
-
-        private void ReleaseModels()
-        {
-            if (AT.CurrentState.ModelFile != null)
-            {
-                AT.CurrentState.SelectedModelPackage = null;
-                AT.CurrentState.CanUseGlobals = false;
-                AT.CurrentState.CanUseBlendWeights = false;
-
-                AT.CurrentState.ModelFile.Dispose();
-                AT.CurrentState.ModelFile = null;
-
-                TextureCache.Flush(true);
-                PackageManager.Clear();
-
-                Viewer.ClearModels();
-                ResetViewWidgets();
-            }
-        }
-
-        private void CloseFile(bool exiting)
-        {
-            ReleaseModels();
-
-            IsFileDirty = false;
-            SetCurrentFile(null);
+            get { return AT.CurrentState.CanSaveFile; }
         }
 
         private void SetCurrentFile(string filename)
         {
             SubTitle = filename;
-            UpdateFileStatus();
+            AT.CurrentState.UpdateFileStatus();
         }
 
-        private void MoveToTab(int index)
+        private void CloseFile(bool exiting)
         {
-            CurrentTab = index;
-            OnPropertyChanged("CurrentTab");
+            AT.CurrentState.FreeModels();
+
+            IsFileDirty = false;
+
+            SetCurrentFile(null);
         }
 
         private void LoadDriv3rVehicles(string filename)
@@ -308,8 +151,37 @@ namespace Antilli
             if (city != Driv3r.City.Unknown)
                 vgtFile = Driv3r.GetVehicleGlobals(city);
 
-            if (File.Exists(vgtFile))
+            if (!File.Exists(vgtFile))
+            {
+                // try locating it in the same directory as models file
+                // vgtFile has 'Vehicles' in it so we need parent dir of model file!
+                vgtFile = Path.GetFullPath( Path.Combine($"{Path.GetDirectoryName(filename)}\\..\\", vgtFile) );
+
+                // still not found!?
+                if (!File.Exists(vgtFile))
+                {
+                    // ask the user to choose one
+                    var dlg = FileManager.GetOpenDialog(GameType.Driv3r, ".vgt");
+
+                    dlg.Title = "Please select a global vehicle textures file.";
+                    dlg.InitialDirectory = Path.GetDirectoryName(filename);
+                    dlg.CheckFileExists = true;
+                    dlg.CheckPathExists = true;
+
+                    // this won't be set if the user cancels/selects an invalid file
+                    vgtFile = null;
+
+                    if (dlg.ShowDialog() ?? false)
+                        vgtFile = dlg.FileName;
+                }
+            }
+            
+            // load global textures if we have them
+            if (!String.IsNullOrEmpty(vgtFile))
+            {
+                // continue normally
                 vehicleFile.VehicleGlobals = new GlobalTexturesFile(vgtFile);
+            }
 
             AT.CurrentState.ModelFile = vehicleFile;
             AT.CurrentState.CanUseGlobals = vehicleFile.HasGlobals;
@@ -577,6 +449,7 @@ namespace Antilli
                     if (CurrentModelFile.Save(filename))
                     {
                         IsFileDirty = false;
+
                         SetCurrentFile(filename);
 
                         MessageBox.Show($"Successfully saved to '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -631,23 +504,12 @@ namespace Antilli
             if (actuallyExit)
             {
                 CloseFile(true);
-                Environment.Exit(0);
+                Close();
+                //Environment.Exit(0);
             }
         }
 
         private RadioButton[] m_lodBtnRefs = new RadioButton[7];
-
-        private void ResetViewWidgets()
-        {
-            MaterialViewWidget.Clear();
-            TextureViewWidget.Clear();
-        }
-
-        private void UpdateViewWidgets()
-        {
-            MaterialViewWidget.Update();
-            TextureViewWidget.Update();
-        }
 
         private void ResetLODButtons()
         {
@@ -770,7 +632,7 @@ namespace Antilli
 
         private void ExportAntilliScene()
         {
-            var prompt = CreateDialog<ExportModelDialog>(true, false);
+            var prompt = AT.CurrentState.CreateDialog<ExportModelDialog>(true, false);
 
             if (!SelectedModelGroup.IsNull)
                 prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
@@ -806,7 +668,7 @@ namespace Antilli
 
         private void ExportModelPackage()
         {
-            var prompt = CreateDialog<ExportModelDialog>(true, false);
+            var prompt = AT.CurrentState.CreateDialog<ExportModelDialog>(true, false);
 
             if (!SelectedModelGroup.IsNull)
                 prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
@@ -832,7 +694,7 @@ namespace Antilli
 
         private void ExportWavefrontOBJ()
         {
-            var prompt = CreateDialog<ExportModelDialog>(true, false);
+            var prompt = AT.CurrentState.CreateDialog<ExportModelDialog>(true, false);
 
             if (!SelectedModelGroup.IsNull)
                 prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
@@ -913,122 +775,17 @@ namespace Antilli
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private void ExportTexture(ITextureData texture)
-        {
-            var filename = $"{texture.Handle:X8}";
-
-            if (texture.UID != 0x01010101)
-                filename = $"{texture.UID:X8}_{texture.Handle:X8}";
-
-            var ext = "biff";
-
-            if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
-                ext = "bin";
-            
-            var saveDlg = new SaveFileDialog() {
-                AddExtension = true,
-                DefaultExt = ext,
-                FileName = filename,
-                InitialDirectory = Settings.TexturesDirectory,
-                Title = "Please enter a filename",
-                ValidateNames = true,
-                OverwritePrompt = true,
-            };
-
-            if (saveDlg.ShowDialog() ?? false)
-                FileManager.WriteFile(saveDlg.FileName, texture.Buffer);
-        }
-
-        private bool ExportTextures<T>(List<T> textures, string directory, bool silent = false)
-            where T : ITextureData
-        {
-            ShowWaitCursor = true;
-
-            foreach (var texture in textures)
-            {
-                var filename = $"{texture.Handle:X8}";
-
-                if (texture.UID != 0x01010101)
-                {
-                    var uid = new UID(texture.UID, texture.Handle);
-
-                    filename = uid.ToString("_");
-                }
-
-                var ext = "biff";
-
-                if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
-                    ext = "bin";
-
-                filename = $"{filename}.{ext}";
-
-                var path = Path.Combine(directory, filename);
-
-                FileManager.WriteFile(path, texture.Buffer);
-            }
-
-            ShowWaitCursor = false;
-
-            if (!silent)
-                MessageBox.Show("Successfully exported all textures!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            return true;
-        }
-
-        private bool ExportTextures<T>(List<T> textures, bool silent = false)
-            where T : ITextureData
-        {
-            if (textures != null)
-            {
-                var saveDlg = new FolderSelectDialog() {
-                    InitialDirectory = Settings.TexturesDirectory,
-                };
-
-                if (saveDlg.ShowDialog())
-                    return ExportTextures(textures, saveDlg.SelectedPath, silent);
-            }
-
-            return false;
-        }
-        
-        private bool ExportTextures(ModelPackage modelPackage, bool silent = false)
-        {
-            var textures = modelPackage?.Textures;
-
-            if (textures != null)
-                return ExportTextures(textures, silent);
-            
-            if (!silent)
-                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            return false;
-        }
-
-        private bool ExportGlobalTextures(bool silent = false)
-        {
-            var modelFile = CurrentModelFile as IVehiclesFile;
-
-            if (modelFile != null && modelFile.HasGlobals)
-            {
-                var globs = modelFile.GlobalTextures;
-
-                return ExportTextures(globs.Textures, silent);
-            }
-
-            if (!silent)
-                MessageBox.Show("Nothing to export!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            return false;
-        }
-
         private bool ExportAllTextures(bool silent = false)
         {
-            if (CurrentModelFile != null)
+            var modelFile = AT.CurrentState.ModelFile;
+
+            if (modelFile != null)
             {
                 var total = 0;
                 var count = 0;
 
-                var saveDlg = new FolderSelectDialog() {
+                var saveDlg = new FolderSelectDialog()
+                {
                     InitialDirectory = Settings.TexturesDirectory,
                 };
 
@@ -1037,7 +794,7 @@ namespace Antilli
                     var directory = saveDlg.SelectedPath;
 
                     // try to export as many textures as possible
-                    foreach (var package in CurrentModelFile.Packages)
+                    foreach (var package in modelFile.Packages)
                     {
                         // do we have to load it first?
                         if (!package.HasMaterials)
@@ -1053,7 +810,7 @@ namespace Antilli
 
                         if (textures != null)
                         {
-                            if (ExportTextures(textures, directory, true))
+                            if (TextureUtils.ExportTextures(textures, directory, true))
                                 count++;
                         }
 
@@ -1079,77 +836,6 @@ namespace Antilli
             return false;
         }
 
-        private void ReplaceTexture(ITextureData texture)
-        {
-            if (texture.Flags == -666)
-            {
-                MessageBox.Show("Can't do that, sorry!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            var openDlg = new OpenFileDialog() {
-                AddExtension = true,
-                CheckFileExists = true,
-                CheckPathExists = true,
-                Filter = "Texture files|*.dds;*.tga;*.bmp;",
-                Title = "Select a file:",
-                ValidateNames = true
-            };
-            
-            if (openDlg.ShowDialog() ?? false)
-            {
-                var buffer = File.ReadAllBytes(openDlg.FileName);
-
-                var type = "biff";
-
-                if (Utils.TryGetImageFormat(buffer, out type)
-                    || (buffer.Length == 0))
-                {
-                    var texRef = TextureCache.GetTexture(texture);
-                    texRef.SetBuffer(buffer);
-
-                    Viewer.UpdateActiveModel();
-
-                    // reload the active texture if necessary
-                    if (IsViewWidgetVisible)
-                        CurrentViewWidget.SetTexture(texture);
-
-                    IsFileDirty = true;
-                    CurrentModelPackage.NotifyChanges();
-                }
-                else
-                {
-                    MessageBox.Show("Invalid texture file selected!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        private void ReplaceTexture(object sender, RoutedEventArgs e)
-        {
-            var item = ((sender as FrameworkElement).DataContext) as TextureTreeItem;
-
-            if (item != null)
-            {
-                var tex = item.Texture;
-                ReplaceTexture(tex);
-
-                item.UpdateName();
-                
-                UpdateViewWidgets();
-            }
-        }
-
-        private void ExportTexture(object sender, RoutedEventArgs e)
-        {
-            var item = ((sender as FrameworkElement).DataContext) as TextureTreeItem;
-
-            if (item != null)
-            {
-                var tex = item.Texture;
-                ExportTexture(tex);
-            }
-        }
-        
         // requiring this is probably a design flaw...but it works :P
         volatile bool m_deferSelectionChange = false;
 
@@ -1191,7 +877,6 @@ namespace Antilli
             int index = Packages.SelectedIndex;
 
             AT.CurrentState.SelectedModelPackage = (index != -1) ? ModelPackages[index] : null;
-            ResetViewWidgets();
         }
 
         private void OnModelGroupItemSelected(object sender, EventArgs e)
@@ -1218,190 +903,17 @@ namespace Antilli
                 m_deferSelectionChange = false;
         }
 
-        private void SetCurrentViewElement<T>(Action<T> setterFunc, T element)
-            where T : class
-        {
-            CurrentViewWidget.Clear();
-
-            if (element != null)
-                setterFunc(element);
-        }
-
-        private void OnCurrentViewElementUpdated(object obj)
-        {
-            var objId = (obj is MaterialTreeItem) ? 0
-                        : (obj is SubstanceTreeItem) ? 1
-                        : (obj is TextureTreeItem) ? 2
-                        : -1;
-
-            // unhandled type or null view widget?!
-            if (objId == -1 || (CurrentViewWidget == null))
-                return;
-            
-            switch (objId)
-            {
-            case 0:
-                SetCurrentViewElement(CurrentViewWidget.SetMaterial, ((MaterialTreeItem)obj).Material);
-                break;
-            case 1:
-                SetCurrentViewElement(CurrentViewWidget.SetSubstance, ((SubstanceTreeItem)obj).Substance);
-                break;
-            case 2:
-                SetCurrentViewElement(CurrentViewWidget.SetTexture, ((TextureTreeItem)obj).Texture);
-                break;
-            }
-        }
-        
-        private void OnMaterialListSelectionChanged(object sender, RoutedEventArgs e)
-        {
-            var source = e.Source as TreeView;
-
-            if (source != null)
-                OnCurrentViewElementUpdated(source.SelectedItem);
-        }
-
-        private void OnTextureListSelectionChanged(object sender, RoutedEventArgs e)
-        {
-            var source = e.Source as ListBox;
-
-            if (source != null)
-                OnCurrentViewElementUpdated(source.SelectedItem);
-        }
-
-        private bool TrySelectMaterial(TreeView tree, IMaterialData material)
-        {
-            var generator = tree.ItemContainerGenerator;
-
-            // do we need to update the layout?
-            if (generator.Status == GeneratorStatus.NotStarted)
-                tree.UpdateLayout();
-
-            foreach (var item in tree.Items.OfType<MaterialTreeItem>())
-            {
-                if (Object.ReferenceEquals(material, item.Material))
-                {
-                    var childNode = generator.ContainerFromItem(item) as TreeViewItem;
-                    
-                    if (childNode != null)
-                    {
-                        childNode.Focus();
-                        childNode.IsSelected = true;
-
-                        return true;
-                    }
-                    else
-                    {
-                        Debug.WriteLine("Couldn't select the requested material :(");
-                        return false;
-                    }
-                }
-            }
-            return false;
-        }
-
-        private bool TrySelectTexture(ListBox list, ITextureData texture)
-        {
-            foreach (var item in list.Items.OfType<TextureTreeItem>())
-            {
-                if (Object.ReferenceEquals(texture, item.Texture))
-                {
-                    list.SelectedItem = item;
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        /*
-            This will check the globals (if applicable),
-            then the current model package for the material/texture
-        */
-        private bool OnQuerySelection<TQueryInput, TQueryObject>(Func<TQueryInput, TQueryObject, bool> fnQuery,
-            TQueryInput queryGlobals, TQueryInput queryOther, object obj, int tabIdx = -1)
-            where TQueryInput : class
-            where TQueryObject : class
-        {
-            var queryObj = obj as TQueryObject;
-
-            if (queryObj != null)
-            {
-                if (tabIdx != -1)
-                    MoveToTab(tabIdx);
-
-                return (AT.CurrentState.CanUseGlobals && fnQuery(queryGlobals, queryObj))
-                || fnQuery(queryOther, queryObj);
-            }
-
-            // no material!
-            return false;
-        }
-
-        private Dictionary<Type, Window> m_dialogs = new Dictionary<Type, Window>();
-        
-        private T CreateDialog<T>(bool modal, bool show = true)
-            where T : Window, new()
-        {
-            var wndType = typeof(T);
-
-            T dialog = null;
-
-            if (modal && m_dialogs.ContainsKey(wndType))
-            {
-                dialog = (T)m_dialogs[wndType];
-
-                if (show)
-                    dialog.Activate();
-            }
-            else
-            {
-                dialog = new T() {
-                    Owner = this,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                };
-
-                if (modal)
-                {
-                    dialog.Closed += (o, e) => {
-                        m_dialogs.Remove(wndType);
-                    };
-
-                    m_dialogs.Add(wndType, dialog);
-                }
-
-                if (show)
-                    dialog.Show();
-            }
-
-            dialog.Closed += (o, e) => {
-                // focus main window so everything doesn't disappear
-                Focus();
-            };
-            
-            return dialog;
-        }
-        
         public void Initialize()
         {
             Settings.Verify();
-            
+
             AT.CurrentState.PropertyChanged += (o, e) => {
                 //Debug.WriteLine($">> State change: '{e.PropertyName}'");
                 OnPropertyChanged(e.PropertyName);
             };
-            
-            AT.CurrentState.MaterialSelectQueried += (o, e) => {
-                var selected = OnQuerySelection<TreeView, IMaterialData>(TrySelectMaterial, GlobalMaterialsList, MaterialsList, o, 1);
 
-                if (!selected)
-                    MessageBox.Show("No material found!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-            };
-
-            AT.CurrentState.TextureSelectQueried += (o, e) => {
-                var selected = OnQuerySelection<ListBox, ITextureData>(TrySelectTexture, GlobalTextureList, TextureList, o, 2);
-
-                if (!selected)
-                    MessageBox.Show("No texture found!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
-            };
+            AT.CurrentState.MainWindow = this;
+            AT.CurrentState.ModelView = this; // TODO: unfuck this hacky shit
 
             AT.CurrentState.ModelPackageSelected += OnModelPackageSelected;
             AT.CurrentState.FileModified += OnFileModified;
@@ -1454,29 +966,8 @@ namespace Antilli
                     }
 
                     break;
-                case 1:
-                    MaterialViewWidget.OnKeyPressed(o, e);
-
-                    switch (e.Key)
-                    {
-                    case Key.X:
-                        var xmlDoc = new XmlDocument();
-
-                        var matPkg = xmlDoc.CreateElement("MaterialPackage");
-                        var outPath = Path.Combine(Settings.ExportDirectory, "MaterialPackage.xml");
-                        matPkg.SetAttribute("Version", "6");
-
-                        CurrentModelPackage.SaveMaterials(matPkg);
-
-                        xmlDoc.AppendChild(matPkg);
-                        xmlDoc.Save(outPath);
-
-                        Debug.WriteLine($"Saved material package to '{outPath}'.");
-                        break;
-                    }
-                    break;
-                case 2:
-                    TextureViewWidget.OnKeyPressed(o, e);
+                default:
+                    AT.CurrentState.HandleKeyDown(o, e);
                     break;
                 }
 
@@ -1525,10 +1016,10 @@ namespace Antilli
 
             fileExit.Click += (o, e) => OnFileExitClick();
             
-            chunkViewer.Click += (o, e) => CreateDialog<ChunkViewer>(false);
-            modelTool.Click += (o, e) => CreateDialog<Importer>(true);
+            chunkViewer.Click += (o, e) => AT.CurrentState.CreateDialog<ChunkViewer>(false);
+            modelTool.Click += (o, e) => AT.CurrentState.CreateDialog<Importer>(true);
 
-            optionsDlg.Click += (o, e) => CreateDialog<OptionsDialog>(true);
+            optionsDlg.Click += (o, e) => AT.CurrentState.CreateDialog<OptionsDialog>(true);
 
             impAntilliScene.Click += (o, e) => ImportAntilliScene();
             expAntilliScene.Click += (o, e) => ExportAntilliScene();
@@ -1545,11 +1036,9 @@ namespace Antilli
             blenderSendCmd.Click += (o, e) => SendCommandToBlender();
             */
 
-            mtlListExpandAll.Click += (o, e) => MaterialsList.ExpandAll(true);
-            mtlListCollapseAll.Click += (o, e) => MaterialsList.ExpandAll(false);
+            
 
-            btnExportAllTextures.Click += (o, e) => ExportTextures(CurrentModelPackage);
-            btnExportAllGlobalTextures.Click += (o, e) => ExportGlobalTextures();
+            
 
             var d3Log = new Action<string>((s) => {
                 Console.WriteLine(s);

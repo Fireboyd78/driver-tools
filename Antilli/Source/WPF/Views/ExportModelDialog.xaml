@@ -7,9 +7,6 @@
         ResizeMode="NoResize"
         SizeToContent="Height"
         Background="#181818">
-    <at:ObservableWindow.Resources>
-        <at:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </at:ObservableWindow.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="60"/>

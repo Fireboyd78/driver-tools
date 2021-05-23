@@ -19,5 +19,9 @@ namespace DSCript.Spooling
         /// Saves the contents of the resource into the spooler.
         /// </summary>
         void Save();
+
+        bool AreChangesPending { get; }
+        void CommitChanges();
+        void NotifyChanges();
     }
 }

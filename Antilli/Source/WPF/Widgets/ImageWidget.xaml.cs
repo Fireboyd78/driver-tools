@@ -47,21 +47,21 @@ namespace Antilli
         }
         #endregion
         
-        string m_contentInfo;
-        TextureBitmap m_bitmap;
+        Texture m_texture;
         int m_imageLoadFlags;
-        
-        public string ContentInfo
+        string m_contentInfo;
+
+        public Texture CurrentTexture
         {
-            get { return m_contentInfo; }
+            get { return m_texture; }
         }
 
         public BitmapSource CurrentImage
         {
             get
             {
-                if (m_bitmap != null)
-                    return m_bitmap.GetBitmapSource((BitmapSourceLoadFlags)m_imageLoadFlags);
+                if (m_texture != null)
+                    return m_texture.Bitmap.GetBitmapSource((BitmapSourceLoadFlags)m_imageLoadFlags);
 
                 return null;
             }
@@ -72,9 +72,44 @@ namespace Antilli
             get { return m_imageLoadFlags; }
         }
 
+        public string ContentInfo
+        {
+            get { return m_contentInfo; }
+        }
+
+        public Texture LoadTexture(ITextureData texture)
+        {
+            if (m_texture != null)
+                TextureCache.Release(m_texture);
+
+            m_texture = TextureCache.GetTexture(texture);
+
+            return m_texture;
+        }
+
+        public void FreeTexture()
+        {
+            if (m_texture != null)
+            {
+                TextureCache.Release(m_texture);
+                m_texture = null;
+            }
+        }
+
         public void SetMaterial(IMaterialData material)
         {
-            m_bitmap = null;
+            FreeTexture();
+
+            // display the first texture from the first substance of this material
+            var substance1 = material.Substances.FirstOrDefault();
+
+            if (substance1 != null)
+            {
+                var texture1 = substance1.Textures.FirstOrDefault();
+
+                if (texture1 != null)
+                    LoadTexture(texture1);
+            }
             
             var piType = new PropertyItem("Type", delegate (string type) {
                 MaterialType mtlType = MaterialType.Group;
@@ -143,7 +178,13 @@ namespace Antilli
         
         public void SetSubstance(ISubstanceData substance)
         {
-            m_bitmap = null;
+            FreeTexture();
+
+            // display the first texture from this substance
+            var texture1 = substance.Textures.FirstOrDefault();
+
+            if (texture1 != null)
+                LoadTexture(texture1);
             
             var piBin = new PropertyItem("Bin", delegate (string bin) {
                 RenderBinType renderBin = RenderBinType.ReflectedSky;
@@ -268,12 +309,7 @@ namespace Antilli
 
         public void SetTexture(ITextureData texture)
         {
-            if (m_bitmap != null)
-                m_bitmap = null;
-
-            var textureRef = TextureCache.GetTexture(texture);
-
-            m_bitmap = textureRef.Bitmap;
+            var textureRef = LoadTexture(texture);
 
             var tex = textureRef.Data;
             
@@ -330,7 +366,8 @@ namespace Antilli
         
         public void Clear()
         {
-            m_bitmap = null;
+            FreeTexture();
+
             m_contentInfo = "";
 
             OnPropertyChanged("CurrentImage");

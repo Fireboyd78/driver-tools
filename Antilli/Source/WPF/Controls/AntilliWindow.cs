@@ -58,7 +58,7 @@ namespace Antilli
             set { SetValue(TitleProperty, value); }
         }
 
-        public string SubTitle
+        public virtual string SubTitle
         {
             get { return (string)GetValue(SubTitleProperty); }
             set { SetValue(SubTitleProperty, value); }

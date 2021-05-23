@@ -162,7 +162,7 @@ namespace Antilli
         public struct StateData : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler PropertyChanged;
-            
+
             public void NotifyChange(string property)
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
@@ -177,17 +177,77 @@ namespace Antilli
                 NotifyChange(propertyName);
                 return true;
             }
-            
+
             int m_currentTab;
-            
+
             public int CurrentTab
             {
                 get { return m_currentTab; }
                 set
                 {
-                    m_currentTab = value;
+                    SetValue(ref m_currentTab, value, "CurrentTab");
                     // TODO: Temporarily unload stuff?
                 }
+            }
+
+            public MainWindow ModelView { get; set; }
+
+            public MaterialsView MaterialEditor { get; set; }
+            public TexturesView TextureEditor { get; set; }
+
+            public bool IsFileOpened
+            {
+                get { return ModelFile != null; }
+            }
+
+            bool m_isFileDirty;
+
+            public bool IsFileDirty
+            {
+                get { return m_isFileDirty; }
+                set
+                {
+                    if (SetValue(ref m_isFileDirty, value, "IsFileDirty"))
+                    {
+                        if (IsFileOpened)
+                        {
+                            var filename = ModelFile.FileName;
+
+                            ModelView.SubTitle = (m_isFileDirty) ? $"{filename} *" : filename;
+                        }
+
+                        UpdateFileStatus();
+                    }
+                }
+            }
+
+            public bool AreChangesPending
+            {
+                get { return IsFileOpened && (IsFileDirty || ModelFile.AreChangesPending); }
+            }
+
+            public bool CanSaveFile
+            {
+                get { return IsFileOpened && AreChangesPending; }
+            }
+
+            public void UpdateFileStatus()
+            {
+                NotifyChange("IsFileOpened");
+                NotifyChange("AreChangesPending");
+                NotifyChange("CanSaveFile");
+            }
+
+            public void ResetEditors()
+            {
+                MaterialEditor.ResetView();
+                TextureEditor.ResetView();
+            }
+
+            public void UpdateEditors()
+            {
+                MaterialEditor.UpdateView();
+                TextureEditor.UpdateView();
             }
 
             public bool IsModelViewerOpen
@@ -291,6 +351,9 @@ namespace Antilli
                         NotifyChange("GlobalTextures");
                     }
 
+                    // reset the editors
+                    ResetEditors();
+
                     ModelPackageSelected?.Invoke(m_modelPackage, null);
                 }
             }
@@ -327,16 +390,6 @@ namespace Antilli
                 set { SetValue(ref m_useBlendWeights, value, "CanShowBlendWeights"); }
             }
 
-            public Visibility CanShowGlobals
-            {
-                get { return CanUseGlobals ? Visibility.Visible : Visibility.Collapsed; }
-            }
-
-            public Visibility CanShowBlendWeights
-            {
-                get { return CanUseBlendWeights ? Visibility.Visible : Visibility.Collapsed; }
-            }
-            
             public EventHandler ModelPackageSelected;
             
             public EventHandler MaterialSelectQueried;
@@ -348,6 +401,26 @@ namespace Antilli
             {
                 FileModified?.Invoke(sender, null);
             }
+
+            public void FreeModels()
+            {
+                if (ModelFile != null)
+                {
+                    SelectedModelPackage = null;
+                    CanUseGlobals = false;
+                    CanUseBlendWeights = false;
+
+                    ModelFile.Dispose();
+                    ModelFile = null;
+
+                    TextureCache.Flush(true);
+                    PackageManager.Clear();
+
+                    ModelView.Viewer.ClearModels();
+
+                    ResetEditors();
+                }
+            }
             
             public void QueryMaterialSelect(IMaterialData material)
             {
@@ -357,6 +430,96 @@ namespace Antilli
             public void QueryTextureSelect(ITextureData texture)
             {
                 TextureSelectQueried?.Invoke(texture, null);
+            }
+
+            /*
+                This will check the globals (if applicable),
+                then the current model package for the material/texture
+            */
+            public bool OnQuerySelection<TQueryInput, TQueryObject>(Func<TQueryInput, TQueryObject, bool> fnQuery,
+                TQueryInput queryGlobals, TQueryInput queryOther, object obj, int tabIdx = -1)
+                where TQueryInput : class
+                where TQueryObject : class
+            {
+                var queryObj = obj as TQueryObject;
+
+                if (queryObj != null)
+                {
+                    if (tabIdx != -1)
+                        CurrentTab = tabIdx;
+
+                    return (CanUseGlobals && fnQuery(queryGlobals, queryObj))
+                    || fnQuery(queryOther, queryObj);
+                }
+
+                // no material!
+                return false;
+            }
+
+            public void HandleKeyDown(object sender, KeyEventArgs e)
+            {
+                switch (CurrentTab)
+                {
+                case 1:
+                    MaterialEditor.HandleKeyDown(sender, e);
+                    break;
+                case 2:
+                    TextureEditor.HandleKeyDown(sender, e);
+                    break;
+                }
+            }
+
+            public Window MainWindow { get; set; }
+
+            private Dictionary<Type, Window> m_dialogs;
+
+            public T CreateDialog<T>(bool modal, bool show = true)
+                where T : Window, new()
+            {
+                if (m_dialogs == null)
+                    m_dialogs = new Dictionary<Type, Window>();
+
+                var wndType = typeof(T);
+
+                var window = MainWindow;
+                var dialogs = m_dialogs;
+
+                T dialog = null;
+
+                if (modal && dialogs.ContainsKey(wndType))
+                {
+                    dialog = (T)dialogs[wndType];
+
+                    if (show)
+                        dialog.Activate();
+                }
+                else
+                {
+                    dialog = new T()
+                    {
+                        Owner = MainWindow,
+                        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    };
+
+                    if (modal)
+                    {
+                        dialog.Closed += (o, e) => {
+                            dialogs.Remove(wndType);
+                        };
+
+                        dialogs.Add(wndType, dialog);
+                    }
+
+                    if (show)
+                        dialog.Show();
+                }
+
+                dialog.Closed += (o, e) => {
+                    // focus main window so everything doesn't disappear
+                    window.Focus();
+                };
+
+                return dialog;
             }
         }
 
@@ -492,6 +655,31 @@ namespace Antilli
                     dlg.Filter = AllFilters[(int)gameType].ToString();
                     break;
                 }
+            }
+
+            return dlg;
+        }
+
+        public static OpenFileDialog GetOpenDialog(GameType gameType, string extension)
+        {
+            var dlg = new OpenFileDialog()
+            {
+                CheckFileExists = true,
+                CheckPathExists = true,
+
+                InitialDirectory = Environment.CurrentDirectory,
+
+                ValidateNames = true,
+            };
+
+            if (gameType != GameType.None)
+            {
+                var gameDir = GetDirectory(gameType);
+
+                if (!String.IsNullOrEmpty(gameDir))
+                    dlg.InitialDirectory = gameDir;
+
+                dlg.Filter = FindFilter(extension, gameType).ToString();
             }
 
             return dlg;

@@ -18,6 +18,8 @@ namespace Antilli
 
         public IMaterialData Material { get; }
 
+        public IMaterialPackage Owner { get; set; }
+
         public List<SubstanceTreeItem> Substances
         {
             get

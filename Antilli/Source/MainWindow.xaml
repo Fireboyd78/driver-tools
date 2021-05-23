@@ -19,30 +19,6 @@
         </LinearGradientBrush>
     </at:AntilliWindow.Background>
 
-    <at:AntilliWindow.Resources>
-        <HierarchicalDataTemplate DataType="{x:Type at:MaterialTreeItem}"
-                                ItemsSource="{Binding Path=Substances}">
-            <TextBlock Text="{Binding Path=Name}"/>
-        </HierarchicalDataTemplate>
-
-        <HierarchicalDataTemplate DataType="{x:Type at:SubstanceTreeItem}"
-                                ItemsSource="{Binding Path=Textures}">
-            <TextBlock Text="{Binding Path=Name}"/>
-        </HierarchicalDataTemplate>
-
-        <DataTemplate DataType="{x:Type at:TextureTreeItem}">
-            <TextBlock Text="{Binding Path=Name}">
-                <TextBlock.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Replace..." Click="ReplaceTexture"/>
-                        <Separator/>
-                        <MenuItem Header="Export" Click="ExportTexture"/>
-                    </ContextMenu>
-                </TextBlock.ContextMenu>
-            </TextBlock>
-        </DataTemplate>
-    </at:AntilliWindow.Resources>
-    
     <Grid>
         <Grid.RowDefinitions>
             <!-- Toolbar -->
@@ -175,7 +151,7 @@
                                 <CheckBox x:Name="ApplyTransform" Content="Apply Transforms" ToolTip="Enable/Disable the use of transforms being applied to models (if applicable). This will only affect models in the model viewer, not exported models."
                                           Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                                 <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
-                                          Visibility="{Binding CanShowBlendWeights}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
+                                          Visibility="{Binding CanUseBlendWeights, Converter={StaticResource BoolToVisibilityConverter}}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                             </StackPanel>
                         </GroupBox>
                     </Grid>
@@ -195,97 +171,11 @@
             </TabItem>
 
             <TabItem Header="Materials">
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.25*" MinWidth="190" MaxWidth="280"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="4.75*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
-                        </Grid.RowDefinitions>
-
-                        <GroupBox x:Name="MaterialsBox" Header="Materials" Grid.Column="0" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
-                            <TreeView x:Name="MaterialsList" ItemsSource="{Binding Materials}" SelectedItemChanged="OnMaterialListSelectionChanged">
-                                <TreeView.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem x:Name="mtlListExpandAll" Header="Expand All"/>
-                                        <MenuItem x:Name="mtlListCollapseAll" Header="Collapse All"/>
-                                    </ContextMenu>
-                                </TreeView.ContextMenu>
-                            </TreeView>
-                        </GroupBox>
-                        <GroupBox Header="Global Materials" Grid.Row="1" Margin="0,5,0,0" Visibility="{Binding CanShowGlobals}">
-                            <TreeView x:Name="GlobalMaterialsList" ItemsSource="{Binding GlobalMaterials}" SelectedItemChanged="OnMaterialListSelectionChanged"/>
-                        </GroupBox>
-                    </Grid>
-
-                    <GridSplitter Grid.Column="1"
-                          Background="Transparent"
-                          ResizeDirection="Columns"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Width="5" />
-
-                    <Grid Grid.Column="2">
-                        <at:ImageWidget x:Name="MaterialViewWidget" />
-                    </Grid>
-                </Grid>
+                <at:MaterialsView />
             </TabItem>
 
             <TabItem Header="Textures">
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.25*" MinWidth="190" MaxWidth="280"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="4.75*"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <GroupBox Header="Textures" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
-                            <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}" SelectionChanged="OnTextureListSelectionChanged"
-                                     VirtualizingStackPanel.IsVirtualizing="False"/>
-                        </GroupBox>
-                        <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,4,0,0" Visibility="{Binding CanShowGlobals}">
-                            <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}" SelectionChanged="OnTextureListSelectionChanged"
-                                     VirtualizingStackPanel.IsVirtualizing="False"/>
-                        </GroupBox>
-                        <GroupBox Header="Toolbox" Grid.Row="2" Margin="0,4,0,0">
-                            <StackPanel Orientation="Vertical" Margin="2">
-                                <Button x:Name="btnExportAllTextures" Content="Export Textures" Height="25" HorizontalAlignment="Stretch"/>
-                                <Button x:Name="btnExportAllGlobalTextures" Content="Export Globals" Height="25" HorizontalAlignment="Stretch"
-                                        Visibility="{Binding CanShowGlobals}"/>
-                                <StackPanel.Resources>
-                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                        <Setter Property="Margin" Value="2" />
-                                    </Style>
-                                </StackPanel.Resources>
-                            </StackPanel>
-                        </GroupBox>
-                        
-                        
-                    </Grid>
-
-                    <GridSplitter Grid.Column="1"
-                          Background="Transparent"
-                          ResizeDirection="Columns"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Width="5" />
-
-                    <Grid Grid.Column="2">
-                        <at:ImageWidget x:Name="TextureViewWidget" />
-                    </Grid>
-                </Grid>
+                <at:TexturesView />
             </TabItem>
         </TabControl>
     </Grid>
