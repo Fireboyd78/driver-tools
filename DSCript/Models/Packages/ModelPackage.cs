@@ -262,34 +262,27 @@ namespace DSCript.Models
 
                 var vBufferIdx = _model.BufferIndex;
                 var vBuffer = vBuffers[vBufferIdx];
-                
+
+                // initialize vertex buffer?
                 if (vBuffer.Type == 0xABCDEF)
                 {
                     // setup the type
                     vBuffer.Type = _model.BufferType;
                     vBuffers[vBufferIdx] = vBuffer;
-                }
 
-                VertexBuffer vb = null;
+                    // create the buffer in the desired format
+                    var vb = VertexBuffer.Create(detail.Version, vBuffer.Type);
 
-                // initialize vertex buffer?
-                if (_model.BufferIndex == VertexBuffers.Count)
-                {
-                    vb = VertexBuffer.Create(detail.Version, vBuffer.Type);
-
+                    // add our new buffer
                     VertexBuffers.Add(vb);
                 }
-                else
-                {
-                    vb = VertexBuffers[_model.BufferIndex];
-                }
-
+                
                 var model = new Model() {
                     UID = _model.UID,
                     Scale = _model.Scale,
                     Flags = _model.Flags,
 
-                    VertexBuffer = vb,
+                    VertexBuffer = VertexBuffers[vBufferIdx],
                     VertexType = _model.BufferType,
 
                     BoundingBox = stream.Read<BBox>(),
@@ -416,8 +409,8 @@ namespace DSCript.Models
 
                     Scale = model.Scale,
 
+                    BufferType = model.VertexType,
                     BufferIndex = (short)VertexBuffers.IndexOf(model.VertexBuffer),
-                    BufferType = (short)model.VertexBuffer.Type,
 
                     Flags = model.Flags,
 
