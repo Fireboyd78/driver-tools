@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml;
@@ -20,10 +22,25 @@ namespace DSCript.Menus
         Textbox     =  2,
         Button      =  3,
         Movie       =  4,
-        AdvTextbox  =  5,
-        Checkbox    =  6,
-        Progress    =  7,
-        Listbox     =  8,
+        Progress    =  5,
+        ListBox     =  6,
+        CheckBox    =  7,
+        AdvTextbox  =  8,
+    }
+
+    // Known versions:
+    //  3.1.0 - Driv3r: PS2, XBox
+    //  4.0.1 - Driv3r: PC
+    //  5.1.6.0 - Driver Parallel Lines: PS2, XBox
+    //  6.0.0.0 - Driver Parallel Lines: Wii
+    //  7.0.0.1 - Driver Parallel Lines: PC
+    public struct MenuVersion
+    {
+        public const int Driver3_Console    = 310;      // Driv3r: PS2, XBox
+        public const int Driver3_PC         = 401;      // Driv3r: PC
+        public const int Driver4_Console    = 5160;     // Driver Parallel Lines: PS2, XBox
+        public const int Driver4_Wii        = 6000;     // Driver Parallel Lines: Wii
+        public const int Driver4_PC         = 7001;     // Driver Parallel Lines: PC
     }
 
     public class MenuData
@@ -75,10 +92,16 @@ namespace DSCript.Menus
 
             var length = value.Length;
 
-            if ((length + 1) >= count)
-                length = (count - 1);
+            if (length > 0)
+            {
+                if ((length + 1) >= count)
+                    length = (count - 1);
 
-            Encoding.UTF8.GetBytes(value, 0, length, buffer, 0);
+                Encoding.UTF8.GetBytes(value, 0, length, buffer, 0);
+            }
+
+            // IMPORTANT: null-terminator!
+            buffer[length] = 0;
 
             stream.Write(buffer, 0, count);
         }
@@ -126,10 +149,10 @@ namespace DSCript.Menus
             case ElementType.Textbox:       return new MenuTextbox();
             case ElementType.Button:        return new MenuButton();
             case ElementType.Movie:         return new MenuMovie();
-            case ElementType.AdvTextbox:    return new MenuAdvTextbox();
-            case ElementType.Checkbox:      return new MenuCheckbox();
             case ElementType.Progress:      return new MenuProgress();
-            case ElementType.Listbox:       return new MenuListbox();
+            case ElementType.ListBox:       return new MenuListBox();
+            case ElementType.CheckBox:      return new MenuCheckBox();
+            case ElementType.AdvTextbox:    return new MenuAdvTextbox();
             }
 
             return null;
@@ -203,7 +226,7 @@ namespace DSCript.Menus
             var element = new T();
 
             if (element != null)
-                Read(node, element, provider);
+                element.Deserialize(node, provider);
 
             return element;
         }
@@ -263,7 +286,7 @@ namespace DSCript.Menus
     {
         int[] sizes = new int[10];
 
-        public int SizeOf_Unknown1;
+        public int SizeOf_Project;
 
         public int SizeOf_Screen;
         public int SizeOf_Element;
@@ -272,14 +295,14 @@ namespace DSCript.Menus
         public int SizeOf_Button;
         public int SizeOf_Movie;
 
-        public int SizeOf_AdvTextbox;
-        public int SizeOf_Checkbox;
         public int SizeOf_Progress;
-        public int SizeOf_Listbox;
+        public int SizeOf_ListBox;
+        public int SizeOf_CheckBox;
+        public int SizeOf_AdvTextbox;
 
         void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
         {
-            SizeOf_Unknown1 = stream.ReadInt32();
+            SizeOf_Project = stream.ReadInt32();
 
             SizeOf_Screen = stream.ReadInt32();
             SizeOf_Element = stream.ReadInt32();
@@ -288,18 +311,18 @@ namespace DSCript.Menus
             SizeOf_Button = stream.ReadInt32();
             SizeOf_Movie = stream.ReadInt32();
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                SizeOf_AdvTextbox = stream.ReadInt32();
-                SizeOf_Checkbox = stream.ReadInt32();
                 SizeOf_Progress = stream.ReadInt32();
-                SizeOf_Listbox = stream.ReadInt32();
+                SizeOf_ListBox = stream.ReadInt32();
+                SizeOf_CheckBox = stream.ReadInt32();
+                SizeOf_AdvTextbox = stream.ReadInt32();
             }
         }
 
         void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
         {
-            stream.Write(SizeOf_Unknown1);
+            stream.Write(SizeOf_Project);
 
             stream.Write(SizeOf_Screen);
             stream.Write(SizeOf_Element);
@@ -308,12 +331,12 @@ namespace DSCript.Menus
             stream.Write(SizeOf_Button);
             stream.Write(SizeOf_Movie);
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                stream.Write(SizeOf_AdvTextbox);
-                stream.Write(SizeOf_Checkbox);
                 stream.Write(SizeOf_Progress);
-                stream.Write(SizeOf_Listbox);
+                stream.Write(SizeOf_ListBox);
+                stream.Write(SizeOf_CheckBox);
+                stream.Write(SizeOf_AdvTextbox);
             }
         }
 
@@ -501,7 +524,7 @@ namespace DSCript.Menus
 
         void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
         {
-            MenuData.WriteString(stream, Value, 32, true);
+            MenuData.WriteString(stream, Value ?? String.Empty, 32, true);
         }
 
         void IMenuDetailXml.Deserialize(XElement node, IMenuProvider provider)
@@ -664,41 +687,63 @@ namespace DSCript.Menus
 
         public string Tag;
 
-        public int ZDepth;
-        public int ZOrder;
+        public int BackgroundTexture;
+        public int DefaultButtonId;
 
-        public bool ClearAfter;         // can't return to this screen
-        public bool ClearBefore;        // clear all previous screens
+        public bool KeepOffStack;           // can't return to this screen
+        public bool ClearStack;             // clear all previous screens
+
+        public bool DisableDropBack;
+        public bool NoDropBack2;
+
+        public bool RotateItems;
+
+        public int RotateStepsX;
+        public int RotateStepsY;
+        public int RotateMode;
+
+        public int ActivateEffectsFlag;
+
+        public short MaterialChunkIndex;
 
         public MenuCallback OnEnter;
         public MenuCallback OnLeave;
 
-        public byte[] ExtraData;
+        //public byte[] ExtraData;
 
         public List<ScreenState> States;
 
-        const int FIELD_TAG         = 0;
-        const int FIELD_ZDEPTH      = 1;
-        const int FIELD_ZORDER      = 2;
-        const int FIELD_CLEARAFTER  = 3;
-        const int FIELD_CLEARBEFORE = 4;
-        const int FIELD_ONENTER     = 5;
-        const int FIELD_ONLEAVE     = 6;
-        const int FIELD_COUNT       = FIELD_ONLEAVE + 1;
+        const int FIELD_TAG             = 0;
+        const int FIELD_BGTEXTURE       = 1;
+        const int FIELD_DEFAULTBTN      = 2;
+        const int FIELD_KEEPOFFSTACK    = 3;
+        const int FIELD_CLEARSTACK      = 4;
+        const int FIELD_ONENTER         = 5;
+        const int FIELD_ONLEAVE         = 6;
+        const int FIELD_DROPBACK1       = 7;
+        const int FIELD_COUNT           = FIELD_DROPBACK1 + 1;
+        const int FIELD_PADDING         = FIELD_COUNT + 1;
+        const int FIELD_ENDOFLIST       = FIELD_PADDING + 1;
 
         protected delegate void SerializerDelegate(Stream stream, IMenuProvider provider);
 
-        protected void ReadZDepth(Stream stream, IMenuProvider provider)  { ZDepth = stream.ReadInt32(); }
-        protected void WriteZDepth(Stream stream, IMenuProvider provider) { stream.Write(ZDepth); }
+        protected void ReadBackgroundTexture(Stream stream, IMenuProvider provider)  { BackgroundTexture = stream.ReadInt32(); }
+        protected void WriteBackgroundTexture(Stream stream, IMenuProvider provider) { stream.Write(BackgroundTexture); }
 
-        protected void ReadZOrder(Stream stream, IMenuProvider provider)  { ZOrder = stream.ReadInt32(); }
-        protected void WriteZOrder(Stream stream, IMenuProvider provider) { stream.Write(ZOrder); }
+        protected void ReadDefaultButtonId(Stream stream, IMenuProvider provider)  { DefaultButtonId = stream.ReadInt32(); }
+        protected void WriteDefaultButtonId(Stream stream, IMenuProvider provider) { stream.Write(DefaultButtonId); }
 
-        protected void ReadClear1(Stream stream, IMenuProvider provider)  { ClearAfter = stream.ReadBool(); }
-        protected void WriteClear1(Stream stream, IMenuProvider provider) { stream.WriteBool(ClearAfter); }
+        protected void ReadClear1(Stream stream, IMenuProvider provider)  { KeepOffStack = stream.ReadBool(); }
+        protected void WriteClear1(Stream stream, IMenuProvider provider) { stream.WriteBool(KeepOffStack); }
 
-        protected void ReadClear2(Stream stream, IMenuProvider provider)  { ClearBefore = stream.ReadBool(); }
-        protected void WriteClear2(Stream stream, IMenuProvider provider) { stream.WriteBool(ClearBefore); }
+        protected void ReadClear2(Stream stream, IMenuProvider provider)  { ClearStack = stream.ReadBool(); }
+        protected void WriteClear2(Stream stream, IMenuProvider provider) { stream.WriteBool(ClearStack); }
+
+        protected void ReadNoDropBack1(Stream stream, IMenuProvider provider) { DisableDropBack = stream.ReadBool(); }
+        protected void WriteNoDropBack1(Stream stream, IMenuProvider provider) { stream.WriteBool(DisableDropBack); }
+
+        protected void ReadNoDropBack2(Stream stream, IMenuProvider provider) { NoDropBack2 = stream.ReadBool(); }
+        protected void WriteNoDropBack2(Stream stream, IMenuProvider provider) { stream.WriteBool(NoDropBack2); }
 
         protected void ReadTag(Stream stream, IMenuProvider provider)     { Tag = stream.ReadString(8); }
         protected void WriteTag(Stream stream, IMenuProvider provider)    { MenuData.WriteString(stream, Tag, 8); }
@@ -719,58 +764,69 @@ namespace DSCript.Menus
             funcs = new SerializerDelegate[FIELD_COUNT];
 
             funcs[FIELD_TAG]            = SelectFunc(ReadTag, WriteTag, writer);
-            funcs[FIELD_ZDEPTH]         = SelectFunc(ReadZDepth, WriteZDepth, writer);
-            funcs[FIELD_ZORDER]         = SelectFunc(ReadZOrder, WriteZOrder, writer);
-            funcs[FIELD_CLEARAFTER]     = SelectFunc(ReadClear1, WriteClear1, writer);
-            funcs[FIELD_CLEARBEFORE]    = SelectFunc(ReadClear2, WriteClear2, writer);
+            funcs[FIELD_BGTEXTURE]      = SelectFunc(ReadBackgroundTexture, WriteBackgroundTexture, writer);
+            funcs[FIELD_DEFAULTBTN]     = SelectFunc(ReadDefaultButtonId, WriteDefaultButtonId, writer);
+            funcs[FIELD_KEEPOFFSTACK]   = SelectFunc(ReadClear1, WriteClear1, writer);
+            funcs[FIELD_CLEARSTACK]     = SelectFunc(ReadClear2, WriteClear2, writer);
             funcs[FIELD_ONENTER]        = SelectFunc(ReadOnEnter, WriteOnEnter, writer);
             funcs[FIELD_ONLEAVE]        = SelectFunc(ReadOnLeave, WriteOnLeave, writer);
+            funcs[FIELD_DROPBACK1]      = SelectFunc(ReadNoDropBack1, WriteNoDropBack1, writer);
 
             switch (provider.Version)
             {
-            case 310:
+            case MenuVersion.Driver3_Console:
                 return new[] {
-                    FIELD_ZDEPTH,
-                    FIELD_ZORDER,
-                    FIELD_CLEARAFTER,
+                    FIELD_BGTEXTURE,
+                    FIELD_DEFAULTBTN,
+                    FIELD_KEEPOFFSTACK,
                     FIELD_ONLEAVE,
-                    -3,
-                    FIELD_CLEARBEFORE,
+                    FIELD_PADDING, 3,
+                    FIELD_CLEARSTACK,
                     FIELD_TAG,
                     FIELD_ONENTER,
-                    -3,
+                    FIELD_PADDING, 3,
+
+                    FIELD_ENDOFLIST, 0,
                 };
-            case 401:
+            case MenuVersion.Driver3_PC:
                 return new[] {
                     FIELD_TAG,
-                    FIELD_ZDEPTH,
-                    FIELD_ZORDER,
-                    FIELD_CLEARAFTER,
+                    FIELD_BGTEXTURE,
+                    FIELD_DEFAULTBTN,
+                    FIELD_KEEPOFFSTACK,
                     FIELD_ONENTER,
                     FIELD_ONLEAVE,
-                    FIELD_CLEARBEFORE,
-                    -2,
+                    FIELD_CLEARSTACK,
+                    FIELD_PADDING, 2,
+
+                    FIELD_ENDOFLIST, 0,
                 };
-            case 5160:
-            case 6000:
+            case MenuVersion.Driver4_Console:
+            case MenuVersion.Driver4_Wii:
                 return new[] {
                     FIELD_TAG,
-                    FIELD_ZDEPTH,
-                    FIELD_ZORDER,
-                    FIELD_CLEARAFTER,
+                    FIELD_BGTEXTURE,
+                    FIELD_DEFAULTBTN,
+                    FIELD_KEEPOFFSTACK,
                     FIELD_ONENTER,
                     FIELD_ONLEAVE,
-                    -11, // TODO: what are these?
+                    FIELD_CLEARSTACK,
+                    FIELD_DROPBACK1,
+
+                    FIELD_ENDOFLIST, 9,
                 };
-            case 7001:
+            case MenuVersion.Driver4_PC:
                 return new[] {
                     FIELD_TAG,
                     FIELD_ONENTER,
                     FIELD_ONLEAVE,
-                    FIELD_ZDEPTH,
-                    FIELD_ZORDER,
-                    FIELD_CLEARAFTER,
-                    -11, // TODO: what are these?
+                    FIELD_BGTEXTURE,
+                    FIELD_DEFAULTBTN,
+                    FIELD_KEEPOFFSTACK,
+                    FIELD_CLEARSTACK,
+                    FIELD_DROPBACK1,
+
+                    FIELD_ENDOFLIST, 9,
                 };
             }
 
@@ -783,15 +839,66 @@ namespace DSCript.Menus
 
             var fields = GetFields(provider, ref readers, false);
 
-            foreach (var field in fields)
-            {
-                if (field < 0)
-                {
-                    var length = -field;
+            var idx = 0;
 
-                    ExtraData = new byte[length];
-                    stream.Read(ExtraData, 0, length);
+            while (idx < fields.Length)
+            {
+                var field = fields[idx++];
+
+                if (field == FIELD_PADDING)
+                {
+                    stream.Position += fields[idx++];
+                    continue;
                 }
+                else if (field == FIELD_ENDOFLIST)
+                {
+                    if (fields[idx++] != 0)
+                    {
+                        //
+                        // !!! deserialize the rest of the data !!!
+                        //
+                        if (provider.Version >= MenuVersion.Driver4_Console)
+                        {
+                            if (provider.Version == MenuVersion.Driver4_PC)
+                                NoDropBack2 = stream.ReadBool();
+
+                            RotateItems = stream.ReadBool();
+
+                            RotateStepsX = stream.ReadByte();
+                            RotateStepsY = stream.ReadByte();
+
+                            RotateMode = stream.ReadByte();
+
+                            ActivateEffectsFlag = stream.ReadByte();
+
+                            if (provider.Version == MenuVersion.Driver4_PC)
+                            {
+                                // juuuuuuuuuust in case
+                                var pad = stream.ReadByte();
+
+                                if (pad != 0)
+                                    DSC.Log($"D4 menu GUI unknown pad byte {pad:X2}({pad})");
+                            }
+
+                            MaterialChunkIndex = stream.ReadInt16();
+
+                            // /definitely/ padding, safely skip
+                            if (provider.Version != MenuVersion.Driver4_PC)
+                                stream.Position += 2;
+                        }
+                    }
+
+                    break;
+                }
+                //if (field < 0)
+                //{
+                //    var length = -field;
+                //
+                //    ExtraData = new byte[length];
+                //    stream.Read(ExtraData, 0, length);
+                //
+                //    System.Diagnostics.Debug.WriteLine($"{Tag,-8} extra data - {String.Join(", ", ExtraData.Select((b) => b.ToString("X2")))}");
+                //}
                 else
                 {
                     // read data
@@ -808,17 +915,59 @@ namespace DSCript.Menus
 
             var fields = GetFields(provider, ref writers, true);
 
-            foreach (var field in fields)
-            {
-                if (field < 0)
-                {
-                    var length = -field;
-                    
-                    if (length != ExtraData.Length)
-                        throw new InvalidOperationException("Field extra data length mismatch!");
+            var idx = 0;
 
-                    stream.Write(ExtraData, 0, length);
+            while (idx < fields.Length)
+            {
+                var field = fields[idx++];
+
+                if (field == FIELD_PADDING)
+                {
+                    MenuData.WritePadding(stream, fields[idx++]);
+                    continue;
                 }
+                else if (field == FIELD_ENDOFLIST)
+                {
+                    if (fields[idx++] != 0)
+                    {
+                        //
+                        // !!! serialize the rest of the data !!!
+                        //
+                        if (provider.Version >= MenuVersion.Driver4_Console)
+                        {
+                            if (provider.Version == MenuVersion.Driver4_PC)
+                                stream.WriteBool(NoDropBack2);
+
+                            stream.WriteBool(RotateItems);
+
+                            stream.WriteByte(RotateStepsX);
+                            stream.WriteByte(RotateStepsY);
+
+                            stream.WriteByte(RotateMode);
+
+                            stream.WriteByte(ActivateEffectsFlag);
+
+                            if (provider.Version == MenuVersion.Driver4_PC)
+                                stream.WriteByte(0);
+
+                            stream.Write(MaterialChunkIndex);
+                            
+                            if (provider.Version != MenuVersion.Driver4_PC)
+                                MenuData.WritePadding(stream, 2);
+                        }
+                    }
+
+                    break;
+                }
+                //if (field < 0)
+                //{
+                //    var length = -field;
+                //    
+                //    if (length != ExtraData.Length)
+                //        throw new InvalidOperationException("Field extra data length mismatch!");
+                //
+                //    stream.Write(ExtraData, 0, length);
+                //}
                 else
                 {
                     // write data
@@ -833,11 +982,26 @@ namespace DSCript.Menus
         {
             Tag = MenuData.GetAttribute(node, "Tag");
 
-            ZDepth = MenuData.GetAttribute(node, "ZDepth", int.Parse);
-            ZOrder = MenuData.GetAttribute(node, "ZOrder", int.Parse);
+            BackgroundTexture = MenuData.GetAttribute(node, "BackgroundTexture", int.Parse);
+            DefaultButtonId = MenuData.GetAttribute(node, "DefaultButtonId", int.Parse);
 
-            ClearAfter = MenuData.GetAttribute(node, "ClearAfter", bool.Parse);
-            ClearBefore = MenuData.GetAttribute(node, "ClearBefore", bool.Parse);
+            KeepOffStack = MenuData.GetAttribute(node, "KeepOffStack", bool.Parse);
+            ClearStack = MenuData.GetAttribute(node, "ClearStack", bool.Parse);
+
+            if (provider.Version >= MenuVersion.Driver4_Console)
+            {
+                DisableDropBack = MenuData.GetAttribute(node, "DisableDropBack", bool.Parse);
+                NoDropBack2 = MenuData.GetAttribute(node, "_NoDropBack2", bool.Parse);
+
+                RotateItems = MenuData.GetAttribute(node, "RotateItems", bool.Parse);
+                RotateStepsX = MenuData.GetAttribute(node, "RotateStepsX", int.Parse);
+                RotateStepsY = MenuData.GetAttribute(node, "RotateStepsY", int.Parse);
+                RotateMode = MenuData.GetAttribute(node, "RotateMode", int.Parse);
+
+                ActivateEffectsFlag = MenuData.GetAttribute(node, "ActivateEffectsFlag", int.Parse);
+
+                MaterialChunkIndex = MenuData.GetAttribute(node, "MaterialChunkIndex", short.Parse, (short)-1);
+            }
 
             var states = new List<ScreenState>();
 
@@ -868,10 +1032,28 @@ namespace DSCript.Menus
         {
             node.SetAttributeValue("Tag", Tag);
 
-            node.SetAttributeValue("ZDepth", ZDepth);
-            node.SetAttributeValue("ZOrder", ZDepth);
-            node.SetAttributeValue("ClearAfter", ZDepth);
-            node.SetAttributeValue("ClearBefore", ZDepth);
+            node.SetAttributeValue("BackgroundTexture", BackgroundTexture);
+            node.SetAttributeValue("DefaultButtonId", DefaultButtonId);
+            node.SetAttributeValue("KeepOffStack", KeepOffStack);
+            node.SetAttributeValue("ClearStack", ClearStack);
+
+            if (provider.Version >= MenuVersion.Driver4_Console)
+            {
+                node.SetAttributeValue("DisableDropBack", DisableDropBack);
+
+                if (provider.Version == MenuVersion.Driver4_PC)
+                    node.SetAttributeValue("_NoDropBack2", NoDropBack2);
+
+                node.SetAttributeValue("RotateItems", RotateItems);
+                node.SetAttributeValue("RotateStepsX", RotateStepsX);
+                node.SetAttributeValue("RotateStepsY", RotateStepsY);
+                node.SetAttributeValue("RotateMode", RotateMode);
+
+                node.SetAttributeValue("ActivateEffectsFlag", ActivateEffectsFlag);
+
+                if (MaterialChunkIndex != -1)
+                    node.SetAttributeValue("MaterialChunkIndex", MaterialChunkIndex);
+            }
 
             MenuData.Write(node, OnEnter, "OnEnter", provider);
             MenuData.Write(node, OnLeave, "OnLeave", provider);
@@ -886,46 +1068,241 @@ namespace DSCript.Menus
         }
     }
 
+#if WORKS_FINE
+    public class EffectData<T> : IMenuDetail, IMenuDetailXml
+        where T : struct
+    {
+        Type m_Type;
+
+        T Start;
+        T End;
+
+        void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
+        {
+            Start = stream.Read<T>();
+            End = stream.Read<T>();
+        }
+
+        void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
+        {
+            stream.Write(Start);
+            stream.Write(End);
+        }
+
+        void IMenuDetailXml.Deserialize(XElement node, IMenuProvider provider)
+        {
+            Start = MenuData.GetAttribute(node, "Start", Parse);
+            End = MenuData.GetAttribute(node, "End", Parse);
+        }
+
+        void IMenuDetailXml.Serialize(XElement node, IMenuProvider provider)
+        {
+            node.SetAttributeValue("Start", Start);
+            node.SetAttributeValue("End", End);
+        }
+
+        T ConvertType(object value)
+        {
+            return (T)Convert.ChangeType(value, m_Type);
+        }
+
+        delegate TParseType ParseDelegate<TParseType>(string value);
+        delegate bool TryParseDelegate<TParseType>(string value, out TParseType result);
+
+        T Parse<TParseType>(string value, ParseDelegate<TParseType> fnParse)
+        {
+            TParseType result = fnParse(value);
+
+            return (T)Convert.ChangeType(result, m_Type);
+        }
+
+        bool TryParseObject(string value, ref T result)
+        {
+            if (m_Type == typeof(Vector2))
+            {
+                result = Parse(value, Vector2.Parse);
+                return true;
+            }
+            else if (m_Type == typeof(Vector3))
+            {
+                result = Parse(value, Vector3.Parse);
+                return true;
+            }
+            else if (m_Type == typeof(Vector4))
+            {
+                result = Parse(value, Vector4.Parse);
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryParse<TParseType>(string value, TryParseDelegate<TParseType> fnTryParse, ref T result)
+        {
+            TParseType val = default(TParseType);
+
+            if (fnTryParse(value, out val))
+            {
+                result = (T)Convert.ChangeType(val, m_Type);
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryParse(string value, ref T result)
+        {
+            var typecode = Type.GetTypeCode(m_Type);
+
+            switch (typecode)
+            {
+            case TypeCode.Empty:
+            case TypeCode.DBNull:
+                throw new InvalidCastException();
+
+            case TypeCode.Boolean:  return TryParse<bool>(value, bool.TryParse, ref result);
+            case TypeCode.Char:     return TryParse<char>(value, char.TryParse, ref result);
+            case TypeCode.SByte:    return TryParse<sbyte>(value, sbyte.TryParse, ref result);
+            case TypeCode.Byte:     return TryParse<byte>(value, byte.TryParse, ref result);
+            case TypeCode.Int16:    return TryParse<short>(value, short.TryParse, ref result);
+            case TypeCode.UInt16:   return TryParse<ushort>(value, ushort.TryParse, ref result);
+            case TypeCode.Int32:    return TryParse<int>(value, int.TryParse, ref result);
+            case TypeCode.UInt32:   return TryParse<uint>(value, uint.TryParse, ref result);
+            case TypeCode.Int64:    return TryParse<long>(value, long.TryParse, ref result);
+            case TypeCode.UInt64:   return TryParse<ulong>(value, ulong.TryParse, ref result);
+            case TypeCode.Single:   return TryParse<float>(value, float.TryParse, ref result);
+            case TypeCode.Double:   return TryParse<double>(value, double.TryParse, ref result);
+            case TypeCode.Decimal:  return TryParse<decimal>(value, decimal.TryParse, ref result);
+            case TypeCode.DateTime: return TryParse<DateTime>(value, DateTime.TryParse, ref result);
+
+            case TypeCode.String:
+                throw new InvalidOperationException("String-to-string conversion!?");
+
+            case TypeCode.Object:   return TryParseObject(value, ref result);
+            }
+
+            return false;
+        }
+
+        T Parse(string value)
+        {
+            T result = default(T);
+
+            if (TryParse(value, ref result))
+                return result;
+
+            throw new InvalidOperationException("Can't parse type");
+        }
+
+        public EffectData()
+        {
+            m_Type = typeof(T);
+        }
+    }
+#endif
+
     public class MenuEffect : MenuNodeXml, IMenuElement
     {
         public ElementType Type => ElementType.Effect;
 
         public override string Name => "Effect";
 
-        public int EffectType;
+#if !WORKS_FINE
+        public int EffectTypeA;
+        public int EffectTypeB;
 
-        public Vector2 Position;
-        public Vector2 Scale;
+        public Vector2 Time;
+        public Vector2 Data;
 
         void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
         {
-            EffectType = stream.ReadInt32();
+            EffectTypeA = stream.ReadUInt16();
+            EffectTypeB = stream.ReadUInt16();
 
-            Position = stream.Read<Vector2>();
-            Scale = stream.Read<Vector2>();
+            Time = stream.Read<Vector2>();
+            Data = stream.Read<Vector2>();
         }
 
         void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
         {
-            stream.Write(Type);
+            stream.Write((ushort)EffectTypeA);
+            stream.Write((ushort)EffectTypeB);
 
-            stream.Write(Position);
-            stream.Write(Scale);
+            stream.Write(Time);
+            stream.Write(Data);
         }
 
         protected override void Read(XElement node, IMenuProvider provider)
         {
-            EffectType = MenuData.GetAttribute(node, "Type", int.Parse);
-            Position = MenuData.GetAttribute(node, "Position", Vector2.Parse);
-            Scale = MenuData.GetAttribute(node, "Scale", Vector2.Parse);
+            EffectTypeA = MenuData.GetAttribute(node, "TypeA", int.Parse);
+            EffectTypeB = MenuData.GetAttribute(node, "TypeB", int.Parse);
+
+            Time = MenuData.GetAttribute(node, "Time", Vector2.Parse);
+            Data = MenuData.GetAttribute(node, "Data", Vector2.Parse);
         }
 
         protected override void Write(XElement node, IMenuProvider provider)
         {
-            node.SetAttributeValue("Type", Type);
-            node.SetAttributeValue("Position", Position);
-            node.SetAttributeValue("Scale", Scale);
+            node.SetAttributeValue("TypeA", EffectTypeA);
+            node.SetAttributeValue("TypeB", EffectTypeB);
+
+            node.SetAttributeValue("Time", Time);
+            node.SetAttributeValue("Data", Data);
         }
+#else
+        public EffectData<ushort> EffectType;
+        public EffectData<float> Time;
+        public EffectData<float> Data;
+
+        void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
+        {
+            provider.Factory.Deserialize(stream, ref EffectType);
+            provider.Factory.Deserialize(stream, ref Time);
+            provider.Factory.Deserialize(stream, ref Data);
+        }
+
+        void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
+        {
+            provider.Factory.Serialize(stream, ref EffectType);
+            provider.Factory.Serialize(stream, ref Time);
+            provider.Factory.Serialize(stream, ref Data);
+        }
+
+        protected override void Read(XElement node, IMenuProvider provider)
+        {
+            foreach (var elem in node.Elements())
+            {
+                var name = elem.Name;
+
+                switch (name.LocalName)
+                {
+                case "Type":
+                    MenuData.Read(elem, EffectType, provider);
+                    break;
+                case "Time":
+                    MenuData.Read(elem, Time, provider);
+                    break;
+                case "Data":
+                    MenuData.Read(elem, Data, provider);
+                    break;
+                }
+            }
+        }
+
+        protected override void Write(XElement node, IMenuProvider provider)
+        {
+            MenuData.Write(node, EffectType, "Type", provider);
+            MenuData.Write(node, Time, "Time", provider);
+            MenuData.Write(node, Data, "Data", provider);
+        }
+
+        public MenuEffect()
+        {
+            EffectType = new EffectData<ushort>();
+            Time = new EffectData<float>();
+            Data = new EffectData<float>();
+        }
+#endif
     }
 
     public abstract class MenuElement : MenuElementBase
@@ -934,11 +1311,11 @@ namespace DSCript.Menus
         public Vector2 Size;
         public Vector4 Color;
 
-        public float Foobar; // ???
+        public float Scale; // ???
 
-        public short Unk1;
-        public short Unk2;
-        public short Unk3;
+        public short OnActivate;
+        public short OnStepping;
+        public short OnDeactivate;
 
         protected sealed override void Deserialize(Stream stream, IMenuProvider provider)
         {
@@ -946,13 +1323,13 @@ namespace DSCript.Menus
             Size = stream.Read<Vector2>();
             Color = stream.Read<Vector4>();
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                Foobar = stream.ReadSingle();
+                Scale = stream.ReadSingle();
 
-                Unk1 = stream.ReadInt16();
-                Unk2 = stream.ReadInt16();
-                Unk3 = stream.ReadInt16();
+                OnActivate = stream.ReadInt16();
+                OnStepping = stream.ReadInt16();
+                OnDeactivate = stream.ReadInt16();
 
                 stream.Position += 2;
             }
@@ -966,13 +1343,13 @@ namespace DSCript.Menus
             stream.Write(Size);
             stream.Write(Color);
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                stream.Write(Foobar);
+                stream.Write(Scale);
 
-                stream.Write(Unk1);
-                stream.Write(Unk2);
-                stream.Write(Unk3);
+                stream.Write(OnActivate);
+                stream.Write(OnStepping);
+                stream.Write(OnDeactivate);
 
                 stream.Write((short)~0x3333);
             }
@@ -986,14 +1363,12 @@ namespace DSCript.Menus
             Size = MenuData.GetAttribute(node, "Size", Vector2.Parse);
             Color = MenuData.GetAttribute(node, "Color", Vector4.Parse);
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                var e = node.Element("Effect");
-
-                Foobar = MenuData.GetAttribute(e, "_Foobar", float.Parse, 0.0f);
-                Unk1 = MenuData.GetAttribute(e, "_Unk1", short.Parse, (short)-1);
-                Unk2 = MenuData.GetAttribute(e, "_Unk2", short.Parse, (short)-1);
-                Unk3 = MenuData.GetAttribute(e, "_Unk3", short.Parse, (short)-1);
+                Scale = MenuData.GetAttribute(node, "Scale", float.Parse, 0.0f);
+                OnActivate = MenuData.GetAttribute(node, "OnActivate", short.Parse, (short)-1);
+                OnStepping = MenuData.GetAttribute(node, "OnStepping", short.Parse, (short)-1);
+                OnDeactivate = MenuData.GetAttribute(node, "OnDeactivate", short.Parse, (short)-1);
             }
 
             ReadData(node, provider);
@@ -1005,16 +1380,16 @@ namespace DSCript.Menus
             node.SetAttributeValue("Size", Size);
             node.SetAttributeValue("Color", Color);
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                var e = new XElement("Effect");
+                node.SetAttributeValue("Scale", Scale);
 
-                e.SetAttributeValue("_Foobar", Foobar);
-                e.SetAttributeValue("_Unk1", Unk1);
-                e.SetAttributeValue("_Unk2", Unk2);
-                e.SetAttributeValue("_Unk3", Unk3);
-
-                node.Add(e);
+                if (OnActivate != -1)
+                    node.SetAttributeValue("OnActivate", OnActivate);
+                if (OnStepping != -1)
+                    node.SetAttributeValue("OnStepping", OnStepping);
+                if (OnDeactivate != -1)
+                    node.SetAttributeValue("OnDeactivate", OnDeactivate);
             }
 
             WriteData(node, provider);
@@ -1031,23 +1406,23 @@ namespace DSCript.Menus
     {
         public override ElementType Type => ElementType.Icon;
 
-        public Vector2 Offset;
-        public Vector2 Scale;
-
         public int TextureId;
+
+        public Vector2 IconOffset;
+        public Vector2 IconScale;
 
         public bool HasVectors;
 
         protected override void Read(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
                 TextureId = stream.ReadInt16();
             }
             else
             {
-                Offset = stream.Read<Vector2>();
-                Scale = stream.Read<Vector2>();
+                IconOffset = stream.Read<Vector2>();
+                IconScale = stream.Read<Vector2>();
 
                 TextureId = stream.ReadInt32();
                 HasVectors = true;
@@ -1056,14 +1431,14 @@ namespace DSCript.Menus
 
         protected override void Write(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
                 stream.Write((short)TextureId);
             }
             else
             {
-                stream.Write(Offset);
-                stream.Write(Scale);
+                stream.Write(IconOffset);
+                stream.Write(IconScale);
                 stream.Write(TextureId);
             }
         }
@@ -1072,10 +1447,10 @@ namespace DSCript.Menus
         {
             TextureId = MenuData.GetAttribute(node, "TextureId", int.Parse);
 
-            if (provider.Version < 5160)
+            if (provider.Version < MenuVersion.Driver4_Console)
             {
-                Offset = MenuData.GetAttribute(node, "Offset", Vector2.Parse);
-                Scale = MenuData.GetAttribute(node, "Scale", Vector2.Parse);
+                IconOffset = MenuData.GetAttribute(node, "IconOffset", Vector2.Parse);
+                IconScale = MenuData.GetAttribute(node, "IconScale", Vector2.Parse);
             }
         }
 
@@ -1083,10 +1458,10 @@ namespace DSCript.Menus
         {
             node.SetAttributeValue("TextureId", TextureId);
 
-            if (provider.Version < 5160)
+            if (provider.Version < MenuVersion.Driver4_Console)
             {
-                node.SetAttributeValue("Offset", Offset);
-                node.SetAttributeValue("Scale", Scale);
+                node.SetAttributeValue("IconOffset", IconOffset);
+                node.SetAttributeValue("IconScale", IconScale);
             }
         }
     }
@@ -1095,35 +1470,40 @@ namespace DSCript.Menus
     {
         public override ElementType Type => ElementType.Textbox;
 
-        public int TextId;
+        public TextSettings Settings;
 
-        public Vector2 Offset;
-        public Vector2 Scale;
+        public Vector2 TextOffset;  // > Driver3_PC
+        public Vector2 TextScale;   // <= Driver3_PC
+
+        public float Spacing;
+
+        public short ScrollType;
+        public short ScrollSpeed;
 
         public MenuCallback DataSource;
         public MenuCallback TextSource;
 
         protected override void Read(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 401)
+            provider.Factory.Deserialize(stream, ref Settings);
+
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                if (provider.Version > 5160)
-                {
-                    TextId = stream.ReadInt16();
-                    stream.Position += 2;
-                }
-                else
-                {
-                    TextId = (stream.ReadInt32() & 0xFFFFFF);
-                }
+                TextOffset = stream.Read<Vector2>();
+                Spacing = stream.ReadSingle();
+
+                ScrollType = stream.ReadInt16();
+                ScrollSpeed = stream.ReadInt16();
             }
             else
             {
-                TextId = stream.ReadInt32();
-            }
+                Spacing = stream.ReadSingle();
 
-            Offset = stream.Read<Vector2>();
-            Scale = stream.Read<Vector2>();
+                // sneaky sneaky
+                Settings.Justify = stream.ReadInt32();
+
+                TextScale = stream.Read<Vector2>();
+            }
 
             provider.Factory.Deserialize(stream, ref DataSource);
             provider.Factory.Deserialize(stream, ref TextSource);
@@ -1131,25 +1511,24 @@ namespace DSCript.Menus
 
         protected override void Write(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 401)
+            provider.Factory.Serialize(stream, ref Settings);
+
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
-                if (provider.Version > 5160)
-                {
-                    stream.Write((short)TextId);
-                    stream.Write((short)2);
-                }
-                else
-                {
-                    stream.Write((TextId & 0xFFFFFF) | (2 << 24));
-                }
+                stream.Write(TextOffset);
+                stream.Write(Spacing);
+
+                stream.Write(ScrollType);
+                stream.Write(ScrollSpeed);
             }
             else
             {
-                stream.Write(TextId);
-            }
+                stream.Write(Spacing);
 
-            stream.Write(Offset);
-            stream.Write(Scale);
+                stream.Write(Settings.Justify);
+
+                stream.Write(TextScale);
+            }
 
             provider.Factory.Serialize(stream, DataSource);
             provider.Factory.Serialize(stream, TextSource);
@@ -1157,10 +1536,20 @@ namespace DSCript.Menus
 
         protected override void ReadData(XElement node, IMenuProvider provider)
         {
-            TextId = MenuData.GetAttribute(node, "TextId", int.Parse);
+            Settings = MenuData.Parse<TextSettings>(node, provider);
 
-            Offset = MenuData.GetAttribute(node, "Offset", Vector2.Parse);
-            Scale = MenuData.GetAttribute(node, "Scale", Vector2.Parse);
+            if (provider.Version > MenuVersion.Driver3_PC)
+            {
+                TextOffset = MenuData.GetAttribute(node, "TextOffset", Vector2.Parse);
+                Spacing = MenuData.GetAttribute(node, "Spacing", float.Parse);
+                ScrollType = MenuData.GetAttribute(node, "ScrollType", short.Parse);
+                ScrollSpeed = MenuData.GetAttribute(node, "ScrollSpeed", short.Parse);
+            }
+            else
+            {
+                Spacing = MenuData.GetAttribute(node, "Spacing", float.Parse);
+                TextScale = MenuData.GetAttribute(node, "TextScale", Vector2.Parse);
+            }
 
             foreach (var elem in node.Elements())
             {
@@ -1180,10 +1569,23 @@ namespace DSCript.Menus
 
         protected override void WriteData(XElement node, IMenuProvider provider)
         {
-            node.SetAttributeValue("TextId", TextId);
+            MenuData.Write(node, Settings, provider);
 
-            node.SetAttributeValue("Offset", Offset);
-            node.SetAttributeValue("Scale", Scale);
+            if (provider.Version > MenuVersion.Driver3_PC)
+            {
+                node.SetAttributeValue("TextOffset", TextOffset);
+                node.SetAttributeValue("Spacing", Spacing);
+                node.SetAttributeValue("ScrollType", ScrollType);
+                node.SetAttributeValue("ScrollSpeed", ScrollSpeed);
+            }
+            else
+            {
+                // unused, but let's include it for debugging purposes
+                if (Spacing != 0)
+                    node.SetAttributeValue("Spacing", Spacing);
+
+                node.SetAttributeValue("TextScale", TextScale);
+            }
 
             MenuData.Write(node, DataSource, "DataSource", provider);
             MenuData.Write(node, TextSource, "TextSource", provider);
@@ -1226,7 +1628,7 @@ namespace DSCript.Menus
 
         void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
             {
                 Type = MenuData.ReadByte32(stream);
                 Id = stream.ReadInt32();
@@ -1240,7 +1642,7 @@ namespace DSCript.Menus
 
         void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
                 MenuData.WriteByte32(stream, Type);
 
             stream.Write(Id);
@@ -1257,9 +1659,30 @@ namespace DSCript.Menus
             }
         }
 
+        byte GetTypeFromName(string typename)
+        {
+            if (!String.IsNullOrEmpty(typename))
+            {
+                switch (typename)
+                {
+                case "Element":     return 0;
+                case "Screen":      return 1;
+                case "DropBack":    return 2;
+                case "UserAction":  return 254;
+                case "None":        return 255;
+                default:            throw new InvalidOperationException($"Unknown navigator type '{typename}'");
+                }
+            }
+
+            // default to none
+            return 255;
+        }
+
         void IMenuDetailXml.Deserialize(XElement node, IMenuProvider provider)
         {
-            Type = MenuData.GetAttribute(node, "Type", byte.Parse, (byte)255);
+            var typename = MenuData.GetAttribute(node, "Type");
+
+            Type = GetTypeFromName(typename);
             Id = MenuData.GetAttribute(node, "Id", int.Parse, -1);
         }
         
@@ -1272,7 +1695,7 @@ namespace DSCript.Menus
 
     public class ButtonNavigators : IMenuDetail, IMenuDetailXml
     {
-        public bool MouseEnabled;
+        public bool MouseAllowed;
 
         public ButtonAction MenuUp = ButtonAction.Empty;
         public ButtonAction MenuDown = ButtonAction.Empty;
@@ -1286,8 +1709,8 @@ namespace DSCript.Menus
 
         void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 310)
-                MouseEnabled = MenuData.ReadBool32(stream);
+            if (provider.Version > MenuVersion.Driver3_Console)
+                MouseAllowed = MenuData.ReadBool32(stream);
 
             provider.Factory.Deserialize(stream, ref MenuUp);
             provider.Factory.Deserialize(stream, ref MenuDown);
@@ -1295,22 +1718,22 @@ namespace DSCript.Menus
             provider.Factory.Deserialize(stream, ref MenuRight);
             provider.Factory.Deserialize(stream, ref MenuSelect);
 
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
             {
                 provider.Factory.Deserialize(stream, ref MenuCancel);
                 provider.Factory.Deserialize(stream, ref MenuExtra1);
                 provider.Factory.Deserialize(stream, ref MenuExtra2);
 
                 // reserved memory?
-                if (provider.Version > 401)
+                if (provider.Version > MenuVersion.Driver3_PC)
                 {
                     stream.Position += 16;
 
-                    if (provider.Version == 7001)
+                    if (provider.Version == MenuVersion.Driver4_PC)
                         stream.Position += 16;
                 }
             }
-            else if (provider.Version == 310)
+            else if (provider.Version == MenuVersion.Driver3_Console)
             {
                 // assume this opens a menu
                 if (MenuSelect.Type == 0)
@@ -1320,8 +1743,8 @@ namespace DSCript.Menus
 
         void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
         {
-            if (provider.Version > 310)
-                MenuData.WriteBool32(stream, MouseEnabled);
+            if (provider.Version > MenuVersion.Driver3_Console)
+                MenuData.WriteBool32(stream, MouseAllowed);
 
             provider.Factory.Serialize(stream, MenuUp);
             provider.Factory.Serialize(stream, MenuDown);
@@ -1329,17 +1752,17 @@ namespace DSCript.Menus
             provider.Factory.Serialize(stream, MenuRight);
             provider.Factory.Serialize(stream, MenuSelect);
 
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
             {
                 provider.Factory.Serialize(stream, MenuCancel);
                 provider.Factory.Serialize(stream, MenuExtra1);
                 provider.Factory.Serialize(stream, MenuExtra2);
 
-                if (provider.Version > 401)
+                if (provider.Version > MenuVersion.Driver3_PC)
                 {
                     MenuData.WritePadding(stream, 16);
 
-                    if (provider.Version == 7001)
+                    if (provider.Version == MenuVersion.Driver4_PC)
                         MenuData.WritePadding(stream, 16);
                 }
             }
@@ -1347,7 +1770,7 @@ namespace DSCript.Menus
 
         void IMenuDetailXml.Deserialize(XElement node, IMenuProvider provider)
         {
-            MouseEnabled = MenuData.GetAttribute(node, "FocusEnabled", bool.Parse, (provider.Version > 310) ? true : false);
+            MouseAllowed = MenuData.GetAttribute(node, "MouseAllowed", bool.Parse, (provider.Version > MenuVersion.Driver3_Console) ? true : false);
 
             foreach (var elem in node.Elements())
             {
@@ -1355,28 +1778,28 @@ namespace DSCript.Menus
 
                 switch (name.LocalName)
                 {
-                case "MenuUp":
+                case "Navigate_MenuUp":
                     MenuUp = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuDown":
+                case "Navigate_MenuDown":
                     MenuDown = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuLeft":
+                case "Navigate_MenuLeft":
                     MenuLeft = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuRight":
+                case "Navigate_MenuRight":
                     MenuRight = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuSelect":
+                case "Navigate_MenuSelect":
                     MenuSelect = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuCancel":
+                case "Navigate_MenuCancel":
                     MenuCancel = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuExtra1":
+                case "Navigate_MenuExtra1":
                     MenuExtra1 = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
-                case "MenuExtra2":
+                case "Navigate_MenuExtra2":
                     MenuExtra2 = MenuData.Parse<ButtonAction>(elem, provider);
                     break;
                 }
@@ -1385,7 +1808,8 @@ namespace DSCript.Menus
 
         void IMenuDetailXml.Serialize(XElement node, IMenuProvider provider)
         {
-            node.SetAttributeValue("FocusEnabled", MouseEnabled);
+            if (provider.Version > MenuVersion.Driver3_Console)
+                node.SetAttributeValue("MouseAllowed", MouseAllowed);
 
             SerializeAction(node, "MenuUp", MenuUp, provider);
             SerializeAction(node, "MenuDown", MenuDown, provider);
@@ -1393,7 +1817,7 @@ namespace DSCript.Menus
             SerializeAction(node, "MenuRight", MenuRight, provider);
             SerializeAction(node, "MenuSelect", MenuSelect, provider);
 
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
             {
                 SerializeAction(node, "MenuCancel", MenuCancel, provider);
 
@@ -1405,7 +1829,7 @@ namespace DSCript.Menus
         void SerializeAction(XElement node, string name, ButtonAction action, IMenuProvider provider)
         {
             if (!action.IsDisabled)
-                MenuData.Write(node, action, "Navigate", provider);
+                MenuData.Write(node, action, $"Navigate_{name}", provider);
         }
     }
 
@@ -1441,21 +1865,21 @@ namespace DSCript.Menus
             provider.Factory.Deserialize(stream, ref OnMenuSelect);
             provider.Factory.Deserialize(stream, ref OnMenuDraw);
 
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
             {
                 Version = 2;
 
                 provider.Factory.Deserialize(stream, ref OnMenuScrollUp);
                 provider.Factory.Deserialize(stream, ref OnMenuScrollDown);
 
-                if (provider.Version > 401)
+                if (provider.Version > MenuVersion.Driver3_PC)
                 {
                     Version = 3;
 
                     provider.Factory.Deserialize(stream, ref OnMenuExtra1);
                     provider.Factory.Deserialize(stream, ref OnMenuExtra2);
 
-                    if (provider.Version == 7001)
+                    if (provider.Version == MenuVersion.Driver4_PC)
                     {
                         Version = 4;
 
@@ -1477,17 +1901,17 @@ namespace DSCript.Menus
             provider.Factory.Serialize(stream, OnMenuSelect);
             provider.Factory.Serialize(stream, OnMenuDraw);
 
-            if (provider.Version > 310)
+            if (provider.Version > MenuVersion.Driver3_Console)
             {
                 provider.Factory.Serialize(stream, OnMenuScrollUp);
                 provider.Factory.Serialize(stream, OnMenuScrollDown);
 
-                if (provider.Version > 401)
+                if (provider.Version > MenuVersion.Driver3_PC)
                 {
                     provider.Factory.Serialize(stream, OnMenuExtra1);
                     provider.Factory.Serialize(stream, OnMenuExtra2);
 
-                    if (provider.Version == 7001)
+                    if (provider.Version == MenuVersion.Driver4_PC)
                     {
                         provider.Factory.Serialize(stream, OnExtraAction1);
                         provider.Factory.Serialize(stream, OnExtraAction2);
@@ -1500,6 +1924,8 @@ namespace DSCript.Menus
 
         void IMenuDetailXml.Deserialize(XElement node, IMenuProvider provider)
         {
+            Version = MenuData.GetAttribute(node, "Version", int.Parse);
+
             foreach (var elem in node.Elements())
             {
                 var name = elem.Name;
@@ -1637,7 +2063,7 @@ namespace DSCript.Menus
         protected override void WriteData(XElement node, IMenuProvider provider)
         {
             foreach (var state in States)
-                MenuData.Write(node, state, "State", provider);
+                MenuData.Write(node, state, provider);
 
             MenuData.Write(node, Navigators, "Navigation", provider);
             MenuData.Write(node, Callbacks, "Callbacks", provider);
@@ -1657,149 +2083,50 @@ namespace DSCript.Menus
         public override ElementType Type => ElementType.Movie;
     }
 
-    public class MenuAdvTextbox : MenuElement
-    {
-        public override ElementType Type => ElementType.AdvTextbox;
-
-        public int Foo1;
-        public int Foo2;
-        public int Foo3;
-
-        public MenuCallback Format;
-
-        public int Foo4;
-
-        protected override void Read(Stream stream, IMenuProvider provider)
-        {
-            Foo1 = stream.ReadByte();
-            Foo2 = stream.ReadByte();
-
-            Foo3 = stream.ReadInt16();
-
-            provider.Factory.Deserialize(stream, ref Format);
-
-            Foo4 = stream.ReadInt16();
-        }
-
-        protected override void Write(Stream stream, IMenuProvider provider)
-        {
-            stream.WriteByte(Foo1);
-            stream.WriteByte(Foo2);
-
-            stream.Write((short)Foo3);
-
-            provider.Factory.Serialize(stream, Format);
-
-            stream.Write((short)Foo4);
-        }
-
-        protected override void ReadData(XElement node, IMenuProvider provider)
-        {
-            Foo1 = MenuData.GetAttribute(node, "_Foo1", byte.Parse);
-            Foo2 = MenuData.GetAttribute(node, "_Foo2", byte.Parse);
-            Foo3 = MenuData.GetAttribute(node, "_Foo3", short.Parse);
-            
-            foreach (var elem in node.Elements())
-            {
-                var name = elem.Name;
-
-                switch (name.LocalName)
-                {
-                case "Format":
-                    Format = MenuData.Parse<MenuCallback>(node, provider);
-                    break;
-                }
-            }
-
-            Foo4 = MenuData.GetAttribute(node, "_Foo4", short.Parse);
-        }
-
-        protected override void WriteData(XElement node, IMenuProvider provider)
-        {
-            node.SetAttributeValue("_Foo1", Foo1);
-            node.SetAttributeValue("_Foo2", Foo2);
-            node.SetAttributeValue("_Foo3", Foo3);
-
-            MenuData.Write(node, Format, "Format", provider);
-
-            node.SetAttributeValue("_Foo4", Foo4);
-        }
-    }
-
-    public class MenuCheckbox : MenuElement
-    {
-        public override ElementType Type => ElementType.Checkbox;
-
-        protected override void Read(Stream stream, IMenuProvider provider)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void Write(Stream stream, IMenuProvider provider)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void ReadData(XElement node, IMenuProvider provider)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void WriteData(XElement node, IMenuProvider provider)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
     public class MenuProgress : MenuElement
     {
         public override ElementType Type => ElementType.Progress;
 
-        public float Foo1;
-        public float Foo2;
-        public float Foo3;
-        public float Foo4;
+        public int Direction;
+        public int Parts;
+        public int Gap;
 
-        public short Foo5;
-        public short Foo6;
+        public int BackAlpha;
 
         public MenuCallback Format;
 
+        public int Texture;
+
         protected override void Read(Stream stream, IMenuProvider provider)
         {
-            Foo1 = stream.ReadSingle();
-            Foo2 = stream.ReadSingle();
-            Foo3 = stream.ReadSingle();
-            Foo4 = stream.ReadSingle();
-
-            Foo5 = stream.ReadInt16();
-            Foo6 = stream.ReadInt16();
+            Direction = stream.ReadByte();
+            Parts = stream.ReadByte();
+            Gap = stream.ReadByte();
+            BackAlpha = stream.ReadByte();
 
             provider.Factory.Deserialize(stream, ref Format);
+
+            Texture = stream.ReadInt16();
         }
 
         protected override void Write(Stream stream, IMenuProvider provider)
         {
-            stream.Write(Foo1);
-            stream.Write(Foo2);
-            stream.Write(Foo3);
-            stream.Write(Foo4);
-
-            stream.Write(Foo5);
-            stream.Write(Foo6);
+            stream.WriteByte(Direction);
+            stream.WriteByte(Parts);
+            stream.WriteByte(Gap);
+            stream.WriteByte(BackAlpha);
 
             provider.Factory.Serialize(stream, Format);
+
+            stream.Write((short)Texture);
         }
 
         protected override void ReadData(XElement node, IMenuProvider provider)
         {
-            Foo1 = MenuData.GetAttribute(node, "_Foo1", float.Parse);
-            Foo2 = MenuData.GetAttribute(node, "_Foo2", float.Parse);
-            Foo3 = MenuData.GetAttribute(node, "_Foo3", float.Parse);
-            Foo4 = MenuData.GetAttribute(node, "_Foo4", float.Parse);
-
-            Foo5 = MenuData.GetAttribute(node, "_Foo5", short.Parse);
-            Foo6 = MenuData.GetAttribute(node, "_Foo6", short.Parse);
+            Direction = MenuData.GetAttribute(node, "Direction", byte.Parse);
+            Parts = MenuData.GetAttribute(node, "Parts", byte.Parse);
+            Gap = MenuData.GetAttribute(node, "Gap", byte.Parse);
+            BackAlpha = MenuData.GetAttribute(node, "BackAlpha", byte.Parse);
 
             foreach (var elem in node.Elements())
             {
@@ -1808,7 +2135,117 @@ namespace DSCript.Menus
                 switch (name.LocalName)
                 {
                 case "Format":
-                    Format = MenuData.Parse<MenuCallback>(node, provider);
+                    Format = MenuData.Parse<MenuCallback>(elem, provider);
+                    break;
+                }
+            }
+
+            Texture = MenuData.GetAttribute(node, "Texture", short.Parse);
+        }
+
+        protected override void WriteData(XElement node, IMenuProvider provider)
+        {
+            node.SetAttributeValue("Direction", Direction);
+            node.SetAttributeValue("Parts", Parts);
+            node.SetAttributeValue("Gap", Gap);
+            node.SetAttributeValue("BackAlpha", BackAlpha);
+
+            MenuData.Write(node, Format, "Format", provider);
+
+            node.SetAttributeValue("Texture", Texture);
+        }
+    }
+#if _CPP
+    struct SMenuListboxExpData
+    /*
+    	size: 0x30
+    */
+    {
+    	/* 0x00 */MAv4 v4SelColour;
+    	/* 0x10 */char strName[8];
+    	/* 0x18 */uint8 nNumToDisplay;
+    	/* 0x19 */uint8 nFontIndex;
+    	/* 0x1A */uint8 nJustify;
+    	/* 0x1B */uint8 pad;
+    	/* 0x1C */MAreal fXScale;
+    	/* 0x20 */MAreal fYScale;
+    	/* 0x24 */MAreal fSpacing;
+    	public: SMenuListboxExpData & operator=(const SMenuListboxExpData &);
+    	public: SMenuListboxExpData * SMenuListboxExpData(const SMenuListboxExpData &);
+    	public: SMenuListboxExpData * SMenuListboxExpData(void);
+    };
+#endif
+    public class MenuListBox : MenuElement
+    {
+        public override ElementType Type => ElementType.ListBox;
+
+        protected override void Read(Stream stream, IMenuProvider provider)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void Write(Stream stream, IMenuProvider provider)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void ReadData(XElement node, IMenuProvider provider)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void WriteData(XElement node, IMenuProvider provider)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class MenuCheckBox : MenuElement
+    {
+        public override ElementType Type => ElementType.CheckBox;
+
+        public Vector4 Color2;
+        
+        public short Texture1;
+        public short Texture2;
+
+        public MenuCallback Format;
+
+        protected override void Read(Stream stream, IMenuProvider provider)
+        {
+            Color2 = stream.Read<Vector4>();
+
+            Texture1 = stream.ReadInt16();
+            Texture2 = stream.ReadInt16();
+
+            provider.Factory.Deserialize(stream, ref Format);
+        }
+
+        protected override void Write(Stream stream, IMenuProvider provider)
+        {
+            stream.Write(Color2);
+
+            stream.Write(Texture1);
+            stream.Write(Texture2);
+
+            provider.Factory.Serialize(stream, Format);
+        }
+
+        protected override void ReadData(XElement node, IMenuProvider provider)
+        {
+            Color2 = MenuData.GetAttribute(node, "Color2", Vector4.Parse);
+
+            Texture1 = MenuData.GetAttribute(node, "Texture1", short.Parse);
+            Texture2 = MenuData.GetAttribute(node, "Texture2", short.Parse);
+
+            foreach (var elem in node.Elements())
+            {
+                var name = elem.Name;
+
+                switch (name.LocalName)
+                {
+                case "Format":
+                    Format = MenuData.Parse<MenuCallback>(elem, provider);
                     break;
                 }
             }
@@ -1816,29 +2253,146 @@ namespace DSCript.Menus
 
         protected override void WriteData(XElement node, IMenuProvider provider)
         {
-            node.SetAttributeValue("_Foo1", Foo1);
-            node.SetAttributeValue("_Foo2", Foo2);
-            node.SetAttributeValue("_Foo3", Foo3);
-            node.SetAttributeValue("_Foo4", Foo4);
+            node.SetAttributeValue("Color2", Color2);
 
-            node.SetAttributeValue("_Foo5", Foo5);
-            node.SetAttributeValue("_Foo6", Foo6);
+            node.SetAttributeValue("Texture1", Texture1);
+            node.SetAttributeValue("Texture2", Texture2);
 
             MenuData.Write(node, Format, "Format", provider);
         }
     }
 
-    public class MenuListbox : MenuElement
+    public struct TextJustify
     {
-        public override ElementType Type => ElementType.Listbox;
+        public const int Left   = 0;
+        public const int Right  = 1;
+        public const int Center = 2;
 
+        public static string ToString(int value)
+        {
+            switch (value)
+            {
+            case 0: return "Left";
+            case 1: return "Right";
+            case 2: return "Center";
+            default:
+                throw new InvalidDataException($"Unknown justify value '{value}'");
+            }
+        }
+
+        public static int Parse(string value)
+        {
+            if (!String.IsNullOrEmpty(value))
+            {
+                switch (value)
+                {
+                case "Left":    return Left;
+                case "Right":   return Right;
+                case "Center":  return Center;
+                default:
+                    try
+                    {
+                        return int.Parse(value);
+                    }
+                    catch (Exception) {
+                        throw new InvalidDataException($"Unknown justify type '{value}'");
+                    }
+                }
+            }
+
+            return Left;
+        }
+    }
+
+    public struct TextSettings : IMenuDetail, IMenuDetailXml
+    {
         public int TextId;
+        public int Font;
+        public int Justify;
+
+        void IDetail<IMenuProvider>.Deserialize(Stream stream, IMenuProvider provider)
+        {
+            if (provider.Version > MenuVersion.Driver3_PC)
+            {
+                if (provider.Version > MenuVersion.Driver4_Console)
+                {
+                    TextId = stream.ReadInt16();
+                    Font = stream.ReadByte();
+                    Justify = stream.ReadByte();
+                }
+                else
+                {
+                    var data = stream.ReadInt32();
+                    
+                    // TODO: verify
+                    TextId = data & 0xFFFFFF;
+                    Font = (data >> 24) & 0xFF;
+                    Justify = -1;
+                }
+            }
+            else
+            {
+                TextId = stream.ReadInt32();
+                Justify = -1;
+            }
+        }
+
+        void IDetail<IMenuProvider>.Serialize(Stream stream, IMenuProvider provider)
+        {
+            if (provider.Version > MenuVersion.Driver3_PC)
+            {
+                if (provider.Version > MenuVersion.Driver4_Console)
+                {
+                    stream.Write((short)TextId);
+                    stream.WriteByte(Font);
+                    stream.WriteByte(Justify);
+                }
+                else
+                {
+                    var data = TextId | ((Font & 0xFF) << 24);
+
+                    stream.Write(data);
+                }
+            }
+            else
+            {
+                stream.Write(TextId);
+            }
+        }
+
+        void IMenuDetailXml.Serialize(XElement node, IMenuProvider provider)
+        {
+            node.SetAttributeValue("TextId", TextId);
+
+            if (Justify != -1)
+                node.SetAttributeValue("Justify", TextJustify.ToString(Justify));
+
+            if (provider.Version > MenuVersion.Driver3_PC)
+                node.SetAttributeValue("Font", Font);
+        }
+
+        void IMenuDetailXml.Deserialize(XElement node, IMenuProvider provider)
+        {
+            TextId = MenuData.GetAttribute(node, "TextId", int.Parse);
+
+            Justify = MenuData.GetAttribute(node, "Justify", TextJustify.Parse, -1);
+
+            if (provider.Version > MenuVersion.Driver3_PC)
+                Font = MenuData.GetAttribute(node, "Font", int.Parse);
+        }
+    }
+
+    public class MenuAdvTextbox : MenuElement
+    {
+        public override ElementType Type => ElementType.AdvTextbox;
+
+        public TextSettings Settings;
 
         public short[] Values;
 
-        public Vector2 Offset;
+        public Vector2 TextScale;
 
-        public float Scale;
+        public float Spacing;
 
         public MenuCallback DataSource;
         public MenuCallback TextSource;
@@ -1848,11 +2402,11 @@ namespace DSCript.Menus
             for (int i = 0; i < 11; i++)
                 Values[i] = stream.ReadInt16();
 
-            TextId = stream.ReadInt16();
-            stream.Position += 4;
+            provider.Factory.Deserialize(stream, ref Settings);
+            stream.Position += 2;
 
-            Offset = stream.Read<Vector2>();
-            Scale = stream.ReadSingle();
+            TextScale = stream.Read<Vector2>();
+            Spacing = stream.ReadSingle();
 
             provider.Factory.Deserialize(stream, ref DataSource);
             provider.Factory.Deserialize(stream, ref TextSource);
@@ -1863,13 +2417,11 @@ namespace DSCript.Menus
             for (int i = 0; i < 11; i++)
                 stream.Write(Values[i]);
 
-            stream.Write(TextId);
-            stream.Write((short)2);
-
+            provider.Factory.Serialize(stream, Settings);
             MenuData.WritePadding(stream, 2);
 
-            stream.Write(Offset);
-            stream.Write(Scale);
+            stream.Write(TextScale);
+            stream.Write(Spacing);
 
             provider.Factory.Serialize(stream, DataSource);
             provider.Factory.Serialize(stream, TextSource);
@@ -1877,9 +2429,10 @@ namespace DSCript.Menus
 
         protected override void ReadData(XElement node, IMenuProvider provider)
         {
-            TextId = MenuData.GetAttribute(node, "TextId", int.Parse);
-            Offset = MenuData.GetAttribute(node, "Offset", Vector2.Parse);
-            Scale = MenuData.GetAttribute(node, "Scale", float.Parse);
+            Settings = MenuData.Parse<TextSettings>(node, provider);
+
+            TextScale = MenuData.GetAttribute(node, "TextScale", Vector2.Parse);
+            Spacing = MenuData.GetAttribute(node, "Spacing", float.Parse);
 
             var choices = new short[11];
 
@@ -1922,10 +2475,10 @@ namespace DSCript.Menus
 
         protected override void WriteData(XElement node, IMenuProvider provider)
         {
-            node.SetAttributeValue("TextId", TextId);
+            MenuData.Write(node, Settings, provider);
 
-            node.SetAttributeValue("Offset", Offset);
-            node.SetAttributeValue("Scale", Scale);
+            node.SetAttributeValue("TextScale", TextScale);
+            node.SetAttributeValue("Spacing", Spacing);
 
             MenuData.Write(node, DataSource, "DataSource", provider);
             MenuData.Write(node, TextSource, "TextSource", provider);
@@ -1946,7 +2499,7 @@ namespace DSCript.Menus
             }
         }
 
-        public MenuListbox()
+        public MenuAdvTextbox()
         {
             Values = new short[11];
         }
@@ -1972,7 +2525,12 @@ namespace DSCript.Menus
         public int Version { get; set; }
         public int Flags { get; set; }
 
-        public int UID { get; set; }
+        public int DefaultScreen { get; set; }
+
+        public bool Spooled { get; set; }
+
+        public short Width { get; set; }
+        public short Height { get; set; }
 
         public MenuDataSizes Sizes { get; set; }
 
@@ -1989,10 +2547,10 @@ namespace DSCript.Menus
             case ElementType.Textbox:       return Sizes.SizeOf_Element + Sizes.SizeOf_Textbox;
             case ElementType.Button:        return Sizes.SizeOf_Element + Sizes.SizeOf_Button;
             case ElementType.Movie:         return Sizes.SizeOf_Movie;
+            case ElementType.Progress:      return Sizes.SizeOf_Element + Sizes.SizeOf_Progress;
+            case ElementType.ListBox:       return Sizes.SizeOf_Element + Sizes.SizeOf_ListBox;
+            case ElementType.CheckBox:      return Sizes.SizeOf_Element + Sizes.SizeOf_CheckBox;
             case ElementType.AdvTextbox:    return Sizes.SizeOf_Element + Sizes.SizeOf_AdvTextbox;
-            case ElementType.Checkbox:      return Sizes.SizeOf_Element + Sizes.SizeOf_Checkbox;
-            case ElementType.Progress:      return Sizes.SizeOf_Progress + Sizes.SizeOf_Progress;
-            case ElementType.Listbox:       return Sizes.SizeOf_Listbox + Sizes.SizeOf_Listbox;
             }
 
             throw new InvalidOperationException($"Unknown element size for type {type}");
@@ -2003,14 +2561,14 @@ namespace DSCript.Menus
             switch (type)
             {
             case ElementType.Effect:
-            case ElementType.AdvTextbox:
-            case ElementType.Checkbox:
             case ElementType.Progress:
-            case ElementType.Listbox:
-                return 5160;
+            case ElementType.ListBox:
+            case ElementType.CheckBox:
+            case ElementType.AdvTextbox:
+                return MenuVersion.Driver4_Console;
             }
 
-            return 310;
+            return MenuVersion.Driver3_Console;
         }
 
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
@@ -2049,30 +2607,30 @@ namespace DSCript.Menus
 
         protected void Deserialize(Stream stream, IMenuProvider provider)
         {
+            // menu project data
             Version = stream.ReadInt16();
 
             var nScreens = 0;
-            var nUnks = 0;
 
             var factory = provider.GetFactory();
 
-            // Known versions:
-            //  310 - Driv3r: PS2, XBox
-            //  401 - Driv3r: PC
-            //  5160 - Driver Parallel Lines: PS2, XBox
-            //  6000 - Driver Parallel Lines: Wii
-            //  7001 - Driver Parallel Lines: PC
-            if (Version > 401)
+            if (Version > MenuVersion.Driver3_PC)
             {
                 nScreens = stream.ReadByte();
-                nUnks = stream.ReadByte();
 
-                UID = stream.ReadInt16();
+                DefaultScreen = stream.ReadByte();
+                Spooled = stream.ReadInt16() == 1;
 
                 var numEffects = stream.ReadInt16();
 
-                if (Version == 7001)
-                    stream.Position += 8;
+                if (Version == MenuVersion.Driver4_PC)
+                {
+                    Width = stream.ReadInt16();
+                    Height = stream.ReadInt16();
+
+                    // what is this?
+                    stream.Position += 4;
+                }
 
                 var effects = new List<MenuEffect>(numEffects);
 
@@ -2093,7 +2651,7 @@ namespace DSCript.Menus
                 if (stream.ReadInt16() != 0)
                     throw new InvalidOperationException($"Menu version {Version} has unexpected data!");
 
-                UID = -1;
+                Spooled = false;
 
                 nScreens = stream.ReadInt32();
             }
@@ -2116,19 +2674,67 @@ namespace DSCript.Menus
 
         protected void Serialize(Stream stream, IMenuProvider provider)
         {
+            stream.Write((short)Version);
 
+            var nScreens = Screens.Count;
+
+            if (Version > MenuVersion.Driver3_PC)
+            {
+                var nEffects = Effects.Count;
+
+                stream.WriteByte(nScreens);
+                stream.WriteByte(DefaultScreen);
+
+                stream.Write((short)(Spooled ? 1 : 0));
+                stream.Write((short)nEffects);
+
+                if (Version == MenuVersion.Driver4_PC)
+                {
+                    stream.Write(Width);
+                    stream.Write(Height);
+
+                    MenuData.WritePadding(stream, 4);
+                }
+
+                //
+                // Effects
+                //
+                foreach (var effect in Effects)
+                    provider.Factory.Serialize(stream, effect);
+            }
+            else
+            {
+                stream.Write((short)0);
+                stream.Write(nScreens);
+            }
+
+            //
+            // Data sizes
+            //
+            provider.Factory.Serialize(stream, Sizes);
+
+            //
+            // Screens
+            //
+            foreach (var screen in Screens)
+                provider.Factory.Serialize(stream, screen);
         }
 
         protected void Deserialize(XElement node, IMenuProvider provider)
         {
             Version = MenuData.GetAttribute(node, "Version", int.Parse);
-            UID = MenuData.GetAttribute(node, "UID", int.Parse);
+
+            if (provider.Version > MenuVersion.Driver3_PC)
+            {
+                Spooled = MenuData.GetAttribute(node, "Spooled", bool.Parse);
+                DefaultScreen = MenuData.GetAttribute(node, "DefaultScreen", int.Parse);
+            }
 
             switch (Version)
             {
-            case 310:
+            case MenuVersion.Driver3_Console:
                 Sizes = new MenuDataSizes() {
-                    SizeOf_Unknown1     = 0x0C,
+                    SizeOf_Project      = 0x0C,
                     SizeOf_Screen       = 0x58,
                     SizeOf_Element      = 0x20,
                     SizeOf_Textbox      = 0x54,
@@ -2137,9 +2743,9 @@ namespace DSCript.Menus
                     SizeOf_Movie        = 0x20,
                 };
                 break;
-            case 401:
+            case MenuVersion.Driver3_PC:
                 Sizes = new MenuDataSizes() {
-                    SizeOf_Unknown1     = 0x0C,
+                    SizeOf_Project      = 0x0C,
                     SizeOf_Screen       = 0x54,
                     SizeOf_Element      = 0x20,
                     SizeOf_Textbox      = 0x54,
@@ -2148,38 +2754,41 @@ namespace DSCript.Menus
                     SizeOf_Movie        = 0x20,
                 };
                 break;
-            case 5160:
-            case 6000:
+            case MenuVersion.Driver4_Console:
+            case MenuVersion.Driver4_Wii:
                 Sizes = new MenuDataSizes()
                 {
-                    SizeOf_Unknown1     = 0x08,
+                    SizeOf_Project      = 0x08,
                     SizeOf_Screen       = 0x5C,
                     SizeOf_Element      = 0x2C,
                     SizeOf_Textbox      = 0x54,
                     SizeOf_Icon         = 0x02,
                     SizeOf_Button       = 0x198,
                     SizeOf_Movie        = 0x2C,
-                    SizeOf_AdvTextbox   = 0x26,
-                    SizeOf_Checkbox     = 0x28,
-                    SizeOf_Progress     = 0x34,
-                    SizeOf_Listbox      = 0x68,
+                    SizeOf_Progress     = 0x26,
+                    SizeOf_ListBox      = 0x28,
+                    SizeOf_CheckBox     = 0x34,
+                    SizeOf_AdvTextbox   = 0x68,
                 };
                 break;
-            case 7001:
+            case MenuVersion.Driver4_PC:
                 Sizes = new MenuDataSizes()
                 {
-                    SizeOf_Unknown1     = 0x10,
+                    SizeOf_Project      = 0x10,
                     SizeOf_Screen       = 0x5C,
                     SizeOf_Element      = 0x2C,
                     SizeOf_Textbox      = 0x54,
                     SizeOf_Icon         = 0x02,
                     SizeOf_Button       = 0x1E8,
                     SizeOf_Movie        = 0x2C,
-                    SizeOf_AdvTextbox   = 0x26,
-                    SizeOf_Checkbox     = 0x28,
-                    SizeOf_Progress     = 0x34,
-                    SizeOf_Listbox      = 0x68,
+                    SizeOf_Progress     = 0x26,
+                    SizeOf_ListBox      = 0x28,
+                    SizeOf_CheckBox     = 0x34,
+                    SizeOf_AdvTextbox   = 0x68,
                 };
+
+                Width = MenuData.GetAttribute(node, "Width", short.Parse, (short)1280);
+                Height = MenuData.GetAttribute(node, "Height", short.Parse, (short)720);
                 break;
             default:
                 throw new InvalidOperationException($"Unknown menu gui version {Version}");
@@ -2189,13 +2798,13 @@ namespace DSCript.Menus
             if (provider == null)
                 provider = this;
 
-            if (provider.Version > 401)
+            if (provider.Version > MenuVersion.Driver3_PC)
             {
                 var effects = new List<MenuEffect>();
 
                 foreach (var elem in node.Elements("Effect"))
                 {
-                    var fx = MenuData.Parse<MenuEffect>(node, provider);
+                    var fx = MenuData.Parse<MenuEffect>(elem, provider);
 
                     effects.Add(fx);
                 }
@@ -2207,7 +2816,7 @@ namespace DSCript.Menus
 
             foreach (var elem in node.Elements("Screen"))
             {
-                var screen = MenuData.Parse<MenuScreen>(node, provider);
+                var screen = MenuData.Parse<MenuScreen>(elem, provider);
 
                 screens.Add(screen);
             }
@@ -2218,10 +2827,18 @@ namespace DSCript.Menus
         protected void Serialize(XElement node, IMenuProvider provider)
         {
             node.SetAttributeValue("Version", Version);
-            node.SetAttributeValue("UID", UID);
 
-            if (Version > 401)
+            if (Version > MenuVersion.Driver3_PC)
             {
+                node.SetAttributeValue("Spooled", Spooled);
+                node.SetAttributeValue("DefaultScreen", DefaultScreen);
+
+                if (Version == MenuVersion.Driver4_PC)
+                {
+                    node.SetAttributeValue("Width", Width);
+                    node.SetAttributeValue("Height", Height);
+                }
+
                 foreach (var fx in Effects)
                     MenuData.Write(node, fx, this);
             }
@@ -2310,6 +2927,14 @@ namespace DSCript.Menus
             MenuData.Write(node, Data, "MenuGui", Data);
         }
 
+        public void LoadXml(string filename)
+        {
+            var doc = XDocument.Load(filename);
+            var root = doc.Root;
+
+            Deserialize(root, null);
+        }
+
         public void WriteTo(string filename)
         {
             var doc = new XDocument();
@@ -2391,6 +3016,25 @@ namespace DSCript.Menus
                 SpoolableResourceFactory.Load(MenuData);
                 break;
             }
+
+            base.OnSpoolerLoaded(sender, e);
+        }
+
+        protected override void OnFileSaveBegin()
+        {
+            MenuData.CommitChanges();
+
+            base.OnFileSaveBegin();
+        }
+
+        protected override void OnFileLoadEnd()
+        {
+            var package = MaterialData;
+
+            if (MaterialData != null)
+                package.DisplayName = $"{package.UID:X8} : {package.Handle:X4}";
+
+            base.OnFileLoadEnd();
         }
 
         public override void Dispose()

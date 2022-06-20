@@ -111,6 +111,34 @@ namespace DSCript
         public float M43;
         public float M44;
 
+        // thanks to https://stackoverflow.com/a/29484542/3676210 for the help!
+        public Matrix44 GetTranspose()
+        {
+            // row/column to column/row
+            return new Matrix44()
+            {
+                M11 = M11,
+                M12 = M21,
+                M13 = M31,
+                M14 = M41,
+
+                M21 = M12,
+                M22 = M22,
+                M23 = M32,
+                M24 = M42,
+
+                M31 = M13,
+                M32 = M23,
+                M33 = M33,
+                M34 = M43,
+
+                M41 = M14,
+                M42 = M24,
+                M43 = M34,
+                M44 = M44,
+            };
+        }
+
         public static readonly Matrix44 Identity = new Matrix44(
             1.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,

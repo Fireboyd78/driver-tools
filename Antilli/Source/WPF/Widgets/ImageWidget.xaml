@@ -9,7 +9,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition MinHeight="256" Height="4*"/>
-            <RowDefinition MinHeight="72" Height="1*"/>
+            <RowDefinition MinHeight="150" Height="1*"/>
         </Grid.RowDefinitions>
         <Border BorderThickness="1">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="5">

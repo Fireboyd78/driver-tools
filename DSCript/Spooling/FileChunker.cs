@@ -258,6 +258,8 @@ namespace DSCript.Spooling
             }
 
             Content.Dispose();
+
+            IsLoaded = false;
         }
 
         /// <summary>
@@ -309,6 +311,122 @@ namespace DSCript.Spooling
             }
 
             return buffer;
+        }
+
+        public static bool ReadChunkHeader(Stream stream, out ChunkHeader header)
+        {
+            var magic = stream.ReadInt32();
+
+            if (magic != ChunkHeader.Magic)
+            {
+                header = new ChunkHeader();
+                return false;
+            }
+
+            header = stream.Read<ChunkHeader>();
+            return true;
+        }
+
+        private IEnumerable<Spooler> ReadChunkEntries(Stream stream, int offset, int count)
+        {
+            var entries = new List<ChunkEntry>(count);
+
+            DSC.Update($"Processing {count} chunks...");
+
+            for (int i = 0; i < count; i++)
+            {
+                var entry = stream.Read<ChunkEntry>();
+
+                entries.Add(entry);
+            }
+
+            for (int idx = 1; idx <= count; idx++)
+            {
+                DSC.Update($"Loading chunk {idx} / {count}", (idx / (double)count) * 100.0);
+
+                var data = entries[idx - 1];
+                var dataOffset = (offset + data.Offset);
+
+                if (Enum.IsDefined(typeof(ChunkType), data.Context))
+                    DSC.Update($" - {(ChunkType)data.Context}");
+
+                string description = null;
+
+                // get description if present
+                if (data.StrLen > 0)
+                {
+                    stream.Position = (dataOffset + data.Size);
+                    description = stream.ReadString(data.StrLen);
+
+                    DSC.Update($" - '{description}'");
+                }
+
+                // read chunk data
+                stream.Position = dataOffset;
+
+                Spooler spooler = null;
+
+                if (stream.PeekInt32() == ChunkHeader.Magic)
+                {
+                    // process chunk
+                    spooler = ReadChunk_NEW(stream, data);
+                }
+                else
+                {
+                    // process data
+                    spooler = new SpoolableBuffer(ref data)
+                    {
+                        FileOffset = (offset + data.Offset),
+                        FileChunker = this,
+                    };
+                }
+
+                // ignore changes until attached to our parent
+                spooler.IsDirty = true;
+                spooler.Description = description;
+
+                yield return spooler;
+            }
+        }
+
+        public SpoolablePackage ReadChunk_NEW(Stream stream, ChunkEntry? data)
+        {
+            var offset = (int)stream.Position;
+            ChunkHeader header;
+
+            if (!ReadChunkHeader(stream, out header))
+                throw new Exception("Invalid chunk data -- bad magic!");
+
+            // does chunk contain LZW-compressed data?
+            if ((header.Version & 0x80000000) != 0)
+            {
+                IsCompressed = true;
+                header.Version &= 0x7FFFFFFF;
+            }
+
+            if (header.Version != Chunk.Version)
+                throw new Exception("Unsupported version - cannot load chunk file!");
+
+            var count = header.Count;
+
+            var entries = ReadChunkEntries(stream, offset, count);
+            var chunk = new SpoolablePackage(entries);
+
+            // set the size explicitly
+            chunk.SetSizeInternal(header.Size);
+
+            if (data.HasValue)
+            {
+                var info = data.Value;
+
+                chunk.SetCommon(ref info);
+            }
+
+            // fire off events
+            foreach (var spooler in chunk.Children)
+                OnSpoolerLoaded(spooler, EventArgs.Empty);
+
+            return chunk;
         }
 
         private void ReadChunk(SpoolablePackage parent)
@@ -500,7 +618,7 @@ namespace DSCript.Spooling
             if (CanLoad)
             {
                 if (!File.Exists(filename))
-                    throw new FileNotFoundException("The specified chunk file could not be found.", "filename");
+                    throw new FileNotFoundException("The specified chunk file could not be found.", filename);
 
                 // check for existing content
                 if (_stream != null || Content.Children.Count > 0)
@@ -515,11 +633,24 @@ namespace DSCript.Spooling
 
                 _stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
 
+                ChunkHeader header;
+
+                if (!ReadChunkHeader(_stream, out header))
+                {
+                    // not a chunk file; terminate
+                    _stream.Dispose();
+                    _stream = null;
+
+                    return false;
+                }
+
+                _stream.Position = 0;
+
                 OnFileLoadBegin();
 
                 DSC.Update($"Loading chunk file: '{filename}'");
 
-                ReadChunk(Content);
+                Content = ReadChunk_NEW(_stream, null);
                 IsLoaded = true;
 
                 DSC.Update($"Finished loading chunk file.");

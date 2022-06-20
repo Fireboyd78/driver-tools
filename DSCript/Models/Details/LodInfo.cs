@@ -23,13 +23,16 @@ namespace DSCript.Models
                 stream.Write(0);
 
             stream.Write(InstancesCount);
-            
-            stream.Write((int)MagicNumber.FIREBIRD); // ;)
+
+            if (InstancesCount > 0)
+                stream.Write((int)MagicNumber.FIREBIRD); // ;)
+            else
+                stream.Write(0);
             
             stream.Write(Flags);
 
             stream.Write(Mask);
-            stream.Write(0);
+            stream.Write(ExtraData);
 
             if (provider.Version == 6)
                 stream.Write(0);

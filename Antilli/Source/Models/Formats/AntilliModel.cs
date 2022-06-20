@@ -24,35 +24,9 @@ namespace Antilli
     
     public class AntilliModel
     {
-        static readonly string[] sLodNames = {
-            "high",
-            "med",
-            "low",
-            "vlow",
-            "shadow",
-        };
+        
 
-        static readonly int[] sLodSlots = {
-            0,
-            1,
-            2,
-            4,
-            5,
-        };
-
-        static int GetLodSlotIndex(int type)
-        {
-            switch (type)
-            {
-            case 0x1E:  return 0;
-            case 0x1C:  return 1;
-            case 0x18:  return 2;
-            case 1:     return 3;
-            case 0:     return 4;
-            }
-
-            return -1;
-        }
+        
         
         public class Model
         {
@@ -116,10 +90,10 @@ namespace Antilli
                     var substance = new Substance() {
                         Bin = s.Bin,
                         Flags = s.Flags,
-                        K1 = (s.Mode & 0xFF),
-                        K2 = (s.Mode >> 8),
-                        K3 = (s.Type & 0xFF),
-                        ExtraFlags = (s.Type >> 8),
+                        K1 = s.TS1,
+                        K2 = s.TS2,
+                        K3 = s.TS3,
+                        ExtraFlags = s.TextureFlags,
                     };
 
                     substances.Add(substance);
@@ -209,7 +183,7 @@ namespace Antilli
                         continue;
 
                     var lod = new LodInstance() {
-                        Type = GetLodSlotIndex(p.Mask)
+                        Type = Lod.GuessLodTypeByMask(p.Mask)
                     };
 
                     lods.Add(lod);

@@ -27,6 +27,36 @@
     <IncludeDSCLibrary>false</IncludeDSCLibrary>
     <UsesFreeImage>false</UsesFreeImage>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;LOG</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>bin\libDSC.xml</DocumentationFile>
+    <FileAlignment>4096</FileAlignment>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>6</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>bin\libDSC.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <FileAlignment>4096</FileAlignment>
+    <NoWarn>0164,1573,1591</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <LangVersion>6</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>
     <Reference Include="System" />
@@ -61,6 +91,7 @@
     <Compile Include="Extensions\System\TypeExtensions.cs" />
     <Compile Include="Games\Driv3r.cs" />
     <Compile Include="Games\DriverPL.cs" />
+    <Compile Include="IO\CopyCatFactory.cs" />
     <Compile Include="IO\Detail\Extensions\DetailProviderExtensions.cs" />
     <Compile Include="IO\Detail\IClassDetail.cs" />
     <Compile Include="IO\Detail\ICopyDetail.cs" />
@@ -68,6 +99,7 @@
     <Compile Include="IO\Detail\IDetailProvider.cs" />
     <Compile Include="IO\Detail\Types\PlatformType.cs" />
     <Compile Include="IO\Formats\LocaleReader.cs" />
+    <Compile Include="IO\Detail\ICopyClass.cs" />
     <Compile Include="Menus\Formats\MECFile.cs" />
     <Compile Include="IO\TempFile.cs" />
     <Compile Include="Math\Matrix.cs" />
@@ -156,6 +188,7 @@
     <Compile Include="Spooling\Spooler.cs" />
     <Compile Include="Spooling\SpoolerCollection.cs" />
     <Compile Include="Spooling\Templates.cs" />
+    <Compile Include="Spooling\Types\SpooledVehicleType.cs" />
     <Compile Include="Utilities\DDSUtils.cs" />
     <Compile Include="Utilities\StringHelper.cs" />
     <Compile Include="Vehicles\Formats\VehiclesFile.cs" />
@@ -165,4 +198,8 @@
     <Folder Include="Menus\Details\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
 </Project>

@@ -10,7 +10,7 @@ namespace DSCript.Models
             public int Count;
             public int Offset;
 
-            public float Zestiness;
+            public float BoundingRadius;
 
             public int Flags;
 
@@ -21,7 +21,7 @@ namespace DSCript.Models
                 Count = stream.ReadInt32();
                 Offset = stream.ReadInt32() + ptr;
 
-                Zestiness = stream.ReadSingle();
+                BoundingRadius = stream.ReadSingle();
 
                 Flags = stream.ReadInt32();
             }
@@ -33,14 +33,13 @@ namespace DSCript.Models
                 stream.Write(Count);
                 stream.Write(Offset - ptr);
 
-                stream.Write(Zestiness);
+                stream.Write(BoundingRadius);
 
                 stream.Write(Flags);
             }
         }
 
-        // I actually have no idea what this is :D
-        public float Zestiness { get; set; }
+        public float BoundingRadius { get; set; }
 
         public int Flags { get; set; }
 

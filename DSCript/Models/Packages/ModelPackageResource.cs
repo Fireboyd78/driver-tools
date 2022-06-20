@@ -18,9 +18,14 @@ namespace DSCript.Models
     {
         int UID { get; }
 
+        bool HasMaterials { get; }
+
         List<MaterialDataPC> Materials { get; }
         List<SubstanceDataPC> Substances { get; }
+        List<PaletteData> Palettes { get; }
         List<TextureDataPC> Textures { get; }
+
+        int FindMaterial(MaterialHandle material, out IMaterialData result);
     }
 
     public abstract class ModelPackageResource : SpoolableResource<SpoolableBuffer>, IDetailProvider, IMaterialPackage
@@ -55,6 +60,8 @@ namespace DSCript.Models
         
         public int Version { get; set; }
         public int UID { get; set; }
+
+        public int Handle { get; set; }
 
         public int Flags { get; set; }
 
@@ -140,8 +147,11 @@ namespace DSCript.Models
 
                 foreach (var vBuffer in VertexBuffers)
                 {
-                    vBuffer.Vertices.Clear();
-                    vBuffer.Vertices = null;
+                    if (vBuffer.Vertices != null)
+                    {
+                        vBuffer.Vertices.Clear();
+                        vBuffer.Vertices = null;
+                    }
                 }
 
                 IndexBuffer.Indices = null;

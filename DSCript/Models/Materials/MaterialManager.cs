@@ -22,7 +22,7 @@ namespace DSCript.Models
         //
         // -128: undefined result
         //
-        public static int Find(ModelPackage package, MaterialHandle material, out IMaterialData result)
+        public static int Find(IMaterialPackage package, MaterialHandle material, out IMaterialData result)
         {
             result = null;
 
@@ -101,7 +101,7 @@ namespace DSCript.Models
             return Find(null, material, out result);
         }
 
-        public static int Find<TMaterialData>(ModelPackage package, MaterialHandle material, out TMaterialData result)
+        public static int Find<TMaterialData>(IMaterialPackage package, MaterialHandle material, out TMaterialData result)
             where TMaterialData : class, IMaterialData
         {
             IMaterialData mtl = null;

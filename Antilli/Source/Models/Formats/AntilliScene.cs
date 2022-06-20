@@ -11,6 +11,9 @@ using System.Xml.Linq;
 using DSCript;
 using DSCript.Models;
 using DSCript.Parser;
+using DSCript.Spooling;
+
+using Game = DSCript.Models;
 
 namespace Antilli
 {
@@ -87,7 +90,7 @@ namespace Antilli
 
         public class Lod : IDetail
         {
-            public int Slot;
+            public int Type;
 
             public int Mask;
             public int Flags;
@@ -96,7 +99,7 @@ namespace Antilli
 
             void IDetail.Deserialize(Stream stream, IDetailProvider provider)
             {
-                Slot = stream.ReadByte();
+                Type = stream.ReadByte();
 
                 Mask = stream.ReadByte();
                 Flags = stream.ReadByte();
@@ -117,7 +120,7 @@ namespace Antilli
             {
                 var count = Instances.Count;
 
-                stream.WriteByte(Slot);
+                stream.WriteByte(Type);
 
                 stream.WriteByte(Mask);
                 stream.WriteByte(Flags);
@@ -274,22 +277,23 @@ namespace Antilli
             public RenderBinType RenderBin;
             public int RenderFlags;
 
-            // TBD
-            public int ShaderType;
-            public int ShaderFlags;
+            public int TS1, TS2, TS3;
+            public int TextureFlags;
 
             public List<Texture> Textures { get; set; }
             
             void IDetail.Deserialize(Stream stream, IDetailProvider provider)
             {
-                var info1 = stream.ReadInt32();
-                var info2 = stream.ReadInt32();
+                var info = stream.ReadInt32();
                 
-                RenderBin = (RenderBinType)(info1 & 0xFF);
-                RenderFlags = ((info1 >> 8) & 0xFFFFFF);
-                
-                ShaderType = (info2 & 0xFF);
-                ShaderFlags = ((info2 >> 8) & 0xFFFFFF);
+                RenderBin = (RenderBinType)(info & 0xFF);
+                RenderFlags = ((info >> 8) & 0xFFFFFF);
+
+                TS1 = stream.ReadByte();
+                TS2 = stream.ReadByte();
+                TS3 = stream.ReadByte();
+
+                TextureFlags = stream.ReadByte();
 
                 var count = stream.ReadInt32();
 
@@ -303,13 +307,15 @@ namespace Antilli
 
             void IDetail.Serialize(Stream stream, IDetailProvider provider)
             {
-                var info1 = ((int)RenderBin & 0xFF) | ((RenderFlags & 0xFFFFFF) << 8);
-                var info2 = (ShaderType & 0xFF) | ((ShaderFlags & 0xFFFFFF) << 8);
-
+                var info = ((int)RenderBin & 0xFF) | ((RenderFlags & 0xFFFFFF) << 8);
                 var count = Textures.Count;
 
-                stream.Write(info1);
-                stream.Write(info2);
+                stream.Write(info);
+
+                stream.WriteByte(TS1);
+                stream.WriteByte(TS2);
+                stream.WriteByte(TS3);
+                stream.WriteByte(TextureFlags);
 
                 stream.Write(count);
 
@@ -401,6 +407,20 @@ namespace Antilli
 
             throw new InvalidDataException($"Vertex type {vertexType} not implemented!");
         }
+
+        protected short GetVertexType(ModelType modelType)
+        {
+            switch (modelType)
+            {
+            case ModelType.World:       return 0;
+            case ModelType.Static:      return 1;
+            case ModelType.Vehicle:     return 5;
+            case ModelType.Character:   return 6;
+            case ModelType.HyperLow:    return 7;
+            }
+
+            throw new InvalidDataException($"Model type {modelType} not implemented!");
+        }
         
         public void Serialize(Stream stream)
         {
@@ -485,15 +505,17 @@ namespace Antilli
             var modelsCount = stream.ReadInt32();
             var modelsOffset = stream.ReadInt32();
 
-            var vertexDeclOffset = stream.ReadInt32();
+            var vertexBufferOffset = stream.ReadInt32();
 
             var indicesCount = stream.ReadInt32();
             var indicesLength = stream.ReadInt32();
             var indicesOffset = stream.ReadInt32();
-            
+
             //
             // Models
             //
+
+            Models = new List<Model>(modelsCount);
 
             stream.Position = modelsOffset;
 
@@ -503,11 +525,171 @@ namespace Antilli
 
                 Models.Add(model);
             }
+
+            //
+            // Index Buffer
+            //
+
+            stream.Position = indicesOffset;
+
+            var indexBuffer = stream.ReadBytes(indicesLength);
+
+            IndexBuffer = new IndexBuffer(indexBuffer, indicesCount);
+
+            //
+            // Vertex buffer
+            //
+
+            stream.Position = vertexBufferOffset;
+
+            // reads in declaration + vertex data
+            VertexBuffer = VertexBuffer.CreateFromStream(stream);
+        }
+
+        public ModelPackage ToModelPackage(PlatformType platform, int version)
+        {
+            var package = SpoolableResourceFactory.Create<ModelPackage>();
+
+            package.UID = UID;
+            package.Platform = platform;
+            package.Version = version;
+
+            var gModels = new List<Game.Model>();
+            var gLodInstances = new List<Game.LodInstance>();
+            var gSubModels = new List<Game.SubModel>();
+
+            var gMaterials = new List<Game.MaterialDataPC>();
+            var gSubstances = new List<Game.SubstanceDataPC>();
+            var gTextures = new List<Game.TextureDataPC>();
+
+            var lookup = new Dictionary<int, int>();
+
+            VertexBuffer vertexBuffer = null;
+
+            foreach (var _model in Models)
+            {
+                var model = new Game.Model()
+                {
+                    UID = _model.UID,
+                    Scale = _model.Scale,
+                    BoundingBox = _model.BoundingBox,
+
+                    VertexType = GetVertexType(_model.Type),
+                };
+
+                if (vertexBuffer == null)
+                    vertexBuffer = VertexBuffer.Create(version, model.VertexType);
+
+                model.VertexBuffer = vertexBuffer; // set the vertex buffer!
+
+                gModels.Add(model);
+
+                foreach (var _lod in _model.Lods)
+                {
+                    var lodType = _lod.Type;
+
+                    var lod = new Game.Lod(lodType)
+                    {
+                        Mask = _lod.Mask,
+                        Flags = _lod.Flags,
+                    };
+
+                    model.Lods[lodType] = lod;
+
+                    foreach (var _lodInst in _lod.Instances)
+                    {
+                        var lodInst = new Game.LodInstance()
+                        {
+                            Parent = lod,
+
+                            Transform = _lodInst.Transform,
+                            UseTransform = _lodInst.UseTransform,
+
+                            Handle = _lodInst.Handle,
+                        };
+
+                        lod.Instances.Add(lodInst);
+                        gLodInstances.Add(lodInst);
+
+                        foreach (var _subModel in _lodInst.SubModels)
+                        {
+                            var subModel = new Game.SubModel()
+                            {
+                                ModelPackage = package,
+                                
+                                Model = model,
+                                LodInstance = lodInst,
+
+                                PrimitiveType = _subModel.Type,
+
+                                VertexBaseOffset = _subModel.VertexBaseOffset,
+                                VertexOffset = _subModel.VertexOffset,
+                                VertexCount = _subModel.VertexCount,
+
+                                IndexOffset = _subModel.IndexOffset,
+                                IndexCount = _subModel.IndexCount,
+
+                                Material = _subModel.Material,
+                            };
+
+                            lodInst.SubModels.Add(subModel);
+                            gSubModels.Add(subModel);
+                        }
+                    }
+                }
+            }
+
+            // copy all vertices over to the new buffer
+            VertexBuffer.CopyTo(vertexBuffer);
+
+            package.VertexBuffers = new List<VertexBuffer>() {
+                    // only one vertex buffer
+                    vertexBuffer,
+                };
+
+            package.IndexBuffer = IndexBuffer;
+
+            package.Models = gModels;
+            package.LodInstances = gLodInstances;
+            package.SubModels = gSubModels;
+
+            package.Materials = new List<Game.MaterialDataPC>();
+            package.Substances = new List<Game.SubstanceDataPC>();
+            package.Textures = new List<Game.TextureDataPC>();
+
+            //
+            // TODO: Materials
+            //
+
+            var resource = (ISpoolableResource)package;
+
+            resource.Spooler = new SpoolableBuffer()
+            {
+                Context = ModelPackageResource.GetChunkId(platform, version),
+                Version = version,
+                Alignment = SpoolerAlignment.Align4096,
+                Description = "Antilli model package",
+            };
+
+            return package;
         }
 
         public AntilliScene()
         {
             Version = 3;
+        }
+
+        public AntilliScene(string filename)
+        {
+            using (var f = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                // deserialize models
+                Deserialize(f);
+
+                //
+                // TODO: Materials
+                //
+            }
         }
 
         public AntilliScene(ModelPackageResource modelPackage)
@@ -536,7 +718,7 @@ namespace Antilli
                 foreach (var _lod in _model.Lods)
                 {
                     var lod = new Lod() {
-                        Slot = _lod.ID,
+                        Type = _lod.Type,
 
                         Mask = _lod.Mask,
                         Flags = _lod.Flags,

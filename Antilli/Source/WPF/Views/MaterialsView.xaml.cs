@@ -235,44 +235,58 @@ namespace Antilli
                 case 0: // Basic
                     substance.Bin = RenderBinType.Building;
                     substance.Flags = 4;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 case 1: // Vehicle Body
                     substance.Bin = RenderBinType.Car;
                     substance.Flags = 0x14;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 case 2: // Vehicle Body w/ Color Mask
                     substance.Bin = RenderBinType.Car;
                     substance.Flags = 0x14;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 case 3: // Vehicle Body w/ Damage
                     substance.Bin = RenderBinType.Car;
                     substance.Flags = 0x14;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 case 4: // Vehicle Body w/ Damage + Color Mask
                     substance.Bin = RenderBinType.Car;
                     substance.Flags = 0x14;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 case 5: // Vehicle Lights
                     substance.Bin = RenderBinType.FullBrightOverlay;
                     substance.Flags = 0x4;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 case 6: // Vehicle Wheel
                     substance.Bin = RenderBinType.Car;
                     substance.Flags = 4;
-                    substance.Mode = 0;
-                    substance.Type = 0;
+                    substance.TS1 = 0;
+                    substance.TS2 = 0;
+                    substance.TS3 = 0;
+                    substance.TextureFlags = 0;
                     break;
                 }
                 
@@ -380,8 +394,10 @@ namespace Antilli
                 substance.Textures.Add(texture);
 
                 substance.Flags = 4;
-                substance.Mode = 0;
-                substance.Type = 0;
+                substance.TS1 = 0;
+                substance.TS2 = 0;
+                substance.TS3 = 0;
+                substance.TextureFlags = 0;
 
                 material.Substances.Add(substance);
             }
@@ -470,6 +486,45 @@ namespace Antilli
             }
         }
 
+        private void OnShowModelUsage(object sender, RoutedEventArgs e)
+        {
+            var item = ((sender as FrameworkElement).DataContext) as MaterialTreeItem;
+
+            var package = AT.CurrentState.SelectedModelPackage;
+
+            var targetMaterial = item.Material as MaterialDataPC;
+            var targetHandle = package.Materials.IndexOf(targetMaterial);
+
+            var usedModels = new List<Model>();
+
+            foreach (var submodel in package.SubModels)
+            {
+                var material = submodel.Material;
+
+                if (material.UID != package.UID)
+                    continue;
+
+                if (material.Handle == targetHandle)
+                    usedModels.Add(submodel.Model);
+            }
+
+            if (usedModels.Count > 0)
+            {
+                var message = new List<String>();
+
+                message.Add($"Used by {usedModels.Count} model(s) in this package:");
+
+                foreach (var model in usedModels)
+                    message.Add($"\t{model.UID}");
+
+                MessageBox.Show(String.Join("\r\n", message), "Material Editor", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("This material is not used by any models in this package.", "Material Editor", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
         public override void HandleKeyDown(object sender, KeyEventArgs e)
         {
             switch (e.Key)
@@ -479,7 +534,6 @@ namespace Antilli
 
                 var matPkg = xmlDoc.CreateElement("MaterialPackage");
                 var outPath = Path.Combine(Settings.ExportDirectory, "MaterialPackage.xml");
-                matPkg.SetAttribute("Version", "6");
 
                 AT.CurrentState.SelectedModelPackage.SaveMaterials(matPkg);
 
@@ -489,6 +543,8 @@ namespace Antilli
                 Debug.WriteLine($"Saved material package to '{outPath}'.");
                 break;
             }
+
+            MaterialViewWidget.OnKeyPressed(sender, e);
 
             base.HandleKeyDown(sender, e);
         }
@@ -543,8 +599,7 @@ namespace Antilli
             AT.CurrentState.MaterialSelectQueried += (o, e) => {
                 var selected = AT.CurrentState.OnQuerySelection<TreeView, IMaterialData>(TrySelectMaterial, GlobalMaterialsList, MaterialsList, o, 1);
 
-                if (!selected)
-                    MessageBox.Show("No material found!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                AT.CurrentState.MaterialSelectQueryResult = (!selected) ? o : null;
             };
 
             ExpandAllCommand = new RelayCommand(delegate (object o)

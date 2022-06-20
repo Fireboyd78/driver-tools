@@ -16,6 +16,13 @@ namespace DSCript.Models
             return (hash == other);
         }
 
+        public bool Equals(uint other)
+        {
+            var hash = (uint)GetHashCode();
+
+            return (hash == other);
+        }
+
         public bool Equals(MaterialHandle other)
         {
             return ((Handle == other.Handle) && (UID == other.UID));
@@ -49,6 +56,8 @@ namespace DSCript.Models
                 return Equals((MaterialHandle)obj);
             if (obj is int)
                 return Equals((int)obj);
+            if (obj is uint)
+                return Equals((uint)obj);
 
             return base.Equals(obj);
         }
@@ -69,6 +78,16 @@ namespace DSCript.Models
         }
 
         public static bool operator !=(MaterialHandle lhs, int rhs)
+        {
+            return !lhs.Equals(rhs);
+        }
+
+        public static bool operator ==(MaterialHandle lhs, uint rhs)
+        {
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(MaterialHandle lhs, uint rhs)
         {
             return !lhs.Equals(rhs);
         }

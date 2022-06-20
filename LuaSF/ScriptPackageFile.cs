@@ -19,8 +19,10 @@ namespace LuaSF
 
         public int Version { get; set; } = 1;
         
-        // 2 = PC, 6 = 360 (?)
-        public int Reserved { get; set; } = 2;
+        // 2 = Compiled?
+        // 4 = Big-Endian?
+        // PC = 2, 360 = 6
+        public int Flags { get; set; } = 2;
         
         public List<CompiledScript> Scripts { get; set; }
 
@@ -54,7 +56,7 @@ namespace LuaSF
         
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
-            if ((ChunkType)sender.Context == ChunkType.ScriptPackageRoot)
+            if (sender.Context == ChunkType.ScriptPackageRoot)
             {
                 var scrr = sender as SpoolablePackage;
 
@@ -67,17 +69,22 @@ namespace LuaSF
                 // read header
                 using (var f = scrh.GetMemoryStream())
                 {
-                    Version = f.ReadInt32(BigEndian);
+                    Version = f.ReadInt32();
 
                     if (Version != 1)
-                        throw new InvalidOperationException("Invalid version - Cannot load Script Package Header!");
+                    {
+                        if ((Version >> 24) == 1)
+                            throw new InvalidOperationException("Big-Endian scripts detected! Restart with '--big' argument specified.");
+                        else
+                            throw new InvalidOperationException($"Invalid version ({Version}) - cannot load Script Package Header!");
+                    }
 
-                    nScripts = f.ReadInt32(BigEndian);
+                    nScripts = f.ReadInt32();
 
                     // we don't care about the checksum
                     f.Position += 0x4;
 
-                    Reserved = f.ReadInt32(BigEndian);
+                    Flags = f.ReadInt32();
                 }
 
                 var lookupTable = new List<int>();
@@ -92,13 +99,13 @@ namespace LuaSF
                     {
                         f.Position = (i * 0xC);
 
-                        var offset = f.ReadInt32(BigEndian);
+                        var offset = f.ReadInt32();
                         
                         // add offset to lookup
                         lookupTable.Add(offset);
 
                         Scripts.Add(new CompiledScript() {
-                            Hash = f.ReadInt32(BigEndian)
+                            Hash = f.ReadInt32(),
                         });
                     }
                 }
@@ -134,7 +141,9 @@ namespace LuaSF
                 // verify script data
                 foreach (var script in Scripts)
                 {
-                    using (var fB = new MemoryStream(script.Buffer))
+                    using (var fB = (BigEndian)
+                        ? new BigEndianMemoryStream(script.Buffer)
+                        : new MemoryStream(script.Buffer))
                     {
                         if (BigEndian)
                         {
@@ -154,7 +163,7 @@ namespace LuaSF
                         // we'll use the debug information to get the filename
                         fB.Position = 0xC;
 
-                        var strLen = fB.ReadInt32(BigEndian);
+                        var strLen = fB.ReadInt32();
 
                         // missing debug symbols?
                         if (strLen == 0)
@@ -225,14 +234,14 @@ namespace LuaSF
 
             var scrr = new SpoolablePackage() {
                 Alignment   = SpoolerAlignment.Align2048,
-                Context     = (int)ChunkType.ScriptPackageRoot,
+                Context     = ChunkType.ScriptPackageRoot,
                 Version     = 0,
                 Description = "Script Package Root"
             };
 
             var scrh = new SpoolableBuffer() {
                 Alignment   = SpoolerAlignment.Align2048,
-                Context     = (int)ChunkType.ScriptPackageHeader,
+                Context     = ChunkType.ScriptPackageHeader,
                 Version     = 1,
                 Description = "Script Package Header"
             };
@@ -241,7 +250,7 @@ namespace LuaSF
 
             var scrc = new SpoolableBuffer() {
                 Alignment   = SpoolerAlignment.Align2048,
-                Context     = (int)ChunkType.ScriptPackageLookup,
+                Context     = ChunkType.ScriptPackageLookup,
                 Version     = 0,
                 Description = "Script Package Lookup"
             };
@@ -250,7 +259,7 @@ namespace LuaSF
 
             var scrs = new SpoolableBuffer() {
                 Alignment   = SpoolerAlignment.Align2048,
-                Context     = (int)ChunkType.ScriptPackageCompiledScript,
+                Context     = ChunkType.ScriptPackageCompiledScript,
                 Version     = 0,
                 Description = "Script Package Compiled Script"
             };
@@ -263,7 +272,7 @@ namespace LuaSF
                 f.Write(Version);
                 f.Write(Scripts.Count);
                 f.Write(0x99999999);
-                f.Write(Reserved);
+                f.Write(Flags);
 
                 scrh.SetBuffer(f.ToArray());
             }
@@ -306,6 +315,7 @@ namespace LuaSF
         {
             // set endianness before proceeding
             BigEndian = bigEndian;
+            HACK_BigEndian = bigEndian;
 
             Load(filename);
         }

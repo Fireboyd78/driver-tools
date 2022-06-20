@@ -1,0 +1,92 @@
+﻿<at:EditorControl x:Class="Antilli.TextureViewWidget"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:at="clr-namespace:Antilli"
+             mc:Ignorable="d" DataContext="{Binding RelativeSource={RelativeSource Self}}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <at:EditorControl.Resources>
+        <DataTemplate DataType="{x:Type at:TextureTreeItem}">
+            <TextBlock>
+                <TextBlock.Style>
+                    <Style>
+                        <Setter Property="TextBlock.Text" Value="{Binding Path=Name}"/>
+                        <Setter Property="TextBlock.FontWeight" Value="Normal"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=IsDirty}" Value="True">
+                                <Setter Property="TextBlock.Text" Value="{Binding Path=Name, StringFormat={}{0} *}"/>
+                                <Setter Property="TextBlock.FontWeight" Value="Bold"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </DataTemplate>
+    </at:EditorControl.Resources>
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="25"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="0,2" FlowDirection="LeftToRight">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="60"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="40"/>
+            </Grid.ColumnDefinitions>
+            <Border BorderThickness="1" Grid.ColumnSpan="2"/>
+            <Button Content="Open..." Grid.Column="0" Height="21" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                Command="{Binding Path=OpenModelsFileCommand}"/>
+            <TextBlock Grid.Column="1" Text="{Binding Path=FileName}" ToolTip="{Binding Path=FileName}" TextWrapping="NoWrap" Background="White" Margin="0,1" Padding="4,2"/>
+            <Button Content="X" Grid.Column="2" Height="21" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    Command="{Binding Path=CloseModelsFileCommand}" 
+                    IsEnabled="{Binding Path=IsFileOpened, FallbackValue=False}"/>
+            <Button Content="Save" Grid.Column="3" Height="21" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    Command="{Binding Path=SaveModelsFileCommand}"  
+                    IsEnabled="{Binding Path=IsFileOpened, FallbackValue=False}"/>
+        </Grid>
+        <Grid x:Name="MainGrid" Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.25*" MinWidth="190" MaxWidth="280"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="4.75*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid FlowDirection="LeftToRight">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <GroupBox Header="Textures" Grid.Row="0" Grid.RowSpan="{Binding MatTexRowSpan}">
+                    <ListBox x:Name="TextureList" ItemsSource="{Binding Textures}" SelectionChanged="OnTextureListSelectionChanged"
+                                         VirtualizingStackPanel.IsVirtualizing="True"/>
+                </GroupBox>
+                <GroupBox Header="Global Textures" Grid.Row="1" Margin="0,4,0,0" Visibility="{Binding HasGlobalTextures, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ListBox x:Name="GlobalTextureList" ItemsSource="{Binding GlobalTextures}" SelectionChanged="OnTextureListSelectionChanged"
+                                         VirtualizingStackPanel.IsVirtualizing="True"/>
+                </GroupBox>
+            </Grid>
+
+            <GridSplitter Grid.Column="1"
+                              Background="Transparent"
+                              ResizeDirection="Columns"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              Width="5" />
+
+            <Grid FlowDirection="LeftToRight" Grid.Column="2">
+                <Border BorderThickness="1">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="5">
+                        <Image Source="{Binding CurrentImage}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</at:EditorControl>

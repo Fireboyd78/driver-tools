@@ -12,7 +12,15 @@ namespace DSCript.Models
         public int Reserved;
     }
 
-    public struct PropData : IDetail
+    public struct PropData
+    {
+        // offset - 0x40
+        // bunch of stuff before this; unused???
+        public Vector3 MomentsOfInertia;
+        public float Mass;
+    }
+
+    public struct FragmentData : IDetail
     {
         short Handle;
         short PhysicsId;
@@ -85,19 +93,61 @@ namespace DSCript.Models
         public float V2 { get; set; }
 
         public int Reserved { get; set; }
+
+        public List<PropData> Props { get; set; }
         
         protected override void ReadData(Stream stream, IDetailProvider provider)
         {
-            Flags = stream.ReadInt32();
-            
-            PhysicsData = provider.Deserialize<PhysicsData>(stream);
+            if (provider.Version == 2)
+            {
+
+            }
+            else
+            {
+                
+
+                PhysicsData = provider.Deserialize<PhysicsData>(stream);
+            }
         }
 
         protected override void WriteData(Stream stream, IDetailProvider provider)
         {
-            stream.Write(Flags);
-            
-            provider.Serialize(stream, PhysicsData);
+            if (provider.Version == 2)
+            {
+
+            }
+            else
+            {
+                stream.Write(Flags);
+
+                provider.Serialize(stream, PhysicsData);
+            }
+        }
+
+        protected override void ReadHeader(Stream stream, IDetailProvider provider)
+        {
+            if (provider.Version == 2)
+            {
+                UID = stream.ReadInt32();
+                Header.Count = stream.ReadInt32();
+            }
+            else
+            {
+                base.ReadHeader(stream, provider);
+            }
+        }
+
+        protected override void WriteHeader(Stream stream, IDetailProvider provider)
+        {
+            if (provider.Version == 2)
+            {
+                stream.Write(UID);
+                stream.Write(Props.Count);
+            }
+            else
+            {
+                base.WriteHeader(stream, provider);
+            }
         }
     }
 }

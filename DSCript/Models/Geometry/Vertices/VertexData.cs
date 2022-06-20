@@ -31,7 +31,7 @@ namespace DSCript.Models
             m_decl = null;
             m_buffer = null;
         }
-        
+
         // this is some of the dirtiest code I've ever written...
         public unsafe bool PossiblyEqual(ref VertexData other)
         {
@@ -54,7 +54,7 @@ namespace DSCript.Models
                 return false;
             }
         }
-        
+
         public T GetData<T>(VertexUsageType usageType, short usageIndex)
             where T : struct
         {
@@ -115,7 +115,7 @@ namespace DSCript.Models
 
             if (adjustVertices)
                 vertex.FixDirection();
-            
+
             return vertex;
         }
 
@@ -129,6 +129,19 @@ namespace DSCript.Models
             : this(decl)
         {
             System.Buffer.BlockCopy(buffer, offset, m_buffer, 0, m_buffer.Length);
+        }
+
+        public VertexData(VertexDeclaration decl, byte[] buffer, int offset, int length)
+            : this(decl)
+        {
+            System.Buffer.BlockCopy(buffer, offset, m_buffer, 0, length);
+        }
+
+        public VertexData(Stream stream, VertexDeclaration decl)
+            : this(decl)
+        {
+            // read bytes from stream into the buffer directly
+            stream.Read(m_buffer, 0, decl.SizeOf);
         }
     }
 }

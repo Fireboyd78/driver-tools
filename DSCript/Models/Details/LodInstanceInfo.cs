@@ -4,7 +4,7 @@ namespace DSCript.Models
 {
     public struct LodInstanceInfo : IDetail
     {
-        public struct DebugInfo : IDetail
+        public struct ExtraInfo : IDetail
         {
             public int Reserved;
             public short Handle;
@@ -35,7 +35,7 @@ namespace DSCript.Models
         public short SubModelsCount;
         public short UseTransform;
         
-        public DebugInfo Info;
+        public ExtraInfo Info;
         
         void IDetail.Serialize(Stream stream, IDetailProvider provider)
         {
@@ -71,7 +71,7 @@ namespace DSCript.Models
             if (provider.Version == 6)
                 stream.Position += 4;
 
-            Info = provider.Deserialize<DebugInfo>(stream);
+            Info = provider.Deserialize<ExtraInfo>(stream);
         }
     }
 }

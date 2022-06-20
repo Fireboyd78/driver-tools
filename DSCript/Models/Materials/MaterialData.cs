@@ -54,8 +54,53 @@ namespace DSCript.Models
         }
     }
     
-    public sealed class MaterialDataPC : MaterialDataWrapper<SubstanceDataPC>
+    public sealed class MaterialDataPC : MaterialDataWrapper<SubstanceDataPC>, ICopyCat<MaterialDataPC>
     {
         public MaterialDataPC() : base() { }
+
+        bool ICopyCat<MaterialDataPC>.CanCopy(CopyClassType copyType)                       => true;
+        bool ICopyCat<MaterialDataPC>.CanCopyTo(MaterialDataPC obj, CopyClassType copyType) => true;
+
+        bool ICopyCat<MaterialDataPC>.IsCopyOf(MaterialDataPC obj, CopyClassType copyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        MaterialDataPC ICopyClass<MaterialDataPC>.Copy(CopyClassType copyType)
+        {
+            var material = new MaterialDataPC();
+
+            CopyTo(material, copyType);
+
+            return material;
+        }
+
+        public void CopyTo(MaterialDataPC obj, CopyClassType copyType)
+        {
+            obj.Type = Type;
+            obj.AnimationSpeed = AnimationSpeed;
+
+            var substances = new List<SubstanceDataPC>();
+
+            if (copyType == CopyClassType.DeepCopy)
+            {
+                // copy substances
+                foreach (var _substance in Substances)
+                {
+                    // DEEP COPY: all new instances down the line
+                    var substance = CopyCatFactory.GetCopy(_substance, CopyClassType.DeepCopy);
+
+                    // add to new substances
+                    substances.Add(substance);
+                }
+            }
+            else
+            {
+                // reuse substance references
+                substances.AddRange(Substances);
+            }
+
+            obj.Substances = substances;
+        }
     }
 }

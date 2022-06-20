@@ -12,12 +12,19 @@
             <MenuItem Header="Go to parent" Click="FindSpoolerParent" Visibility="{Binding CanFindSpoolerParent}"/>
             <MenuItem Header="Export" Click="ExportSpooler" IsEnabled="{Binding IsChunkFileOpen}"/>
             <Separator/>
+            <MenuItem Header="Append..." Click="AppendSpooler" IsEnabled="{Binding CanModifySpooler}"/>
+            <MenuItem Header="Insert..." IsEnabled="{Binding CanModifySpooler}">
+                <MenuItem Header="Before" Click="InsertBeforeSpooler"/>
+                <MenuItem Header="After" Click="InsertAfterSpooler"/>
+            </MenuItem>
+            <Separator/>
             <MenuItem Header="Cut" Click="CutSpooler" IsEnabled="{Binding CanModifySpooler}"/>
             <MenuItem Header="Paste" Click="PasteSpooler" IsEnabled="{Binding CanPasteSpooler}"/>
             <MenuItem Header="Remove" Click="RemoveSpooler" IsEnabled="{Binding CanModifySpooler}"/>
             <Separator/>
             <MenuItem Header="Rename..." Click="RenameSpooler" IsEnabled="{Binding CanModifySpooler}"/>
             <MenuItem Header="Replace..." Click="ReplaceBuffer" Visibility="{Binding CanReplaceSpooler}"/>
+            <MenuItem Header="Append..." Click="AppendSpooler" IsEnabled="{Binding CanModifySpooler}"/>
         </CompositeCollection>
         <CompositeCollection x:Key="MenuBase" x:Shared="False">
             <MenuItem Header="Remove" Click="RemoveSpooler"/>
@@ -84,8 +91,7 @@
                 <Separator/>
                 <MenuItem x:Name="fileSave" Header="_Save" IsEnabled="{Binding CanSaveChunkFile}"/>
 
-                <!-- Too early. Come back later. -->
-                <!-- <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsChunkFileOpen}"/> -->
+                <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsChunkFileOpen}"/>
 
                 <Separator/>
                 <MenuItem x:Name="fileClose" Header="_Close" IsEnabled="{Binding IsChunkFileOpen}" ToolTip="Closes the current chunk file."/>

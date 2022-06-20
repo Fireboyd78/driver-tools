@@ -22,7 +22,7 @@ namespace DSCript.Models
         public static readonly MagicNumber VPKBulletMagic = "BULL";
         public static readonly int VPKBulletVersion = 2;
         
-        public class CenterPoint : IDetail
+        public class MovingPart : IDetail
         {
             public Vector4 Position { get; set; }
             public Vector4 Rotation { get; set; }
@@ -50,7 +50,8 @@ namespace DSCript.Models
                 Position = stream.Read<Vector4>();
 
                 // thank god Reflections did this, otherwise we'd be f*$%ed!
-                if (provider.Version == 1)
+                // ...oh wait, they DIDN'T do this for DPL on Xbox...
+                if (provider.Version == 1 || (provider.Version == 0 && provider.Platform == PlatformType.Xbox))
                     Rotation = stream.Read<Vector4>();
             }
 
@@ -63,8 +64,7 @@ namespace DSCript.Models
             }
         }
 
-        // bounding box? collision plane?
-        public class Thing3 : IDetail
+        public class DamagingPart : IDetail
         {
             public Matrix44 Transform { get; set; }
             public Vector4 Unknown { get; set; }
@@ -81,26 +81,48 @@ namespace DSCript.Models
                 stream.Write(Unknown);
             }
         }
+
+        public class InstancePart : IDetail
+        {
+            public Matrix44 Transform { get; set; }
+
+            void IDetail.Deserialize(Stream stream, IDetailProvider provider)
+            {
+                Transform = stream.Read<Matrix44>();
+            }
+
+            void IDetail.Serialize(Stream stream, IDetailProvider provider)
+            {
+                stream.Write(Transform);
+            }
+        }
         
         public ModelPackageResource ModelPackage { get; set; }
 
         public List<VehiclePartData> Parts { get; set; }
 
         public List<MarkerPoint> MarkerPoints { get; set; }
-        public List<CenterPoint> CenterPoints { get; set; }
-        public List<Thing3> T3Entries { get; set; }
-        public List<Matrix44> PivotPoints { get; set; }
+        public List<MovingPart> MovingParts { get; set; }
+        public List<DamagingPart> DamagingParts { get; set; }
+        public List<InstancePart> InstanceParts { get; set; }
 
         public List<PhysicsCollisionModel> CollisionModels { get; set; }
 
         public List<BulletHolder> BulletHolders { get; set; }
 
+        // should ALWAYS be Generic (unless it's for DPL on Xbox!)
         public PlatformType Platform { get; set; }
 
-        public int Version { get; set; }
+        public int Version
+        {
+            get { return Spooler.Version; }
+            set { Spooler.Version = value; }
+        }
 
         public int UID { get; set; }
         public int Flags { get; set; }
+
+        public int ExtraData { get; set; }
 
         public int BulletCount
         {
@@ -132,6 +154,8 @@ namespace DSCript.Models
                 UID = header.UID;
                 Flags = vInfo.Flags;
 
+                ExtraData = vInfo.ExtraData;
+
                 //
                 // Parts
                 //
@@ -145,38 +169,38 @@ namespace DSCript.Models
                 }
 
                 //
-                // Thing2 data
+                // Moving parts
                 //
 
-                CenterPoints = new List<CenterPoint>(vInfo.T2Count);
+                MovingParts = new List<MovingPart>(vInfo.MovingPartsCount);
                 
-                for (int i = 0; i < vInfo.T2Count; i++)
+                for (int i = 0; i < vInfo.MovingPartsCount; i++)
                 {
-                    var point = this.Deserialize<CenterPoint>(stream);
+                    var point = this.Deserialize<MovingPart>(stream);
                     
-                    CenterPoints.Add(point);
+                    MovingParts.Add(point);
                 }
 
                 //
-                // Thing3 data
+                // Damaging parts
                 //
 
-                T3Entries = new List<Thing3>(vInfo.T3Count);
+                DamagingParts = new List<DamagingPart>(vInfo.DamagingPartsCount);
                 
-                for (int i = 0; i < vInfo.T3Count; i++)
+                for (int i = 0; i < vInfo.DamagingPartsCount; i++)
                 {
-                    var t3 = this.Deserialize<Thing3>(stream);
+                    var t3 = this.Deserialize<DamagingPart>(stream);
 
-                    T3Entries.Add(t3);
+                    DamagingParts.Add(t3);
                 }
 
                 //
-                // Thing1 data
+                // Marker points
                 //
 
-                MarkerPoints = new List<MarkerPoint>(vInfo.T1Count);
+                MarkerPoints = new List<MarkerPoint>(vInfo.MarkerPointsCount);
 
-                for (int i = 0; i < vInfo.T1Count; i++)
+                for (int i = 0; i < vInfo.MarkerPointsCount; i++)
                 {
                     var point = this.Deserialize<MarkerPoint>(stream);
 
@@ -184,16 +208,16 @@ namespace DSCript.Models
                 }
                 
                 //
-                // Thing4 data
+                // Instance parts
                 //
 
-                PivotPoints = new List<Matrix44>(vInfo.T4Count);
+                InstanceParts = new List<InstancePart>(vInfo.InstancePartsCount);
                 
-                for (int i = 0; i < vInfo.T4Count; i++)
+                for (int i = 0; i < vInfo.InstancePartsCount; i++)
                 {
-                    var m44 = stream.Read<Matrix44>();
+                    var inst = this.Deserialize<InstancePart>(stream);
 
-                    PivotPoints.Add(m44);
+                    InstanceParts.Add(inst);
                 }
 
                 //
@@ -258,7 +282,146 @@ namespace DSCript.Models
 
         protected override void Save()
         {
-            throw new NotImplementedException();
+            MagicNumber magic = "Antilli!";
+
+            var header = new HierarchyInfo()
+            {
+                Type = 6,
+                UID = UID,
+                Count = Parts.Count,
+            };
+
+            var vInfo = new VehicleHierarchyInfo()
+            {
+                Flags = Flags,
+
+                MarkerPointsCount = (short)MarkerPoints.Count,
+                MovingPartsCount = (short)MovingParts.Count,
+                DamagingPartsCount = (short)DamagingParts.Count,
+                InstancePartsCount = (short)InstanceParts.Count,
+
+                ExtraData = ExtraData,
+            };
+
+            // original version (excluding DPL on Xbox)
+            if (Version == 0 && Platform != PlatformType.Xbox)
+                vInfo.ExtraFlags = MagicNumber.FIREBIRD;
+
+            byte[] buffer = null;
+
+            using (var stream = new MemoryStream())
+            {
+                // skip the header portion for now
+                stream.Position = 0x30;
+
+                //
+                // Parts
+                //
+
+                foreach (var part in Parts)
+                    stream.Write(part);
+
+                //
+                // Moving parts
+                //
+
+                foreach (var point in MovingParts)
+                    this.Serialize(stream, point);
+
+                //
+                // Damaging parts
+                //
+
+                foreach (var t3 in DamagingParts)
+                    this.Serialize(stream, t3);
+
+                //
+                // Marker points
+                //
+
+                foreach (var point in MarkerPoints)
+                    this.Serialize(stream, point);
+
+                //
+                // Instance parts
+                //
+
+                foreach (var inst in InstanceParts)
+                    this.Serialize(stream, inst);
+
+                //
+                // Physics data
+                //
+
+                var pdlOffset = (int)stream.Position;
+                var pdl = new PhysicsData()
+                {
+                    CollisionModels = CollisionModels,
+                };
+
+                this.Serialize(stream, pdl);
+
+                header.PDLSize = (int)stream.Position - pdlOffset;
+
+                //
+                // Bullet data
+                //
+
+                var bulDataOffset = (pdlOffset + header.PDLSize);
+
+                var nHolders = BulletHolders.Count; // => t3Count
+                var nBullets = 0;
+
+                var holders = new int[nHolders];
+
+                // bullet data is aligned to 16-byte boundary after header
+                stream.Position = bulDataOffset + Memory.Align(8 + (nHolders * 4), 16);
+
+                for (int p = 0; p < nHolders; ++p)
+                {
+                    var holder = BulletHolders[p];
+                    var bullets = holder.Bullets;
+
+                    // current bullets number/offset
+                    holders[p] = nBullets;
+
+                    foreach (var bullet in bullets)
+                    {
+                        // pack the bullet data tightly
+                        var bulData = bullet.ToBinary(true);
+
+                        stream.Write(bulData, 0, bulData.Length);
+                        nBullets++;
+                    }
+                }
+
+                // write out bullet data header
+                stream.Position = bulDataOffset;
+
+                stream.Write(nBullets);
+                stream.Write(nHolders);
+
+                foreach (var holder in holders)
+                    stream.Write(holder);
+
+                //
+                // Header
+                //
+
+                stream.Position = 0;
+
+                stream.Write((long)magic);
+                stream.Write((int)MagicNumber.FIREBIRD);
+
+                stream.Write(header);
+
+                this.Serialize(stream, vInfo);
+
+                buffer = stream.ToArray();
+            }
+
+            // done! :D
+            Spooler.SetBuffer(buffer);
         }
         
         public void SaveVPK(string filename)
@@ -344,7 +507,7 @@ namespace DSCript.Models
                         var phy = CollisionModels[part.PhysicsId];
 
                         fs.Write(phy.Children.Count);
-                        fs.Write(phy.Zestiness);
+                        fs.Write(phy.BoundingRadius);
                         fs.Write(phy.Flags);
 
                         if (version == 3)
@@ -355,12 +518,14 @@ namespace DSCript.Models
 
                         foreach (var pdl in phy.Children)
                         {
-                            fs.Write(pdl.Position);
+                            fs.Write(pdl.Bounds);
                             fs.Write(pdl.Transform);
                             
-                            fs.Write(pdl.Material);
+                            fs.Write(pdl.Flags);
 
-                            fs.Write(pdl.Unknown);
+                            fs.Write(pdl.Elasticity);
+                            fs.Write(pdl.Friction);
+                            fs.Write(pdl.Zestiness);
                         }
                     }
 
@@ -369,7 +534,7 @@ namespace DSCript.Models
 
                     if (hasOffset)
                     {
-                        var off = CenterPoints[part.OffsetId];
+                        var off = MovingParts[part.OffsetId];
 
                         fs.Write(off.Position);
                         fs.Write(off.Rotation);
@@ -377,7 +542,7 @@ namespace DSCript.Models
 
                     if (hasTransform)
                     {
-                        var unk5 = T3Entries[part.TransformId];
+                        var unk5 = DamagingParts[part.TransformId];
 
                         fs.Write(unk5.Transform);
                         fs.Write(unk5.Unknown);
@@ -385,7 +550,7 @@ namespace DSCript.Models
 
                     if (hasAxis)
                     {
-                        var axis = PivotPoints[part.AxisId];
+                        var axis = InstanceParts[part.AxisId];
 
                         fs.Write(axis);
                     }

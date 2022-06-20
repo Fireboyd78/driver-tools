@@ -46,7 +46,121 @@ namespace DSCript
             Bike,
             Boat
         }
-        
+
+        enum VehicleType
+        {
+            Camaro,                 // speculation: cut very early in development; Stuntman car?
+            Capri,                  // speculation: cut very early in development; Stuntman car?
+            Taxi,
+            Mustang_Blue,           // speculation: used in early alpha before cars had colors
+            Mustang_White,          // speculation: used in early alpha before cars had colors
+            Mustang_Yellow,         // speculation: used in early alpha before cars had colors
+            Mustang_Grey,           // speculation: used in early alpha before cars had colors; why this became the final vehicle? who knows..
+            Mustang_Red,            // speculation: used in early alpha before cars had colors
+            Dougal,                 // speculation: cut very early in development; what the heck is a Dougal?! something from Stuntman?
+            CopCar_Miami,
+            Jalpa,
+            Vantage,                // speculation: alternative version of AstonMartin?
+            Citroen2CV,             // cut late in development, seen in few screenshots
+            Countach,
+            CopCar_Istanbul,
+            DodgeTruck,
+            Bora,
+            Panda,
+            HierarchyTest,          // speculation: used for testing 18-wheelers?
+            RigTruck,
+            RigTrailer,
+            IstanbulTaxi,
+            Challenger,
+            ChevyVan,
+            MiamiFordPickup,
+            CitroenCX,
+            Starion,                // speculation: cut late in development (it's an unreleased cut car, so we'll never know)
+            BMW507,
+            Datsun240Z,
+            ChevyBelaire,
+            IstanbulFordPickup,
+            Ducati,
+            ChevyBlazer,
+            Ferrari,
+            TransAm,
+            Bentley,
+            Dumpster,
+            Corvette,
+            Torino,
+            Miami_Bus,
+            Lincoln,
+            AuburnSpeedster,
+            Hotrod,
+            Gokart,
+            VRod,
+            Scarab,                 // speculation: Tanner originally had his own unique speedboat; later became the only speed boat
+            Miami_Cruiser_Boat,
+            Miami_Small_Boat,
+            Miami_Speed_Boat,       // speculation: cut early in development - Scarab used instead?
+            MetroMover,
+            BMW_Alpina,
+            Jaguar,
+            RenaultVan,
+            RenaultVanPickup,
+            Forklift,
+            AstonMartin,
+            Citroen_DS,             // cut very early in development, seen in a couple of screenshots (as a cop car!)
+            CopCar_Nice,
+            Nice_Bus,
+            Nice_Van,
+            Nice_Truck,
+            Nice_Taxi,
+            Reanult_5,
+            Porsche,                // speculation: cut very early in development
+            SwatVan,                // speculation: cut due to time constraints, so replaced with the Sobe truck gimmick xD
+            CamperVan,
+            Cobra,
+            Nice_SportsBike,
+            Nice_Moped,
+            Nice_SpeedBoat,
+            Nice_Cruiser_Boat,
+            Nice_Small_Boat,
+            Chevy_Impala,
+            Istanbul_Bus,
+            RenaultAlpine,
+            Wagonaire,
+            MackTruck,
+            Merc,
+            Bugatti,
+            Racer,
+            GT40,
+            Istanbul_StreetBike,
+            Istanbul_Moped,
+            Fishing_Boat,
+            Big_Cruiser_Boat,
+            Istanbul_SpeedBoat,
+            Tram,
+            Train,
+            RigCarrierTrailer,
+            Miami_Cop_Boat,
+            Nice_Cop_Boat,
+            Istanbul_Cop_Boat,
+            CitroenZX,
+            VW_Passat,
+            MercSL500,
+            Carriage,
+
+            // these were never used/defined, so names are placeholders
+            Extra1,
+            Extra2,
+            Extra3,
+            Extra4,
+            Extra5,
+            Extra6,
+            Extra7,
+
+            // end of the list
+            MaxVehicles,
+        };
+
+        static readonly Dictionary<int, string> VehicleNames = new Dictionary<int, string>();
+
         public static readonly string FileFilter;
 
         public static readonly string InvalidPath = "???";
@@ -70,6 +184,16 @@ namespace DSCript
             //FileFilter = String.Join("|", filters);
 
             FileFilter = "Driv3r|*.vvs;*.vvv;*.vgt;*.d3c;*.pcs;*.cpr;*.dam;*.map;*.gfx;*.pmu;*.d3s;*.mec;*.bnk";
+
+            foreach (VehicleType vehicleType in Enum.GetValues(typeof(VehicleType)))
+            {
+                if (vehicleType == VehicleType.MaxVehicles)
+                    break;
+
+                var vehicleId = (int)vehicleType;
+
+                VehicleNames[vehicleId] = vehicleType.ToString();
+            }
         }
 
         public sealed class Files
@@ -409,6 +533,16 @@ namespace DSCript
             City city = GetCityFromMissionId(missionId);
 
             return (city != City.Unknown) ? GetVehicleGlobals((City)city) : null;
+        }
+
+        public static string GetVehicleTypeName(int vehicleId)
+        {
+            var typeName = $"{vehicleId:X2}";
+
+            if (VehicleNames.ContainsKey(vehicleId))
+                typeName = $"{VehicleNames[vehicleId]}";
+
+            return $"VehicleType_{typeName}";
         }
     }
 }

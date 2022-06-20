@@ -12,7 +12,7 @@ namespace DSCript.Models
         public byte TS2;
         public byte TS3;
 
-        public byte TextureFlags;
+        public int TextureFlags;
 
         public int TextureRefsOffset;
         public int TextureRefsCount;
@@ -47,13 +47,19 @@ namespace DSCript.Models
             TS2 = (byte)((sFlg >> 8) & 0xFF);
             TS3 = (byte)((sFlg >> 16) & 0xFF);
 
-            TextureFlags = (byte)((sFlg >> 24) & 0xFF);
+            TextureFlags = ((sFlg >> 24) & 0xFF);
 
             TextureRefsOffset = stream.ReadInt32();
             TextureRefsCount = stream.ReadInt32();
 
             if (provider.Version != 6)
             {
+                if ((TextureFlags & (int)(SubstanceExtraFlags.Damage | SubstanceExtraFlags.ColorMask)) != 0)
+                {
+                    // ughhhh
+                    TextureFlags |= (int)SubstanceExtraFlags.DPL_SwapDamageAndColorMaskBits;
+                }
+
                 PaletteRefsOffset = stream.ReadInt32();
                 PaletteRefsCount = stream.ReadInt32();
                 
@@ -69,7 +75,7 @@ namespace DSCript.Models
         void IDetail.Serialize(Stream stream, IDetailProvider provider)
         {
             var sInf = ((Bin << 0) | ((Flags & 0xFFFFFF) << 8));
-            var sFlg = ((TS1 << 0) | (TS2 << 8) | (TS3 << 16) | (TextureFlags << 24));
+            var sFlg = ((TS1 << 0) | (TS2 << 8) | (TS3 << 16) | ((TextureFlags & 0xFF) << 24));
 
             if (provider.Version == 6)
             {

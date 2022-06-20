@@ -128,6 +128,17 @@
                             </TextBlock.ContextMenu>
                         </TextBlock>
                     </DataTemplate>
+
+                    <DataTemplate DataType="{x:Type at:SubModelVisual3D}">
+                        <TextBlock Text="SubModel">
+                            <TextBlock.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="View Material" Click="ViewModelMaterial" Tag="{Binding Model}"/>
+                                    <MenuItem Header="View Texture" Click="ViewModelTexture" Tag="{Binding Model}"/>
+                                </ContextMenu>
+                            </TextBlock.ContextMenu>
+                        </TextBlock>
+                    </DataTemplate>
                 </GroupBox.Resources>
                 <TreeView x:Name="ModelsList" ItemsSource="{Binding Elements}" SelectedItemChanged="OnModelSelected"/>
             </GroupBox>

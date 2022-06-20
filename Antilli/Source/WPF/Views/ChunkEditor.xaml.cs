@@ -31,7 +31,6 @@ namespace Antilli
     /// </summary>
     public partial class ChunkViewer : ObservableWindow
     {
-        private bool _inTextureMode;
         private bool _isDirty;
 
         private FileChunker _chunkFile;
@@ -272,8 +271,6 @@ namespace Antilli
         {
             Dispatcher.VerifyAccess();
 
-            Debug.WriteLine($"Updating spoolers using search filter '{m_filterString}'...");
-
             // remove any previous items
             ChunkList.Items.Clear();
             ChunkList.UpdateLayout();
@@ -297,7 +294,11 @@ namespace Antilli
             while (m_filterTimeout-- > 0)
                 Thread.Sleep(1);
 
-            Dispatcher.Invoke((Action)UpdateSpoolers);
+            Dispatcher.Invoke(new Action(() =>
+            {
+                Debug.WriteLine($"Updating spoolers using search filter '{m_filterString}'...");
+                UpdateSpoolers();
+            }));
         }
         
         private void QueueFilterUpdate(string filter)
@@ -356,7 +357,7 @@ namespace Antilli
 
         public bool CanSaveChunkFile
         {
-            get { return IsDirty; }
+            get { return ((LoadedChunk != null) && LoadedChunk.AreChangesPending) || IsDirty; }
         }
 
         public bool IsChunkFileOpen
@@ -411,7 +412,7 @@ namespace Antilli
                 if (magic == 0 || magic > 255)
                     sb.AppendLine((ChunkType)magic);
                 else
-                    sb.AppendLine("Vehicle Container (ID:{0})", magic);
+                    sb.AppendLine("Vehicle Container : {0}", Driv3r.GetVehicleTypeName(magic));
 
                 sb.AppendColumn("Offset",       col, true).AppendLine("0x{0:X}", CurrentSpooler.BaseOffset);
                 sb.AppendColumn("Version",      col, true).AppendLine(CurrentSpooler.Version);
@@ -437,6 +438,184 @@ namespace Antilli
 
                     // dump debug matxml container
                     sb.AppendLine(encoding.GetString(buffer));
+                }
+                else if (CurrentSpooler.Context == ChunkType.SpoolSystemLookup)
+                {
+                    sb.AppendLine();
+
+                    var packageTypes = new string[2][]
+                    {
+                        new[]
+                        {
+                            "Vehicles",
+                            "Missions",
+                            "CharacterSkins",
+                            "CharacterAnimations",
+                            "Audio",
+                            "Localisation",
+                            "Subtitles",
+                            "numSpooledPackageTypes",
+                            "Uninitialised",
+                        },
+                        new[]
+                        {
+                            "Vehicles",
+                            "Skies",
+                            "Challenges",
+                            "CityLocking",
+                            "Generic",
+                            "Commentary",
+                            "Cutscene",
+                            "AmbientAudio",
+                            "Localisation",
+                            "GUI",
+                            "Billboard",
+                            "EBoard",
+                            "MegaMesh",
+                            "MenusMaster",
+                            "NumSpooledPackageTypes",
+                            "Uninitialised",
+                        }
+                    };
+
+                    using (var ms = ((SpoolableBuffer)CurrentSpooler).GetMemoryStream())
+                    {
+                        var type = ms.ReadInt16() & 0xFF;
+                        var count = ms.ReadInt16();
+
+                        var totalMemory = ms.ReadInt32();
+
+                        sb.AppendColumn("PackageType", col, false).AppendLine($"{packageTypes[CurrentSpooler.Version][type]}");
+                        sb.AppendColumn("TotalMemory", col, false).AppendLine($"{totalMemory:X8}");
+
+                        var bufferSizes = new int[4];
+
+                        sb.AppendColumn("BufferSizes", col, false).AppendLine();
+
+                        for (int i = 0; i < 4; i++)
+                        {
+                            var bufferSize = ms.ReadInt32();
+
+                            sb.AppendLine($"\t{bufferSize}");
+
+                            bufferSizes[i] = bufferSize;
+                        }
+
+                        var numBuffers = ms.ReadInt32();
+
+                        sb.AppendColumn("NumBuffers", col, false).AppendLine($"{numBuffers}");
+                        sb.AppendColumn("Entries", col, false).AppendLine();
+
+                        for (int i = 0; i < count; i++)
+                        {
+                            var id = ms.ReadInt16();
+                            var chunkIndex = ms.ReadInt16();
+                            var slotType = ms.ReadInt16();
+
+                            sb.AppendLine($"\t{id:X4}, {chunkIndex}, {slotType}");
+                        }
+
+                        sb.AppendLine();
+                    }
+                }
+                else if (CurrentSpooler.Context == ChunkType.SpooledVehicleStringCollection)
+                {
+                    sb.AppendLine();
+
+                    using (var ms = ((SpoolableBuffer)CurrentSpooler).GetMemoryStream())
+                    {
+                        // skip useless header
+                        ms.Position += 6;
+
+                        var count = ms.ReadInt16();
+
+                        sb.AppendColumn("Entries", col, false).AppendLine();
+
+                        if (CurrentSpooler.Version == 0)
+                        {
+                            sb.AppendLine("(Physics Class|Group|Flags|Anim. Class|Name)").AppendLine();
+
+                            for (int i = 0; i < count; i++)
+                            {
+                                /*
+                                uint8 physicsClass;
+                                uint8 vehicleGroup;
+                                uint16 vehicleFlags;
+                                char textName[17];
+                                uint8 animClass;
+                                */
+
+                                var physicsClass = ms.ReadByte();
+                                var vehicleGroup = ms.ReadByte();
+                                var vehicleFlags = ms.ReadInt16();
+                                var textName = ms.ReadString(17);
+                                var animClass = ms.ReadByte();
+
+                                sb.AppendLine($"\t{physicsClass}\t{vehicleGroup}\t{vehicleFlags:X4}\t{animClass}\t\"{textName}\"");
+                            }
+                        }
+                        else
+                        {
+                            sb.AppendLine("(Entry ID|Physics Class|Driver Template|Flags|Anim. Class|Gear Change Up/Down|Transmission Type|Sub Type|Name)").AppendLine();
+
+                            for (int i = 0; i < count; i++)
+                            {
+                                /*
+                                    uint16 entryID;
+                                    uint8 physicsClass;
+                                    uint8 driverTemplate;
+                                    uint16 vehicleFlags;
+                                    char textName[17];
+                                    uint8 animClass;
+                                    uint8 gearChangeUp;
+                                    uint8 gearChangeDown;
+                                    uint8 transmissionType;
+                                    uint8 subType;
+                                */
+                                var entryID = ms.ReadInt16();
+                                var physicsClass = ms.ReadByte();
+                                var driverTemplate = ms.ReadByte();
+                                var vehicleFlags = ms.ReadInt16();
+                                var textName = ms.ReadString(17);
+                                var animClass = ms.ReadByte();
+                                var gearChangeUp = ms.ReadByte();
+                                var gearChangeDown = ms.ReadByte();
+                                var transmissionType = ms.ReadByte();
+                                var subType = ms.ReadByte();
+
+                                sb.AppendLine($"\t{entryID}\t{physicsClass}\t{driverTemplate}\t{vehicleFlags:X4}\t{animClass}\t{gearChangeUp}:{gearChangeDown}\t{transmissionType}\t{subType}\t\"{textName}\"");
+                            }
+                        }
+
+                        sb.AppendLine();
+                    }
+                }
+                else if (CurrentSpooler.Context == ChunkType.VO3HandlingData)
+                {
+                    sb.AppendLine();
+
+                    // increase column
+                    col += 1;
+
+                    using (var ms = ((SpoolableBuffer)CurrentSpooler).GetMemoryStream())
+                    {
+                        var info = ms.ReadInt32() & 0xFFFF;
+
+                        var vehId = info & 0xFF;
+                        var modLvl = (info & 0x7000) / 0x1000;
+
+                        // skip magic and version
+                        ms.Position += 8;
+
+                        var count = ms.ReadInt32();
+
+                        sb.AppendColumn("VehicleID", col, false).AppendLine(vehId);
+
+                        if (modLvl > 0)
+                            sb.AppendColumn("Bodykit", col, false).AppendLine(modLvl);
+
+                        sb.AppendColumn("Values", col, false).AppendLine(count);
+                    }
                 }
 
                 return sb.ToString();
@@ -497,7 +676,6 @@ namespace Antilli
                     
                     UpdateSpoolers();
 
-                    IsDirty = false;
                     OnPropertyChanged("WindowTitle");
 
                     stopwatch.Stop();
@@ -621,43 +799,61 @@ namespace Antilli
             }
         }
 
+        private void InsertAtCurrentSpooler(Spooler spooler, int direction, bool notify)
+        {
+            var parentItem = CurrentSpoolerItem.Parent as SpoolerListItem;
+            var items = (parentItem != null) ? parentItem.Items : ChunkList.Items;
+
+            var parent = CurrentSpooler.Parent;
+            var index = parent.Children.IndexOf(CurrentSpooler) + direction;
+
+            var item = new SpoolerListItem(spooler);
+
+            if (index < parent.Children.Count)
+            {
+                if (index < 0)
+                    index = 0;
+
+                parent.Children.Insert(index, spooler);
+                items.Insert(index, item);
+            }
+            else
+            {
+                parent.Children.Add(spooler);
+                items.Add(item);
+            }
+
+            if (notify)
+            {
+                IsDirty = true;
+                
+                if (spooler is SpoolablePackage)
+                    UpdateSpoolers();
+            }
+        }
+
+        private void AppendToCurrentSpooler(Spooler spooler)
+        {
+            if (CurrentSpooler is SpoolablePackage)
+            {
+                ((SpoolablePackage)CurrentSpooler).Children.Insert(0, spooler);
+                CurrentSpoolerItem.Items.Insert(0, new SpoolerListItem(spooler));
+
+                IsDirty = true;
+                UpdateSpoolers();
+            }
+            else
+            {
+                InsertAtCurrentSpooler(spooler, 1, true);
+            }
+        }
+
         private void PasteSpooler(object sender, RoutedEventArgs e)
         {
             if (CanPasteSpooler)
             {
-                if (CurrentSpooler is SpoolablePackage)
-                {
-                    ((SpoolablePackage)CurrentSpooler).Children.Add(SpoolerClipboard);
-                    CurrentSpoolerItem.Items.Add(new SpoolerListItem(SpoolerClipboard));
-                }
-                else
-                {
-                    var parentItem = CurrentSpoolerItem.Parent as SpoolerListItem;
-
-                    var parent = CurrentSpooler.Parent;
-                    var index = parent.Children.IndexOf(CurrentSpooler) + 1;
-
-                    var item = new SpoolerListItem(SpoolerClipboard);
-
-                    if (index < parent.Children.Count)
-                    {
-                        parent.Children.Insert(index, SpoolerClipboard);
-
-                        if (parentItem != null)
-                            parentItem.Items.Insert(index, item);
-                        else
-                            ChunkList.Items.Insert(index, item);
-                    }
-                    else
-                    {
-                        parent.Children.Add(SpoolerClipboard);
-
-                        if (parentItem != null)
-                            parentItem.Items.Add(item);
-                        else
-                            ChunkList.Items.Add(item);
-                    }
-                }
+                AppendToCurrentSpooler(SpoolerClipboard);
+                SpoolerClipboard = null;
 
                 IsDirty = true;
             }
@@ -738,11 +934,125 @@ namespace Antilli
                 spooler.SetBuffer(File.ReadAllBytes(openFile.FileName));
 
                 AT.Log("Replaced buffer.");
+
                 IsDirty = true;
             }
         }
 
-        public void SaveChunkFile()
+        private FileChunker SelectFileChunker()
+        {
+            var openFile = new OpenFileDialog()
+            {
+                Title = "Please select a chunk file:",
+                CheckFileExists = true,
+                CheckPathExists = true,
+                ValidateNames = true
+            };
+
+            var chunker = new FileChunker();
+
+            while (openFile.ShowDialog() ?? false)
+            {
+                // wait until user selects a valid file...
+                if (chunker.Load(openFile.FileName))
+                    break;
+                else
+                    MessageBox.Show("Unsupported file type!", "Chunk Editor", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            if (!chunker.IsLoaded)
+            {
+                chunker.Dispose();
+                chunker = null;
+            }
+            
+            return chunker;
+        }
+
+        private void AppendSpooler(object sender, RoutedEventArgs e)
+        {
+            var chunker = SelectFileChunker();
+
+            if (chunker != null)
+            {
+                var root = chunker.Content;
+
+                if (root.Children.Count == 1)
+                {
+                    var spooler = CopyCatFactory.GetCopy(root.Children[0], CopyClassType.DeepCopy);
+
+                    AppendToCurrentSpooler(spooler);
+                }
+                else
+                {
+                    if (MessageBox.Show($"Confirm appending of {root.Children.Count} spoolers to the selected spooler?",
+                        "Chunk Editor", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                    {
+                        foreach (var child in root.Children.Reverse())
+                        {
+                            var spooler = CopyCatFactory.GetCopy(child, CopyClassType.DeepCopy);
+
+                            AppendToCurrentSpooler(spooler);
+                        }
+                    }
+                }
+
+                chunker.Dispose();
+            }
+        }
+
+        private void InsertChunksAtCurrentSpooler(FileChunker chunker, int direction, int step)
+        {
+            var root = chunker.Content;
+
+            if (root.Children.Count == 1)
+            {
+                var spooler = CopyCatFactory.GetCopy(root.Children[0], CopyClassType.DeepCopy);
+
+                InsertAtCurrentSpooler(spooler, direction, true);
+            }
+            else
+            {
+                if (MessageBox.Show($"Confirm insertion of {root.Children.Count} spoolers?",
+                    "Chunk Editor", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    foreach (var child in root.Children)
+                    {
+                        var spooler = CopyCatFactory.GetCopy(child, CopyClassType.DeepCopy);
+
+                        InsertAtCurrentSpooler(spooler, direction, false);
+                        direction += step;
+                    }
+
+                    IsDirty = true;
+                    UpdateSpoolers();
+                }
+            }
+        }
+
+        private void InsertBeforeSpooler(object sender, RoutedEventArgs e)
+        {
+            var chunker = SelectFileChunker();
+
+            if (chunker != null)
+            {
+                InsertChunksAtCurrentSpooler(chunker, 0, 0);
+                chunker.Dispose();
+            }
+        }
+
+        private void InsertAfterSpooler(object sender, RoutedEventArgs e)
+        {
+            var chunker = SelectFileChunker();
+
+            if (chunker != null)
+            {
+                InsertChunksAtCurrentSpooler(chunker, 1, 1);
+                chunker.Dispose();
+            }
+        }
+
+        public void SaveChunkFile(bool saveAs)
         {
             if (ChunkFile.IsCompressed)
             {
@@ -750,30 +1060,57 @@ namespace Antilli
                 return;
             }
 
-            if (IsDirty)
+            if (saveAs)
             {
-                Mouse.OverrideCursor = Cursors.Wait;
+                var filename = FileName;
 
-                var bak = FileName + ".bak";
-                var stopwatch = new Stopwatch();
+                var name = Path.GetFileName(filename);
+                var ext = Path.GetExtension(filename);
 
-                AT.Log("Saving...");
-                stopwatch.Start();
+                var saveDlg = new SaveFileDialog()
+                {
+                    AddExtension = true,
+                    DefaultExt = ext,
+                    FileName = name,
+                    InitialDirectory = Path.GetDirectoryName(filename),
+                    Title = "Please enter a filename",
+                    ValidateNames = true,
+                    OverwritePrompt = true,
+                };
 
-                // make our backup
-                File.Copy(FileName, bak, true);
+                if (saveDlg.ShowDialog() ?? false)
+                {
+                    filename = saveDlg.FileName;
 
-                ChunkFile.Save();
-                stopwatch.Stop();
+                    Mouse.OverrideCursor = Cursors.Wait;
 
-                IsDirty = false;
-                Mouse.OverrideCursor = null;
+                   if (ChunkFile.Save(filename))
+                    {
+                        IsDirty = false;
 
-                DSC.Log("Successfully saved file in {0}ms.", stopwatch.ElapsedMilliseconds);
+                        MessageBox.Show($"Successfully saved to '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Failed to save '{filename}'!", "Antilli", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+                    Mouse.OverrideCursor = null;
+                }
             }
             else
             {
-                MessageBox.Show("No changes have been made!", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+                if (MessageBox.Show($"All pending changes will be saved to '{FileName}'. Do you wish to OVERWRITE the original file? (NO BACKUPS WILL BE CREATED)",
+                        "Chunk Editor", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    Mouse.OverrideCursor = Cursors.Wait;
+
+                    ChunkFile.Save();
+
+                    IsDirty = false;
+
+                    Mouse.OverrideCursor = null;
+                }
             }
         }
 
@@ -787,30 +1124,35 @@ namespace Antilli
 
             Mouse.OverrideCursor = Cursors.Wait;
 
-            var stopwatch = new Stopwatch();
             var filename = Path.Combine(Settings.ExportDirectory, Path.GetFileName(FileName));
 
-            AT.Log("Exporting...");
-
-            stopwatch.Start();
             ChunkFile.Save(filename, false);
-            stopwatch.Stop();
             
-            IsDirty = false;
             Mouse.OverrideCursor = null;
-
-            DSC.Log("Exported file in {0}ms.", stopwatch.ElapsedMilliseconds);
 
             MessageBox.Show($"Successfully exported to '{filename}'!", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ExportSpooler(object sender, RoutedEventArgs e)
         {
-            bool chunk = (CurrentSpooler is SpoolablePackage);
+            var spooler = CurrentSpooler;
+            var chunk = (spooler is SpoolablePackage);
+
+            var copied = false;
+
+            if (!chunk)
+            {
+                if (MessageBox.Show("Do you want to export this as a chunk file?",
+                    "Chunk Editor", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    spooler = CopyCatFactory.GetCopy(spooler, CopyClassType.DeepCopy);
+                    copied = true;
+                }
+            }
 
             var saveDlg = new SaveFileDialog() {
                 AddExtension = true,
-                DefaultExt =  "." + ((chunk) ? "chunk" : Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Context)).ToLower()),
+                DefaultExt =  "." + ((chunk || copied) ? "chunk" : Encoding.UTF8.GetString(BitConverter.GetBytes(CurrentSpooler.Context)).ToLower()),
                 FileName = "export",
                 InitialDirectory = Settings.ExportDirectory,
                 Title = "Please enter a filename",
@@ -818,56 +1160,41 @@ namespace Antilli
                 OverwritePrompt = true,
             };
 
-            if (CurrentSpooler.Context == 0x444D4244) // DBMD
-                saveDlg.DefaultExt = ".debugmat.xml";
+            if (!copied)
+            {
+                if (CurrentSpooler.Context == 0x444D4244) // DBMD
+                    saveDlg.DefaultExt = ".debugmat.xml";
+            }
 
             if (saveDlg.ShowDialog() ?? false)
             {
                 Mouse.OverrideCursor = Cursors.Wait;
-                var stopwatch = new Stopwatch();
 
-                DSC.Log("Exporting '{0}'...", saveDlg.FileName);
-                stopwatch.Start();
-                
                 if (chunk)
                 {
                     FileChunker.WriteChunk(saveDlg.FileName, (SpoolablePackage)CurrentSpooler);
                 }
+                else if (copied)
+                {
+                    using (var chunker = new FileChunker())
+                    {
+                        chunker.Children.Add(spooler);
+                        chunker.Save(saveDlg.FileName);
+                    }
+
+                    // clean up our mess
+                    spooler.Dispose();
+                }
                 else
                 {
-                    // var unifiedPackage = ChunkTemplates.UnifiedPackage;
-                    // 
-                    // // copy the buffer
-                    // var spoolerCopy = new SpoolableBuffer() {
-                    //     Alignment = CurrentSpooler.Alignment,
-                    //     Magic = CurrentSpooler.Magic,
-                    //     Description = CurrentSpooler.Description,
-                    //     Reserved = CurrentSpooler.Reserved
-                    // };
-                    // 
-                    // spoolerCopy.SetBuffer(((SpoolableBuffer)CurrentSpooler).GetBuffer());
-                    // 
-                    // unifiedPackage.Children.Add(spoolerCopy);
-                    // 
-                    // FileChunker.WriteChunk(saveDlg.FileName, unifiedPackage);
-                    // 
-                    // // release resources
-                    // spoolerCopy.Dispose();
-                    // unifiedPackage.Dispose();
-
                     using (var fs = File.Create(saveDlg.FileName))
                     {
                         fs.SetLength(CurrentSpooler.Size);
                         fs.Write(((SpoolableBuffer)CurrentSpooler).GetBuffer());
                     }
                 }
-
-                stopwatch.Stop();
                 
-                IsDirty = false;
                 Mouse.OverrideCursor = null;
-
-                DSC.Log("Successfully exported file in {0}ms!", stopwatch.ElapsedMilliseconds);
 
                 MessageBox.Show($"Successfully exported to '{saveDlg.FileName}'!", AppTitle, MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -954,7 +1281,11 @@ namespace Antilli
             };
 
             fileSave.Click += (o, e) => {
-                SaveChunkFile();
+                SaveChunkFile(false);
+            };
+
+            fileSaveAs.Click += (o, e) => {
+                SaveChunkFile(true);
             };
 
             fileClose.Click += (o, e) => {

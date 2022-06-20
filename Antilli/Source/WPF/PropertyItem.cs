@@ -6,6 +6,7 @@ using System.Windows.Input;
 namespace Antilli
 {
     public delegate bool PropertyUpdatedCallback(string updatedValue);
+    public delegate bool PropertyTryParseDelegate<T>(string input, out T value);
 
     public class PropertyItem
     {
@@ -61,7 +62,7 @@ namespace Antilli
                 Margin = new Thickness(4)
             };
 
-            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(50) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -111,7 +112,7 @@ namespace Antilli
                 Margin = new Thickness(4)
             };
 
-            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(50) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(100) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(75) });
             grid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -123,12 +124,54 @@ namespace Antilli
             panel.Children.Add(grid);
         }
 
-        public PropertyItem(string name, PropertyUpdatedCallback callback, string initialValue = "")
+        public static PropertyUpdatedCallback EnumParser<TEnum>(Predicate<TEnum> fnCheckValue, Action<TEnum> fnSetValue)
+            where TEnum : struct
+        {
+            return new PropertyUpdatedCallback(delegate (string input)
+            {
+                TEnum value = default(TEnum);
+
+                if (Enum.TryParse(input, out value) && fnCheckValue(value))
+                {
+                    fnSetValue(value);
+                    return true;
+                }
+
+                return false;
+            });
+
+        }
+        public static PropertyUpdatedCallback TryParser<T>(PropertyTryParseDelegate<T> fnTryParse, Predicate<T> fnCheckValue, Action<T> fnSetValue)
+        {
+            return new PropertyUpdatedCallback(delegate (string input)
+            {
+                T value = default(T);
+
+                if (fnTryParse(input, out value) && fnCheckValue(value))
+                {
+                    fnSetValue(value);
+                    return true;
+                }
+
+                return false;
+            });
+        }
+
+        public PropertyItem(string name, PropertyUpdatedCallback callback, object initialValue = null)
         {
             Name = name;
             Callback = callback;
 
-            m_value = initialValue;
+            if (initialValue != null)
+                m_value = initialValue.ToString();
+        }
+
+        public PropertyItem(string name, PropertyUpdatedCallback callback, string initialValue)
+        {
+            Name = name;
+            Callback = callback;
+
+            m_value = initialValue ?? "";
         }
     }
 }

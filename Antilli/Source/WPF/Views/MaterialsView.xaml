@@ -12,14 +12,14 @@
         <HierarchicalDataTemplate DataType="{x:Type at:MaterialTreeItem}"
                                 ItemsSource="{Binding Path=Substances}">
             <TextBlock Text="{Binding Path=Name}">
-                <!-- DISABLED UNTIL READY
                 <TextBlock.ContextMenu>
                     <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-                                 IsEnabled="False">
-                        <MenuItem Header="Add Substance" Click="AddSubstance"/>
+                                 IsEnabled="True">
+                <!-- DISABLED UNTIL READY
+                        <MenuItem Header="Add Substance" Click="AddSubstance"/> -->
+                        <MenuItem Header="Show Model Usage" Click="OnShowModelUsage"/>
                     </ContextMenu>
                 </TextBlock.ContextMenu>
-                -->
             </TextBlock>
         </HierarchicalDataTemplate>
 

@@ -97,6 +97,21 @@ namespace Antilli
 
                 return ExportModelFormat.Invalid;
             }
+            set
+            {
+                switch (value)
+                {
+                case ExportModelFormat.Driv3r:
+                    cmbGame.SelectedIndex = 0;
+                    break;
+                case ExportModelFormat.DriverParallelLines:
+                    cmbGame.SelectedIndex = 1;
+                    break;
+                default:
+                    cmbGame.SelectedIndex = -1;
+                    break;
+                }
+            }
         }
 
         public ExportModelFlags Flags
@@ -104,7 +119,13 @@ namespace Antilli
             get { return _flags; }
         }
 
-        public bool ShowFormatSelector { get; set; }
+        private bool _showFormatSelector = false;
+
+        public bool ShowFormatSelector
+        {
+            get { return _showFormatSelector; }
+            set { SetValue(ref _showFormatSelector, value, "ShowFormatSelector"); }
+        }
 
         public bool IsValid
         {

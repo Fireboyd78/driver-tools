@@ -22,6 +22,7 @@
   <PropertyGroup>
     <DToolsRoot>$(ProjectDir)..\</DToolsRoot>
     <IncludeDSCLibrary>true</IncludeDSCLibrary>
+    <UsesFreeImage>false</UsesFreeImage>
   </PropertyGroup>
   <Import Project="$(DToolsRoot)DriverTools.Common.props" Condition="Exists('$(DToolsRoot)DriverTools.Common.props')" />
   <ItemGroup>

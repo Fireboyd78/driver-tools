@@ -24,6 +24,7 @@ using DSCript.Spooling;
 
 namespace Antilli
 {
+
     /// <summary>
     /// Interaction logic for ModelViewer.xaml
     /// </summary>
@@ -54,14 +55,19 @@ namespace Antilli
         }
         #endregion
 
+#if OLD_VISUALS
         private ModelVisual3DGroup _selectedModel;
         private List<ModelVisual3DGroup> _visuals;
         private List<AntilliModelVisual3D> _models;
-
+#else
+        private ModelVisual3DGroup _selectedModel;
+        private List<ModelVisual3DGroup> _visuals;
+        private List<LodModelVisual3D> _models;
+#endif
         private bool _applyTransforms;
         private bool _useBlendWeights;
         private int m_lod;
-        
+
         public int LevelOfDetail
         {
             get { return m_lod; }
@@ -94,6 +100,7 @@ namespace Antilli
                 if (Visuals == null)
                     return;
 
+#if OLD_VISUALS
                 var selectedModel   = SelectedModel;
                 var item            = ModelsList.GetSelectedContainer();
 
@@ -107,25 +114,53 @@ namespace Antilli
                     SelectedModel = selectedModel;
                 if (item != null)
                     item.IsSelected = true;
+#else
+                if (_useBlendWeights)
+                {
+                    foreach (var group in Visuals)
+                    {
+                        var model = group.Model;
+
+                        model.UseBlendWeights = true;
+                        model.TweenFactor = 1.0f;
+                    }
+                }
+                else
+                {
+                    foreach (var group in Visuals)
+                    {
+                        var model = group.Model;
+
+                        // resets the tween factor
+                        model.UseBlendWeights = false;
+                    }
+                }
+#endif
             }
         }
 
+#if OLD_VISUALS
         public List<ModelVisual3DGroup> Visuals
+#else
+        public List<ModelVisual3DGroup> Visuals
+#endif
         {
             get { return _visuals; }
             set
             {
                 if (SetValue(ref _visuals, value, "Visuals"))
                 {
+#if OLD_VISUALS
                     if (_models != null)
                     {
                         foreach (var model in _models)
                             model.ClearValue(AntilliModelVisual3D.ModelProperty);
-
                         _models.Clear();
                         _models = null;
                     }
-
+#else
+                    FreeSubModels();
+#endif
                     OnPropertyChanged("Elements");
                 }
             }
@@ -152,7 +187,11 @@ namespace Antilli
             }
         }
 
+#if OLD_MODELS
         public ModelVisual3DGroup SelectedModel
+#else
+        public ModelVisual3DGroup SelectedModel
+#endif
         {
             get { return _selectedModel; }
             set
@@ -163,20 +202,47 @@ namespace Antilli
                 {
                     foreach (var visual in Visuals)
                     {
+                        var model = visual.Model;
+
                         if (SelectedModel != null && SelectedModel != visual)
                         {
+#if OLD_VISUALS
                             visual.SetOpacity(Settings.GhostOpacity);
 
-                            foreach (var model in visual.Children)
+                            foreach (ModelVisual3D model in visual.Children)
                                 VisualParentHelper.SetParent(model, TopmostLayer);
+#else
+                            foreach (var submodel in visual.Children)
+                            {
+                                submodel.Opacity = Settings.GhostOpacity;
+                                VisualParentHelper.SetParent(model, TopmostLayer);
+                            }
+#endif
                         }
                         else
+#if OLD_VISUALS
                             visual.SetOpacity(1.0);
+#else
+                            foreach (SubModelVisual3D submodel in visual.Children)
+                                submodel.Opacity = 1.0;
+#endif
                     }
                 }
 
                 if (SelectedModel == null)
                     OnModelDeselected();
+            }
+        }
+
+        private void FreeSubModels()
+        {
+            if (_models != null)
+            {
+                foreach (var model in _models)
+                    model.RemoveSubModels();
+
+                _models.Clear();
+                _models = null;
             }
         }
 
@@ -187,7 +253,9 @@ namespace Antilli
                 RestoreVisualParents();
                 SelectedModel = null;
             }
-
+#if !OLD_VISUALS
+            FreeSubModels();
+#endif
             VisualsLayer.Children.Clear();
             EmissiveLayer.Children.Clear();
             TransparencyLayer.Children.Clear();
@@ -233,7 +301,8 @@ namespace Antilli
 
                 foreach (var visual in Visuals)
                 {
-                    foreach (var model in visual.Children)
+#if OLD_VISUALS
+                    foreach (ModelVisual3D model in visual.Children)
                     {
                         if (model != (ModelVisual3D)item)
                         {
@@ -243,6 +312,20 @@ namespace Antilli
                         else
                             model.SetOpacity(1.0);
                     }
+#else
+                    var model = visual.Model;
+
+                    foreach (SubModelVisual3D submodel in visual.Children)
+                    {
+                        if (submodel != (ModelVisual3D)item)
+                        {
+                            submodel.Opacity = Settings.GhostOpacity;
+                            VisualParentHelper.SetParent(model, TopmostLayer);
+                        }
+                        else
+                            submodel.Opacity = 1.0;
+                    }
+#endif
                 }
             }
             else
@@ -252,7 +335,11 @@ namespace Antilli
 
             if (SelectedModel != null)
             {
+#if OLD_VISUALS
                 var dmodel = SelectedModel.Children[0] as AntilliModelVisual3D;
+#else
+                var dmodel = SelectedModel.Children[0] as SubModelVisual3D;
+#endif
 
                 if (dmodel != null)
                 {
@@ -263,7 +350,7 @@ namespace Antilli
 
                     var bbox = model.BoundingBox;
 
-                    DSC.Log($"{model.Flags} {lod.ID} {lod.Mask}");
+                    DSC.Log($"{model.Flags} {lod.Type} {lod.Mask}");
                     DSC.Log($"{model.Scale}");
 
                     DSC.Log($"{bbox.V11}\n\t{bbox.V12}\n\t{bbox.V13}\n\t{bbox.V14}");
@@ -318,6 +405,9 @@ namespace Antilli
             if (FindMaterial(visual, out material))
             {
                 AT.CurrentState.QueryMaterialSelect(material);
+
+                if (AT.CurrentState.MaterialSelectQueryResult == material)
+                    MessageBox.Show($"Global material {visual.Material.Handle}, package {visual.Material.UID:X4}.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
@@ -343,6 +433,7 @@ namespace Antilli
             if (m_partsGroups == null)
                 return true;
 
+#if OLD_VISUALS
             var models = new List<ModelVisual3DGroup>();
 
             foreach (var part in m_partsGroups)
@@ -398,12 +489,34 @@ namespace Antilli
                 if (meshes.Children.Count > 0)
                     models.Add(meshes);
             }
+#else
+            var groups = new List<ModelVisual3DGroup>();
+            
+            foreach (var part in m_partsGroups)
+            {
+                var model = new LodModelVisual3D()
+                {
+                    Lod = LevelOfDetail,
+                    Model = part,
+                };
 
-            if (models.Count > 0)
+                if (UseBlendWeights)
+                {
+                    model.UseBlendWeights = true;
+                    model.TweenFactor = 1.0f;
+                }
+
+                var group = new ModelVisual3DGroup(model);
+
+                groups.Add(group);
+            }
+#endif
+            if (groups.Count > 0)
             {
                 // do this first, otherwise shit will get fucked up
-                Visuals = models;
+                Visuals = groups;
 
+#if OLD_VISUALS
                 _models = new List<AntilliModelVisual3D>();
 
                 // set the new model
@@ -421,8 +534,33 @@ namespace Antilli
                         _models.Add(dmodel);
                     }
                 }
+#else
+                _models = new List<LodModelVisual3D>();
 
-                
+                var fnGetVisualParent = new Func<SubModelVisual3D, ModelVisual3D>((submodel) =>
+                {
+                    var mesh = submodel.MeshGeometry;
+                    var material = mesh.Material;
+
+                    if (material.IsEmissive)
+                        return EmissiveLayer;
+                    if (material.IsTransparent)
+                        return TransparencyLayer;
+
+                    // own child in VisualsLayer
+                    return null;
+                });
+
+                foreach (var visual in Visuals)
+                {
+                    var model = visual.Model;
+
+                    VisualsLayer.Children.Add(model);
+                    model.AddSubModels(fnGetVisualParent);
+
+                    _models.Add(model);
+                }
+#endif
                 return true;
             }
             else
@@ -489,6 +627,30 @@ namespace Antilli
                 break;
             case Key.C:
                 ToggleCameraMode();
+                break;
+            case Key.OemOpenBrackets:
+                if (Visuals == null || !UseBlendWeights)
+                    break;
+                {
+                    foreach (var group in Visuals)
+                    {
+                        var model = group.Model;
+
+                        model.TweenFactor -= 0.1f;
+                    }
+                }
+                break;
+            case Key.OemCloseBrackets:
+                if (Visuals == null || !UseBlendWeights)
+                    break;
+                {
+                    foreach (var group in Visuals)
+                    {
+                        var model = group.Model;
+
+                        model.TweenFactor += 0.1f;
+                    }
+                }
                 break;
             }
         }

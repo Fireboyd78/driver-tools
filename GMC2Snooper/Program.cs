@@ -1175,6 +1175,7 @@ namespace GMC2Snooper
 
                     //var buffer = Swizzlers.UnSwizzle8(texBuffer, width, height, tex.CLUTs[2]);
 
+#if BROKEN_VQ2_CODE
                     var quants = new byte[256 * 4];
                     var texels = new byte[(width * height) * 4];
 
@@ -1205,6 +1206,9 @@ namespace GMC2Snooper
                             offset += (size * size);
                         }
                     }
+#else
+                    var buffer = Swizzlers.UnSwizzleVQ2(texBuffer, width, height, tex.CLUTs[2]);
+#endif
 
                     img.Pixels = buffer;
                     img.SetColorPalette(clut);
@@ -1218,7 +1222,9 @@ namespace GMC2Snooper
                     var img = new BitmapHelper(tex.Width, tex.Height, PixelFormat.Format8bppIndexed);
                     //var clut = Read8bppCLUT(texBuffer, clutTex, clutIdx);
 
-                    var buffer = Swizzlers.UnSwizzle8(texBuffer, tex.Width, tex.Height, tex.CLUTs[1]);
+                    //var buffer = Swizzlers.UnSwizzle8(texBuffer, tex.Width, tex.Height, tex.CLUTs[1]);
+
+                    var buffer = Swizzlers.UnSwizzleVQ4(texBuffer, tex.Width, tex.Height, tex.CLUTs[1]);
 
                     img.Pixels = buffer;
                     //img.SetColorPalette(clut);

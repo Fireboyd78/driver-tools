@@ -327,11 +327,12 @@ namespace Antilli
                             // reload the materials
                             if (!m_modelPackage.HasMaterials)
                             {
-                                ModelPackage.SkipModelsOnLoad = true;
+                                var level = ModelPackage.LoadLevel;
+                                ModelPackage.LoadLevel = ModelPackageLoadLevel.Materials;
 
                                 SpoolableResourceFactory.Load(m_modelPackage);
 
-                                ModelPackage.SkipModelsOnLoad = false;
+                                ModelPackage.LoadLevel = level;
                             }
                         }
                     }
@@ -387,12 +388,15 @@ namespace Antilli
             public bool CanUseBlendWeights
             {
                 get { return m_useBlendWeights; }
-                set { SetValue(ref m_useBlendWeights, value, "CanShowBlendWeights"); }
+                set { SetValue(ref m_useBlendWeights, value, "CanUseBlendWeights"); }
             }
+
 
             public EventHandler ModelPackageSelected;
             
             public EventHandler MaterialSelectQueried;
+            public object MaterialSelectQueryResult;
+
             public EventHandler TextureSelectQueried;
 
             public EventHandler FileModified;

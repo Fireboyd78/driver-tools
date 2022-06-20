@@ -7,10 +7,10 @@ namespace DSCript.Models
     {
         public int Flags;
         
-        public short T1Count; // READ ORDER: 3
-        public short T2Count; // READ ORDER: 1
-        public short T3Count; // READ ORDER: 2
-        public short T4Count; // READ ORDER: 4
+        public short MarkerPointsCount;
+        public short MovingPartsCount;
+        public short DamagingPartsCount;
+        public short InstancePartsCount;
 
         public int ExtraData;
         public int ExtraFlags;
@@ -19,11 +19,12 @@ namespace DSCript.Models
         {
             Flags = stream.ReadInt32();
 
-            T1Count = stream.ReadInt16();
-            T2Count = stream.ReadInt16();
-            T3Count = stream.ReadInt16();
-            T4Count = stream.ReadInt16();
+            MarkerPointsCount = stream.ReadInt16();
+            MovingPartsCount = stream.ReadInt16();
+            DamagingPartsCount = stream.ReadInt16();
+            InstancePartsCount = stream.ReadInt16();
             
+            // truthfully all junk, but figured I'd keep it anyways
             if (provider.Version == 1)
             {
                 ExtraFlags = stream.ReadInt32() & 0; // force to zero
@@ -31,7 +32,6 @@ namespace DSCript.Models
             }
             else
             {
-                // Driv3r format
                 ExtraData = stream.ReadInt32();
                 ExtraFlags = MagicNumber.FIREBIRD;
 
@@ -44,69 +44,69 @@ namespace DSCript.Models
         {
             stream.Write(Flags);
 
-            stream.Write(T1Count);
-            stream.Write(T2Count);
-            stream.Write(T3Count);
-            stream.Write(T4Count);
+            stream.Write(MarkerPointsCount);
+            stream.Write(MovingPartsCount);
+            stream.Write(DamagingPartsCount);
+            stream.Write(InstancePartsCount);
 
-            if (ExtraFlags != 0)
-            {
-                stream.Write(ExtraData);
-                stream.Write(ExtraFlags);
-            }
-            else
+            if (provider.Version == 1)
             {
                 stream.Write(0);
                 stream.Write(ExtraData);
             }
+            else
+            {
+                stream.Write(ExtraData);
+                stream.Write(0);
+            }
         }
 
-        public int T1Size
+        public int MarkerPointSize
         {
             get { return (ExtraFlags != 0) ? 0x10 : 0x20; }
         }
 
-        public int T2Size
+        public int MovingPartSize
         {
             get { return 0x20; }
         }
 
-        public int T3Size
+        public int DamagingPartSize
         {
             get { return 0x50; }
         }
 
-        public int T4Size
+        public int InstancePartSize
         {
             get { return 0x40; }
         }
         
-        public int T1Length
+        public int MarkerPointsLength
         {
             get
             {
-                return (T1Count * T1Size);
+                return (MarkerPointsCount * MarkerPointSize);
             }
         }
 
-        public int T2Length
+        public int MovingPartsLength
         {
-            get { return (T2Count * T2Size); }
+            get { return (MovingPartsCount * MovingPartSize); }
         }
 
-        public int T3Length
+        public int DamagingPartsLength
         {
-            get { return (T3Count * T3Size); }
+            get { return (DamagingPartsCount * DamagingPartSize); }
         }
 
-        public int T4Length
+        public int InstancePartsLength
         {
-            get { return (T4Count * T4Size); }
+            get { return (InstancePartsCount * InstancePartSize); }
         }
 
         public int BufferSize
         {
-            get { return (T1Length + T2Length + T3Length + T4Length); }
+            get { return (MarkerPointsLength + MovingPartsLength + DamagingPartsLength + InstancePartsLength); }
         }
     }
 }

@@ -162,7 +162,14 @@ namespace DSCript
         {
             return $"{X:F4},{Y:F4}";
         }
-        
+
+        public string ToString(string format)
+        {
+            format = String.Format("{{0:{0}}},{{1:{0}}}", format);
+
+            return String.Format(format, X, Y);
+        }
+
         public Vector2(float x, float y)
         {
             X = x;
@@ -303,6 +310,13 @@ namespace DSCript
         public override string ToString()
         {
             return $"{X:F4},{Y:F4},{Z:F4}";
+        }
+
+        public string ToString(string format)
+        {
+            format = String.Format("{{0:{0}}},{{1:{0}}},{{2:{0}}}", format);
+
+            return String.Format(format, X, Y, Z);
         }
 
         public static Vector3 Parse(string value)
@@ -466,6 +480,13 @@ namespace DSCript
         public override string ToString()
         {
             return $"{X:F4},{Y:F4},{Z:F4},{W:F4}";
+        }
+
+        public string ToString(string format)
+        {
+            format = String.Format("{{0:{0}}},{{1:{0}}},{{2:{0}}},{{3:{0}}}", format);
+
+            return String.Format(format, X, Y, Z, W);
         }
 
         public static Vector4 Parse(string value)

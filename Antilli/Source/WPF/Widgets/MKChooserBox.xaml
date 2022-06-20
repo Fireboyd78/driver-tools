@@ -21,7 +21,10 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <CheckBox Name="chkOption" Content="{Binding OptionName, FallbackValue=Option}" HorizontalAlignment="Right" Margin="5" VerticalAlignment="Center" Foreground="{StaticResource atDark_fg}"
+            <CheckBox Name="chkOption"
+                      Content="{Binding OptionName, FallbackValue='Option'}"
+                      ToolTip="{Binding OptionToolTip, FallbackValue=''}"
+                      HorizontalAlignment="Right" Margin="5" VerticalAlignment="Center" Foreground="{StaticResource atDark_fg}"
                       Visibility="{Binding ShowOptionCheckbox, Converter={StaticResource BoolToVisibilityConverter}}"/>
             
             <StackPanel Orientation="Horizontal" Margin="0,0,2,0" Grid.Column="1">

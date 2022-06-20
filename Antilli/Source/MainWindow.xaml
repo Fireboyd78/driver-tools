@@ -51,11 +51,11 @@
                 <MenuItem x:Name="fileSave" Header="Save" IsEnabled="{Binding CanSaveFile}"/>
                 <MenuItem x:Name="fileSaveAs" Header="Save As..." IsEnabled="{Binding IsFileOpened}"/>
                 <Separator/>
-                <MenuItem x:Name="fileImport" Header="Import">
+                <MenuItem x:Name="fileImport" Header="Import" IsEnabled="{Binding IsFileOpened}">
                     <MenuItem x:Name="impAntilliScene" Header="Antilli Scene"/>
                     <MenuItem x:Name="impModelPackage" Header="Model Package"/>
                 </MenuItem>
-                <MenuItem x:Name="fileExport" Header="Export">
+                <MenuItem x:Name="fileExport" Header="Export" IsEnabled="{Binding IsFileOpened}">
                     <MenuItem x:Name="expAntilliScene" Header="Antilli Scene"/>
                     <MenuItem x:Name="expModelPackage" Header="Model Package"/>
                     <MenuItem x:Name="expWavefrontOBJ" Header="Wavefront OBJ"/>
@@ -69,6 +69,9 @@
             <MenuItem Header="Tools" Style="{DynamicResource atDark_menuItem}">
                 <MenuItem x:Name="chunkViewer" Header="Chunk Editor"/>
                 <MenuItem x:Name="modelTool" Header="Model Tool"/>
+                <Separator />
+                <MenuItem Header="Texture Differ" Command="{Binding Path=TextureDifferCommand}"/>
+                <MenuItem x:Name="extractTextures" Header="Extract Textures from directory..."/>
                 <Separator />
                 <MenuItem x:Name="optionsDlg" Header="Options..."/>
                 <!--
@@ -105,9 +108,9 @@
                         </Grid.RowDefinitions>
                         <Grid.Resources>
                             <DataTemplate DataType="{x:Type dscm:ModelPackage}">
-                                <TextBlock Text="Model Package"/>
+                                <TextBlock Text="{Binding DisplayName, FallbackValue='Model Package'}"/>
                             </DataTemplate>
-                            <DataTemplate DataType="{x:Type at:ModelGroupListItem}">
+                            <DataTemplate DataType="{x:Type at:ModelContainerListItem}">
                                 <TextBlock Text="{Binding Text}"/>
                             </DataTemplate>
                         </Grid.Resources>
@@ -115,7 +118,7 @@
                         <!-- Lists -->
                         <Grid Grid.Column="0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.25*" MinWidth="120"/>
+                                <ColumnDefinition Width="1.25*" MinWidth="120" MaxWidth="195"/>
                                 <ColumnDefinition Width="Auto" MinWidth="5"/>
                                 <ColumnDefinition Width="1.75*"/>
                             </Grid.ColumnDefinitions>
@@ -123,8 +126,15 @@
                             <GroupBox Grid.Column="0" Header="Model Packages" HorizontalAlignment="Stretch">
                                 <ListBox x:Name="Packages" ItemsSource="{Binding ModelPackages}" />
                             </GroupBox>
-                            <GroupBox Grid.Column="2" Header="Model Groups" HorizontalAlignment="Stretch">
-                                <ListBox x:Name="Groups" ItemsSource="{Binding ModelGroups}"
+                            <GridSplitter Grid.Column="1"
+                                          Background="Transparent"
+                                          ResizeDirection="Columns"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Stretch"
+                                          Width="5"/>
+                            
+                            <GroupBox Grid.Column="2" Header="Model Containers" HorizontalAlignment="Stretch">
+                                <ListBox x:Name="Containers" ItemsSource="{Binding ModelContainers}"
                              FontFamily="Consolas"
                              FontStretch="UltraCondensed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
                             </GroupBox>
@@ -142,14 +152,19 @@
                                             </Style>
                                         </StackPanel.Resources>
                                         <RadioButton IsEnabled="False" Tag="0" Content="H"  ToolTip="High"/>
-                                        <RadioButton IsEnabled="False" Tag="1" Content="M"  ToolTip="Medium"/>
-                                        <RadioButton IsEnabled="False" Tag="2" Content="L"  ToolTip="Low"/>
-                                        <RadioButton IsEnabled="False" Tag="4" Content="VL" ToolTip="Very Low"/>
-                                        <RadioButton IsEnabled="False" Tag="5" Content="S"  ToolTip="Shadow"/>
+                                        <RadioButton IsEnabled="False" Tag="1" Content="1"  ToolTip="Lod 1"/>
+                                        <RadioButton IsEnabled="False" Tag="2" Content="2"  ToolTip="Lod 2"/>
+                                        <RadioButton IsEnabled="False" Tag="3" Content="3"  ToolTip="Lod 3"/>
+                                        <RadioButton IsEnabled="False" Tag="4" Content="L"  ToolTip="Low"/>
+                                        <RadioButton IsEnabled="False" Tag="5" Content="S1" ToolTip="Primary Shadow"/>
+                                        <RadioButton IsEnabled="False" Tag="6" Content="S2" ToolTip="Secondary Shadow"/>
                                     </StackPanel>
                                 </StackPanel>
                                 <CheckBox x:Name="ApplyTransform" Content="Apply Transforms" ToolTip="Enable/Disable the use of transforms being applied to models (if applicable). This will only affect models in the model viewer, not exported models."
-                                          Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
+                                          Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5">
+                                    <!-- DEPRECATED: No longer usable in its current state. -->
+                                    <CheckBox.Visibility>Collapsed</CheckBox.Visibility>
+                                </CheckBox>
                                 <CheckBox x:Name="BlendWeights" Content="Use Blend Weights" ToolTip="Enable/Disable the use of blend weights. This can be used to view damage on vehicles."
                                           Visibility="{Binding CanUseBlendWeights, Converter={StaticResource BoolToVisibilityConverter}}" Grid.Column="1" Grid.Row="1" Foreground="{StaticResource atDark_fg}" Focusable="False" Margin="5"/>
                             </StackPanel>

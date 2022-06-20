@@ -12,11 +12,38 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
+using DSCript.Spooling;
+
 namespace DSCript.Models
 {
+    public enum ModelPackageLoadLevel
+    {
+        /// <summary>
+        /// Loads in the header only.
+        /// </summary>
+        FastLoad    = 0,
+
+        /// <summary>
+        /// Loads in the header and materials.
+        /// </summary>
+        Materials   = 1,
+
+        /// <summary>
+        /// Loads in the header, materials, and models.
+        /// </summary>
+        Models      = 2,
+
+        /// <summary>
+        /// Loads in everything.
+        /// </summary>
+        Default     = 3,
+    }
+
     public class ModelPackage : ModelPackageResource
     {
-        public static bool SkipModelsOnLoad = false;
+        public static ModelPackageLoadLevel LoadLevel = ModelPackageLoadLevel.Default;
+
+        public static readonly int FLAG_SpooledVehicleHacks = 0x10000000;
 
         public static PlatformType GetPlatformType(ChunkType context)
         {
@@ -32,6 +59,400 @@ namespace DSCript.Models
             }
 
             return PlatformType.Generic;
+        }
+
+        public string DisplayName { get; set; } = "Model Package";
+
+        public bool IsOwnModelPackage()
+        {
+            var notASingleVVVFile = true;
+
+            if (Version == 6)
+                notASingleVVVFile = (UID != 0x2D);
+
+            if (HasModels)
+            {
+                var uid = Models[0].UID;
+
+                for (int i = 1; i < Models.Count; i++)
+                {
+                    if (Models[i].UID != uid)
+                        return false;
+                }
+            }
+
+            return notASingleVVVFile;
+        }
+
+        public bool IsOwnModelPackage(UID modelUID)
+        {
+            var notASingleVVVFile = true;
+
+            if (Version == 6)
+                notASingleVVVFile = (UID != 0x2D);
+
+            foreach (var model in Models)
+            {
+                if (model.UID != modelUID)
+                    return false;
+            }
+
+            return notASingleVVVFile;
+        }
+
+        public ModelPackage ExtractModelsByUID(UID modelUID, int targetUID)
+        {
+            if (!HasModels)
+                throw new Exception("Cannot extract models from a package with no models!");
+
+            // copy spooler information
+            var spooler = new SpoolableBuffer()
+            {
+                Context = Spooler.Context,
+                Alignment = Spooler.Alignment,
+                Description = Spooler.Description,
+                Version = Spooler.Version,
+            };
+
+            // create new model package
+            var package = SpoolableResourceFactory.Create<ModelPackage>(spooler);
+
+            // initialize settings
+            package.Version = Version;
+            package.Platform = Platform;
+            package.UID = targetUID;
+            package.Flags = Flags;
+
+            var updateUIDs = (targetUID != UID);
+            var materialUID = (ushort)targetUID;
+            var spooledVehicleHacks = false;
+
+            if (updateUIDs && targetUID == 0xFF)
+            {
+                package.Flags |= FLAG_SpooledVehicleHacks;
+                spooledVehicleHacks = true;
+                materialUID = 0xFFFD;
+            }
+
+            //
+            // STEP 1: Models
+            //
+
+            package.Models = new List<Model>();
+            package.LodInstances = new List<LodInstance>();
+            package.SubModels = new List<SubModel>();
+
+            // for creating our new index buffer
+            var gIndices = new List<int>();
+
+            var luVertexBuffers = new Dictionary<int, VertexBuffer>();
+            var luVertexCounts = new Dictionary<int, int>(); // Count = VertexOffset
+
+            // collect materials information
+            var materialRefs = new List<MaterialDataPC>();
+            var luMaterials = new Dictionary<MaterialHandle, MaterialHandle>();
+#if !SHITTY_REBASING
+            var luOldVertexBuffer = new Dictionary<int, VertexBuffer>();
+            var luLowestVertexBase = new Dictionary<int, int>();
+            var luHighestVertexOffset = new Dictionary<int, int>();
+
+            var lowestIndexOffset = -1;
+            var highestIndexOffset = -1;
+#endif
+            // first pass: collect new models/instances/submodels, material references, initialize vertex buffers
+            foreach (var _model in Models)
+            {
+                if (_model.UID != modelUID)
+                    continue;
+
+                // DEEP COPY: all new instances down the line
+                var model = CopyCatFactory.GetCopy(_model, CopyClassType.DeepCopy);
+
+                // prepare our vertex buffer lookups for the second pass
+                if (!luVertexBuffers.ContainsKey(model.VertexType))
+                {
+                    luVertexBuffers[model.VertexType] = VertexBuffer.Create(Version, model.VertexType);
+                    luVertexCounts[model.VertexType] = 0;
+                }
+#if !SHITTY_REBASING
+                // buffer to retreive from
+                if (!luOldVertexBuffer.ContainsKey(model.VertexType))
+                    luOldVertexBuffer[model.VertexType] = _model.VertexBuffer;
+
+                if (!luLowestVertexBase.ContainsKey(model.VertexType))
+                    luLowestVertexBase[model.VertexType] = -1;
+                if (!luHighestVertexOffset.ContainsKey(model.VertexType))
+                    luHighestVertexOffset[model.VertexType] = -1;
+
+                var lowestVertexBase = luLowestVertexBase[model.VertexType];
+                var highestVertexOffset = luHighestVertexOffset[model.VertexType];
+#endif
+                // collect model
+                package.Models.Add(model);
+
+                foreach (var lod in model.Lods)
+                {
+                    foreach (var instance in lod.Instances)
+                    {
+                        // collect instance
+                        package.LodInstances.Add(instance);
+
+                        foreach (var submodel in instance.SubModels)
+                        {
+                            // collect submodel
+                            package.SubModels.Add(submodel);
+#if !SHITTY_REBASING
+                            if (lowestVertexBase == -1 || (submodel.VertexBaseOffset < lowestVertexBase))
+                            {
+                                lowestVertexBase = submodel.VertexBaseOffset;
+                                luLowestVertexBase[model.VertexType] = lowestVertexBase;
+                            }
+
+                            var vertexUpperEnd = submodel.VertexBaseOffset + submodel.VertexOffset + submodel.VertexCount;
+
+                            if (vertexUpperEnd > highestVertexOffset)
+                            {
+                                highestVertexOffset = vertexUpperEnd;
+                                luHighestVertexOffset[model.VertexType] = highestVertexOffset;
+                            }
+
+                            if (lowestIndexOffset == -1 || (submodel.IndexOffset < lowestIndexOffset))
+                                lowestIndexOffset = submodel.IndexOffset;
+
+                            var indexUpperEnd = submodel.IndexOffset + submodel.IndexCount;
+
+                            if (indexUpperEnd > highestIndexOffset)
+                                highestIndexOffset = indexUpperEnd;
+#endif
+                            var material = submodel.Material;
+
+                            var ownedMaterial = false;
+                            var packagedMaterial = false;
+
+                            switch (material.UID)
+                            {
+                            // TODO: verify 100% what's a packaged material or not
+                            case 0xFFFD:
+                                packagedMaterial = true;
+                                break;
+                            case 0xF00D:
+                            case 0xFFFB:
+                            case 0xFFFC:
+                            case 0xFFFE:
+                            case 0xFFFF:
+                                // global material
+                                break;
+                            case 0xCCCC:
+                                // null material
+                                break;
+                            default:
+                                if (material.UID == UID)
+                                {
+                                    ownedMaterial = true;
+                                }
+                                break;
+                            }
+
+                            // collect any materials we might own
+                            if (ownedMaterial || packagedMaterial)
+                            {
+                                if (!luMaterials.ContainsKey(submodel.Material))
+                                {
+                                    // get the material ref
+                                    var mtlRef = Materials[material.Handle];
+
+                                    // adjust the new handle
+                                    material.Handle = (ushort)materialRefs.Count;
+
+                                    // update the UID as well?
+                                    if (updateUIDs || spooledVehicleHacks)
+                                        material.UID = materialUID;
+
+                                    // add to lookup
+                                    luMaterials.Add(submodel.Material, material);
+
+                                    // store material ref
+                                    materialRefs.Add(mtlRef);
+                                }
+                                
+                                // remap the material
+                                submodel.Material = luMaterials[submodel.Material];
+                            }
+                        }
+                    }
+                }
+            }
+#if !SHITTY_REBASING
+            foreach (var kv in luVertexBuffers)
+            {
+                var idx = kv.Key;
+                var newVertexBuffer = kv.Value;
+
+                var oldVertexBuffer = luOldVertexBuffer[idx];
+                var lowestVertexBase = luLowestVertexBase[idx];
+                var highestVertexOffset = luHighestVertexOffset[idx];
+
+                Debug.WriteLine($"VBUFFER {idx} : Lowest Vertex Base: {lowestVertexBase:X8}, Highest Vertex Offset: {highestVertexOffset:X8}");
+
+                // collect vertices
+                var decl = newVertexBuffer.Declaration;
+                var count = (highestVertexOffset - lowestVertexBase) + 1;
+                var offset = 0;
+                var stride = decl.SizeOf;
+                var buffer = new byte[count * stride];
+
+                var vertices = oldVertexBuffer.Vertices;
+
+                for (int v = lowestVertexBase; v <= highestVertexOffset; v++)
+                {
+                    if (v >= vertices.Count)
+                    {
+                        var newCount = (v - lowestVertexBase);
+
+                        Debug.WriteLine($"**** Adjusting count from {count} to {newCount}");
+                        count = newCount;
+                        break;
+                    }
+
+                    var vertex = vertices[v];
+
+                    Buffer.BlockCopy(vertex.Buffer, 0, buffer, offset, stride);
+                    offset += stride;
+                }
+
+                newVertexBuffer.AddVertices(buffer, stride, count);
+            }
+
+            var indices = IndexBuffer.Indices;
+            var nTotalIndices = indices.Length;
+
+            // build index buffer (dunno how many we actually need lmao)
+            for (int i = lowestIndexOffset; i < highestIndexOffset + 3; i++)
+            {
+                if (i >= nTotalIndices)
+                    break;
+
+                var idx = indices[i];
+
+                gIndices.Add(idx);
+            }
+#endif
+            // second pass: finalize vertex buffers
+            foreach (var model in package.Models)
+            {
+#if SHITTY_REBASING
+                // setup info for the vertex buffer we're appending to
+                var vertexBuffer = luVertexBuffers[model.VertexType];
+                var vertexBaseOffset = luVertexCounts[model.VertexType];
+                var vertexOffset = 0;
+#else
+                var lowestVertexBase = luLowestVertexBase[model.VertexType];
+                var highestVertexCount = luHighestVertexOffset[model.VertexType] - lowestVertexBase;
+#endif
+                // we need to attach it to our new vertex buffer/model package,
+                // but first we need to collect all of its vertices/indices...
+                foreach (var lod in model.Lods)
+                {
+                    foreach (var instance in lod.Instances)
+                    {
+                        foreach (var submodel in instance.SubModels)
+                        {
+#if SHITTY_REBASING
+                            // watch out for strange scenarios like this
+                            if (submodel.ModelPackage != this)
+                                throw new Exception("WTF? I don't own this sub-model?!");
+
+                            // rebase the submodel! :D
+                            submodel.RebaseTo(package, model, instance, vertexBuffer, vertexBaseOffset, ref vertexOffset, ref gIndices);
+#else
+                            Debug.WriteLine("**** BEFORE REBASE ****");
+                            Debug.WriteLine($"\tVertexBaseOffset: {submodel.VertexBaseOffset:X8}");
+                            Debug.WriteLine($"\tVertexOffset: {submodel.VertexOffset:X8}");
+                            Debug.WriteLine($"\tVertexCount: {submodel.VertexCount:X8}");
+                            Debug.WriteLine($"\tIndexOffset: {submodel.IndexOffset:X8}");
+                            Debug.WriteLine($"\tIndexCount: {submodel.IndexCount:X8}");
+
+                            submodel.VertexBaseOffset -= lowestVertexBase;
+                            submodel.IndexOffset -= lowestIndexOffset;
+#endif
+                            Debug.WriteLine("**** AFTER REBASE ****");
+                            Debug.WriteLine($"\tVertexBaseOffset: {submodel.VertexBaseOffset:X8}");
+                            Debug.WriteLine($"\tVertexOffset: {submodel.VertexOffset:X8}");
+                            Debug.WriteLine($"\tVertexCount: {submodel.VertexCount:X8}");
+                            Debug.WriteLine($"\tIndexOffset: {submodel.IndexOffset:X8}");
+                            Debug.WriteLine($"\tIndexCount: {submodel.IndexCount:X8}");
+                        }
+                    }
+                }
+
+                // finalize vertex buffer
+                model.VertexBuffer = luVertexBuffers[model.VertexType];
+#if SHITTY_REBASING
+                // update base offset
+                luVertexCounts[model.VertexType] = (vertexBaseOffset + vertexOffset);
+#endif
+            }
+
+            // compile index buffer
+            var indexBuffer = new IndexBuffer(gIndices.Count);
+            var indexOffset = 0;
+
+            // ugly hacks lol
+            foreach (var index in gIndices)
+            {
+                var idx = (short)index;
+
+                if (idx < 0)
+                    throw new Exception("You dun GOOFED !!!");
+
+                indexBuffer[indexOffset++] = idx;
+            }
+
+            // finalize index buffer
+            package.IndexBuffer = indexBuffer;
+
+            // finalize vertex buffer(s)
+            package.VertexBuffers = luVertexBuffers.Values.ToList();
+
+            // cleanup thus far...
+            luVertexBuffers.Clear();
+            luVertexCounts.Clear();
+
+            //
+            // STEP 2: Materials
+            //
+
+            package.Materials = new List<MaterialDataPC>();
+            package.Substances = new List<SubstanceDataPC>();
+            package.Textures = new List<TextureDataPC>();
+
+            foreach (var _material in materialRefs)
+            {
+                // DEEP COPY: all new instances down the line
+                var material = CopyCatFactory.GetCopy(_material, CopyClassType.DeepCopy);
+
+                // collect material
+                package.Materials.Add(material);
+
+                foreach (var substance in material.Substances)
+                {
+                    // collect substance
+                    package.Substances.Add(substance);
+
+                    foreach (var texture in substance.Textures)
+                    {
+                        // collect texture
+                        package.Textures.Add(texture);
+                    }
+                }
+            }
+
+            //
+            // STEP 3: [TODO] Remove all duplicate data - sounds like fun! xD
+            //
+
+            // ~Fin :)
+            return package;
         }
 
         protected void ReadVertexDeclarations(Stream stream, ref ModelPackageData detail, out List<VertexBufferInfo> decls)
@@ -78,30 +499,80 @@ namespace DSCript.Models
             }
         }
 
+        public static float toTwoByteFloat(int intVal)
+        {
+            int mant = intVal & 0x03ff;
+            int exp = intVal & 0x7c00;
+            if (exp == 0x7c00) exp = 0x3fc00;
+            else if (exp != 0)
+            {
+                exp += 0x1c000;
+                if (mant == 0 && exp > 0x1c400)
+                    return BitConverter.ToSingle(BitConverter.GetBytes((intVal & 0x8000) << 16 | exp << 13 | 0x3ff), 0);
+            }
+            else if (mant != 0)
+            {
+                exp = 0x1c400;
+                do
+                {
+                    mant <<= 1;
+                    exp -= 0x400;
+                } while ((mant & 0x400) == 0);
+                mant &= 0x3ff;
+            }
+            return BitConverter.ToSingle(BitConverter.GetBytes((intVal & 0x8000) << 16 | (exp | mant) << 13), 0);
+        }
+
         protected void ReadVertices(Stream stream, ref ModelPackageData detail, ref List<VertexBufferInfo> decls)
         {
             int vBufferIdx = 0;
 
             foreach (var decl in decls)
             {
-                var vBufferType = decl.Type;
-
-                if (vBufferType == 0xABCDEF)
-                    throw new InvalidOperationException("Can't create vertices; one or more vertex buffers are uninitialized!");
-
                 var vBuffer = VertexBuffers[vBufferIdx++];
                 var vertexLength = vBuffer.Declaration.SizeOf;
 
-                // Too early. Come back later.
                 if (decl.VertexLength != vertexLength)
-                    throw new InvalidOperationException($"Vertex buffer expected vertex size of {vertexLength} but got {decl.VertexLength}.");
+                {
+                    if (decl.VertexLength > vertexLength)
+                        throw new InvalidOperationException($"Vertex buffer expected vertex size of {vertexLength} but got {decl.VertexLength}.");
+                }
 
                 stream.Position = decl.VerticesOffset;
 
                 var buffer = new byte[decl.VerticesLength];
                 stream.Read(buffer, 0, decl.VerticesLength);
 
-                vBuffer.CreateVertices(buffer, decl.VerticesCount);
+                if (Platform == PlatformType.Xbox)
+                {
+                    var newBuffer = new byte[vertexLength * decl.VerticesCount];
+
+                    for (int v = 0; v < decl.VerticesCount; v++)
+                    {
+                        var offset = (v * vertexLength);
+
+                        // try unpacking positions only?
+                        var pos = BitConverter.ToUInt32(buffer, (v * decl.VertexLength));
+
+                        /*
+                         pDstVertices[i].n = ( ( ((DWORD)(pSrcVertices[i].n.z *  511.0f)) & 0x3ff ) << 22L ) |
+                            ( ( ((DWORD)(pSrcVertices[i].n.y * 1023.0f)) & 0x7ff ) << 11L ) |
+                            ( ( ((DWORD)(pSrcVertices[i].n.x * 1023.0f)) & 0x7ff ) <<  0L );*/
+                        var x = (pos & 0x7ff) / 1023.0f;
+                        var y = ((pos >> 11) & 0x7ff) / 1023.0f;
+                        var z = ((pos >> 22) & 0x3ff) / 511.0f;
+
+                        Buffer.BlockCopy(BitConverter.GetBytes(x), 0, newBuffer, offset, 4);
+                        Buffer.BlockCopy(BitConverter.GetBytes(y), 0, newBuffer, offset + 4, 4);
+                        Buffer.BlockCopy(BitConverter.GetBytes(z), 0, newBuffer, offset + 8, 4);
+                    }
+
+                    vBuffer.SetVertices(newBuffer, vertexLength, decl.VerticesCount);
+                }
+                else
+                {
+                    vBuffer.SetVertices(buffer, decl.VertexLength, decl.VerticesCount);
+                }
             }
         }
 
@@ -306,6 +777,9 @@ namespace DSCript.Models
 
                     if (_lod.InstancesCount != 0)
                     {
+                        if (k == 6)
+                            Debug.WriteLine($"{model.UID}: secondary shadow has mask {lod.Mask:X8}, flags {lod.Flags:X8}");
+
                         var lodInstancesIdx = -1;
 
                         if (luLodInstances.TryGetValue(_lod.InstancesOffset, out lodInstancesIdx))
@@ -387,7 +861,7 @@ namespace DSCript.Models
 
                     UseTransform = (short)((lodInst.UseTransform) ? 1 : 0),
 
-                    Info = new LodInstanceInfo.DebugInfo() {
+                    Info = new LodInstanceInfo.ExtraInfo() {
                         Handle = (short)lodInst.Handle,
                         Reserved = lodInst.Reserved,
                     },
@@ -466,38 +940,14 @@ namespace DSCript.Models
                 {
                     var texA1 = substance.Textures[0];
 
-                    var texA2 = new TextureDataPC()
-                    {
-                        UID = texA1.UID,
-                        Handle = texA1.Handle + 1,
-                        Type = texA1.Type,
-                        Flags = texA1.Flags,
-                        Width = texA1.Width,
-                        Height = texA1.Height,
-                        Buffer = texA1.Buffer,
-                    };
+                    var texA2 = CopyCatFactory.GetCopy(texA1, CopyClassType.DeepCopy);
+                    texA2.Handle += 1;
 
-                    var texB1 = new TextureDataPC()
-                    {
-                        UID = texA2.UID,
-                        Handle = texA2.Handle + 1,
-                        Type = texA2.Type,
-                        Flags = texA2.Flags,
-                        Width = texA2.Width,
-                        Height = texA2.Height,
-                        Buffer = texA2.Buffer,
-                    };
+                    var texB1 = CopyCatFactory.GetCopy(texA2, CopyClassType.DeepCopy);
+                    texB1.Handle += 1;
 
-                    var texB2 = new TextureDataPC()
-                    {
-                        UID = texB1.UID,
-                        Handle = texB1.Handle + 1,
-                        Type = texB1.Type,
-                        Flags = texB1.Flags,
-                        Width = texB1.Width,
-                        Height = texB1.Height,
-                        Buffer = texB1.Buffer,
-                    };
+                    var texB2 = CopyCatFactory.GetCopy(texB1, CopyClassType.DeepCopy);
+                    texB2.Handle += 1;
 
                     textures = new List<TextureDataPC>()
                             {
@@ -513,16 +963,8 @@ namespace DSCript.Models
                 {
                     var texA1 = substance.Textures[0];
 
-                    var texA2 = new TextureDataPC()
-                    {
-                        UID = texA1.UID,
-                        Handle = texA1.Handle + 1,
-                        Type = texA1.Type,
-                        Flags = texA1.Flags,
-                        Width = texA1.Width,
-                        Height = texA1.Height,
-                        Buffer = texA1.Buffer,
-                    };
+                    var texA2 = CopyCatFactory.GetCopy(texA1, CopyClassType.DeepCopy);
+                    texA2.Handle += 1;
 
                     textures = new List<TextureDataPC>()
                             {
@@ -538,16 +980,8 @@ namespace DSCript.Models
 
                     for (int n = 1; n < nPalettes; n++)
                     {
-                        var child = new TextureDataPC()
-                        {
-                            UID = tex.UID,
-                            Handle = tex.Handle + 1,
-                            Type = tex.Type,
-                            Flags = tex.Flags,
-                            Width = tex.Width,
-                            Height = tex.Height,
-                            Buffer = tex.Buffer,
-                        };
+                        var child = CopyCatFactory.GetCopy(tex, CopyClassType.DeepCopy);
+                        child.Handle += 1;
 
                         textures.Add(child);
                         tex = child;
@@ -564,16 +998,8 @@ namespace DSCript.Models
 
                         while (idx != -1)
                         {
-                            var clone = new TextureDataPC()
-                            {
-                                UID = tex.UID,
-                                Handle = tex.Handle + num++,
-                                Type = tex.Type,
-                                Flags = tex.Flags,
-                                Width = tex.Width,
-                                Height = tex.Height,
-                                Buffer = tex.Buffer,
-                            };
+                            var clone = CopyCatFactory.GetCopy(tex, CopyClassType.DeepCopy);
+                            clone.Handle += num++;
 
                             tex = clone;
 
@@ -605,23 +1031,21 @@ namespace DSCript.Models
                     {
                         var idx = (n * 4);
 
-                        // copy the red channel and prepare a mask
+                        // clone the red clut
                         var clut = substance.Palettes[idx].Clone();
-                        var mask = new PaletteData(clut.Count);
 
+                        // merge in green/blue/alpha cluts
                         for (int k = 1; k < 4; k++)
-                        {
-                            // merge green/blue/alpha
-                            clut.Merge(substance.Palettes[idx + k], k);
+                            clut.Merge(k, substance.Palettes[idx + k]);
 
-                            // setup mask
-                            var m = (k - 1);
+                        // prepare the alpha mask
+                        var mask = clut.Clone();
 
-                            mask.Merge(substance.Palettes[idx + m], m);
-                            mask.Blend(substance.Palettes[3], m);
-                        }
+                        // blend each channel with the alpha clut
+                        for (int m = 0; m < 4; m++)
+                            mask.Blend(m, substance.Palettes[3]);
 
-                        // and finally, set the mask up by using the alpha
+                        // average everything out and convert it to a mask
                         mask.ToAlphaMask();
 
                         cluts.Add(clut);
@@ -680,15 +1104,16 @@ namespace DSCript.Models
                     if (luSwizzledTextures.Contains(data))
                         continue;
 
-                    var format = (D3DFormat)((texture.Flags >> 8) & 0xFF);
-                    var mipmaps = (texture.Flags >> 16) & 0xF;
+                    var format = TextureFormat.Unpack(texture.ExtraData);
 
-                    var width = texture.Width;
-                    var height = texture.Height;
+                    var type = (D3DFormat)format.Type;
+                    var width = format.USize;
+                    var height = format.VSize;
+                    var mipmaps = format.MipMaps;
 
-                    if (DDSUtils.HasPalette(format))
+                    if (DDSUtils.HasPalette(type))
                     {
-                        var bpp = DDSUtils.GetBytesPerPixel(format);
+                        var bpp = DDSUtils.GetBytesPerPixel(type);
 
                         if (bpp != 4)
                             throw new InvalidOperationException("can't process palettes!");
@@ -697,10 +1122,22 @@ namespace DSCript.Models
 
                         // override the data
                         data = DDSUtils.Depalettize(data, width, height, bpp, palette.Data);
-                        mipmaps = 0; // ooooo that's dirty
+
+                        switch (type)
+                        {
+                        case D3DFormat.DXT1:
+                        case D3DFormat.DXT2:
+                        case D3DFormat.DXT3:
+                        case D3DFormat.DXT5:
+                            // do not remove mipmaps...
+                            break;
+                        default:
+                            mipmaps = 0; // ooooo that's dirty
+                            break;
+                        }
                     }
 
-                    var buffer = DDSUtils.EncodeTexture(format, width, height, mipmaps, data);
+                    var buffer = DDSUtils.EncodeTexture(type, width, height, mipmaps, data);
 
                     texture.Buffer = buffer;
 
@@ -798,10 +1235,13 @@ namespace DSCript.Models
                         Handle = _tex.Handle,
 
                         Type = _tex.Type,
+
                         Flags = _tex.Flags,
 
                         Width = _tex.Width,
                         Height = _tex.Height,
+
+                        ExtraData = _tex.Format.ToInt32(Version),
                     };
 
                     Textures.Add(tex);
@@ -945,9 +1385,12 @@ namespace DSCript.Models
                         Bin = (RenderBinType)_substance.Bin,
 
                         Flags = _substance.Flags,
-                        
-                        Mode = (_substance.TS1 | (_substance.TS2 << 8)),
-                        Type = (_substance.TS3 | (_substance.TextureFlags << 8)),
+
+                        TS1 = _substance.TS1,
+                        TS2 = _substance.TS2,
+                        TS3 = _substance.TS3,
+
+                        TextureFlags = _substance.TextureFlags,
                     };
 
                     if (_substance.PaletteRefsCount != 0)
@@ -1100,6 +1543,8 @@ namespace DSCript.Models
                     UID = texture.UID,
                     Handle = texture.Handle,
 
+                    Flags = (texture.Flags != -666) ? texture.Flags : 0,
+
                     DataOffset = textureDataLength,
                     DataSize = buffer.Length,
 
@@ -1108,10 +1553,14 @@ namespace DSCript.Models
                     Width = (short)texture.Width,
                     Height = (short)texture.Height,
 
-                    Flags = texture.Flags,
-
                     Reserved = 0,
                 };
+
+                if (texture.ExtraData != 0)
+                {
+                    _texture.Format = TextureFormat.Unpack(texture.ExtraData);
+                    _texture.UsesFormat = true;
+                }
 
                 this.Serialize(stream, ref _texture);
                 
@@ -1283,17 +1732,23 @@ namespace DSCript.Models
 
             using (var stream = Spooler.GetMemoryStream())
             {
-                // initialize everything as empty
-                Models = new List<Model>();
-                LodInstances = new List<LodInstance>();
-                SubModels = new List<SubModel>();
+                if (LoadLevel >= ModelPackageLoadLevel.Materials)
+                {
+                    // initialize everything as empty
+                    Materials = new List<MaterialDataPC>();
+                    Substances = new List<SubstanceDataPC>();
+                    Palettes = new List<PaletteData>();
+                    Textures = new List<TextureDataPC>();
 
-                VertexBuffers = new List<VertexBuffer>();
+                    if (LoadLevel >= ModelPackageLoadLevel.Models)
+                    {
+                        Models = new List<Model>();
+                        LodInstances = new List<LodInstance>();
+                        SubModels = new List<SubModel>();
 
-                Materials = new List<MaterialDataPC>();
-                Substances = new List<SubstanceDataPC>();
-                Palettes = new List<PaletteData>();
-                Textures = new List<TextureDataPC>();
+                        VertexBuffers = new List<VertexBuffer>();
+                    }
+                }
 
                 if (Platform == PlatformType.PS2)
                 {
@@ -1307,28 +1762,35 @@ namespace DSCript.Models
                     var detail = this.Deserialize<ModelPackageData>(stream);
 
                     UID = detail.UID;
+                    Handle = detail.Handle;
 
-                    if ((Platform != PlatformType.Xbox) && !SkipModelsOnLoad)
+                    if (LoadLevel >= ModelPackageLoadLevel.Materials)
                     {
-                        Models = new List<Model>(detail.ModelsCount);
-                        LodInstances = new List<LodInstance>(detail.LodInstancesCount);
-                        SubModels = new List<SubModel>(detail.SubModelsCount);
+                        if (Platform != PlatformType.Wii)
+                            ReadMaterials(stream, ref detail);
 
-                        // skip packages with no models
-                        if (detail.ModelsCount > 0)
+                        if (LoadLevel >= ModelPackageLoadLevel.Models)
                         {
-                            List<VertexBufferInfo> decls = null;
+                            //if (Platform != PlatformType.Xbox)
+                            {
+                                Models = new List<Model>(detail.ModelsCount);
+                                LodInstances = new List<LodInstance>(detail.LodInstancesCount);
+                                SubModels = new List<SubModel>(detail.SubModelsCount);
 
-                            ReadVertexDeclarations(stream, ref detail, out decls);
-                            ReadModels(stream, ref detail, ref decls);
+                                // skip packages with no models
+                                if (detail.ModelsCount > 0)
+                                {
+                                    List<VertexBufferInfo> decls = null;
 
-                            ReadVertices(stream, ref detail, ref decls);
-                            ReadIndices(stream, ref detail);
+                                    ReadVertexDeclarations(stream, ref detail, out decls);
+                                    ReadModels(stream, ref detail, ref decls);
+
+                                    ReadVertices(stream, ref detail, ref decls);
+                                    ReadIndices(stream, ref detail);
+                                }
+                            }
                         }
                     }
-
-                    if (Platform != PlatformType.Wii)
-                        ReadMaterials(stream, ref detail);
 
                     if (Platform == PlatformType.Wii)
                         StreamExtensions.UseBigEndian = false;
@@ -1349,6 +1811,8 @@ namespace DSCript.Models
                 detail = new ModelPackageData(Version, UID,
                     Models.Count, LodInstances.Count, SubModels.Count, IndexBuffer.Indices.Length, VertexBuffers.Count);
             }
+
+            detail.Handle = (ushort)Handle;
 
             byte[] buffer = null;
 
@@ -1393,7 +1857,9 @@ namespace DSCript.Models
         public void SaveMaterials(XmlElement parent)
         {
             var xmlDoc = parent.OwnerDocument;
-            
+
+            parent.SetAttribute("Version", Version.ToString());
+
             foreach (var material in Materials)
             {
                 var mat = xmlDoc.CreateElement("Material");
@@ -1405,21 +1871,27 @@ namespace DSCript.Models
                 {
                     var sub = xmlDoc.CreateElement("Substance");
 
+                    sub.SetAttribute("Bin", substance.Bin.ToString());
+
                     sub.SetAttribute("Flags", substance.Flags.ToString("X8"));
 
-                    sub.SetAttribute("Mode", substance.Mode.ToString("X4"));
-                    sub.SetAttribute("Type", substance.Type.ToString("X4"));
-                    
+                    sub.SetAttribute("TS1", substance.TS1.ToString());
+                    sub.SetAttribute("TS2", substance.TS2.ToString());
+                    sub.SetAttribute("TS3", substance.TS3.ToString());
+
+                    sub.SetAttribute("TextureFlags", substance.TextureFlags.ToString("X2"));
+
                     foreach (var texture in substance.Textures)
                     {
                         var tex = xmlDoc.CreateElement("Texture");
 
                         tex.SetAttribute("UID", texture.UID.ToString("X8"));
-                        tex.SetAttribute("Hash", texture.Handle.ToString("X8"));
+                        tex.SetAttribute("Handle", texture.Handle.ToString("X8"));
                         tex.SetAttribute("Type", texture.Type.ToString());
                         tex.SetAttribute("Width", texture.Width.ToString());
                         tex.SetAttribute("Height", texture.Height.ToString());
                         tex.SetAttribute("Flags", texture.Flags.ToString());
+                        tex.SetAttribute("ExtraData", texture.ExtraData.ToString("X8"));
 
                         sub.AppendChild(tex);
                     }

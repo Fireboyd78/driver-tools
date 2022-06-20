@@ -27,7 +27,7 @@ using DSCript.Models;
 
 namespace Antilli
 {
-    public class ModelGroupListItem
+    public class ModelContainerListItem
     {
         public ModelPackage ModelPackage { get; private set; }
         public List<Model> Models { get; private set; }
@@ -55,14 +55,25 @@ namespace Antilli
             }
         }
 
-        public string Text
+        public string Name
         {
             get
             {
                 if (IsNull)
-                    return "<NULL>";
+                    return "";
 
-                var name = UID.ToString();
+                return UID.ToString();
+            }
+        }
+
+        public string Text
+        {
+            get
+            {
+                var name = Name;
+
+                if (String.IsNullOrEmpty(name))
+                    name = "<NULL>";
 
                 if (!String.IsNullOrEmpty(Tag))
                     name += $"[{Tag}]";
@@ -74,7 +85,7 @@ namespace Antilli
             }
         }
         
-        public ModelGroupListItem(ModelPackage modelPackage, Model modelBasis)
+        public ModelContainerListItem(ModelPackage modelPackage, Model modelBasis)
         {
             ModelPackage = modelPackage;
 

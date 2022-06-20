@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -26,6 +28,142 @@ namespace DSCript.Models
 
                 return size;
             }
+        }
+
+        public byte[] GetVerticesFrom(VertexDeclaration other, List<VertexData> vertices, out int numVertices)
+        {
+            var count = vertices.Count;
+            var length = other.SizeOf;
+            var fails = 0;
+
+            var dstBuffer = new byte[length * count];
+            var dstOffset = 0;
+
+            var remapper = new List<Tuple<
+                // dst offset   src offset/size
+                int,            int, int
+            >>();
+
+            var luDestSizes = new Dictionary<int, int>();
+
+            // build the remapper using their declaration
+            foreach (var entry in other.Entries)
+            {
+                var dataType = entry.DataType;
+                var usageType = entry.UsageType;
+                var usageIndex = entry.UsageIndex;
+
+                var dstSize = entry.SizeOf;
+
+                luDestSizes.Add(dstOffset, dstSize);
+
+                var srcOffset = 0;
+                var srcSize = 0;
+
+                if (GetOffsetAndSize(usageType, usageIndex, out srcOffset, out srcSize))
+                {
+                    if (srcSize <= dstSize)
+                    {
+                        remapper.Add(new Tuple<int, int, int>(dstOffset, srcOffset, srcSize));
+                    }
+                    else
+                    {
+                        // different data type; conversion needed?
+                        fails++;
+                    }
+                }
+                else
+                {
+                    fails++;
+                }
+
+                dstOffset += dstSize;
+            }
+
+            var quickResolve = false;
+
+            if (fails > 0)
+                Debug.WriteLine($"Could not resolve {fails} entries to the new declaration.");
+            else
+            {
+                var srcSize = 0;
+                var dstSize = dstOffset;
+                
+                // can we just copy the buffers straight through?
+                foreach (var remap in remapper)
+                {
+                    var srcOffset = srcSize;
+
+                    // non-continuous offsets?
+                    if (srcOffset != remap.Item1 || remap.Item2 != srcOffset)
+                        break;
+
+                    // add size
+                    srcSize += remap.Item3;
+
+                    var size = (srcSize - srcOffset);
+
+                    // src buffer isn't sequential like dst buffer?
+                    if (size != luDestSizes[remap.Item1])
+                    {
+                        // fail the check below
+                        srcSize = 0;
+                        break;
+                    }
+                }
+
+                if (srcSize == dstSize)
+                {
+                    Debug.WriteLine($"Quick resolve succeeded!");
+                    quickResolve = true;
+                }
+            }
+
+            var dstIndex = 0;
+
+            // process all vertices
+            if (quickResolve)
+            {
+                // dstOffset hasn't been fiddled with, so we can stil use it
+                var dstSize = dstOffset;
+
+                // copy straight through :)
+                foreach (var vertex in vertices)
+                {
+                    var srcBuffer = vertex.Buffer;
+                    var offset = (dstIndex++ * length);
+
+                    // can copy the entire buffer straight-through
+                    Buffer.BlockCopy(srcBuffer, 0, dstBuffer, offset, dstSize);
+                }
+            }
+            else
+            {   
+                // remap all vertices to their new location
+                foreach (var vertex in vertices)
+                {
+                    var srcBuffer = vertex.Buffer;
+
+                    // start offset of dst vertex
+                    var offset = (dstIndex++ * length);
+
+                    foreach (var remap in remapper)
+                    {
+                        // offset into dst vertex
+                        dstOffset = offset + remap.Item1;
+
+                        var srcOffset = remap.Item2;
+                        var srcSize = remap.Item3;
+
+                        // copy partial data from buffer into new buffer
+                        Buffer.BlockCopy(srcBuffer, srcOffset, dstBuffer, dstOffset, srcSize);
+                    }
+                }
+            }
+
+            numVertices = dstIndex;
+
+            return dstBuffer;
         }
         
         public VertexDataType GetType(VertexUsageType usageType, short usageIndex)
@@ -75,6 +213,29 @@ namespace DSCript.Models
             }
 
             return -1;
+        }
+
+        public bool GetOffsetAndSize(VertexUsageType usageType, short usageIndex, out int offset, out int size)
+        {
+            offset = 0;
+            size = -1;
+
+            foreach (var entry in m_entries)
+            {
+                if ((entry.UsageType == usageType) && (entry.UsageIndex == usageIndex))
+                {
+                    size = entry.SizeOf;
+                    break;
+                }
+
+                offset += entry.SizeOf;
+            }
+
+            // failed?
+            if (size == -1)
+                return false;
+
+            return true;
         }
         
         public byte[] GetData(VertexUsageType usageType, short usageIndex, byte[] buffer, int startIndex, out VertexDataType dataType)
@@ -181,6 +342,31 @@ namespace DSCript.Models
             return new VertexDeclaration(entries);
         }
 
+        public static VertexDeclaration CreateFromStream(Stream stream)
+        {
+            var checkSize = stream.ReadInt16();
+            var reserved = stream.ReadInt16();
+
+            var count = stream.ReadInt32();
+            var length = stream.ReadInt32();
+
+            var decl = new VertexDeclaration(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                decl.m_entries[i].DataType = (VertexDataType)stream.ReadByte();
+                decl.m_entries[i].UsageType = (VertexUsageType)stream.ReadByte();
+                decl.m_entries[i].UsageIndex = stream.ReadInt16();
+            }
+
+            var declSize = decl.SizeOf;
+
+            if (declSize != checkSize)
+                throw new Exception($"Vertex declaration expected a size of {checkSize:X} but got {declSize:X} instead!");
+
+            return decl;
+        }
+
         public void WriteTo(Stream stream)
         {
             stream.Write((short)SizeOf);
@@ -196,6 +382,11 @@ namespace DSCript.Models
 
                 stream.Write(info.UsageIndex);
             }
+        }
+
+        protected VertexDeclaration(int count)
+        {
+            m_entries = new VertexDeclInfo[count];
         }
 
         public VertexDeclaration(params VertexDeclInfo[] entries)

@@ -23,8 +23,15 @@ namespace DSCript.Models
         public List<PaletteData> Palettes { get; set; }
         public List<TextureDataPC> Textures { get; set; }
 
+        public bool HasMaterials => Materials?.Count > 0;
+
         protected override void Load()
         {
+            Materials = new List<MaterialDataPC>();
+            Substances = new List<SubstanceDataPC>();
+            Palettes = new List<PaletteData>();
+            Textures = new List<TextureDataPC>();
+
             var upst = Spooler.GetFirstChild(ChunkType.StandaloneTextures) as SpoolableBuffer;
             var mdpc = Spooler.GetFirstChild(ChunkType.ModelPackagePC) as SpoolableBuffer;
 
@@ -32,8 +39,6 @@ namespace DSCript.Models
                 return;
 
             var pak = mdpc.AsResource<ModelPackage>(true);
-
-            PackageManager.Register(pak);
 
             var materials = pak.Materials;
 
@@ -73,6 +78,26 @@ namespace DSCript.Models
         {
             throw new NotImplementedException();
         }
+
+        public int FindMaterial(MaterialHandle material, out IMaterialData result)
+        {
+            result = null;
+
+            if (material.UID == UID)
+            {
+                if (HasMaterials && (material.Handle < Materials.Count))
+                {
+                    result = Materials[material.Handle];
+                    return 1;
+                }
+
+                // missing
+                return -1;
+            }
+
+            // not found
+            return 0;
+        }
     }
 
     public class GlobalTexturesFile : FileChunker
@@ -92,7 +117,12 @@ namespace DSCript.Models
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
             if (sender is SpoolablePackage && sender.Context == 0x0)
-                GlobalTextures = sender.AsResource<GlobalTexturesResource>(true);
+            {
+                GlobalTextures = sender.AsResource<GlobalTexturesResource>();
+
+                // register it
+                PackageManager.Load(GlobalTextures);
+            }
 
             base.OnSpoolerLoaded(sender, e);
         }

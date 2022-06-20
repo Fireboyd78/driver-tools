@@ -221,6 +221,8 @@ namespace Antilli
 
         public override void HandleKeyDown(object sender, KeyEventArgs e)
         {
+            TextureViewWidget.OnKeyPressed(sender, e);
+
             base.HandleKeyDown(sender, e);
         }
 

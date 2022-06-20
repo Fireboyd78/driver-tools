@@ -18,7 +18,7 @@ namespace DSCript.Models
 {
     public static class PackageManager
     {
-        static readonly Dictionary<int, ModelPackage> Packages;
+        static readonly Dictionary<int, IMaterialPackage> Packages;
 
         //
         // TODO:
@@ -37,7 +37,7 @@ namespace DSCript.Models
             Packages.Clear();
         }
         
-        public static bool IsRegistered(ModelPackage package)
+        public static bool IsRegistered(IMaterialPackage package)
         {
             if (package == null)
                 return false;
@@ -47,7 +47,7 @@ namespace DSCript.Models
             return ReferenceEquals(package, Find(uid));
         }
 
-        public static bool IsRegisterable(ModelPackage package)
+        public static bool IsRegisterable(IMaterialPackage package)
         {
             if (package == null)
                 return false;
@@ -60,9 +60,9 @@ namespace DSCript.Models
             return false;
         }
 
-        public static ModelPackage Find(int uid)
+        public static IMaterialPackage Find(int uid)
         {
-            ModelPackage package = null;
+            IMaterialPackage package = null;
 
             if (IsValidUID(uid))
                 Packages.TryGetValue(uid, out package);
@@ -70,7 +70,7 @@ namespace DSCript.Models
             return package;
         }
 
-        public static void Load(ModelPackage package)
+        public static void Load(IMaterialPackage package)
         {
             SpoolableResourceFactory.Load(package);
 
@@ -83,7 +83,7 @@ namespace DSCript.Models
             }
         }
 
-        public static bool Register(ModelPackage package, int uid)
+        public static bool Register(IMaterialPackage package, int uid)
         {
             if (Packages.ContainsKey(uid))
                 return false;
@@ -92,7 +92,7 @@ namespace DSCript.Models
             return true;
         }
 
-        public static bool Register(ModelPackage package)
+        public static bool Register(IMaterialPackage package)
         {
             var uid = package.UID;
 
@@ -118,7 +118,7 @@ namespace DSCript.Models
             return false;
         }
 
-        public static bool UnRegister(ModelPackage package)
+        public static bool UnRegister(IMaterialPackage package)
         {
             var uid = package.UID;
 
@@ -128,7 +128,7 @@ namespace DSCript.Models
             return false;
         }
 
-        public static IEnumerable<ModelPackage> EnumerateAll()
+        public static IEnumerable<IMaterialPackage> EnumerateAll()
         {
             foreach (var package in Packages)
                 yield return package.Value;
@@ -138,7 +138,7 @@ namespace DSCript.Models
         
         static PackageManager()
         {
-            Packages = new Dictionary<int, ModelPackage>();
+            Packages = new Dictionary<int, IMaterialPackage>();
         }
     }
 }

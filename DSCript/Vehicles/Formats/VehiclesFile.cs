@@ -35,13 +35,6 @@ namespace DSCript.Models
     {
         public List<VehicleHierarchyData> Hierarchies { get; set; }
 
-        public virtual IMaterialPackage GlobalTextures { get; set; }
-
-        public virtual bool HasGlobals
-        {
-            get { return (GlobalTextures != null); }
-        }
-
         public virtual bool HasHierarchies
         {
             get { return (Hierarchies?.Count > 0); }
@@ -57,47 +50,46 @@ namespace DSCript.Models
             get { return (HasModels || HasHierarchies); }
         }
 
-        protected bool UsesSpoolSystem = false;
-        
         protected override void OnSpoolerLoaded(Spooler sender, EventArgs e)
         {
             switch ((ChunkType)sender.Context)
             {
-            case ChunkType.ModelPackagePC:
-            case ChunkType.ModelPackagePC_X:
-            case ChunkType.ModelPackagePS2:
-            case ChunkType.ModelPackageXbox:
-            case ChunkType.ModelPackageWii:
-                var modelPackage = sender.AsResource<ModelPackage>();
-                
-                if (sender.Parent.Context == ChunkType.SpoolSystemInitChunker)
-                {
-                    // make sure it's loaded!
-                    PackageManager.Load(modelPackage);
-
-                    GlobalTextures = modelPackage;
-                    UsesSpoolSystem = true;
-                }
-                else
-                {
-                    Packages.Add(modelPackage);
-                }
-                break;
             case ChunkType.VehicleHierarchy:
                 var hierarchy = sender.AsResource<VehicleHierarchyData>();
                 
                 hierarchy.Platform = PlatformType.Generic;
-                hierarchy.Version = sender.Version;
 
-                // DPL on XBox doesn't tell us correct version :(
+                // DPL on XBox is an annoying little bugger!
                 if (UsesSpoolSystem && (hierarchy.Version == 0))
-                    hierarchy.Version = 1;
+                    hierarchy.Platform = PlatformType.Xbox;
                 
                 SpoolableResourceFactory.Load(hierarchy);
                 
                 Hierarchies.Add(hierarchy);
                 break;
+            case ChunkType.SpooledVehicleChunk:
+                if (sender.Version != 0)
+                    break;
+
+                var parent = sender.Parent;
+                var vehc = sender as SpoolablePackage;
+
+                // assume SSIC chunk comes first since we don't load it..
+                var index = parent.Children.IndexOf(vehc) - 1;
+
+                var hier = Hierarchies[index];
+                var pckg = Packages[index];
+
+                var uid = hier.UID;
+
+                var vehId = uid & 0xFF;
+                var modLvl = (uid & 0x7000) / 0x1000;
+
+                pckg.DisplayName = $"[{DriverPL.VehicleNames[vehId] + ((modLvl > 0) ? String.Format(" (Bodykit #{0})", modLvl) : "")}]";
+                break;
             }
+
+            base.OnSpoolerLoaded(sender, e);
         }
 
         protected override void OnFileLoadBegin()
@@ -106,7 +98,32 @@ namespace DSCript.Models
 
             base.OnFileLoadBegin();
         }
-        
+
+        protected override void OnFileLoadEnd()
+        {
+            base.OnFileLoadEnd();
+
+            // TODO: Move somewhere else
+            //if (UsesSpoolSystem)
+            //{
+            //    if (HasModels && HasHierarchies)
+            //    {
+            //        for (int i = 0; i < Packages.Count; i++)
+            //        {
+            //            var package = Packages[i];
+            //            var hierarchy = Hierarchies[i];
+            //
+            //            var uid = hierarchy.UID;
+            //
+            //            var vehId = uid & 0xFF;
+            //            var modLvl = (uid & 0x7000) / 0x1000;
+            //
+            //            package.DisplayName = $"[{DriverPL.VehicleNames[vehId]}]";
+            //        }
+            //    }
+            //}
+        }
+
         public virtual VehicleHierarchyData FindHierarchy(int uid)
         {
             foreach (var hierarchy in Hierarchies)
@@ -139,7 +156,26 @@ namespace DSCript.Models
                 throw new InvalidOperationException("Can't set global textures for this type of vehicles file!");
             }
         }
-        
+
+        protected override void OnFileLoadEnd()
+        {
+            base.OnFileLoadEnd();
+
+            // TODO: Move somewhere else
+            if (HasModels && HasHierarchies && !HasVirtualVehicles)
+            {
+                for (int i = 0; i < Packages.Count; i++)
+                {
+                    var package = Packages[i];
+                    var hierarchy = Hierarchies[i];
+            
+                    var uid = hierarchy.UID;
+            
+                    package.DisplayName = $"[{Driv3r.GetVehicleTypeName(uid)}]";
+                }
+            }
+        }
+
         public Driv3rVehiclesFile() { }
         public Driv3rVehiclesFile(string filename) : base(filename) { }
     }   

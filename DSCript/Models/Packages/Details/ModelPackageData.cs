@@ -26,7 +26,7 @@ namespace DSCript.Models
         public int SubModelsCount;
         public int SubModelsOffset;
 
-        public short Handle;
+        public ushort Handle;
         
         public int Reserved;
         
@@ -92,7 +92,7 @@ namespace DSCript.Models
             SubModelsCount = stream.ReadInt32();
             SubModelsOffset = stream.ReadInt32();
 
-            Handle = (short)(stream.ReadInt32() & 0xFFFF);
+            Handle = (ushort)(stream.ReadUInt32() & 0xFFFF);
             Reserved = stream.ReadInt32();
 
             TextureDataOffset = stream.ReadInt32();

@@ -1,13 +1,88 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace DSCript.Spooling
 {
-    public sealed class SpoolableBuffer : Spooler, IDisposable
+    public sealed class SpoolableBuffer : Spooler, IDisposable, ICopySpooler<SpoolableBuffer>
     {
+        bool ICopyCat<SpoolableBuffer>.CanCopy(CopyClassType copyType)                          => true;
+        bool ICopyCat<SpoolableBuffer>.CanCopyTo(SpoolableBuffer obj, CopyClassType copyType)   => true;
+
+        bool ICopyCat<SpoolableBuffer>.IsCopyOf(SpoolableBuffer obj, CopyClassType copyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        SpoolableBuffer ICopyClass<SpoolableBuffer>.Copy(CopyClassType copyType)
+        {
+            return GetCopy(copyType);
+        }
+
+        void ICopyClassTo<SpoolableBuffer>.CopyTo(SpoolableBuffer obj, CopyClassType copyType)
+        {
+            CopyTo(obj, copyType);
+        }
+
+        protected override bool CanCopy(CopyClassType copyType)
+        {
+            return true;
+        }
+
+        protected override bool CanCopyTo(Spooler obj, CopyClassType copyType)
+        {
+            return (obj is SpoolableBuffer);
+        }
+
+        protected override bool IsCopyOf(Spooler obj, CopyClassType copyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override Spooler Copy(CopyClassType copyType)
+        {
+            return GetCopy(copyType);
+        }
+
+        protected override void CopyTo(Spooler obj, CopyClassType copyType)
+        {
+            var spooler = obj as SpoolableBuffer;
+
+            if (spooler == null)
+                throw new Exception("Cannot copy spoolable buffer; type mismatch!");
+
+            CopyTo(spooler, copyType);
+        }
+
+        private SpoolableBuffer GetCopy(CopyClassType copyType)
+        {
+            var spooler = new SpoolableBuffer();
+
+            CopyTo(spooler, copyType);
+
+            return spooler;
+        }
+
+        private void CopyTo(SpoolableBuffer obj, CopyClassType copyType)
+        {
+            obj.IsDirty = true;
+
+            CopyParamsTo(obj);
+
+            if (copyType == CopyClassType.DeepCopy)
+            {
+                // copy the buffer as well
+                var buffer = GetBuffer();
+
+                obj.SetBuffer(buffer);
+            }
+
+            obj.CommitChanges();
+        }
+
         public static readonly int MaxBufferSize = 1024 * 384; //~384Kb
 
         private byte[] m_buffer;
@@ -53,11 +128,13 @@ namespace DSCript.Spooling
         {
             get
             {
-                if (Offset > 0)
-                    return base.AreChangesPending;
+                if (IsDirty)
+                {
+                    Debug.WriteLine("**** AreChangesPending called on a dirty buffer!");
+                    return true;
+                }
 
-                // offset needs to be calculated
-                return true;
+                return base.AreChangesPending;
             }
         }
 
@@ -148,10 +225,16 @@ namespace DSCript.Spooling
         /// <param name="buffer">The buffer containing the new data.</param>
         public void SetBuffer(byte[] buffer)
         {
-            SetRawBuffer(buffer);
-            NotifyChanges();
+            var dirty = false;
+            var oldSize = m_size;
 
-            Offset = 0;
+            SetRawBuffer(buffer);
+
+            // if sizes are different, have our parents recalculate
+            if (buffer.Length != oldSize)
+                dirty = true;
+
+            NotifyChanges(dirty);
         }
 
         /// <summary>
@@ -165,8 +248,11 @@ namespace DSCript.Spooling
 
         public override void Dispose()
         {
-            ClearBuffer();
             EnsureDetach();
+
+            // don't notify of buffer changes
+            SetRawBuffer(null);
+            Offset = 0;
 
             // lastly, release the temp file (if applicable)
             ReleaseTempFile();

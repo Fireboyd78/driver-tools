@@ -106,8 +106,65 @@ namespace DSCript.Models
         }
     }
 
-    public class Model
+    public class Model : ICopyCat<Model>
     {
+        bool ICopyCat<Model>.CanCopy(CopyClassType copyType)                => true;
+        bool ICopyCat<Model>.CanCopyTo(Model obj, CopyClassType copyType)   => true;
+        
+        bool ICopyCat<Model>.IsCopyOf(Model obj, CopyClassType copyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        Model ICopyClass<Model>.Copy(CopyClassType copyType)
+        {
+            var model = new Model();
+            
+            CopyTo(model, copyType);
+
+            return model;
+        }
+
+        public void CopyTo(Model obj, CopyClassType copyType = CopyClassType.SoftCopy)
+        {
+            obj.UID = UID;
+            obj.Scale = Scale;
+            obj.VertexType = VertexType;
+            obj.Flags = Flags;
+            obj.BoundingBox = BoundingBox;
+
+            // **** REUSE VERTEX BUFFER DUE TO POOR DESIGN CHOICES ****
+            obj.VertexBuffer = VertexBuffer;
+
+            var lods = new List<Lod>(7);
+
+            if (copyType == CopyClassType.DeepCopy)
+            {
+                foreach (var _lod in Lods)
+                {
+                    var lod = new Lod(_lod.Type)
+                    {
+                        // parent to NEW model
+                        // allows copy operation to reparent for us
+                        Parent = obj,
+                    };
+
+                    // DEEP COPY: all new instances down the line
+                    CopyCatFactory.CopyToB(_lod, lod, CopyClassType.DeepCopy);
+
+                    // add new lod
+                    lods.Add(lod);
+                }
+            }
+            else
+            {
+                // reuse lod references
+                lods.AddRange(Lods);
+            }
+
+            obj.Lods = lods;
+        }
+
         public UID UID;
 
         // only used in DPL!?

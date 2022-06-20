@@ -35,8 +35,8 @@ namespace Zartex
         {
             if (!_nodes.Contains(node))
             {
-                node.NodeAdded += (o, e) => OnNodesAdded(o, e);
-                node.NodeUpdated += (o, e) => OnNodesUpdated(o, e);
+                node.NodeAdded += (o, e) => OnNodeAdded(o, e);
+                node.NodeUpdated += (o, e) => OnNodeUpdated(o, e);
                 node.NodeDrawing += (o, e) => OnLineDrawing(o, e);
 
                 _nodes.Add(node);
@@ -47,8 +47,8 @@ namespace Zartex
         {
             if (!_nodes.Contains(node))
             {
-                node.NodeAdded += (o, e) => OnNodesAdded(o, e);
-                node.NodeUpdated += (o, e) => OnNodesUpdated(o, e);
+                node.NodeAdded += (o, e) => OnNodeAdded(o, e);
+                node.NodeUpdated += (o, e) => OnNodeUpdated(o, e);
                 node.NodeDrawing += (o, e) => OnLineDrawing(o, e);
 
                 _nodes.Insert(index, node);
@@ -74,16 +74,53 @@ namespace Zartex
             node.AddWire(input, nodeType);
         }
 
-        public void OnNodesAdded(object sender, PaintNodeEventArgs e)
+        public void OnNodeAdded(object sender, PaintNodeEventArgs e)
         {
             using (Graphics g = CreateGraphics())
             {
                 e.PaintEventArgs = new PaintEventArgs(g, RectangleToScreen(ClientRectangle));
-                OnNodesUpdated(sender, e);
+                OnNodeUpdated(sender, e);
             }
         }
 
-        public void OnNodesUpdated(object sender, PaintNodeEventArgs e)
+        public void MoveNode(NodeWidget node, Point location, Point origin)
+        {
+            if (!Parent.Focused)
+                Parent.Focus();
+
+            var position = PointToClient(PointToScreen(location));
+
+            node.Left = position.X + node.Left - origin.X;
+            node.Top = position.Y + node.Top - origin.Y;
+            node.BringToFront();
+
+            Invalidate();
+        }
+
+        public void LayoutNode(NodeWidget node)
+        {
+            var nWires = node.Links.Count;
+
+            var x = node.Left + (node.Width + 35);
+            var y = node.Top - ((16 + 25) * nWires);
+
+            if (y < 16)
+                y = 16;
+
+            foreach (var link in node.Links)
+            {
+                var child = link.Link.Parent as NodeWidget;
+
+                child.Left = x;
+                child.Top = y;
+
+                y += (node.Height + 25);
+            }
+
+            Invalidate();
+        }
+
+        public void OnNodeUpdated(object sender, PaintNodeEventArgs e)
         {
             var args = e.PaintEventArgs;
             var gfx = args.Graphics;
@@ -107,10 +144,10 @@ namespace Zartex
 
                 points.Add(nodeL);
 
-                nodeL.X += 10;
+                nodeL.X += (10 + e.WireOffset);
                 points.Add(nodeL);
 
-                nodeR.X -= 10;
+                nodeR.X -= (10 + e.WireOffset);
 
                 if (nodeR.X < nodeL.X)
                 {
@@ -140,7 +177,7 @@ namespace Zartex
                     points.Add(nodeR);
                 }
 
-                nodeR.X += 10;
+                nodeR.X += (10 + e.WireOffset);
                 points.Add(nodeR);
 
                 for (int p = 1; p < points.Count; p++)

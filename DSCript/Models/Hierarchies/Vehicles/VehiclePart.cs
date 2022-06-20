@@ -52,8 +52,8 @@ namespace DSCript.Models
 
         public Vector4 MarkerPoint { get; set; }
 
-        public VehicleHierarchyData.CenterPoint CenterPoint { get; set; }
-        public VehicleHierarchyData.Thing3 Thing3 { get; set; }
+        public VehicleHierarchyData.MovingPart CenterPoint { get; set; }
+        public VehicleHierarchyData.DamagingPart Thing3 { get; set; }
 
         public PhysicsCollisionModel CollisionModel { get; set; }
     }

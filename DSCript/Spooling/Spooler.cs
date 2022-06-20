@@ -183,12 +183,31 @@ namespace DSCript.Spooling
         /// </summary>
         Align4096   = 0xC,
     }
-    
+
+    public interface ICopySpooler<T> : ICopyCat<T>
+        where T : Spooler { }
+
     /// <summary>
     /// Represents an abstract class for data spoolers.
     /// </summary>
-    public abstract class Spooler : IDisposable
+    public abstract class Spooler : IDisposable, ICopySpooler<Spooler>
     {
+        bool ICopyCat<Spooler>.CanCopy(CopyClassType copyType)                  => CanCopy(copyType);
+        bool ICopyCat<Spooler>.CanCopyTo(Spooler obj, CopyClassType copyType)   => CanCopyTo(obj, copyType);
+
+        bool ICopyCat<Spooler>.IsCopyOf(Spooler obj, CopyClassType copyType)    => IsCopyOf(obj, copyType);
+
+        Spooler ICopyClass<Spooler>.Copy(CopyClassType copyType)                => Copy(copyType);
+        void ICopyClassTo<Spooler>.CopyTo(Spooler obj, CopyClassType copyType)  => CopyTo(obj, copyType);
+
+        protected abstract bool CanCopy(CopyClassType copyType);
+        protected abstract bool CanCopyTo(Spooler obj, CopyClassType copyType);
+
+        protected abstract bool IsCopyOf(Spooler obj, CopyClassType copyType);
+
+        protected abstract Spooler Copy(CopyClassType copyType);
+        protected abstract void CopyTo(Spooler obj, CopyClassType copyType);
+
         private SpoolerAlignment _alignment = SpoolerAlignment.Align4096;
         
         private SpoolerContext _context;
@@ -208,6 +227,14 @@ namespace DSCript.Spooling
                 Size        = spooler.Size,
             };
         }
+
+        protected void CopyParamsTo(Spooler other)
+        {
+            other.Alignment = Alignment;
+            other.Context = Context;
+            other.Description = Description;
+            other.Version = Version;
+        }
         
         /// <summary>
         /// Disposes of the resources used by this spooler.
@@ -223,30 +250,41 @@ namespace DSCript.Spooling
         /// </summary>
         public string Description
         {
-            get { return (_description != null) ? _description : String.Empty; }
+            get { return _description ?? String.Empty; }
             set
             {
                 var str = value;
-                var dirty = false;
-
-                if (_description != null && _description != str)
-                    dirty = true;
-
+                
                 if (str != null)
                 {
                     // string too long? no worries, we'll just force it to be 255 characters long :)
                     if (str.Length > 255)
                         str = str.Substring(0, 255);
-
-                    _description = str;
                 }
                 else
                 {
-                    _description = String.Empty;
+                    str = String.Empty;
                 }
 
-                if (dirty)
-                    IsModified = true;
+                var dirty = false;
+
+                // if we're clean, see if we need to report size changes
+                if (!IsDirty)
+                {
+                    if (Description != str)
+                    {
+                        // if they're the same length, we don't need to recalculate anything
+                        if (str.Length == Description.Length)
+                            dirty = false;
+                        else
+                            dirty = true;
+                    }
+                }
+
+                // set the new description
+                _description = str;
+
+                NotifyChanges(dirty);
             }
         }
 
@@ -259,7 +297,7 @@ namespace DSCript.Spooling
             set
             {
                 if (!_context.Equals(value))
-                    IsModified = true;
+                    NotifyChanges(false);
 
                 _context = value;
             }
@@ -311,7 +349,7 @@ namespace DSCript.Spooling
             set
             {
                 if (_version != value)
-                    IsModified = true;
+                    NotifyChanges(false);
 
                 _version = value;
             }
@@ -326,7 +364,7 @@ namespace DSCript.Spooling
             set
             {
                 if (_alignment != value)
-                    IsModified = true;
+                    NotifyChanges(true);
 
                 _alignment = value;
             }
@@ -342,17 +380,82 @@ namespace DSCript.Spooling
 
         public virtual bool AreChangesPending
         {
-            get { return IsModified; }
+            get
+            {
+                // flagged for an update?
+                if (IsModified)
+                    return true;
+
+                // if we were previously orphaned,
+                // verify our offset is correct
+                if (Parent != null)
+                {
+                    // we need our offset updated by our parent
+                    if (Offset <= 0)
+                        return true;
+                }
+
+                // no changes are pending
+                return false;
+            }
+        }
+
+        protected bool NotifyAllParents(bool dirty)
+        {
+            var parent = Parent;
+
+            if (parent != null)
+            {
+                do
+                {
+                    parent.NotifyChanges();
+
+                    if (dirty)
+                        parent.IsDirty = true;
+
+                    parent = parent.Parent;
+                } while (parent != null);
+
+                return true;
+            }
+
+            return false;
         }
 
         public virtual void CommitChanges()
         {
             IsModified = false;
+            IsDirty = false;
         }
 
-        public virtual void NotifyChanges()
+        public virtual void NotifyChanges(bool dirty = false)
         {
-            IsModified = true;
+            // only notify of changes if we're clean;
+            // always ensure our parents get flagged as dirty if needed
+            if (!IsDirty)
+            {
+                // flag our changes
+                IsModified = true;
+
+                // notify all parents of our change;
+                // if this fails, we're completely detached
+                if (NotifyAllParents(dirty))
+                {
+                    // flag ourselves as dirty?
+                    if (dirty)
+                        IsDirty = true;
+                }
+                else if (dirty)
+                {
+                    // reset our offset because we're orphaned;
+                    // when we do eventually get attached,
+                    // our parent will update it for us
+                    Offset = 0;
+
+                    // ignore future changes until we're cleaned
+                    IsDirty = true;
+                }
+            }
         }
         
         /// <summary>
@@ -367,6 +470,15 @@ namespace DSCript.Spooling
 
         protected internal bool IsModified { get; set; }
 
+        protected internal virtual void SetCommon(ref ChunkEntry entry)
+        {
+            _alignment = (SpoolerAlignment)entry.Alignment;
+            _context = entry.Context;
+            _version = entry.Version;
+
+            Offset = entry.Offset;
+        }
+
         /// <summary>
         /// Ensures the spooler has been detached from its parent, if applicable.
         /// </summary>
@@ -380,10 +492,7 @@ namespace DSCript.Spooling
         protected Spooler() { }
         protected Spooler(ref ChunkEntry entry)
         {
-            Alignment = (SpoolerAlignment)entry.Alignment;
-            Context = entry.Context;
-            Offset = entry.Offset;
-            Version = entry.Version;
+            SetCommon(ref entry);
         }
     }
 }

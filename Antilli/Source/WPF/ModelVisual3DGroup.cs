@@ -22,6 +22,7 @@ using System.Windows.Navigation;
 
 namespace Antilli
 {
+#if OLD_VISUALS
     public class ModelVisual3DGroup
     {
         public List<ModelVisual3D> Children { get; set; }
@@ -39,4 +40,29 @@ namespace Antilli
             Name = name;
         }
     }
+#else
+    public class ModelVisual3DGroup
+    {
+        public LodModelVisual3D Model { get; set; }
+
+        public List<SubModelVisual3D> Children { get; }
+
+        public string Name { get; set; }
+
+        public ModelVisual3DGroup(LodModelVisual3D model)
+        {
+            Model = model;
+            Children = new List<SubModelVisual3D>();
+
+            foreach (var submodel in Model.SubModels)
+                Children.Add(submodel);
+        }
+
+        public ModelVisual3DGroup(LodModelVisual3D model, string name)
+            : this(model)
+        {
+            Name = name;
+        }
+    }
+#endif
 }

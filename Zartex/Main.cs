@@ -830,12 +830,14 @@ namespace Zartex
                 : NodeTypes.ActorNodeTypes;
 
             string strName = MissionPackage.MissionData.LogicData.StringCollection[def.StringId];
-            string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
+            //string nodeName = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : String.Format("\"{0}\"", strName);
             string opcodeName = opcodes.ContainsKey(def.TypeId) ? opcodes[def.TypeId] : def.TypeId.ToString();
 
             var node = new NodeWidget() {
                 Flowgraph = flowgraph,
-                HeaderText = String.Format("{0}: {1} {2}", MissionPackage.MissionData.LogicData.Nodes.Definitions.IndexOf(def), opcodeName, nodeName),
+                //HeaderText = String.Format("{0}: {1} {2}", MissionPackage.MissionData.LogicData.Nodes.Definitions.IndexOf(def), opcodeName, nodeName),
+                HeaderText = String.Format("{0}: {1}", MissionPackage.MissionData.LogicData.Nodes.Definitions.IndexOf(def), opcodeName),
+                CommentText = (strName == "Unknown" || strName == "Unnamed") ? String.Empty : strName,
                 Tag = def
             };
 
@@ -932,30 +934,47 @@ namespace Zartex
 
             var touchedNodes = new HashSet<NodeWidget>();
 
+#if OLD_LOOKUP
             foreach (var kv in nodeLookup)
             {
                 var def = kv.Key;
                 var node = kv.Value;
-
+#else
+            foreach (var def in definition)
+            {
+                var node = nodeLookup[def];
+#endif
                 var wireId = (int)def.Properties[0].Value;
                 var wireCol = wireCollections[wireId];
 
                 var wireCollection = MissionPackage.MissionData.LogicData.WireCollection[wireId];
-                
+
+                var nWires = wireCollection.Wires.Count;
+
+                if (node.Left > x)
+                    node.Left += (node.Width + 35);
+                if (node.Top > y)
+                    node.Top += (node.Height + 25);
+
                 x = node.Left + (node.Width + 35);
-                y = node.Top;
-                
-                for (int w = 0; w < wireCollection.Wires.Count; w++)
+                y = node.Top - ((16 + 25) * nWires);
+
+                if (y < 16)
+                    y = 16;
+
+                for (int w = 0; w < nWires; w++)
                 {
                     var wire = wireCollection.Wires[w];
                     var wireDef = definition[wire.NodeId];
-                
+
                     var wireNode = nodeLookup[wireDef];
-                    
+
                     wireNode.Left = x;
-                    //wireNode.Top = y;
+                    wireNode.Top = y;
 
                     Flowgraph.LinkNodes(node, wireNode, (WireNodeType)wire.WireType);
+
+                    y += (node.Height + 25);
 
                     if (!touchedNodes.Contains(wireNode))
                         touchedNodes.Add(wireNode);

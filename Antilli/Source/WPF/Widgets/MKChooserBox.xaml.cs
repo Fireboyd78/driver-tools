@@ -22,6 +22,7 @@ namespace Antilli
     public partial class MKChooserBox : ObservableWindow
     {
         private string _optionName;
+        private string _optionHover;
         private bool _showCancelButton;
         private bool _showOptionCheckbox;
 
@@ -29,6 +30,12 @@ namespace Antilli
         {
             get { return _optionName; }
             set { SetValue(ref _optionName, value, "OptionName"); }
+        }
+
+        public string OptionToolTip
+        {
+            get { return _optionHover; }
+            set { SetValue(ref _optionHover, value, "OptionToolTip"); }
         }
 
         public string SelectedItem
@@ -39,6 +46,7 @@ namespace Antilli
         public int SelectedIndex
         {
             get { return ItemsBox.SelectedIndex; }
+            set { ItemsBox.SelectedIndex = value; }
         }
 
         public bool IsOptionChecked

@@ -46,10 +46,6 @@ namespace Antilli
     /// </summary>
     public partial class MainWindow : AntilliWindow
     {
-        //public TextureViewer TextureViewer { get; private set; }
-        //public MaterialEditor MaterialEditor { get; private set; }
-        //public MaterialEditor GlobalMaterialEditor { get; private set; }
-
         public int CurrentTab
         {
             get { return AT.CurrentState.CurrentTab; }
@@ -76,19 +72,19 @@ namespace Antilli
             get { return AT.CurrentState.ModelPackages; }
         }
 
-        public ModelGroupListItem SelectedModelGroup
+        public ModelContainerListItem SelectedModelContainer
         {
-            get { return Groups.SelectedItem as ModelGroupListItem; }
+            get { return Containers.SelectedItem as ModelContainerListItem; }
         }
 
-        public List<ModelGroupListItem> ModelGroups
+        public List<ModelContainerListItem> ModelContainers
         {
             get
             {
                 if (CurrentModelPackage == null || CurrentModelPackage.Models == null)
                     return null;
 
-                List<ModelGroupListItem> items = new List<ModelGroupListItem>();
+                List<ModelContainerListItem> items = new List<ModelContainerListItem>();
 
                 Model curModel = null;
 
@@ -96,7 +92,7 @@ namespace Antilli
                 {
                     if (curModel == null || curModel.UID != model.UID)
                     {
-                        items.Add(new ModelGroupListItem(CurrentModelPackage, model));
+                        items.Add(new ModelContainerListItem(CurrentModelPackage, model));
                         curModel = model;
                     }
                 }
@@ -333,11 +329,24 @@ namespace Antilli
             case ".mec":
                 var menuFile = new MenuPackageFile();
                 menuFile.FileLoadEnd += (o, e) => {
-                    if (AskUserOption("Would you like to dump the XML menu tree?"))
-                    {
-                        var menuDef = menuFile.MenuData;
+                    var menuDef = menuFile.MenuData;
 
-                        menuDef.WriteTo(Path.ChangeExtension(filename, ".mec.xml"));
+                    var xmlFile = Path.ChangeExtension(filename, ".mec.xml");
+
+                    if (AskUserOption("Would you like to dump the XML menu tree?"))
+                        menuDef.WriteTo(xmlFile);
+
+                    if (File.Exists(xmlFile))
+                    {
+                        if (AskUserOption("Would you like to reload using the XML menu tree?"))
+                            menuDef.LoadXml(xmlFile);
+                    }
+
+                    if (AskUserOption("Rebuild a second copy of the menu data?"))
+                    {
+                        // force an entire rebuild!
+                        menuDef.NotifyChanges(true);
+                        menuFile.Save(Path.ChangeExtension(filename, ".mec.out"), false);
                     }
                 };
                 modelFile = menuFile;
@@ -529,9 +538,9 @@ namespace Antilli
 
             var lodCount = new int[7];
 
-            if (SelectedModelGroup != null)
+            if (SelectedModelContainer != null)
             {
-                foreach (var model in SelectedModelGroup.Models)
+                foreach (var model in SelectedModelContainer.Models)
                 {
                     // run this check once to prevent unnecessary slowdown
                     if (checkBlendWeights)
@@ -627,22 +636,107 @@ namespace Antilli
 
         private void ImportAntilliScene()
         {
+            string[] message = {
+                "This experimental feature will REPLACE the selected model package ENTIRELY!",
+                "",
+                "Materials haven't been implemented yet, so you will LOSE ALL MATERIALS !!!",
+                "",
+                "Maybe you can still have some fun anyways? ;)",
+            };
 
+            MessageBox.Show(string.Join("\r\n", message), "Scene Importer - WARNING!", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+            var dialog = new OpenFileDialog() {
+                CheckFileExists = true,
+                CheckPathExists = true,
+                Filter = "Antilli Scene|*.ais",
+                ValidateNames = true,
+            };
+
+            if (dialog.ShowDialog() ?? false)
+            {
+                var scene = new AntilliScene(dialog.FileName);
+
+                var chooser = new MKChooserBox("Scene Importer", "Select game format:", new[] {
+                    "Driv3r",
+                    "Driver: Parallel Lines",
+                }) {
+                    ShowOptionCheckbox = true,
+                    OptionName = "Force retarget",
+                    OptionToolTip = "Converts the model to the selected format, regardless of settings.",
+                };
+
+                if (chooser.ShowDialog() ?? false)
+                {
+                    //
+                    // TODO: make this more robust
+                    //
+                    var version = (chooser.SelectedIndex == 0) ? 6 : 1;
+
+                    var package = scene.ToModelPackage(PlatformType.PC, version);
+
+                    // force a retarget?
+                    if (chooser.IsOptionChecked)
+                        package = ModelConverter.Convert(package, version);
+
+                    var modelFile = AT.CurrentState.ModelFile;
+                    var modelPackage = AT.CurrentState.SelectedModelPackage;
+
+                    // deselect the model package
+                    AT.CurrentState.SelectedModelPackage = null;
+
+                    // free old models/materials
+                    modelPackage.FreeModels();
+                    modelPackage.FreeMaterials();
+
+                    //
+                    // **** REPLACE THE OLD PACKAGE WITH OUR NEW ONE ****
+                    //
+
+                    var resource = (ISpoolableResource)modelPackage;
+                    var targetResource = (ISpoolableResource)package;
+
+                    // save our new model's spooler...
+                    targetResource.Save();
+
+                    // free up its shit..
+                    package.FreeModels();
+                    package.FreeMaterials();
+
+                    // ... then replace the existing spooler with our new one! ;)
+                    // (we don't need our imported package anymore, we've stolen the selected one)
+                    resource.Spooler = targetResource.Spooler;
+
+                    // replace the UID and shit..
+                    modelPackage.UID = package.UID;
+                    modelPackage.Version = package.Version;
+                    modelPackage.Flags = package.Flags;
+
+                    // reselect the model package (it will be reloaded)
+                    AT.CurrentState.SelectedModelPackage = modelPackage;
+
+                    // notify our changes
+                    AT.CurrentState.NotifyFileChange(modelFile);
+                }
+            }
         }
 
         private void ExportAntilliScene()
         {
             var prompt = AT.CurrentState.CreateDialog<ExportModelDialog>(true, false);
 
-            if (!SelectedModelGroup.IsNull)
-                prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+            if (!SelectedModelContainer.IsNull)
+                prompt.FolderName = SelectedModelContainer.Name.Replace(':', '-');
 
             if (prompt.ShowDialog() ?? false)
             {
                 var flags = prompt.Flags;
                 var name = prompt.FolderName;
 
-                var path = Path.Combine(Settings.ExportDirectory, name);
+                var outDir = Path.Combine(Settings.ExportDirectory, name);
+
+                if (!Directory.Exists(outDir))
+                    Directory.CreateDirectory(outDir);
 
                 ShowWaitCursor = true;
 
@@ -654,7 +748,7 @@ namespace Antilli
 
                     var buffer = ms.ToArray();
 
-                    File.WriteAllBytes(path, buffer);
+                    File.WriteAllBytes(Path.Combine(outDir, $"{name}.ais"), buffer);
                 }
 
                 ShowWaitCursor = false;
@@ -663,18 +757,252 @@ namespace Antilli
 
         private void ImportModelPackage()
         {
+            // TODO: add support for new packages, replacing individual model containers
+            var modelFile = AT.CurrentState.ModelFile;
+            var modelPackage = AT.CurrentState.SelectedModelPackage;
 
+            if (!modelPackage.IsOwnModelPackage())
+            {
+                MessageBox.Show("Sorry, cannot replace individual model containers at this time.",
+                                "Package Importer", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var failed = false;
+
+            var dialog = new OpenFileDialog()
+            {
+                Filter = "Model Package|*.*",
+                CheckFileExists = true,
+                CheckPathExists = true,
+                ValidateNames = true,
+            };
+
+            if (dialog.ShowDialog() ?? false)
+            {
+                var chunker = new FileChunker();
+                var packages = new List<ModelPackage>();
+
+                var level = ModelPackage.LoadLevel;
+
+                //
+                // main importing logic
+                //
+                chunker.SpoolerLoaded += (spooler, e) =>
+                {
+                    switch ((ChunkType)spooler.Context)
+                    {
+                    case ChunkType.ModelPackagePC_X:
+                        if (spooler.Version == 3)
+                            break; // DSF - unhandled for now
+
+                        goto case ChunkType.ModelPackagePC;
+
+                    case ChunkType.ModelPackagePC:
+                    case ChunkType.ModelPackagePS2:
+                    case ChunkType.ModelPackageXbox:
+                    case ChunkType.ModelPackageWii:
+                        // load headers only
+                        ModelPackage.LoadLevel = ModelPackageLoadLevel.FastLoad;
+
+                        // retrieve a COPY of the spooler so we can attach it later
+                        var copy = CopyCatFactory.GetCopy(spooler, CopyClassType.DeepCopy);
+                        var package = SpoolableResourceFactory.AsResource<ModelPackage>(copy, true);
+
+                        packages.Add(package);
+
+                        // restore load level
+                        ModelPackage.LoadLevel = level;
+                        break;
+                    }
+                };
+
+                if (chunker.Load(dialog.FileName))
+                {
+                    ModelPackage package = null;
+
+                    if (packages.Count > 1)
+                    {
+                        var packageNames = new List<String>();
+
+                        for (int i = 0; i < packages.Count; i++)
+                        {
+                            var pkg = packages[i];
+                            var spooler = pkg.AsSpooler();
+
+                            var name = "";
+
+                            if (!String.IsNullOrEmpty(spooler.Description))
+                                name = $"[{spooler.Description}]";
+                            else
+                                name = $"[{pkg.UID:X8} : {pkg.Handle:X4}]";
+
+                            packageNames.Add($"{i + 1}. {name}");
+                        }
+
+                        var pkgBox = new MKChooserBox("Package Importer", "Select a package to import:", packageNames.ToArray());
+
+                        do
+                        {
+                            if (pkgBox.ShowDialog() ?? false)
+                            {
+                                var index = pkgBox.SelectedIndex;
+
+                                // package found, break out
+                                package = packages[index];
+                                break;
+                            }
+                            
+                            if (MessageBox.Show("No package was selected. Try again?",
+                                "Package Importer", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No)
+                            {
+                                failed = true;
+                            }
+                        } while (!failed);
+                    }
+                    else
+                    {
+                        // possibly one package or none at all
+                        package = packages.FirstOrDefault();
+
+                        if (package == null)
+                            failed = true;
+                    }
+
+                    // check a few things before proceeding
+                    if (!failed)
+                    {
+                        if (package.Platform != PlatformType.PC)
+                        {
+                            MessageBox.Show($"Sorry, cannot import a {package.Platform} model package.",
+                                "Package Importer", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                            failed = true;
+                        }
+
+                        //
+                        // TODO: Add support for these
+                        //
+                        if (!package.IsOwnModelPackage())
+                        {
+                            MessageBox.Show("Sorry, cannot import a model package that contains multiple model containers at this time.",
+                                "Package Importer", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                            failed = true;
+                        }
+                    }
+
+                    // if everything is good so far, prepare to import it!
+                    if (!failed)
+                    {
+                        var fmtBox = new MKChooserBox("Package Importer", "Select game format:", new[] {
+                            "Driv3r",
+                            "Driver: Parallel Lines",
+                        }) {
+                            ShowOptionCheckbox = true,
+                            OptionName = "Force retarget",
+                            OptionToolTip = "Converts the model to the selected format, regardless of settings.",
+                        };
+
+                        fmtBox.SelectedIndex = (package.Version == 6) ? 0 : 1;
+
+                        if (fmtBox.ShowDialog() ?? false)
+                        {
+                            //
+                            // TODO: make this more robust
+                            //
+                            var version = (fmtBox.SelectedIndex == 0) ? 6 : 1;
+
+                            // use UID of selected model package
+                            var uid = modelPackage.UID;
+
+                            // now fully load the model package into memory
+                            ModelPackage.LoadLevel = ModelPackageLoadLevel.Default;
+
+                            SpoolableResourceFactory.Load(package);
+                            ModelPackage.LoadLevel = level;
+
+                            // retarget?
+                            if (fmtBox.IsOptionChecked || (version != package.Version))
+                            {
+                                package = ModelConverter.Convert(package, version, uid);
+                            }
+                            else
+                            {
+                                if (version == 1)
+                                {
+                                    if (modelPackage.HasModels)
+                                    {
+                                        var modelUID = modelPackage.Models[0].UID;
+
+                                        // retarget model containers
+                                        foreach (var model in package.Models)
+                                            model.UID = modelUID;
+                                    }
+
+                                    // retarget materials to correct uid
+                                    foreach (var submodel in package.SubModels)
+                                    {
+                                        var material = submodel.Material;
+
+                                        if (material.UID == package.UID || material.UID == 0xFFFD)
+                                            material.UID = (ushort)uid;
+
+                                        // actually update the material...
+                                        submodel.Material = material;
+                                    }
+                                }
+
+                                // set new uid
+                                package.UID = uid;
+                            }
+
+                            // deselect the model package
+                            AT.CurrentState.SelectedModelPackage = null;
+
+                            // free old models/materials
+                            modelPackage.FreeModels();
+                            modelPackage.FreeMaterials();
+
+                            //
+                            // **** REPLACE THE OLD PACKAGE WITH OUR NEW ONE ****
+                            //
+                            
+                            var spooler = modelPackage.AsSpooler();
+                            var parent = spooler.Parent;
+
+                            var index = parent.Children.IndexOf(spooler);
+
+                            parent.Children.Remove(spooler);
+                            parent.Children.Insert(index, package.AsSpooler(true));
+                            
+                            index = modelFile.Packages.IndexOf(modelPackage);
+                            modelFile.Packages[index] = package;
+
+                            // reselect the model package (it will be reloaded)
+                            AT.CurrentState.SelectedModelPackage = package;
+
+                            // notify our changes
+                            AT.CurrentState.NotifyFileChange(modelFile);
+                        }
+                    }
+                }
+            }
+
+            if (failed)
+                MessageBox.Show("Failed to find a suitable model package to import. No changes were made.", "Package Importer", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ExportModelPackage()
         {
             var prompt = AT.CurrentState.CreateDialog<ExportModelDialog>(true, false);
 
-            if (!SelectedModelGroup.IsNull)
-                prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+            if (!SelectedModelContainer.IsNull)
+                prompt.FolderName = SelectedModelContainer.Name.Replace(':', '-');
 
+            prompt.Format = (CurrentModelPackage.Version == 6) ? ExportModelFormat.Driv3r : ExportModelFormat.DriverParallelLines;
             prompt.ShowFormatSelector = true;
-
+            
             if (prompt.ShowDialog() ?? false)
             {
                 var flags = prompt.Flags;
@@ -682,11 +1010,143 @@ namespace Antilli
 
                 var path = Path.Combine(Settings.ModelsDirectory, name);
 
+                var targetVersion = (prompt.Format == ExportModelFormat.Driv3r) ? 6 : 1;
+                
+                //ModelPackage package = null;
+                Spooler spooler = null;
+
+                var package = CurrentModelPackage;
+                var packageUID = CurrentModelPackage.UID;
+                var packageName = "package";
+
+                var vvsHack = false;
+
+                if (MessageBox.Show("Apply spooled vehicle (VVS) hack?",
+                            "Package Exporter", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    // HACK: assume it's a vehicle!
+                    packageUID = 0xFF;
+                    vvsHack = true;
+                }
+
+                var changed = false;
+                
                 ShowWaitCursor = true;
 
-                //
-                // TODO
-                //
+                if (!prompt.ExportAll && !package.IsOwnModelPackage(SelectedModelContainer.UID))
+                {
+                    package = package.ExtractModelsByUID(SelectedModelContainer.UID, packageUID);
+                    changed = true;
+                }
+
+                if (targetVersion != package.Version)
+                {
+                    // convert to a new package
+                    var converted = ModelConverter.Convert(package, targetVersion, packageUID);
+
+                    // cleanup our previous package?
+                    if (changed)
+                    {
+                        package.FreeModels();
+                        package.FreeMaterials();
+                    }
+
+                    // set the new package
+                    package = converted;
+                    packageName = "converted_package";
+
+                    changed = true;
+                }
+                
+                if (changed)
+                {
+                    // save our custom model package
+                    spooler = package.AsSpooler(true);
+
+                    // clean up our mess
+                    package.FreeModels();
+                    package.FreeMaterials();
+                }
+                else
+                {
+                    // get a copy of the original model package
+                    spooler = CopyCatFactory.GetCopy(package.AsSpooler(), CopyClassType.DeepCopy);
+                }
+
+                var filepak = ChunkTemplates.UnifiedPackage;
+
+                // get the hierarchy too!
+                var modelFile = CurrentModelFile as IVehiclesFile;
+
+                if (modelFile != null)
+                {
+                    var idx = (!modelFile.HasVirtualVehicles) ? modelFile.Packages.IndexOf(CurrentModelPackage) : Containers.SelectedIndex;
+
+                    var hierarchy = modelFile.Hierarchies[idx];
+
+                    var copyHierarchy = SpoolableResourceFactory.Clone(hierarchy, true);
+
+                    if (modelFile.HasVirtualVehicles && idx != 0)
+                    {
+                        // relocate models
+                        var lowestModelIndex = -1;
+                        var parts = new List<VehiclePartData>();
+
+                        // first pass: determine the first model index
+                        foreach (var part in copyHierarchy.Parts)
+                        {
+                            if (part.ModelId != 255)
+                            {
+                                if (lowestModelIndex == -1 || (part.ModelId < lowestModelIndex))
+                                    lowestModelIndex = part.ModelId;
+                            }
+
+                            parts.Add(part);
+                        }
+
+                        // second pass: relocate the models
+                        for (int p = 0; p < copyHierarchy.Parts.Count; p++)
+                        {
+                            var newPart = parts[p];
+
+                            if (newPart.ModelId == 255)
+                                continue;
+                            
+                            newPart.ModelId -= (byte)lowestModelIndex;
+
+                            copyHierarchy.Parts[p] = newPart;
+                        }
+                    }
+
+                    copyHierarchy.Version = (targetVersion == 6) ? 0 : 1;
+
+                    // just in case DPL on Xbox ever strikes again... ;)
+                    if (copyHierarchy.Version == 0 && copyHierarchy.Platform == PlatformType.Xbox)
+                        copyHierarchy.Version = 1;
+
+                    if (vvsHack)
+                    {
+                        filepak.Context = copyHierarchy.UID;
+                        filepak.Description = "Individual model";
+                    }
+
+                    filepak.Children.Add(copyHierarchy.AsSpooler(true));
+                }
+
+                filepak.Children.Add(spooler);
+
+                var chunker = new FileChunker();
+                chunker.Children.Add(filepak);
+
+                var outDir = Path.Combine(Settings.ExportDirectory, name);
+
+                if (!Directory.Exists(outDir))
+                    Directory.CreateDirectory(outDir);
+
+                var filename = Path.Combine(outDir, $"{packageName}.vvv");
+
+                if (chunker.Save(filename))
+                    MessageBox.Show($"Exported to '{filename}' successfully!", "Package Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 ShowWaitCursor = false;
             }
@@ -696,8 +1156,8 @@ namespace Antilli
         {
             var prompt = AT.CurrentState.CreateDialog<ExportModelDialog>(true, false);
 
-            if (!SelectedModelGroup.IsNull)
-                prompt.FolderName = SelectedModelGroup.Text.Replace(':', '-');
+            if (!SelectedModelContainer.IsNull)
+                prompt.FolderName = SelectedModelContainer.Name.Replace(':', '-');
 
             if (prompt.ShowDialog() ?? false)
             {
@@ -732,7 +1192,7 @@ namespace Antilli
                 }
                 else
                 {
-                    var part = SelectedModelGroup;
+                    var part = SelectedModelContainer;
                     var filename = $"{part.UID.High:X8}_{part.UID.Low:X8}";
 
                     if (OBJFile.Export(path, filename, CurrentModelPackage, part.UID, prompt.SplitByMaterial, prompt.BakeTransforms) == ExportResult.Success)
@@ -761,7 +1221,7 @@ namespace Antilli
                 return;
             }
 
-            var idx = (!modelFile.HasVirtualVehicles) ? modelFile.Packages.IndexOf(CurrentModelPackage) : Groups.SelectedIndex;
+            var idx = (!modelFile.HasVirtualVehicles) ? modelFile.Packages.IndexOf(CurrentModelPackage) : Containers.SelectedIndex;
 
             var hierarchy = modelFile.Hierarchies[idx];
 
@@ -773,6 +1233,126 @@ namespace Antilli
             var msg = String.Format("Successfully exported VPK file to '{0}'!", path);
 
             MessageBox.Show(msg, "VehicleHierarchy VPK Exporter", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ExtractAllTexturesFromDirectory()
+        {
+            var saveDlg = new FolderSelectDialog()
+            {
+                Title = "Select model files directory",
+            };
+
+            if (saveDlg.ShowDialog()
+                && MessageBox.Show("This will open EVERY model file in the directory and extract ALL textures from them. Continue with choosing an output folder?",
+                    "Texture Extractor", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            {
+                var inputBox = new MKInputBox("Texture Extractor", "Enter output folder name:", $"{Path.GetFileName(saveDlg.SelectedPath)}")
+                {
+                    Owner = this,
+                    OptionName = "Don't create subfolders",
+                    ShowOptionCheckbox = true,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                if (inputBox.ShowDialog() ?? false)
+                {
+                    var prefixes = false;
+
+                    if (MessageBox.Show("Do you want to prefix filenames with the package UID and texture index? This can make it easier to browse them in a file explorer.",
+                        "Texture Extractor", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        prefixes = true;
+                    }
+
+                    var folder = inputBox.InputValue;
+                    var path = Path.Combine(Settings.TexturesDirectory, folder);
+
+                    if (!Directory.Exists(path))
+                        Directory.CreateDirectory(path);
+
+                    var subfolders = !inputBox.IsOptionChecked;
+
+                    // can be changed if subfolders are allowed
+                    var outDir = path;
+
+                    var chunker = new FileChunker();
+                    
+                    var total = 0;
+                    var count = 0;
+
+                    var level = ModelPackage.LoadLevel;
+
+                    // load materials only
+                    ModelPackage.LoadLevel = ModelPackageLoadLevel.Materials;
+
+                    //
+                    // main texture exporting logic
+                    //
+                    chunker.SpoolerLoaded += (sender, e) =>
+                    {
+                        switch ((ChunkType)sender.Context)
+                        {
+                        case ChunkType.ModelPackagePC_X:
+                            if (sender.Version == 3)
+                                break; // DSF - unhandled for now
+
+                            goto case ChunkType.ModelPackagePC;
+
+                        case ChunkType.ModelPackagePC:
+                        case ChunkType.ModelPackagePS2:
+                        case ChunkType.ModelPackageXbox:
+                        case ChunkType.ModelPackageWii:
+                            // load the package (materials only)
+                            var package = SpoolableResourceFactory.Create<ModelPackage>(sender, true);
+
+                            var textures = package.Textures;
+
+                            // nab the textures
+                            if (textures != null)
+                            {
+                                if (TextureUtils.ExportTextures(textures, outDir, (prefixes) ? $"{package.UID:X4}" : "", prefixes, true))
+                                    count++;
+                            }
+
+                            total++;
+
+                            // free package
+                            package.FreeMaterials();
+                            break;
+                        }
+                    };
+
+                    var nFilesProcessed = 0;
+
+                    //
+                    // try loading each file as a model file
+                    //
+                    foreach (var file in Directory.EnumerateFiles(saveDlg.SelectedPath, "*.*"))
+                    {
+                        if (subfolders)
+                            outDir = Path.Combine(path, Path.GetFileName(file));
+
+                        if (chunker.Load(file))
+                            nFilesProcessed++;
+                    }
+
+                    // restore loading level
+                    ModelPackage.LoadLevel = level;
+
+                    if (nFilesProcessed != 0)
+                    {
+                        // make sure to reset these
+                        TextureUtils.BuggedAboutDuplicateFiles = false;
+                        TextureUtils.OverwriteDuplicateFiles = false;
+
+                        MessageBox.Show($"Successfully exported textures to '{outDir}':\r\n\r\n- Processed {count} / {total} packages in {nFilesProcessed} files!",
+                            "Texture Extractor", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+
+                    // free the chunker
+                    chunker.Dispose();
+                }
+            }
         }
 
         private bool ExportAllTextures(bool silent = false)
@@ -791,6 +1371,14 @@ namespace Antilli
 
                 if (saveDlg.ShowDialog())
                 {
+                    var prefixes = false;
+
+                    if (MessageBox.Show("Do you want to prefix filenames with the package UID and texture index? This can make it easier to browse them in a file explorer.",
+                        "Texture Extractor", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        prefixes = true;
+                    }
+
                     var directory = saveDlg.SelectedPath;
 
                     // try to export as many textures as possible
@@ -799,22 +1387,32 @@ namespace Antilli
                         // do we have to load it first?
                         if (!package.HasMaterials)
                         {
+                            var level = ModelPackage.LoadLevel;
+
                             // don't load the model data!
-                            ModelPackage.SkipModelsOnLoad = true;
+                            ModelPackage.LoadLevel = ModelPackageLoadLevel.Materials;
 
                             SpoolableResourceFactory.Load(package);
-                            ModelPackage.SkipModelsOnLoad = false;
+
+                            ModelPackage.LoadLevel = level;
                         }
 
                         var textures = package.Textures;
 
                         if (textures != null)
                         {
-                            if (TextureUtils.ExportTextures(textures, directory, true))
+                            if (TextureUtils.ExportTextures(textures, directory, (prefixes) ? $"{package.UID:X4}" : "", prefixes, true))
                                 count++;
                         }
 
                         total++;
+                    }
+
+                    if (count != 0)
+                    {
+                        // make sure to reset these
+                        TextureUtils.BuggedAboutDuplicateFiles = false;
+                        TextureUtils.OverwriteDuplicateFiles = false;
                     }
 
                     if (total != 0)
@@ -842,16 +1440,16 @@ namespace Antilli
         private void OnModelPackageSelected(object sender, EventArgs e)
         {
             m_deferSelectionChange = true;
-            OnPropertyChanged("ModelGroups");
+            OnPropertyChanged("ModelContainers");
             m_deferSelectionChange = false;
 
             if (CurrentModelPackage != null && CurrentModelPackage.HasModels)
             {
-                Groups.SelectedIndex = 0;
+                Containers.SelectedIndex = 0;
             }
             else
             {
-                Groups.SelectedIndex = -1;
+                Containers.SelectedIndex = -1;
 
                 // make sure we completely reset...
                 // the whole UI system is a joke!
@@ -879,29 +1477,31 @@ namespace Antilli
             AT.CurrentState.SelectedModelPackage = (index != -1) ? ModelPackages[index] : null;
         }
 
-        private void OnModelGroupItemSelected(object sender, EventArgs e)
+        private void OnModelContainerItemSelected(object sender, EventArgs e)
         {
             if (m_deferSelectionChange)
                 return;
 
-            if (Groups.SelectedIndex == -1)
+            if (Containers.SelectedIndex == -1)
             {
                 Viewer.RemoveActiveModel();
                 ResetLODButtons();
 
                 // select the first group
                 m_deferSelectionChange = true;
-                Groups.SelectedIndex = 0;
+                Containers.SelectedIndex = 0;
             }
 
-            if (SelectedModelGroup != null)
-                Viewer.SetActiveModel(SelectedModelGroup.Models);
+            if (SelectedModelContainer != null)
+                Viewer.SetActiveModel(SelectedModelContainer.Models);
 
             UpdateRenderingOptions();
 
             if (m_deferSelectionChange)
                 m_deferSelectionChange = false;
         }
+
+        public RelayCommand TextureDifferCommand { get; set; }
 
         public void Initialize()
         {
@@ -928,7 +1528,7 @@ namespace Antilli
             //--        Debug.WriteLine($"[INFO] {progress_str}");
             //--    }));
             //--};
-            
+
             KeyDown += (o,e) => {
                 switch (CurrentTab)
                 {
@@ -943,6 +1543,10 @@ namespace Antilli
                         MessageBox.Show($"Big-endian mode {status}.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
                         break;
                     case Key.X:
+                        // try to convert DPL models only..
+                        if (CurrentModelPackage.Version != 1)
+                            break;
+
                         var modelPackage = ModelConverter.Convert(CurrentModelPackage, 6);
 
                         // assume it's a vehicle
@@ -981,7 +1585,7 @@ namespace Antilli
             };
             
             Packages.SelectionChanged += OnModelPackageItemSelected;
-            Groups.SelectionChanged += OnModelGroupItemSelected;
+            Containers.SelectionChanged += OnModelContainerItemSelected;
             
             foreach (var child in LODButtons.Children)
             {
@@ -1030,6 +1634,8 @@ namespace Antilli
             expWavefrontOBJ.Click += (o, e) => ExportWavefrontOBJ();
 
             expAllTextures.Click += (o, e) => ExportAllTextures();
+
+            extractTextures.Click += (o, e) => ExtractAllTexturesFromDirectory();
 
             /*
             blenderSync.Click += (o, e) => ConnectToBlender();
@@ -1182,6 +1788,18 @@ namespace Antilli
 
         public MainWindow(string[] args = null)
         {
+            TextureDifferCommand = new RelayCommand(delegate (object o)
+            {
+                if (IsFileOpened)
+                {
+                    MessageBox.Show("Please close the current file before using this tool.", "Antilli", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    AT.CurrentState.CreateDialog<TextureDiffView>(true, true);
+                }
+            });
+
             InitializeComponent();
         }
     }

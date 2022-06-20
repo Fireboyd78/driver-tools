@@ -51,6 +51,15 @@ namespace DSCript.Spooling
             return resource;
         }
 
+        public static T Clone<T>(T resource, bool loadSpooler = false)
+            where T : ISpoolableResource, new()
+        {
+            var _spooler = ((ISpoolableResource)resource).Spooler;
+            var spooler = CopyCatFactory.GetCopy(_spooler, CopyClassType.DeepCopy);
+
+            return Create<T>(spooler, loadSpooler);
+        }
+
         public static void Load<T>(T resource)
             where T : ISpoolableResource
         {
@@ -84,6 +93,23 @@ namespace DSCript.Spooling
             where T : ISpoolableResource, new()
         {
             return Create<T>(@this, loadSpooler);
+        }
+
+        public static TSpooler AsSpooler<TSpooler>(this ISpoolableResource<TSpooler> resource, bool saveSpooler = false)
+            where TSpooler : Spooler
+        {
+            if (saveSpooler)
+                resource.Save();
+
+            return resource.Spooler;
+        }
+
+        public static Spooler AsSpooler(this ISpoolableResource resource, bool saveSpooler = false)
+        {
+            if (saveSpooler)
+                resource.Save();
+
+            return resource.Spooler;
         }
     }
 }

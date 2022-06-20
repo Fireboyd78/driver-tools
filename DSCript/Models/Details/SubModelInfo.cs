@@ -54,17 +54,16 @@ namespace DSCript.Models
         {
             if ((provider.Flags & UseXBoxSizeHackFlag) != 0)
             {
-                IndexCount = stream.ReadInt32();
+                VertexCount = stream.ReadInt32();
                 IndexOffset = stream.ReadInt32();
 
                 PrimitiveType = stream.ReadInt32();
 
                 // TODO: Verify these are correct
-                VertexCount = stream.ReadInt32();
+                VertexBaseOffset = stream.ReadInt32();
                 VertexOffset = stream.ReadInt32();
 
-                // skip junk
-                stream.Position += 4;
+                Material = stream.Read<MaterialHandle>();
             }
             else
             {
@@ -78,11 +77,11 @@ namespace DSCript.Models
                 IndexCount = stream.ReadInt32();
 
                 stream.Position += 0x18;
+
+                Material = stream.Read<MaterialHandle>();
+
+                stream.Position += 4;
             }
-
-            Material = stream.Read<MaterialHandle>();
-
-            stream.Position += 4;
         }
     }
 }

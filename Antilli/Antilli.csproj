@@ -149,10 +149,25 @@
     <Compile Include="Source\WPF\Views\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>
     </Compile>
+    <Page Include="Source\WPF\Views\TextureDiffView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Source\WPF\Widgets\TextureViewWidget.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Source\WPF\Views\TexturesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Compile Include="Source\WPF\Views\TextureDiffView.xaml.cs">
+      <DependentUpon>TextureDiffView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Source\WPF\Visuals\MultiVisual3D.cs" />
+    <Compile Include="Source\WPF\Widgets\TextureViewWidget.xaml.cs">
+      <DependentUpon>TextureViewWidget.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Source\WPF\Views\TexturesView.xaml.cs">
       <DependentUpon>TexturesView.xaml</DependentUpon>
     </Compile>
@@ -180,7 +195,7 @@
       <DependentUpon>MKInputBox.xaml</DependentUpon>
     </Compile>
     <Compile Include="Source\WPF\MaterialTreeItem.cs" />
-    <Compile Include="Source\WPF\ModelGroupListItem.cs" />
+    <Compile Include="Source\WPF\ModelContainerListItem.cs" />
     <Compile Include="Source\WPF\ModelListItem.cs" />
     <Compile Include="Source\WPF\ModelVisual3DGroup.cs" />
     <Compile Include="Source\WPF\PropertyItem.cs" />

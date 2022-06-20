@@ -264,6 +264,9 @@ namespace GMC2Snooper
             // Twiddle map
             int[] twiddleMap = MakeTwiddleMap(width);
 
+            buffer = UnSwizzle8(buffer, 32, 32, where);
+
+#if VQ2_METHOD_A
             // Decode texture data
             for (int y = 0; y < height; y += 2)
             {
@@ -288,6 +291,57 @@ namespace GMC2Snooper
                     }
                 }
             }
+#elif VQ2_METHOD_B
+            // Decode texture data
+            for (int y = 0; y < height; y += 2)
+            {
+                for (int x = 0; x < width; x += 2)
+                {
+                    int index = (buffer[where + ((twiddleMap[x >> 1] << 1) | twiddleMap[y >> 1])]) * 4;
+
+                    for (int x2 = 0; x2 < 2; x2++)
+                    {
+                        for (int y2 = 0; y2 < 2; y2++)
+                        {
+                            destinationIndex = ((((y + y2) * width) + (x + x2)) * 4);
+
+                            for (int i = 0; i < 4; i++)
+                            {
+                                destination[destinationIndex] = (byte)(index + i);
+                                destinationIndex++;
+                            }
+
+                            index++;
+                        }
+                    }
+                }
+            }
+#else
+            // Decode texture data
+            for (int y = 0; y < height; y += 2)
+            {
+                for (int x = 0; x < width; x += 2)
+                {
+                    int index = (buffer[where + ((twiddleMap[x >> 1] << 1) | twiddleMap[y >> 1])]) * 4;
+
+                    for (int x2 = 0; x2 < 2; x2++)
+                    {
+                        for (int y2 = 0; y2 < 2; y2++)
+                        {
+                            destinationIndex = ((((y + y2) * width) + (x + x2)) * 4);
+
+                            for (int i = 0; i < 4; i++)
+                            {
+                                destination[destinationIndex] = (byte)(index + i);
+                                destinationIndex++;
+                            }
+
+                            index++;
+                        }
+                    }
+                }
+            }
+#endif
 
             return destination;
         }

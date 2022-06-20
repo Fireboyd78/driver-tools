@@ -16,6 +16,8 @@ using DSCript.Spooling;
 
 using COLLADA;
 
+using FreeImageAPI;
+
 namespace Antilli
 {
     public enum EffectType
@@ -429,9 +431,15 @@ namespace Antilli
             throw new NotImplementedException($"Effect type '{effectType.ToString()}' is not implemented yet.");
         }
 
-        private static int GetPartSlotIndex(string slotType)
+        private static int GetLodNameType(string lodName)
         {
-            switch (slotType)
+            var lodType = Lod.GetLodNameType(lodName);
+
+            if (lodType != -1)
+                return lodType;
+
+            // backwards compat. list
+            switch (lodName)
             {
             case "H":       return 0;
             case "M":       return 1;
@@ -440,33 +448,16 @@ namespace Antilli
             case "SHADOW":  return 5;
             }
 
+            // still not found
             return -1;
         }
 
-        private static int GetLodType(int slot)
+        private static int GetLodNameTypeMask(string lodType)
         {
-            switch (slot)
-            {
-            case 0: return 0x1E;
-            case 1: return 0x1C;
-            case 2: return 0x18;
-            case 3: return 1;
-            case 5: return 0;
-            }
+            var lodIndex = GetLodNameType(lodType);
 
-            return -1;
-        }
-
-        private static int GetPartSlotType(string slotType)
-        {
-            switch (slotType)
-            {
-            case "H":       return 0x1E;
-            case "M":       return 0x1C;
-            case "L":       return 0x18;
-            case "VL":      return 1;
-            case "SHADOW":  return 0;
-            }
+            if (lodIndex != -1)
+                return Lod.GetLodTypeMask(lodIndex);
 
             return -1;
         }
@@ -561,7 +552,7 @@ namespace Antilli
 
                     var slotType = objName.Split('_').Last();
 
-                    var slotIdx = GetPartSlotIndex(slotType);
+                    var slotIdx = GetLodNameType(slotType);
 
                     if (slotIdx == -1)
                         throw new InvalidOperationException($"Could not determine slot index for '{objName}'!");
@@ -572,7 +563,7 @@ namespace Antilli
 
                     var partDef = new Lod(slotIdx) {
                         Parent = model,
-                        Mask = GetPartSlotType(slotType),
+                        Mask = GetLodNameTypeMask(slotType),
                     };
 
                     lods[slotIdx] = partDef;
@@ -685,24 +676,160 @@ namespace Antilli
             return true;
         }
 
-        public static ModelPackage Convert(ModelPackage modelPackage, int version)
+        private static FREE_IMAGE_FORMAT? FIFormat(Stream stream, out bool alpha)
+        {
+            var format = FreeImage.GetFileTypeFromStream(stream);
+
+            alpha = false;
+
+            switch (format)
+            {
+            case FREE_IMAGE_FORMAT.FIF_BMP:
+            case FREE_IMAGE_FORMAT.FIF_GIF:
+            case FREE_IMAGE_FORMAT.FIF_JPEG:
+                // no alpha
+                break;
+            case FREE_IMAGE_FORMAT.FIF_DDS:
+            case FREE_IMAGE_FORMAT.FIF_PNG:
+            case FREE_IMAGE_FORMAT.FIF_TIFF:
+            case FREE_IMAGE_FORMAT.FIF_TARGA:
+                alpha = true;
+                break;
+            default:
+                // unsupported format
+                return null;
+            }
+
+            return format;
+        }
+
+        private static byte[] CopyAlphaAToAlphaB(byte[] bufferA, byte[] bufferB, bool blackout = false)
+        {
+            byte[] result = null;
+
+            using (var streamA = new MemoryStream(bufferA))
+            using (var streamB = new MemoryStream(bufferB))
+            {
+                bool alphaA, alphaB;
+
+                var formatA = FIFormat(streamA, out alphaA) ?? FREE_IMAGE_FORMAT.FIF_UNKNOWN;
+                var formatB = FIFormat(streamB, out alphaB) ?? FREE_IMAGE_FORMAT.FIF_UNKNOWN;
+
+                // supported formats?
+                if ((formatA == FREE_IMAGE_FORMAT.FIF_UNKNOWN) || (formatB == FREE_IMAGE_FORMAT.FIF_UNKNOWN))
+                    return null;
+
+                // formats can have alpha? (TODO: verify results)
+                if (!alphaA || !alphaB)
+                    return null;
+
+                FIBITMAP dibA = FreeImage.LoadFromStream(streamA, ref formatA);
+                FIBITMAP dibB = FreeImage.LoadFromStream(streamB, ref formatB);
+
+                // images loaded?
+                if (dibA.IsNull || dibB.IsNull)
+                    return null;
+
+                var dibAlphaA = FreeImage.GetChannel(dibA, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+                var dibAlphaB = FreeImage.GetChannel(dibB, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+
+                // alpha channels present?
+                if (dibAlphaA.IsNull || dibAlphaB.IsNull)
+                    return null;
+
+                // get a copy of B
+                var dib = FreeImage.Clone(dibB);
+
+                // replace copy's alpha with A's alpha
+                FreeImage.SetChannel(dib, dibAlphaA, FREE_IMAGE_COLOR_CHANNEL.FICC_ALPHA);
+
+                if (blackout)
+                {
+                    // TODO: fill RGB with black
+                }
+
+                using (var ms = new MemoryStream())
+                {
+                    // save the result
+                    if (FreeImage.SaveToStream(dib, ms, FREE_IMAGE_FORMAT.FIF_TARGA))
+                        result = ms.ToArray();
+                }
+            }
+
+            return result;
+        }
+
+        private static TextureDataPC CopyTextureAlphaAToB(TextureDataPC textureA, TextureDataPC textureB, bool blackout = false)
+        {
+            var bufferA = textureA.Buffer; // texture with alpha channel we want
+            var bufferB = textureB.Buffer; // texture we want to set alpha channel of
+
+            // textureB is our basis for the new texture,
+            // so let's make a copy of it ;)
+            var texture = CopyCatFactory.GetCopy(textureB, CopyClassType.DeepCopy);
+
+            // do the work necessary
+            texture.Buffer = CopyAlphaAToAlphaB(bufferA, bufferB);
+
+            // Driv3rize it?
+            if (texture.UID == 0x01010101)
+                texture.Handle = (int)Memory.GetCRC32(texture.Buffer);
+
+            // return our new texture
+            return texture;
+        }
+
+        public static ModelPackage Convert(ModelPackage modelPackage, int targetVersion, int targetUID = -1)
         {
             var spooler = new SpoolableBuffer() {
-                Context = ModelPackageResource.GetChunkId(modelPackage.Platform, version),
-                Version = version,
+                Context = ModelPackageResource.GetChunkId(modelPackage.Platform, targetVersion),
+                Version = targetVersion,
                 Alignment = SpoolerAlignment.Align4096,
                 Description = "Custom model package",
             };
-            
+
+            var version = modelPackage.Version;
+            var fixups = (version != targetVersion);
+
             var resource = SpoolableResourceFactory.Create<ModelPackage>(spooler);
 
             // fuck
             if (modelPackage.VertexBuffers.Count != 1)
                 throw new InvalidOperationException("Can't recompile model package -- must have exactly ONE vertex buffer!");
-            
-            resource.UID = modelPackage.UID;
+
+            // preserve flags
+            var flags = modelPackage.Flags;
+            var spooledVehicleHacks = false;
+
+            if ((flags & ModelPackage.FLAG_SpooledVehicleHacks) != 0)
+            {
+                flags &= ~ModelPackage.FLAG_SpooledVehicleHacks;
+                spooledVehicleHacks = true;
+            }
+
+            if (targetUID == -1)
+            {
+                // converting to DPL?
+                //if (fixups && targetVersion == 1)
+                //        throw new Exception("Converting a model package to Driver: Parallel Lines requires a valid target UID!");
+
+                if (fixups && (targetVersion == 1))
+                {
+                    // D3 to DPL
+                    targetUID = 0x1234;
+                }
+                else
+                {
+                    // reuse the UID
+                    targetUID = modelPackage.UID;
+                }
+            }
+
+            resource.UID = targetUID;
             resource.Platform = modelPackage.Platform;
-            resource.Version = version;
+            resource.Version = targetVersion;
+
+            resource.Flags = flags;
             
             var gModels = new List<Model>();
             var gLodInstances = new List<LodInstance>();
@@ -712,15 +839,36 @@ namespace Antilli
             var gSubstances = new List<SubstanceDataPC>();
             var gTextures = new List<TextureDataPC>();
 
-            var gVertices = new List<Vertex>();
+            var gVertices = new List<int>();
             var gIndices = new List<short>();
+
+            var gVertexList = new List<Vertex>();
+            var gVertexCount = 0;
+
+            var luVertices = new Dictionary<int, int>();
 
             var lookup = new Dictionary<int, int>();
 
             var vBuffer = modelPackage.VertexBuffers[0];
             VertexBuffer vertexBuffer = null;
-            
-            var scaleVerts = (modelPackage.Version == 1);
+
+            var indices = modelPackage.IndexBuffer.Indices;
+
+            // HACKS: was trying to figure out why DPL kept crashing..
+            // ... it only fucking wants triangle fans!
+#if MARK_HAS_FINISHED_HIS_INCREDIBLE_TRIANGLE_FAN_GENERATOR
+            var convertToTris = (targetVersion == 6);
+            var convertToFans = (targetVersion == 1);
+#elif I_WANNA_MAKE_DPL_LOOK_LIKE_SHIT_AND_SPEW_GARBAGE_AT_ME
+            var convertToTris = (targetVersion == 6);
+            var convertToFans = false;
+#else
+            var convertToTris = true;
+            var convertToFans = false;
+#endif
+
+            var scaleVerts = (version == 1 && targetVersion == 6);
+            var d3Scaling = (version == 6 && targetVersion == 1);
 
             // copy materials
             gMaterials.AddRange(modelPackage.Materials);
@@ -728,11 +876,18 @@ namespace Antilli
             gTextures.AddRange(modelPackage.Textures);
 
             var mtlLookup = new Dictionary<MaterialHandle, int>();
-            
+
             foreach (var _model in modelPackage.Models)
             {
                 if (vertexBuffer == null)
-                    vertexBuffer = VertexBuffer.Create(version, _model.VertexType);
+                    vertexBuffer = VertexBuffer.Create(targetVersion, _model.VertexType);
+#if !OLD_METHOD
+                var vertexBaseOffset = gVertexList.Count;
+#endif
+                var modelScale = _model.Scale;
+
+                if (d3Scaling)
+                    modelScale = new Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
                 var model = new Model() {
                     UID = _model.UID,
@@ -741,7 +896,7 @@ namespace Antilli
                     VertexType = _model.VertexType,
 
                     Flags = _model.Flags,
-                    Scale = _model.Scale,
+                    Scale = modelScale,
 
                     BoundingBox = _model.BoundingBox,
                 };
@@ -750,15 +905,30 @@ namespace Antilli
                 
                 var lods = new List<Lod>();
 
+                // iterate through each Lod
                 foreach (var _lod in _model.Lods)
                 {
-                    var lod = new Lod(_lod.ID) {
+                    var lod = new Lod(_lod.Type) {
                         Parent = model,
-                        Mask = GetLodType(_lod.ID),
+                        Mask = Lod.GetLodTypeMask(_lod.Type, targetVersion),
                     };
 
+                    // reuse the existing mask
                     if (lod.Mask == -1)
                         lod.Mask = _lod.Mask;
+
+                    if (version == 6 && targetVersion == 1)
+                    {
+                        if (_lod.Instances.Count != 0)
+                        {
+                            lod.Flags = (lod.Mask != 0) ? 1 : 0;
+                        }
+                        else
+                        {
+                            lod.Mask = 0;
+                            lod.Flags = 0;
+                        }
+                    }
                     
                     lods.Add(lod);
 
@@ -769,6 +939,7 @@ namespace Antilli
                         var instance = new LodInstance() {
                             Parent = lod,
 
+                            Handle = _instance.Handle,
                             Reserved = _instance.Reserved,
                             Transform = _instance.Transform,
                             UseTransform = _instance.UseTransform,
@@ -781,49 +952,156 @@ namespace Antilli
 
                         foreach (var _subModel in _instance.SubModels)
                         {
+#if !OLD_METHOD
+                            var vertexOffset = (gVertexList.Count - vertexBaseOffset); // == num vertices added so far to the model
+
+                            var subModel = new SubModel()
+                            {
+                                Model = model,
+                                LodInstance = instance,
+                                ModelPackage = resource,
+
+                                PrimitiveType = PrimitiveType.TriangleList,
+
+                                VertexBaseOffset = vertexBaseOffset,
+
+                                VertexOffset = vertexOffset,
+                                IndexOffset = gIndices.Count,
+                            };
+
+                            var vertexCount = 0;
+                            var indexCount = 0;
+
+                            var tris = _subModel.CollectVertexTris(ref lookup, ref gVertices, indices, out vertexCount);
+
+                            for (int t = 0; t < tris.Count; t++)
+                            {
+                                var tri = tris[t];
+                                var vIdx = gVertices[tri];
+                                
+                                if (!luVertices.ContainsKey(vIdx))
+                                {
+                                    var vertex = vBuffer.Vertices[vIdx].ToVertex();
+
+                                    if (!d3Scaling)
+                                        vertex.ApplyScale(modelScale);
+
+                                    gVertexList.Add(vertex);
+                                    luVertices.Add(vIdx, gVertexList.Count - 1);
+                                }
+
+                                gIndices.Add((short)luVertices[vIdx]);
+                                indexCount++;
+                            }
+
+                            subModel.VertexCount = vertexCount;
+                            subModel.IndexCount = indexCount / 3;
+#else
                             var tris = new List<int>();
                             var vertices = _subModel.CollectVertices(out tris);
-
-                            var vertexOffset = gVertices.Count;
+                            
+                            var vertexOffset = gVertices_DATA.Count;
                             var vertexCount = 0;
-
                             var indexOffset = gIndices.Count;
                             var indexCount = (tris.Count / 3);
 
-                            // combine vertices
-                            for (int t = 0; t < tris.Count; t++)
+                            if (convertToTris)
                             {
-                                var idx = tris[t];
-                                var vIdx = vertices[idx];
-
-                                if (!lookup.ContainsKey(vIdx))
+                                // convert to triangles
+                                for (int t = 0; t < tris.Count; t++)
                                 {
-                                    var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
+                                    var idx = tris[t];
+                                    var vIdx = vertices[idx];
 
-                                    if (scaleVerts)
-                                        vertex.ApplyScale(model.Scale);
+                                    if (!lookup.ContainsKey(vIdx))
+                                    {
+                                        var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
 
-                                    lookup.Add(vIdx, (vertexOffset + vertexCount));
+                                        if (!d3Scaling)
+                                            vertex.ApplyScale(modelScale);
 
-                                    gVertices.Add(vertex);
-                                    vertexCount++;
+                                        lookup.Add(vIdx, (vertexOffset + vertexCount));
+
+                                        gVertices_DATA.Add(vertex);
+                                        vertexCount++;
+                                    }
+
+                                    // append to buffer
+                                    gIndices.Add((short)lookup[vIdx]);
                                 }
-
-                                // append to buffer
-                                gIndices.Add((short)lookup[vIdx]);
                             }
+                            else if (convertToFans) // unreachable code... not implemented
+                            {
 
+                            }
+                            else if (scaleVerts) // unreachable code... here for reference only
+                            {
+                                // scale all the triangle fans
+                                foreach (var vIdx in vertices)
+                                {
+                                    if (!lookup.ContainsKey(vIdx))
+                                    {
+                                        var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
+
+                                        vertex.ApplyScale(modelScale);
+
+                                        lookup.Add(vIdx, vertexOffset++);
+                                        gVertices_DATA.Add(vertex);
+                                    }
+                                }
+                            }
+#endif
                             var material = _subModel.Material;
 
-                            // retarget for old-style materials
-                            if (version == 6)
+                            if (fixups)
                             {
-                                if (material.UID == modelPackage.UID)
+                                // retarget material handles
+                                switch (version)
                                 {
-                                    material.UID = 0xFFFD;
-                                }
-                                else if (material.UID != 0xCCCC)
-                                {   
+                                case 1:
+                                    if (targetVersion == 6)
+                                    {
+                                        //
+                                        // Driv3r format
+                                        //
+                                        if (material.UID == modelPackage.UID)
+                                        {
+                                            material.UID = 0xFFFD;
+                                        }
+                                        else if (material.UID != 0xCCCC && !spooledVehicleHacks)
+                                        {
+                                            goto RETARGET_GLOBALS;
+                                        }
+                                    }
+                                    break;
+                                case 6:
+                                    if (targetVersion == 1)
+                                    {
+                                        //
+                                        // DPL format
+                                        //
+                                        if (material.UID == 0xFFFD)
+                                        {
+                                            // fixup the UID to match model package
+                                            material.UID = (ushort)targetUID;
+                                        }
+                                        else if (material.UID != 0xCCCC)
+                                        {
+                                            if (material == 0 && modelPackage.UID == 0xFF)
+                                            {
+                                                // fix the damn shadows...
+                                                material.UID = 0xCCCC;
+                                            }
+                                            else
+                                            {
+                                                // actually retarget it
+                                                goto RETARGET_GLOBALS;
+                                            }
+                                        }
+                                    }
+                                    break;
+                                RETARGET_GLOBALS:
+                                    // compile any used globals into our model package
                                     if (!mtlLookup.ContainsKey(material))
                                     {
                                         MaterialDataPC mtl = null;
@@ -841,27 +1119,75 @@ namespace Antilli
                                         }
                                     }
 
-                                    material.Handle = (ushort)mtlLookup[material];
-                                    material.UID = 0xFFFD;
+                                    if (mtlLookup.ContainsKey(material))
+                                    {
+                                        material.Handle = (ushort)mtlLookup[material];
+
+                                        if (targetVersion == 6)
+                                        {
+                                            material.UID = 0xFFFD;
+                                        }
+                                        else
+                                        {
+                                            material.UID = (ushort)targetUID;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // oopsie woopsie! :D
+                                        material.UID = 0xFFFF;
+                                        material.Handle = 0;
+                                    }
+                                    break;
                                 }
                             }
-                            
+
+#if !OLD_METHOD
+                            subModel.Material = material;
+#else
                             var subModel = new SubModel() {
                                 Model = model,
                                 LodInstance = instance,
                                 ModelPackage = resource,
 
-                                PrimitiveType = PrimitiveType.TriangleList,
-
-                                VertexOffset = vertexOffset,
-                                VertexCount = vertexCount,
-
-                                IndexOffset = indexOffset,
-                                IndexCount = indexCount,
-
                                 Material = material,
                             };
 
+                            if (convertToTris)
+                            {
+                                subModel.PrimitiveType = PrimitiveType.TriangleList;
+
+                                subModel.VertexOffset = vertexOffset;
+                                subModel.VertexCount = vertexCount;
+
+                                subModel.IndexOffset = indexOffset;
+                                subModel.IndexCount = indexCount;
+                            }
+                            else if (convertToFans) // unreachable code... not implemented
+                            {
+                                subModel.PrimitiveType = PrimitiveType.TriangleFan;
+
+                                subModel.VertexCount = vertexCount;
+                                subModel.IndexOffset = indexOffset;
+
+                                // these are ALWAYS zero !!!
+                                subModel.VertexBaseOffset = 0;
+                                subModel.VertexOffset = 0;
+                                subModel.IndexCount = 0;
+                            }
+                            else  // unreachable code... here for reference only
+                            {
+                                subModel.PrimitiveType = _subModel.PrimitiveType;
+
+                                subModel.VertexBaseOffset = _subModel.VertexBaseOffset;
+
+                                subModel.VertexOffset = _subModel.VertexOffset;
+                                subModel.VertexCount = _subModel.VertexCount;
+
+                                subModel.IndexOffset = _subModel.IndexOffset;
+                                subModel.IndexCount = _subModel.IndexCount;
+                            }
+#endif
                             subModels.Add(subModel);
                             gSubModels.Add(subModel);
                         }
@@ -875,118 +1201,272 @@ namespace Antilli
                 model.Lods = lods;
             }
 
-            // compile buffers
-            vertexBuffer.CreateVertices(gVertices);
+            if (convertToTris || convertToFans)
+            {
+                // compile buffers
+                vertexBuffer.SetVertices(gVertexList);
 
-            resource.VertexBuffers = new List<VertexBuffer>() {
-                vertexBuffer
-            };
+                resource.VertexBuffers = new List<VertexBuffer>() {
+                    vertexBuffer
+                };
 
-            var indexBuffer = new IndicesHolder() {
-                Indices = gIndices
-            };
+                var indexBuffer = new IndicesHolder()
+                {
+                    Indices = gIndices
+                };
 
-            resource.IndexBuffer = indexBuffer.Compile();
+                resource.IndexBuffer = indexBuffer.Compile();
+            }
+            else if (scaleVerts) // unreachable code... here for reference only
+            {
+                // re-sort the vertices in their original order
+                var verts = new Vertex[vBuffer.Count];
+
+                for (int v = 0; v < vBuffer.Count; v++)
+                {
+                    var vIdx = lookup[v];
+
+                    verts[v] = gVertexList[vIdx];
+                }
+
+                // set the vertex buffer
+                vertexBuffer.SetVertices(verts.ToList());
+
+                resource.VertexBuffers = new List<VertexBuffer>() { vertexBuffer };
+                resource.IndexBuffer = new IndexBuffer(0)
+                {
+                    Indices = modelPackage.IndexBuffer.Indices
+                };
+
+                // clean up our mess
+                gVertexList.Clear();
+            }
+            else
+            {
+                // directly copy the vertex buffer
+                vBuffer.CopyTo(vertexBuffer);
+
+                resource.VertexBuffers = new List<VertexBuffer>() { vertexBuffer };
+                resource.IndexBuffer = new IndexBuffer(0)
+                {
+                    Indices = modelPackage.IndexBuffer.Indices
+                };
+            }
 
             resource.Models = gModels;
             resource.LodInstances = gLodInstances;
             resource.SubModels = gSubModels;
 
-            // fix materials
-            if (version == 6)
+            if (fixups)
             {
+                // recompile substances/textures
                 gSubstances = new List<SubstanceDataPC>();
                 gTextures = new List<TextureDataPC>();
 
-                foreach (var material in gMaterials)
+                switch (version)
                 {
-                    foreach (var substance in material.Substances)
+                case 1:
+                    if (targetVersion == 6)
                     {
-                        substance.Type &= ~0xFF;
-
-                        if (substance.Mode == 0x101)
-                            substance.Mode = 0x102;
-
-                        if ((substance.Flags & 0x40) != 0)
-                            substance.Flags &= ~0x40;
-
-                        if ((substance.Flags & 0xC0) != 0)
+                        //
+                        // Driv3r format
+                        //
+                        foreach (var material in gMaterials)
                         {
-                            substance.Flags &= ~0xC0;
-                            substance.Flags |= 0x180;
-                        }
+                            foreach (var substance in material.Substances)
+                            {
+                                substance.TS3 = 0;
 
-                        if (substance.ExtraFlags == SubstanceExtraFlags.DamageAndColorMask)
-                        {
-                            substance.Type = (int)(SubstanceExtraFlags.DamageAndColorMaskAlphaMaps) << 8;
+                                // related to specular/alpha maps
+                                if (substance.TS1 == 1 && substance.TS2 == 1)
+                                {
+                                    // most Driv3r vehicles use this combination
+                                    substance.TS1 = 2;
+                                    substance.TS2 = 1;
+                                }
 
-                            var texA1 = substance.Textures[0];
-                            var texA2 = new TextureDataPC() {
-                                UID = texA1.UID,
-                                Handle = texA1.Handle + 0x12345,
-                                Type = texA1.Type,
-                                Flags = texA1.Flags,
-                                Width = texA1.Width,
-                                Height = texA1.Height,
-                                Buffer = texA1.Buffer,
-                            };
+                                // clear specular flag
+                                if ((substance.Flags & 0x40) != 0)
+                                    substance.Flags &= ~0x40;
 
-                            var texB1 = substance.Textures[1];
-                            var texB2 = new TextureDataPC() {
-                                UID = texB1.UID,
-                                Handle = texB1.Handle + 0x12345,
-                                Type = texB1.Type,
-                                Flags = texB1.Flags,
-                                Width = texB1.Width,
-                                Height = texB1.Height,
-                                Buffer = texB1.Buffer,
-                            };
+                                // fix emissive flag
+                                if ((substance.Flags & 0xC0) != 0)
+                                {
+                                    substance.Flags &= ~0xC0;
+                                    substance.Flags |= 0x180;
+                                }
 
-                            // allow damage to work
-                            substance.Textures = new List<TextureDataPC>() {
-                                texA1,
-                                texA2,
-                                texB1,
-                                texB2,
-                            }; ;
-                        }
+                                // DPL saves space by using 2 textures instead of 4
+                                // so for Driv3r, we need to expand out the other 2
+                                if (substance.TextureFlags == (int)SubstanceExtraFlags.DPL_DamageAndColorMask)
+                                {
+                                    substance.TextureFlags = (int)SubstanceExtraFlags.DamageAndColorMask_AlphaMaps;
 
-                        if (substance.ExtraFlags == SubstanceExtraFlags.ColorMask)
-                        {
-                            var texA1 = substance.Textures[0];
-                            var texA2 = new TextureDataPC() {
-                                UID = texA1.UID,
-                                Handle = texA1.Handle + 0x12345,
-                                Type = texA1.Type,
-                                Flags = texA1.Flags,
-                                Width = texA1.Width,
-                                Height = texA1.Height,
-                                Buffer = texA1.Buffer,
-                            };
+                                    var texA1 = substance.Textures[0]; // clean + alpha specular
+                                    var texB1 = substance.Textures[1]; // damage + alpha color map
 
-                            // allow mask to work
-                            substance.Textures = new List<TextureDataPC>() {
-                                texA1,
-                                texA2,
-                            };
-                        }
+                                    // create clean alpha color map
+                                    var texA2 = CopyTextureAlphaAToB(texB1, texA1, true);
 
-                        gSubstances.Add(substance);
-    
-                        foreach (var texture in substance.Textures)
-                        {
-                            // fix flags
-                            texture.Flags = 0;
+                                    texA2.UID = texA1.UID;
+                                    texA2.Handle = texA1.Handle + 0x12345;
 
-                            gTextures.Add(texture);
+                                    // create damage alpha color map
+                                    var texB2 = CopyCatFactory.GetCopy(texA2, CopyClassType.DeepCopy);
+
+                                    texB2.UID = texB1.UID;
+                                    texB2.Handle = texB1.Handle + 0x12345;
+
+                                    // finally, copy the clean alpha specular to the damage texture
+                                    texB1 = CopyTextureAlphaAToB(texA1, texB1);
+
+                                    // allow damage + color mask to work
+                                    substance.Textures = new List<TextureDataPC>() {
+                                        texA1,
+                                        texA2,
+                                        texB1,
+                                        texB2,
+                                    };
+                                }
+                                else if (substance.TextureFlags == (int)SubstanceExtraFlags.DPL_ColorMask)
+                                {
+                                    substance.TextureFlags = (int)SubstanceExtraFlags.ColorMask;
+                                }
+                                else if (substance.TextureFlags == (int)SubstanceExtraFlags.DPL_Damage)
+                                {
+                                    substance.TextureFlags = (int)SubstanceExtraFlags.Damage;
+                                }
+                                else if (substance.TextureFlags == (int)SubstanceExtraFlags.BumpMap)
+                                {
+                                    // assuming this based on Tanner's character model
+                                    substance.TS1 = 1;
+                                    substance.TS2 = 2;
+                                }
+
+                                gSubstances.Add(substance);
+
+                                foreach (var texture in substance.Textures)
+                                {
+                                    gTextures.Add(texture);
+                                }
+                            }
                         }
                     }
+                    break;
+                case 6:
+                    if (targetVersion == 1)
+                    {
+                        //
+                        // DPL format
+                        //
+                        foreach (var material in gMaterials)
+                        {
+                            foreach (var substance in material.Substances)
+                            {
+                                var specular = false;
+
+                                // add specular flag
+                                if ((substance.TS1 == 1 || substance.TS1 == 2) && (substance.TS2 == 2 || substance.TS2 == 1))
+                                {
+                                    substance.Flags |= 0x40;
+                                    specular = true;
+                                }
+
+                                // fix emissive flag
+                                if ((substance.Flags & 0x180) != 0)
+                                {
+                                    substance.Flags &= ~0x180;
+                                    substance.Flags |= 0xC0;
+                                }
+
+                                // clear out these things (TODO: figure out exactly how to set them)
+                                substance.TS1 = 0;
+                                substance.TS2 = 0;
+                                substance.TS3 = 0;
+
+                                var textures = new List<TextureDataPC>();
+
+                                var texFlags = SubstanceExtraFlags.None;
+
+                                // figure out substance texture flags
+                                if ((substance.TextureFlags & (int)SubstanceExtraFlags.DamageAndColorMask_AlphaMaps) != 0)
+                                {
+                                    var texA1 = substance.Textures[0]; // clean + alpha specular
+                                    var texA2 = substance.Textures[1]; // clean alpha color map
+                                    var texB1 = substance.Textures[2]; // damage + alpha specular
+                                    var texB2 = substance.Textures[3]; // damage alpha color map
+
+                                    // copy the clean alpha map to the damage texture
+                                    texB1 = CopyTextureAlphaAToB(texA2, texB1);
+
+                                    textures.Add(texA1); // clean + alpha specular
+                                    textures.Add(texB1); // damage + alpha color map
+
+                                    substance.TS1 = 1;
+                                    substance.TS2 = 1;
+                                    substance.TS3 = 220;
+                                    substance.Textures = textures;
+
+                                    texFlags = SubstanceExtraFlags.DPL_DamageAndColorMask;
+                                }
+                                else if ((substance.TextureFlags & (int)SubstanceExtraFlags.ColorMask) != 0)
+                                {
+                                    var texA1 = substance.Textures[0]; // clean + alpha specular
+                                    var texA2 = substance.Textures[1]; // alpha color map
+
+                                    textures.Add(texA1); // clean + alpha specular
+                                    textures.Add(texA2); // alpha color map
+
+                                    substance.TS1 = 1;
+                                    substance.TS2 = 1;
+                                    substance.TS3 = 220;
+                                    substance.Textures = textures;
+
+                                    texFlags = SubstanceExtraFlags.DPL_ColorMask;
+                                }
+                                else if ((substance.TextureFlags & (int)SubstanceExtraFlags.Damage) != 0)
+                                {
+                                    var texA1 = substance.Textures[0]; // clean + alpha specular
+                                    var texB1 = substance.Textures[1]; // damage + alpha specular
+
+                                    textures.Add(texA1); // clean + alpha specular
+                                    textures.Add(texB1); // damage + alpha specular
+
+                                    substance.TS1 = 1;
+                                    substance.TS2 = 1;
+                                    substance.TS3 = 220;
+                                    substance.Textures = textures;
+
+                                    texFlags = SubstanceExtraFlags.DPL_Damage;
+                                }
+                                else if ((substance.TextureFlags & (int)SubstanceExtraFlags.BumpMap) != 0)
+                                {
+                                    // assuming this based on TK's character model
+                                    substance.TS1 = 1;
+                                    substance.TS2 = 0;
+                                    substance.TS3 = 0;
+                                }
+
+                                // set the texture flags
+                                substance.TextureFlags = (int)texFlags;
+
+                                gSubstances.Add(substance);
+
+                                foreach (var texture in substance.Textures)
+                                {
+                                    gTextures.Add(texture);
+                                }
+                            }
+                        }
+                    }
+                    break;
                 }
             }
 
             resource.Materials = gMaterials;
             resource.Substances = gSubstances;
             resource.Textures = gTextures;
+            resource.Palettes = new List<PaletteData>();
 
             return resource;
         }
@@ -1025,7 +1505,7 @@ namespace Antilli
                 }
                 
                 // populates vertex/index buffers and adds them to the submodel
-                var meshes = geom.CompileMeshes(vertexBuffer, indexBuffer, (lod.ID == 5));
+                var meshes = geom.CompileMeshes(vertexBuffer, indexBuffer, (lod.Type == 5));
                 
                 subModels.AddRange(meshes);
 
@@ -1074,6 +1554,7 @@ namespace Antilli
             modelPackage.Materials = new List<MaterialDataPC>();
             modelPackage.Substances = new List<SubstanceDataPC>();
             modelPackage.Textures = new List<TextureDataPC>();
+            modelPackage.Palettes = new List<PaletteData>();
 
             // lastly, apply materials
             foreach (var material in Materials)

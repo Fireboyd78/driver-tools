@@ -3,7 +3,7 @@ using System.IO;
 
 namespace DSCript.Spooling
 {
-    public interface ISpoolableResource
+    public interface ISpoolableResource : IDisposable
     {
         /// <summary>
         /// Gets or sets the spooler this resource will access during its lifetime.
@@ -22,6 +22,6 @@ namespace DSCript.Spooling
 
         bool AreChangesPending { get; }
         void CommitChanges();
-        void NotifyChanges();
+        void NotifyChanges(bool dirty = false);
     }
 }

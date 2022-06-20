@@ -58,6 +58,8 @@ namespace DSCript.Models
         public int Count;   // number of parts in hierarchy
         public int UID;     // unique identifier for the hierarchy
 
+        public int PDLSize; // used as offset past PDL for stuff like bullet hole data
+
         void IDetail.Serialize(Stream stream, IDetailProvider provider)
         {
             stream.Write((int)Magic);
@@ -69,6 +71,8 @@ namespace DSCript.Models
 
             stream.Write(Count);
             stream.Write(UID);
+
+            stream.Write(PDLSize);
         }
 
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
@@ -83,6 +87,8 @@ namespace DSCript.Models
 
             Count = stream.ReadInt32();
             UID = stream.ReadInt32();
+
+            PDLSize = stream.ReadInt32();
         }
     }
 
@@ -108,34 +114,47 @@ namespace DSCript.Models
         public int Flags { get; set; }
         
         public PhysicsData PhysicsData { get; set; }
-        
+
+        protected HierarchyDataHeader Header;
+
         protected abstract void ReadData(Stream stream, IDetailProvider provider);
         protected abstract void WriteData(Stream stream, IDetailProvider provider);
-        
-        public void Serialize(Stream stream, IDetailProvider provider)
+
+        protected virtual void ReadHeader(Stream stream, IDetailProvider provider)
         {
-            var header = new HierarchyDataHeader() {
+            Header = provider.Deserialize<HierarchyDataHeader>(stream);
+
+            Format = Header.Format;
+            Type = Header.Type;
+
+            ModelUID = Header.ModelUID;
+            UID = Header.UID;
+        }
+
+        protected virtual void WriteHeader(Stream stream, IDetailProvider provider)
+        {
+            Header = new HierarchyDataHeader()
+            {
                 ModelUID = ModelUID,
                 Format = Format,
                 Type = Type,
                 UID = UID,
             };
 
-            provider.Serialize(stream, ref header);
+            provider.Serialize(stream, ref Header);
+        }
 
+        public void Serialize(Stream stream, IDetailProvider provider)
+        {
             WriteData(stream, provider);
+
+            stream.Position = 0;
+            WriteHeader(stream, provider);
         }
 
         public void Deserialize(Stream stream, IDetailProvider provider)
         {
-            var header = provider.Deserialize<HierarchyDataHeader>(stream);
-
-            Format = header.Format;
-            Type = header.Type;
-
-            ModelUID = header.ModelUID;
-            UID = header.UID;
-
+            ReadHeader(stream, provider);
             ReadData(stream, provider);
         }
     }

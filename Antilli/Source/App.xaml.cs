@@ -52,10 +52,9 @@ namespace Antilli
             {
                 var frame = stk.GetFrame(i);
 
-                if ((frame.GetFileLineNumber() | frame.GetFileColumnNumber()) == 0)
-                    break;
+                if ((frame.GetFileLineNumber() | frame.GetFileColumnNumber()) != 0)
+                    sb.AppendLine($"(*) {frame.ToString()}");
 
-                sb.AppendLine($"(*) {frame.ToString()}");
                 frames++;
             }
 

@@ -110,36 +110,22 @@ namespace Antilli
                 if (texture1 != null)
                     LoadTexture(texture1);
             }
-            
-            var piType = new PropertyItem("Type", delegate (string type) {
-                MaterialType mtlType = MaterialType.Group;
 
-                if (Enum.TryParse(type, out mtlType)
-                    && (material.Type != mtlType))
+            var piType = new PropertyItem("Type", PropertyItem.EnumParser<MaterialType>(
+                (type) => material.Type != type,
+                (type) =>
                 {
-                    material.Type = mtlType;
+                    material.Type = type;
                     AT.CurrentState.NotifyFileChange(material);
+                }), material.Type);
 
-                    return true;
-                }
-
-                return false;
-            }, material.Type.ToString());
-
-            var piSpeed = new PropertyItem("Speed", delegate (string speed) {
-                float value = 0.0f;
-
-                if (float.TryParse(speed, out value)
-                    && (material.AnimationSpeed != value))
+            var piSpeed = new PropertyItem("Speed", PropertyItem.TryParser<float>(float.TryParse,
+                (speed) => material.AnimationSpeed != speed,
+                (speed) =>
                 {
-                    material.AnimationSpeed = value;
+                    material.AnimationSpeed = speed;
                     AT.CurrentState.NotifyFileChange(material);
-
-                    return true;
-                }
-
-                return false;
-            }, $"{material.AnimationSpeed:F2}");
+                }), $"{material.AnimationSpeed:F2}");
 
             propPanelItems.Children.Clear();
 
@@ -159,21 +145,32 @@ namespace Antilli
                 sb.AppendLine($"== Substance {++idx} ==");
 
                 int[] regs = {
-                    (substance.Mode & 0xFF),
-                    (substance.Mode >> 8),
-                    (substance.Type & 0xFF),
+                    substance.TS1,
+                    substance.TS2,
+                    substance.TS3,
                 };
 
-                var slotFlags = (substance.Type >> 8);
+                var slotFlags = substance.TextureFlags;
 
-                sb.AppendColumn("Registers", col, true).AppendLine($"{regs[0]} {regs[1]} {regs[2]}");
-                sb.AppendColumn("SlotFlags", col, true).AppendLine($"0x{slotFlags:X}");
+                sb.AppendColumn("TexSlots", col, true).AppendLine($"{regs[0]} {regs[1]} {regs[2]}");
+                sb.AppendColumn("TexFlags", col, true).AppendLine($"0x{slotFlags:X}");
             }
             
             m_contentInfo = sb.ToString();
 
             OnPropertyChanged("CurrentImage");
             OnPropertyChanged("ContentInfo");
+        }
+
+        // substances have a lot of control over how stuff is rendered,
+        // so making changes to one should update ALL the things!
+        private void NotifySubstanceModified(ISubstanceData substance)
+        {
+            AT.CurrentState.NotifyFileChange(substance);
+
+            // this can have various effects on things, so refresh all views
+            AT.CurrentState.ModelView.Viewer.UpdateActiveModel();
+            AT.CurrentState.UpdateEditors();
         }
         
         public void SetSubstance(ISubstanceData substance)
@@ -185,71 +182,97 @@ namespace Antilli
 
             if (texture1 != null)
                 LoadTexture(texture1);
-            
-            var piBin = new PropertyItem("Bin", delegate (string bin) {
-                RenderBinType renderBin = RenderBinType.ReflectedSky;
 
-                if (Enum.TryParse(bin, out renderBin)
-                    && (substance.Bin != renderBin))
+            var piBin = new PropertyItem("Bin", PropertyItem.EnumParser<RenderBinType>(
+                (renderBin) => substance.Bin != renderBin,
+                (renderBin) =>
                 {
                     substance.Bin = renderBin;
-                    AT.CurrentState.NotifyFileChange(substance);
+                    NotifySubstanceModified(substance);
+                }), substance.Bin);
 
-                    return true;
-                }
-
-                return false;
-            }, substance.Bin.ToString());
-
-            var piFlags = new PropertyItem("Flags", delegate (string flags) {
-                int value = 0;
-
-                if (Utils.TryParseNumber(flags, out value)
-                    && (substance.Flags != value))
+            var piFlags = new PropertyItem("Flags", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (flags) => substance.Flags != flags,
+                (flags) =>
                 {
-                    substance.Flags = value;
-                    AT.CurrentState.NotifyFileChange(substance);
+                    substance.Flags = flags;
+                    NotifySubstanceModified(substance);
+                }), $"0x{substance.Flags:X2}");
 
-                    return true;
-                }
+            var piTS1 = new PropertyItem("TS1", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (value) => substance.TS1 != value,
+                (value) =>
+                {
+                    substance.TS1 = value;
+                    NotifySubstanceModified(substance);
+                }), substance.TS1);
 
-                return false;
-            }, $"0x{substance.Flags:X2}");
+            var piTS2 = new PropertyItem("TS2", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (value) => substance.TS2 != value,
+                (value) =>
+                {
+                    substance.TS2 = value;
+                    NotifySubstanceModified(substance);
+                }), substance.TS2);
+
+            var piTS3 = new PropertyItem("TS3", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (value) => substance.TS3 != value,
+                (value) =>
+                {
+                    substance.TS3 = value;
+                    NotifySubstanceModified(substance);
+                }), substance.TS3);
 
             propPanelItems.Children.Clear();
 
             piBin.AddToPanel(propPanelItems, Enum.GetNames(typeof(RenderBinType)));
             piFlags.AddToPanel(propPanelItems);
+            piTS1.AddToPanel(propPanelItems);
+            piTS2.AddToPanel(propPanelItems);
+            piTS3.AddToPanel(propPanelItems);
+
+#if tex_flags_dropdown
+            //
+            // this would be nice if a multi-select combobox existed..
+            // or maybe add a bunch of checkboxes and shit? lol
+            //
+            var piTextureFlags = new PropertyItem("TexFlags", PropertyItem.EnumParser<SubstanceExtraFlags>(
+                (value) => substance.TextureFlags != (int)value,
+                (value) =>
+                {
+                    substance.TextureFlags = (int)value;
+                    NotifySubstanceModified(substance);
+                }), (SubstanceExtraFlags)substance.TextureFlags);
+
+            piTextureFlags.AddToPanel(propPanelItems, Enum.GetNames(typeof(SubstanceExtraFlags)));
+#else
+            var piTextureFlags = new PropertyItem("TextureFlags", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (value) => substance.TextureFlags != value,
+                (value) =>
+                {
+                    substance.TextureFlags = value;
+                    NotifySubstanceModified(substance);
+                }), $"0x{substance.TextureFlags:X2}");
+
+            piTextureFlags.AddToPanel(propPanelItems);
+#endif
 
             var sb = new StringBuilder();
             var col = 12;
             
-            sb.AppendLine("== Substance Information ==");
-            
-            int[] regs = {
-                (substance.Mode & 0xFF),
-                (substance.Mode >> 8),
-                (substance.Type & 0xFF),
-            };
-
-            var slotFlags = (substance.Type >> 8);
-            
-            sb.AppendColumn("Registers", col, true).AppendLine($"{regs[0]} {regs[1]} {regs[2]}");
-            sb.AppendColumn("SlotFlags", col, true).AppendLine($"0x{slotFlags:X}");
-
             if (substance is ISubstanceDataPC)
             {
                 var substance_pc = (substance as ISubstanceDataPC);
 
                 // flags?
-                var eFlags = substance_pc.ExtraFlags;
+                var eFlags = (SubstanceExtraFlags)substance.TextureFlags;
 
                 if (eFlags != 0)
                 {
                     sb.AppendLine();
-                    sb.AppendLine("==== Extra Flags ====");
+                    sb.AppendLine("==== Texture Flags ====");
 
-                    for (int i = 0; i < 8; i++)
+                    for (int i = 0; i < 16; i++)
                     {
                         int flg = (1 << i);
 
@@ -316,35 +339,22 @@ namespace Antilli
             var piUID = new PropertyItem("UID", null, $"{tex.UID:X8}") { ReadOnly = true };
             var piHash = new PropertyItem("Handle", null, $"{tex.Handle:X8}") { ReadOnly = true };
 
-            var piType = new PropertyItem("Type", delegate (string input) {
-                int value = 0;
-
-                if (Utils.TryParseNumber(input, out value)
-                    && (texture.Type != value))
+            var piType = new PropertyItem("Type", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (type) => tex.Type != type,
+                (type) =>
                 {
-                    texture.Type = value;
-                    AT.CurrentState.NotifyFileChange(texture);
+                    tex.Type = type;
+                    AT.CurrentState.NotifyFileChange(tex);
+                }), tex.Type);
 
-                    return true;
-                }
-
-                return false;
-            }, $"{tex.Type}");
-
-            var piFlags = new PropertyItem("Flags", delegate (string input) {
-                int value = 0;
-
-                if (Utils.TryParseNumber(input, out value)
-                    && (texture.Flags != value))
+            var piFlags = new PropertyItem("Flags", PropertyItem.TryParser<int>(Utils.TryParseNumber,
+                (flags) => tex.Flags != flags,
+                (flags) =>
                 {
-                    texture.Flags = value;
-                    AT.CurrentState.NotifyFileChange(texture);
+                    tex.Flags = flags;
 
-                    return true;
-                }
-
-                return false;
-            }, $"{tex.Flags}");
+                    AT.CurrentState.NotifyFileChange(tex);
+                }), tex.Flags);
 
             var piWidth = new PropertyItem("Width", null, $"{tex.Width}") { ReadOnly = true };
             var piHeight = new PropertyItem("Height", null, $"{tex.Height}") { ReadOnly = true };
@@ -354,7 +364,11 @@ namespace Antilli
             piUID.AddToPanel(propPanelItems);
             piHash.AddToPanel(propPanelItems);
             piType.AddToPanel(propPanelItems);
-            piFlags.AddToPanel(propPanelItems);
+
+            // don't add this for Driv3r PC!
+            if (tex.Flags != TextureInfo.FLAGS_DRIV3R_PC)
+                piFlags.AddToPanel(propPanelItems);
+
             piWidth.AddToPanel(propPanelItems);
             piHeight.AddToPanel(propPanelItems);
 

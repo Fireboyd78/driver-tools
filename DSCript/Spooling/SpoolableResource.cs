@@ -6,11 +6,17 @@ using System.Text;
 
 namespace DSCript.Spooling
 {
+    public interface ISpoolableResource<T> : ISpoolableResource
+        where T : Spooler
+    {
+        new T Spooler { get; set; }
+    }
+
     /// <summary>
     /// Represents an abstract spoolable resource class. Inherited classes should be created using the <see cref="SpoolableResourceFactory.Create{T}(Spooler)"/> method.
     /// </summary>
     /// <typeparam name="T">The type of <see cref="Spooler"/> this spoolable resource is based on.</typeparam>
-    public abstract class SpoolableResource<T> : ISpoolableResource
+    public abstract class SpoolableResource<T> : ISpoolableResource<T>
         where T : Spooler
     {
         Spooler ISpoolableResource.Spooler
@@ -25,6 +31,12 @@ namespace DSCript.Spooling
             }
         }
 
+        T ISpoolableResource<T>.Spooler
+        {
+            get { return this.Spooler; }
+            set { this.Spooler = value; }
+        }
+
         void ISpoolableResource.Load()
         {
             this.VerifyAccess();
@@ -36,7 +48,7 @@ namespace DSCript.Spooling
             this.VerifyAccess();
             this.Save();
         }
-        
+
         protected T Spooler { get; set; }
 
         protected abstract void Load();
@@ -76,9 +88,14 @@ namespace DSCript.Spooling
             }
         }
 
-        public virtual void NotifyChanges()
+        public virtual void NotifyChanges(bool dirty = false)
         {
-            Spooler.NotifyChanges();
+            Spooler.NotifyChanges(dirty);
+        }
+
+        public virtual void Dispose()
+        {
+            // TODO: figure out safest way to dispose of this
         }
 
         protected internal SpoolableResource() { }

@@ -14,11 +14,14 @@ namespace Zartex
     {
         public class WireLink
         {
+            public PictureBox Source { get; set; }
             public PictureBox Link { get; set; }
+
             public WireNodeType Type { get; set; }
 
-            public WireLink(PictureBox link, WireNodeType type)
+            public WireLink(PictureBox source, PictureBox link, WireNodeType type)
             {
+                Source = source;
                 Link = link;
                 Type = type;
             }
@@ -41,6 +44,17 @@ namespace Zartex
             Properties.MouseDown += (o, e) => NodeWidget_MouseDown(o, e);
             Properties.MouseDoubleClick += (o, e) => NodeWidget_DoubleClick(o, e);
             Properties.MouseMove += (o, e) => NodeWidget_MouseMove(o, e);
+
+            SetupNodeEvents(nodeOutCondition);
+            SetupNodeEvents(nodeOutSuccess);
+            SetupNodeEvents(nodeOutFailure);
+        }
+
+        public void SetupNodeEvents(PictureBox node)
+        {
+            node.MouseDown += OnOutputNodeMouseDown;
+            node.MouseUp += OnOutputNodeMouseUp;
+            node.MouseMove += OnOutputNodeMouseMove;
         }
 
         public Point MouseDownLocation;
@@ -52,6 +66,7 @@ namespace Zartex
         public event MouseEventHandler NodeClicked;
         public event PaintDrawingEventHandler NodeDrawing;
 
+        PictureBox outputNode = null;
         bool nodeSelected = false;
         bool drawing = false;
 
@@ -71,26 +86,76 @@ namespace Zartex
         
         private IList<WireLink> _links;
 
+        public string CommentText
+        {
+            get { return Comment.Text; }
+            set { Comment.Text = value; }
+        }
+
         public string HeaderText
         {
             get { return Header.Text; }
             set { Header.Text = value; }
         }
-        
+
         public IList<WireLink> Links
         {
             get { return _links; }
         }
-        
+
+        PictureBox GetInputNode(WireNodeType wireType)
+        {
+            switch (wireType)
+            {
+            case WireNodeType.GroupEnable:
+            case WireNodeType.OnConditionEnable:
+            case WireNodeType.OnFailureEnable:
+            case WireNodeType.OnSuccessEnable:
+                return nodeInEnable;
+            case WireNodeType.GroupDisable:
+            case WireNodeType.OnConditionDisable:
+            case WireNodeType.OnFailureDisable:
+            case WireNodeType.OnSuccessDisable:
+                return nodeInDisable;
+            default:
+                throw new Exception("Unknown wire type");
+            }
+        }
+
+        PictureBox GetOutputNode(WireNodeType wireType)
+        {
+            switch (wireType)
+            {
+            case WireNodeType.OnSuccessEnable:
+            case WireNodeType.OnSuccessDisable:
+                return nodeOutSuccess;
+            case WireNodeType.OnFailureEnable:
+            case WireNodeType.OnFailureDisable:
+                return nodeOutFailure;
+            case WireNodeType.GroupEnable:
+            case WireNodeType.GroupDisable:
+            case WireNodeType.OnConditionEnable:
+            case WireNodeType.OnConditionDisable:
+                return nodeOutCondition;
+            default:
+                throw new Exception("Unknown wire type");
+            }
+        }
+
         public void AddWire(NodeWidget output, WireNodeType wireType)
         {
-            var link = output.nodeIn;
-            var wire = new WireLink(output.nodeIn, wireType);
+            var source = GetOutputNode(wireType);
+            var link = output.GetInputNode(wireType);
+            var wire = new WireLink(source, link, wireType);
 
+            var offset = _links.Count;
+            if (offset > 0)
+                offset += 2;
             _links.Add(wire);
 
-            OnNodeAdded(new PaintNodeEventArgs(link, nodeOut) {
+            OnNodeAdded(new PaintNodeEventArgs(link, source) {
                 WireType = wireType,
+                WireOffset = offset,
             });
         }
 
@@ -98,14 +163,23 @@ namespace Zartex
         {
             //Console.WriteLine("Refreshing {0} outputs...", Outputs.Count);
 
-            foreach (WireLink output in _links)
+            var count = _links.Count;
+            var offset = (count == 1) ? 0 : -count;
+
+            for (int i = 0; i < _links.Count; i++)
             {
+                var output = _links[i];
+
+                var source = output.Source;
                 var link = output.Link;
 
                 //Console.WriteLine("Refreshing {0}...", output.Parent.Name);
-                OnNodeUpdated(new PaintNodeEventArgs(link, nodeOut, e) {
+                OnNodeUpdated(new PaintNodeEventArgs(link, source, e) {
                     WireType = output.Type,
+                    WireOffset = offset,
                 });
+
+                offset += 3;
             }
 
             //Console.WriteLine("Node painting done.");
@@ -151,17 +225,19 @@ namespace Zartex
 
         private void NodeWidget_DoubleClick(object sender, EventArgs e)
         {
-            Stopwatch stopwatch = new Stopwatch();
+            //Stopwatch stopwatch = new Stopwatch();
+            //
+            //stopwatch.Start();
+            //
+            //while (stopwatch.ElapsedMilliseconds != 250)
+            //{
+            //    this.Visible = false;
+            //}
+            //
+            //this.Visible = true;
+            //stopwatch.Stop();
 
-            stopwatch.Start();
-
-            while (stopwatch.ElapsedMilliseconds != 250)
-            {
-                this.Visible = false;
-            }
-
-            this.Visible = true;
-            stopwatch.Stop();
+            Flowgraph.LayoutNode(this);
         }
 
         private void NodeWidget_MouseDown(object sender, MouseEventArgs e)
@@ -181,13 +257,17 @@ namespace Zartex
         {
             if (e.Button == MouseButtons.Left)
             {
-                if (!Flowgraph.Parent.Focused)
-                    Flowgraph.Parent.Focus();
+                Flowgraph.MoveNode(this, e.Location, MouseDownLocation);
 
-                this.Left = PointToClient(PointToScreen(e.Location)).X + this.Left - MouseDownLocation.X;
-                this.Top = PointToClient(PointToScreen(e.Location)).Y + this.Top - MouseDownLocation.Y;
+                if (ModifierKeys.HasFlag(Keys.Shift))
+                {
+                    foreach (var link in Links)
+                    {
+                        var child = link.Link.Parent as NodeWidget;
 
-                this.Flowgraph.Invalidate();
+                        Flowgraph.MoveNode(child, e.Location, MouseDownLocation);
+                    }
+                }
             }
         }
 
@@ -211,24 +291,35 @@ namespace Zartex
 
         private Point GetOutNodeLocation()
         {
-            Point p = this.Parent.PointToClient(nodeOut.Parent.PointToScreen(nodeOut.Location));
+            Point p = this.Parent.PointToClient(outputNode.Parent.PointToScreen(outputNode.Location));
 
-            p.X += nodeOut.Bounds.Width;
-            p.Y += nodeOut.Bounds.Height / 2;
+            p.X += outputNode.Bounds.Width;
+            p.Y += outputNode.Bounds.Height / 2;
 
             return p;
         }
 
-        #region nodeOut methods (FIX ME!)
-        private void nodeOut_MouseDown(object sender, MouseEventArgs e)
+        void ClearOutputNode()
+        {
+            outputNode = null;
+            nodeSelected = false;
+        }
+
+        void SelectOutputNode(PictureBox node, MouseEventArgs e)
+        {
+            outputNode = node;
+            nodeSelected = true;
+        }
+
+        private void OnOutputNodeMouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
-                nodeSelected = true;
+                SelectOutputNode(sender as PictureBox, e);
             }
         }
 
-        private void nodeOut_MouseMove(object sender, MouseEventArgs e)
+        private void OnOutputNodeMouseMove(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -238,7 +329,7 @@ namespace Zartex
 
                     outNodeClick = GetOutNodeLocation();
 
-                    Point p = new Point(e.Location.X + outNodeClick.X - nodeOut.Bounds.Width - 1, e.Location.Y + outNodeClick.Y - nodeOut.Bounds.Height / 2);
+                    Point p = new Point(e.Location.X + outNodeClick.X - outputNode.Bounds.Width - 1, e.Location.Y + outNodeClick.Y - outputNode.Bounds.Height / 2);
 
                     mouseDrawLocation = p;
 
@@ -264,12 +355,13 @@ namespace Zartex
             }
         }
 
-        private void nodeOut_MouseUp(object sender, MouseEventArgs e)
+        private void OnOutputNodeMouseUp(object sender, MouseEventArgs e)
         {
             if (nodeSelected && drawing)
             {
                 drawing = false;
 
+                // !!! BROKEN !!!
                 NodeWidget node = (NodeWidget)Flowgraph.GetChildAtPoint(mouseDrawLocation);
 
                 if (node != null)
@@ -290,7 +382,6 @@ namespace Zartex
                 // }
             }
         }
-        #endregion
 
         private void Properties_MouseDoubleClick(object sender, MouseEventArgs e)
         {
@@ -307,10 +398,14 @@ namespace Zartex
                 if (!Flowgraph.Parent.Focused)
                     Flowgraph.Parent.Focus();
 
-                nodeSelected = false;
+                ClearOutputNode();
             }
         }
 
+        private void NodeWidget_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 
     public delegate void PaintNodeEventHandler(object sender, PaintNodeEventArgs e);
@@ -323,6 +418,8 @@ namespace Zartex
         public PaintEventArgs PaintEventArgs { get; set; }
 
         public WireNodeType WireType { get; set; }
+        
+        public int WireOffset { get; set; }
 
         public Color WireColor
         {
@@ -330,6 +427,7 @@ namespace Zartex
             {
                 switch (WireType)
                 {
+#if OLD_COLORS
                 case WireNodeType.GroupEnable:
                 case WireNodeType.OnSuccessEnable:
                     return Color.FromArgb(128, 192, 128); // green
@@ -346,6 +444,23 @@ namespace Zartex
                     return Color.FromArgb(192, 192, 128); // yellow
                 case WireNodeType.OnConditionDisable:
                     return Color.FromArgb(128, 128, 128); // gray
+#else
+                case WireNodeType.OnSuccessEnable:
+                case WireNodeType.OnSuccessDisable:
+                    return Color.FromArgb(128, 192, 128); // green
+
+                case WireNodeType.OnFailureEnable:
+                case WireNodeType.OnFailureDisable:
+                    return Color.FromArgb(192, 128, 128); // red
+
+                case WireNodeType.GroupEnable:
+                case WireNodeType.GroupDisable:
+                    return Color.FromArgb(128, 192, 192); // cyan
+
+                case WireNodeType.OnConditionEnable:
+                case WireNodeType.OnConditionDisable:
+                    return Color.FromArgb(192, 192, 128); // yellow
+#endif
                 }
 
                 // error!
@@ -353,14 +468,40 @@ namespace Zartex
             }
         }
 
+        public Point ReceiverLocation
+        {
+            get
+            {
+                var location = ReceiverNode.Location;
+
+                //location.X += WireOffset;
+                location.Y -= WireOffset;
+
+                return location;
+            }
+        }
+
+        public Point SenderLocation
+        {
+            get
+            {
+                var location = SenderNode.Location;
+
+                //location.X += WireOffset;
+                location.Y += WireOffset;
+
+                return location;
+            }
+        }
+
         public Point ReceiverScreenLocation
         {
-            get { return ReceiverNode.Parent.PointToScreen(ReceiverNode.Location); }
+            get { return ReceiverNode.Parent.PointToScreen(ReceiverLocation); }
         }
 
         public Point SenderScreenLocation
         {
-            get { return SenderNode.Parent.PointToScreen(SenderNode.Location); }
+            get { return SenderNode.Parent.PointToScreen(SenderLocation); }
         }
 
         public PaintNodeEventArgs(PictureBox receiverNode, PictureBox senderNode)

@@ -6,8 +6,85 @@ using System.Text;
 
 namespace DSCript.Spooling
 {
-    public sealed class SpoolablePackage : Spooler
+    public sealed class SpoolablePackage : Spooler, ICopySpooler<SpoolablePackage>
     {
+        bool ICopyCat<SpoolablePackage>.CanCopy(CopyClassType copyType)                         => true;
+        bool ICopyCat<SpoolablePackage>.CanCopyTo(SpoolablePackage obj, CopyClassType copyType) => true;
+
+        bool ICopyCat<SpoolablePackage>.IsCopyOf(SpoolablePackage obj, CopyClassType copyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        SpoolablePackage ICopyClass<SpoolablePackage>.Copy(CopyClassType copyType)
+        {
+            return GetCopy(copyType);
+        }
+
+        void ICopyClassTo<SpoolablePackage>.CopyTo(SpoolablePackage obj, CopyClassType copyType)
+        {
+            CopyTo(obj, copyType);
+        }
+
+        protected override bool CanCopy(CopyClassType copyType)
+        {
+            return true;
+        }
+
+        protected override bool CanCopyTo(Spooler obj, CopyClassType copyType)
+        {
+            return (obj is SpoolablePackage);
+        }
+
+        protected override bool IsCopyOf(Spooler obj, CopyClassType copyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override Spooler Copy(CopyClassType copyType)
+        {
+            return GetCopy(copyType);
+        }
+
+        protected override void CopyTo(Spooler obj, CopyClassType copyType)
+        {
+            var spooler = obj as SpoolablePackage;
+
+            if (spooler == null)
+                throw new Exception("Cannot copy spoolable package; type mismatch!");
+
+            CopyTo(spooler, copyType);
+        }
+
+        private SpoolablePackage GetCopy(CopyClassType copyType)
+        {
+            var package = new SpoolablePackage();
+            
+            CopyTo(package, copyType);
+
+            return package;
+        }
+
+        private void CopyTo(SpoolablePackage obj, CopyClassType copyType)
+        {
+            obj.IsDirty = true;
+
+            CopyParamsTo(obj);
+
+            if (copyType == CopyClassType.DeepCopy)
+            {
+                foreach (var child in Children)
+                {
+                    var copy = CopyCatFactory.GetCopy(child, CopyClassType.DeepCopy);
+
+                    obj.Children.Add(copy);
+                }
+            }
+
+            // finalize our copy
+            obj.CommitChanges();
+        }
+
         private int _size = 0;
         private SpoolerCollection _children;
 
@@ -29,75 +106,76 @@ namespace DSCript.Spooling
         {
             get
             {
-                if (IsModified)
-                    return true;
-
-                foreach (var child in Children)
+                if (IsDirty)
                 {
-                    if (child.AreChangesPending)
-                        return true;
+                    Debug.WriteLine("**** AreChangesPending called on a dirty package!");
+                    return true;
                 }
-
-                return false;
+                
+                return base.AreChangesPending;
             }
         }
 
-        public override void NotifyChanges()
+        private int AlignToSpooler(int offset, Spooler spooler)
         {
-            // reset the size
-            _size = 0;
+            return Memory.Align(offset, (1 << (byte)spooler.Alignment));
+        }
 
-            base.NotifyChanges();
+        private void ProcessSpooler(Spooler spooler, bool dirty, ref int offset)
+        {
+            // recalculate it?
+            if (dirty)
+            {
+                // calculate offset
+                spooler.Offset = AlignToSpooler(offset, spooler);
+                spooler.CommitChanges();
+            }
+
+            // update to include the spooler
+            offset = (spooler.Offset + spooler.Size + spooler.Description.Length);
         }
 
         public override void CommitChanges()
         {
-            int count = Children.Count;
-            var size = ChunkHeader.SizeOf + (count * ChunkEntry.SizeOf);
-
-            if (count > 0)
+            // size recalculation needed?
+            if (IsDirty)
             {
-                Spooler last = null;
+                var count = Children.Count;
 
-                for (int i = 0; i < count; i++)
+                // minimum size of chunk + list
+                var size = ChunkHeader.SizeOf + (count * ChunkEntry.SizeOf);
+
+                if (count > 0)
                 {
-                    var child = Children[i];
+                    Spooler last = null;
 
-                    // finalize any dirty spoolers,
-                    // along with any spoolers following it
-                    if (child.AreChangesPending)
+                    // start recalculating once we encounter a dirty/pending spooler
+                    var dirty = false;
+
+                    // process all children
+                    for (int i = 0; i < count; i++)
                     {
-                        child.CommitChanges();
+                        var spooler = Children[i];
 
-                        if (last != null)
-                            size = (last.Offset + last.Size + last.Description.Length);
-
-                        for (int s = i; s < count; s++)
+                        if (!dirty &&
+                            (spooler.IsDirty || (spooler.Offset < size) || spooler.AreChangesPending))
                         {
-                            var spooler = Children[s];
-
-                            // Calculate spooler offset
-                            spooler.Offset = Memory.Align(size, (1 << (byte)spooler.Alignment));
-                            spooler.CommitChanges();
-
-                            size = (spooler.Offset + spooler.Size + spooler.Description.Length);
-                            last = spooler;
+                            // first dirty/pending spooler found,
+                            // recalculate all spoolers after this
+                            dirty = true;
                         }
 
-                        size = Memory.Align(size, (1 << (byte)last.Alignment));
-                        IsModified = true;
+                        ProcessSpooler(spooler, dirty, ref size);
+                        last = spooler;
                     }
 
-                    // stop processing if we found a dirty spooler
-                    if (IsModified)
-                        break;
-
-                    last = child;
+                    // align the size to the final spooler's alignment
+                    size = AlignToSpooler(size, last);
                 }
-            }
 
-            if (IsModified || (_size != size))
+                // update our size
                 _size = size;
+            }
 
             // finalize changes
             base.CommitChanges();
@@ -116,13 +194,15 @@ namespace DSCript.Spooling
             get
             {
 #if !USE_OLD_SIZE_CALCULATION
-                if (AreChangesPending)
+                if (IsDirty)
                 {
-                    Debug.WriteLine("**** Package.Size accessed with pending changes, committing...");
-                    CommitChanges();
-                }
+                    Debug.WriteLine("**** Package.Size accessed with pending calculations, committing...");
 
-                Debug.Assert(!AreChangesPending, "Attempted to access the size of a package with pending changes!");
+                    CommitChanges();
+
+                    // notify our parents we've been recalculated
+                    NotifyAllParents(true);
+                }
 
                 return _size;
 #else
@@ -198,12 +278,31 @@ namespace DSCript.Spooling
         internal void SetSizeInternal(int size)
         {
             _size = size;
+
+            // do not recalculate size
+            IsDirty = false;
         }
 
+        protected internal override void SetCommon(ref ChunkEntry entry)
+        {
+            base.SetCommon(ref entry);
+
+            _size = entry.Size;
+        }
+        
         public SpoolablePackage() { }
         public SpoolablePackage(int size)
         {
             _size = size;
+        }
+
+        public SpoolablePackage(IEnumerable<Spooler> spoolers)
+        {
+            // insert children without flagging them as dirty
+            _children = new SpoolerCollection(this, spoolers);
+            
+            // we'll need our size calculated
+            IsDirty = true;
         }
 
         public SpoolablePackage(ref ChunkEntry entry)

@@ -31,21 +31,26 @@ namespace DSCript.Spooling
         protected override void ClearItems()
         {
             foreach (var item in Items)
+            {
                 item.Parent = null;
-
-            SetDirtyFlag();
+                item.IsDirty = false;
+                item.Offset = 0;
+            }
 
             base.ClearItems();
+
+            UpdateSpooler(null);
         }
 
         protected override void InsertItem(int index, Spooler item)
         {
             VerifyAccess(item);
+
             item.Parent = spoolablePackage;
 
-            SetDirtyFlag();
-
             base.InsertItem(index, item);
+
+            UpdateSpooler(item);
         }
 
         protected override void RemoveItem(int index)
@@ -53,11 +58,17 @@ namespace DSCript.Spooling
             var item = Items[index];
 
             if (item != null)
+            {
+                // remove the item
+                base.RemoveItem(index);
+
+                // detach the existing item
                 item.Parent = null;
+                item.IsDirty = false;
+                item.Offset = 0;
 
-            SetDirtyFlag();
-
-            base.RemoveItem(index);
+                UpdateSpooler(null);
+            }
         }
 
         protected override void SetItem(int index, Spooler item)
@@ -65,15 +76,22 @@ namespace DSCript.Spooling
             if (item != null)
             {
                 VerifyAccess(item);
+
                 item.Parent = spoolablePackage;
             }
 
-            // detach existing item
-            Items[index].Parent = null;
+            if (Items[index] != null)
+            {
+                // detach existing item
+                Items[index].Parent = null;
+                Items[index].IsDirty = false;
+                Items[index].Offset = 0;
+            }
 
-            SetDirtyFlag();
-
+            // replace with the new item
             base.SetItem(index, item);
+
+            UpdateSpooler(item);
         }
 
         /// <summary>
@@ -85,9 +103,40 @@ namespace DSCript.Spooling
             return spoolablePackage;
         }
 
-        internal void SetDirtyFlag()
+        internal void UpdateSpooler(Spooler spooler)
         {
-            spoolablePackage.IsModified = true;
+            // if the package is already dirty, don't update anything
+            if (!spoolablePackage.IsDirty)
+            {
+                if (spooler != null)
+                {
+                    // mark it as dirty so it gets recalculated
+                    spooler.IsDirty = true;
+                    spooler.Offset = 0;
+                }
+
+                spoolablePackage.NotifyChanges(true);
+
+                var parent = spoolablePackage.Parent;
+
+                while (parent != null)
+                {
+                    var grandparent = parent.Parent;
+
+                    if (grandparent == null)
+                    {
+                        // force a size recalculation from the furthest parent possible
+                        parent.CommitChanges();
+                        break;
+                    }
+
+                    parent = grandparent;
+                }
+
+                // update ourselves
+                if (parent == null)
+                    spoolablePackage.CommitChanges();
+            }
         }
 
         internal SpoolerCollection(SpoolablePackage spoolablePackage)
@@ -96,6 +145,20 @@ namespace DSCript.Spooling
                 throw new ArgumentNullException("spoolablePackage", "Collection must be attached to a spoolable package.");
 
             this.spoolablePackage = spoolablePackage;
+        }
+
+        internal SpoolerCollection(SpoolablePackage spoolablePackage, IEnumerable<Spooler> spoolers)
+            : this(spoolablePackage)
+        {
+            var count = 0;
+
+            foreach (var spooler in spoolers)
+            {
+                spooler.Parent = spoolablePackage;
+                spooler.IsDirty = false;
+
+                base.InsertItem(count++, spooler);
+            }
         }
     }
 }

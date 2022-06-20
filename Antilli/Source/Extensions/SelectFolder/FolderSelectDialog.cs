@@ -36,14 +36,14 @@ namespace Antilli
     public class FolderSelectDialog
 	{
 		// Wrapped dialog
-		OpenFileDialog ofd = null;
+		OpenFileDialog _this = null;
 
         /// <summary>
         /// Default constructor
         /// </summary>
         public FolderSelectDialog()
         {
-            ofd = new OpenFileDialog() {
+            _this = new OpenFileDialog() {
                 Filter = "Folders|\n",
                 AddExtension = false,
                 CheckFileExists = false,
@@ -60,8 +60,8 @@ namespace Antilli
 		/// </summary>
 		public string InitialDirectory
 		{
-			get { return ofd.InitialDirectory; }
-			set { ofd.InitialDirectory = value == null || value.Length == 0 ? Environment.CurrentDirectory : value; }
+			get { return _this.InitialDirectory; }
+			set { _this.InitialDirectory = String.IsNullOrEmpty(value) ? Environment.CurrentDirectory : value; }
 		}
 
 		/// <summary>
@@ -69,8 +69,8 @@ namespace Antilli
 		/// </summary>
 		public string Title
 		{
-			get { return ofd.Title; }
-			set { ofd.Title = value == null ? "Select a folder" : value; }
+			get { return _this.Title; }
+			set { _this.Title = value ?? "Select a folder"; }
 		}
 
 		/// <summary>
@@ -78,7 +78,7 @@ namespace Antilli
 		/// </summary>
 		public string SelectedPath
 		{
-			get { return ofd.FileName; }
+			get { return _this.FileName; }
 		}
 
 		#endregion
@@ -101,34 +101,39 @@ namespace Antilli
 		/// <returns>True if the user presses OK else false</returns>
 		public bool ShowDialog(IntPtr hWndOwner)
 		{
-			bool flag = false;
+			bool result = false;
 
 			if (Environment.OSVersion.Version.Major >= 6)
 			{
 				var r = new Reflector("System.Windows.Forms");
 
-				uint num = 0;
-				Type typeIFileDialog = r.GetType("FileDialogNative.IFileDialog");
-				object dialog = r.Call(ofd, "CreateVistaDialog");
-				r.Call(ofd, "OnBeforeVistaDialog", dialog);
+				var IFileDialog_T = r.GetType("FileDialogNative.IFileDialog");
+				var fileDialog = r.Call(_this, "CreateVistaDialog");
 
-				uint options = (uint)r.CallAs(typeof(FileDialog), ofd, "GetOptions");
+				r.Call(_this, "OnBeforeVistaDialog", fileDialog);
+
+				var options = (uint)r.CallAs(typeof(FileDialog), _this, "GetOptions");
 				options |= (uint)r.GetEnum("FileDialogNative.FOS", "FOS_PICKFOLDERS");
-				r.CallAs(typeIFileDialog, dialog, "SetOptions", options);
 
-				object pfde = r.New("FileDialog.VistaDialogEvents", ofd);
-				object[] parameters = new object[] { pfde, num };
-				r.CallAs2(typeIFileDialog, dialog, "Advise", parameters);
-				num = (uint)parameters[1];
+				r.CallAs(IFileDialog_T, fileDialog, "SetOptions", options);
+
+				var vistaDialogEvents = r.New("FileDialog.VistaDialogEvents", _this);
+
+				uint dwCookie = 0;
+				var parameters = new object[] { vistaDialogEvents, /* out */ dwCookie };
+
+				r.CallAs2(IFileDialog_T, fileDialog, "Advise", parameters);
+				dwCookie = (uint)parameters[1];
+
 				try
 				{
-					int num2 = (int)r.CallAs(typeIFileDialog, dialog, "Show", hWndOwner);
-					flag = 0 == num2;
+					if ((int)r.CallAs(IFileDialog_T, fileDialog, "Show", hWndOwner) == 0)
+						result = true;
 				}
 				finally
 				{
-					r.CallAs(typeIFileDialog, dialog, "Unadvise", num);
-					GC.KeepAlive(pfde);
+					r.CallAs(IFileDialog_T, fileDialog, "Unadvise", dwCookie);
+					GC.KeepAlive(vistaDialogEvents);
 				}
 			}
 			else
@@ -141,12 +146,12 @@ namespace Antilli
 
                 if (fbd.ShowDialog(new WindowWrapper(hWndOwner)) == DialogResult.OK)
                 {
-                    ofd.FileName = fbd.SelectedPath;
-                    flag = true;
+                    _this.FileName = fbd.SelectedPath;
+                    result = true;
                 }
 			}
 
-			return flag;
+			return result;
 		}
 
 		#endregion

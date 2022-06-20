@@ -9,8 +9,54 @@ using System.Windows;
 
 namespace DSCript.Models
 {
-    public class Vertex
+    public class Vertex : ICopyCat<Vertex>
     {
+        bool ICopyCat<Vertex>.CanCopy(CopyClassType copyType)               => true;
+        bool ICopyCat<Vertex>.CanCopyTo(Vertex obj, CopyClassType copyType) => true;
+
+        bool ICopyCat<Vertex>.IsCopyOf(Vertex obj, CopyClassType copyType)
+        {
+            // TODO: this could be very useful to implement
+            throw new System.NotImplementedException();
+        }
+
+        Vertex ICopyClass<Vertex>.Copy(CopyClassType copyType)
+        {
+            return new Vertex()
+            {
+                Position = Position,
+                Normal = Normal,
+                UV = UV,
+
+                Color = Color,
+
+                BlendWeight = BlendWeight,
+
+                Tangent = Tangent,
+                TangentVector = TangentVector,
+
+                PositionW = PositionW,
+                NormalW = NormalW,
+            };
+        }
+
+        void ICopyClassTo<Vertex>.CopyTo(Vertex obj, CopyClassType copyType)
+        {
+            obj.Position = Position;
+            obj.Normal = Normal;
+            obj.UV = UV;
+
+            obj.Color = Color;
+
+            obj.BlendWeight = BlendWeight;
+
+            obj.Tangent = Tangent;
+            obj.TangentVector = TangentVector;
+
+            obj.PositionW = PositionW;
+            obj.NormalW = NormalW;
+        }
+
         /// <summary>Gets or sets the position of the vertex.</summary>
         public Vector3 Position;
 
@@ -34,10 +80,18 @@ namespace DSCript.Models
         public Vector3 PositionW;
         public Vector3 NormalW;
 
-        public void ApplyScale(Vector3 scale)
+        public void ApplyScale(Vector3 scale, bool upscale = false)
         {
-            Position *= scale;
-            PositionW *= scale;
+            if (upscale)
+            {
+                Position /= scale;
+                PositionW /= scale;
+            }
+            else
+            {
+                Position *= scale;
+                PositionW *= scale;
+            }
         }
 
         public void FixDirection()

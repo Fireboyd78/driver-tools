@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 
 namespace DSCript.Models
 {
@@ -9,7 +10,6 @@ namespace DSCript.Models
 
         public VertexDataType DataType;
         public VertexUsageType UsageType;
-        
         public short UsageIndex;
         
         public override int GetHashCode()

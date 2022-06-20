@@ -5,31 +5,52 @@ namespace DSCript.Models
 {
     public class PhysicsPrimitive : IDetail
     {
-        public Vector4 Position { get; set; }
+        public Vector4 Bounds { get; set; }
+
         public Matrix44 Transform { get; set; }
 
-        public int Material { get; set; }
+        // sphere, cylinder
+        public float Radius
+        {
+            get { return Bounds.X; }
+        }
 
-        public Vector3 Unknown { get; set; }
+        // cylinder
+        public float Height
+        {
+            get { return Bounds.Y; }
+        }
+
+        // tells us the primitive type?
+        public int Flags { get; set; }
+
+        public float Elasticity { get; set; }
+        public float Friction { get; set; }
+
+        public float Zestiness { get; set; } // 'eT'
 
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
         {
-            Position = stream.Read<Vector4>();
+            Bounds = stream.Read<Vector4>();
             Transform = stream.Read<Matrix44>();
 
-            Material = stream.ReadInt32();
+            Flags = stream.ReadInt32();
 
-            Unknown = stream.Read<Vector3>();
+            Elasticity = stream.ReadSingle();
+            Friction = stream.ReadSingle();
+            Zestiness = stream.ReadSingle();
         }
 
         void IDetail.Serialize(Stream stream, IDetailProvider provider)
         {
-            stream.Write(Position);
+            stream.Write(Bounds);
             stream.Write(Transform);
 
-            stream.Write(Material);
+            stream.Write(Flags);
 
-            stream.Write(Unknown);
+            stream.Write(Elasticity);
+            stream.Write(Friction);
+            stream.Write(Zestiness);
         }
     }
 }

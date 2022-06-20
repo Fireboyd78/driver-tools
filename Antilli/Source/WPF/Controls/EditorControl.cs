@@ -33,7 +33,7 @@ namespace Antilli
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(property));
         }
 
-        private bool SetValue<T>(ref T backingField, T value, string propertyName)
+        public bool SetValue<T>(ref T backingField, T value, string propertyName)
         {
             if (object.Equals(backingField, value))
                 return false;

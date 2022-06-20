@@ -254,21 +254,52 @@ namespace DSCript.Models
             get { return Declaration.HasType<Vector2>(VertexUsageType.TextureCoordinate, 0); }
         }
 
-        public void CreateVertices(byte[] buffer, int count)
+        public void CopyTo(VertexBuffer vertexBuffer)
         {
-            Vertices = new List<VertexData>(count);
+            var decl = vertexBuffer.Declaration;
+            var stride = decl.SizeOf;
 
-            for (int v = 0; v < count; v++)
-            {
-                var vertex = new VertexData(Declaration, buffer, (v * Declaration.SizeOf));
-                Vertices.Add(vertex);
-            }
+            //var vertices = new List<VertexData>(Count);
+
+            //if (stride < Declaration.SizeOf)
+            //    throw new Exception("Can't copy vertices to vertex buffer - not enough space for a vertex!");
+
+            //for (int v = 0; v < Count; v++)
+            //{
+            //    var vertex = Vertices[v];
+            //
+            //    // copy our vertex for their buffer
+            //    vertices.Add(new VertexData(Declaration, vertex.Buffer, 0, stride));
+            //}
+
+            // setup their buffer
+            //vertexBuffer.Vertices = vertices;
+
+            var count = 0;
+
+            // collect our vertices in a format compatible for their declaration
+            var buffer = Declaration.GetVerticesFrom(decl, Vertices, out count);
+
+            // setup their vertices
+            vertexBuffer.SetVertices(buffer, stride, count);
         }
 
-        public void CreateVertices(List<Vertex> vertices)
+        public void AddVertices(byte[] buffer, int length, int count)
         {
-            Vertices = new List<VertexData>();
+            for (int v = 0; v < count; v++)
+            {
+                var vertex = new VertexData(Declaration, buffer, (v * length), length);
+                Vertices.Add(vertex);
+            }
 
+        }
+        public void AddVertices(byte[] buffer, int count)
+        {
+            AddVertices(buffer, Declaration.SizeOf, count);
+        }
+
+        public void AddVertices(List<Vertex> vertices)
+        {
             foreach (var v in vertices)
             {
                 var vertex = CreateVertex(v);
@@ -276,7 +307,25 @@ namespace DSCript.Models
                 Vertices.Add(vertex);
             }
         }
-        
+
+        public void SetVertices(byte[] buffer, int length, int count)
+        {
+            Vertices = new List<VertexData>(count);
+            AddVertices(buffer, length, count);
+        }
+
+        public void SetVertices(byte[] buffer, int count)
+        {
+            Vertices = new List<VertexData>(count);
+            AddVertices(buffer, count);
+        }
+
+        public void SetVertices(List<Vertex> vertices)
+        {
+            Vertices = new List<VertexData>();
+            AddVertices(vertices);
+        }
+
         public VertexData CreateVertex()
         {
             return new VertexData(Declaration);
@@ -339,7 +388,17 @@ namespace DSCript.Models
 
             return (Format == otherType);
         }
-        
+
+        public static VertexBuffer CreateFromStream(Stream stream)
+        {
+            var count = stream.ReadInt32();
+            var length = stream.ReadInt32();
+
+            var decl = VertexDeclaration.CreateFromStream(stream);
+
+            return new VertexBuffer(stream, decl, count);
+        }
+
         public void WriteTo(Stream stream, bool writeDeclInfo = false)
         {
             // not meant to be used in model package's
@@ -373,6 +432,19 @@ namespace DSCript.Models
         {
             m_decl = declaration;
             Vertices = new List<VertexData>(count);
+        }
+
+        protected VertexBuffer(Stream stream, VertexDeclaration declaration, int count)
+        {
+            m_decl = declaration;
+            Vertices = new List<VertexData>(count);
+
+            // read vertex data sequentially from stream
+            for (int v = 0; v < count; v++)
+            {
+                var vertex = new VertexData(stream, declaration);
+                Vertices.Add(vertex);
+            }
         }
     }
 }

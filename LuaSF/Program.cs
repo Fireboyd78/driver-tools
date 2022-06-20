@@ -219,11 +219,8 @@ namespace LuaSF
 
         static void Compile(string inputDir, string outputDir)
         {
-            if (String.IsNullOrEmpty(outputDir))
-                outputDir = Path.GetFullPath(DefaultOutput);
-            
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
+            if (!Directory.Exists(inputDir))
+                throw new DirectoryNotFoundException("Invalid directory input - cannot compile script package!");
 
             var scripts = new List<CompiledScript>();
 
@@ -279,10 +276,17 @@ namespace LuaSF
             }
 
             var scriptFile = new ScriptPackageFile();
+            var scriptName = Path.GetFileNameWithoutExtension(inputDir);
+
+            if (String.IsNullOrEmpty(outputDir))
+                outputDir = Path.Combine(Path.GetDirectoryName(inputDir), "bin");
+
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             scriptFile.Scripts = scripts;
-            scriptFile.Save(String.Format(@"{0}\{1}.fchunk", outputDir, Path.GetFileNameWithoutExtension(inputDir)));
-            
+            scriptFile.Save(Path.Combine(outputDir, $"{scriptName}.fchunk"));
+
             Console.WriteLine();
             Console.WriteLine($"Successfully compiled \"{scriptFile.FileName}\"!");
         }
@@ -363,8 +367,11 @@ namespace LuaSF
 
         static void Unpack(string input, string outputDir)
         {
+            var inputDir = Path.GetDirectoryName(input);
+            var inputName = Path.GetFileNameWithoutExtension(input);
+
             if (String.IsNullOrEmpty(outputDir))
-                outputDir = Path.Combine(Path.GetFullPath(DefaultOutput), Path.GetFileNameWithoutExtension(input));
+                outputDir = Path.GetFullPath(Path.Combine(inputDir, DefaultOutput, inputName));
 
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
@@ -373,6 +380,9 @@ namespace LuaSF
             var timeUTC = DateTime.UtcNow;
 
             Console.WriteLine("Decompiling scripts...");
+
+            var filePaths = new List<String>();
+            var dirPaths = new List<String>();
 
             foreach (var script in scriptsFile.Scripts)
             {
@@ -401,42 +411,77 @@ namespace LuaSF
 
                 using (var fB = new MemoryStream(script.Buffer))
                 {
-                    var path = Path.Combine(outputDir, filename);
-                    var dir = (badName) ? outputDir : Path.Combine(outputDir, Path.GetDirectoryName(script.Filename));
+                    var luaPath = Path.Combine(outputDir, filename);
+                    var luacPath = Path.ChangeExtension(luaPath, ".luac");
+
+                    var dir = Path.GetDirectoryName(luaPath);
 
                     // create directory if necessary
                     if (!Directory.Exists(dir))
                         Directory.CreateDirectory(dir);
 
-                    using (var f = File.Create(path))
-                    using (var printer = new StreamWriter(f))
+                    var sb = new StringBuilder();
+
+                    try
                     {
-                        var header = new BHeader(fB);
-                        var function = header.Function.Parse(fB, header);
+                        using (var printer = new StringWriter(sb))
+                        {
+                            var header = new BHeader(fB);
+                            var function = header.Function.Parse(fB, header);
 
-                        var d = new Decompiler(function);
+                            var d = new Decompiler(function);
 
-                        d.Decompile();
-                        d.Print(new Output(printer));
+                            d.Decompile();
+                            d.Print(new Output(printer));
+                        }
                     }
+                    catch (Exception e)
+                    {
+                        var err = $"DECOMPILATION FAILURE: {e}";
 
-                    var luacPath = Path.ChangeExtension(path, ".luac");
+                        Console.WriteLine($"  > {err}");
+
+                        sb.AppendLine($"--[[ ******** {err} ******** ]]--");
+                    }
+                    finally
+                    {
+                        File.WriteAllText(luaPath, sb.ToString());
+                    }
 
                     // write compiled version as well
                     File.WriteAllBytes(luacPath, script.Buffer);
 
-                    // set time stuff
-                    File.SetCreationTimeUtc(path, timeUTC);
-                    File.SetLastWriteTimeUtc(path, timeUTC);
+                    // for our timestamp stuff
+                    filePaths.Add(luaPath);
+                    filePaths.Add(luacPath);
 
-                    File.SetCreationTimeUtc(luacPath, timeUTC);
-                    File.SetLastWriteTimeUtc(luacPath, timeUTC);
+                    if (!dirPaths.Contains(dir))
+                        dirPaths.Add(dir);
+                }
+            }
 
+            // set file timestamps
+            foreach (var file in filePaths)
+            {
+                try
+                {
+                    File.SetCreationTimeUtc(file, timeUTC);
+                    File.SetLastWriteTimeUtc(file, timeUTC);
+                }
+                catch (Exception) { /* keep moving */ }
+            }
+
+            // set directory timestamps
+            foreach (var dir in dirPaths)
+            {
+                try
+                {
                     Directory.SetCreationTimeUtc(dir, timeUTC);
                     Directory.SetLastWriteTimeUtc(dir, timeUTC);
                 }
+                catch (Exception) { /* keep moving */ }
             }
-            
+
             Console.WriteLine();
             Console.WriteLine($"Successfully decompiled scripts to \"{outputDir}\"!");
         }
@@ -464,8 +509,8 @@ namespace LuaSF
                         {
                             switch (arg.ToLower().TrimStart('/', '-').Split(':')[0])
                             {
-                            case "b":
                             case "big":
+                            case "big-endian":
                                 BigEndian = true;
                                 continue;
                             case "compile":
@@ -578,7 +623,7 @@ namespace LuaSF
                             var scriptFile = new ScriptPackageFile(input, BigEndian);
                             
                             Console.WriteLine($"Version: {scriptFile.Version}");
-                            Console.WriteLine($"Reserved: {scriptFile.Reserved}");
+                            Console.WriteLine($"Reserved: {scriptFile.Flags}");
 
                             Console.WriteLine();
 
@@ -609,22 +654,31 @@ namespace LuaSF
                 Console.WriteLine(
 @"Usage: LuaSF [:options] [input] [:output folder]
 
-If no output folder is specified, a default folder is used.
-This folder is usually located where LuaSF resides.
+If no output folder is specified, the input file's directory is used.
+A simple folder structure may be created to keep things organized.
+
+Specifying an output folder overrides this behavior entirely.
 
 Options:
-    --big           Specifies the Big-Endian format for scripts.
+    --big
+    --big-endian    Specifies the Big-Endian format for scripts.
                     
-                    Note:
+                    NOTE:
                       This option is for advanced users only.
                       Unexpected behaviour may occur.
 
     --compile       Compiles all .lua files in the specified directory.
 
+                    The default output folder is a 'bin' folder,
+                    located in the same directory as the script files.
+
+                    Specifying an output folder overrides this behavior.
+
+    --l
     --list          Lists the contents of the script package.
                     Useful for verifying script packages.
 
-                    Note:
+                    NOTE:
                       This option doesn't output anything.
                       The output folder has no effect on this option.
 
@@ -639,13 +693,13 @@ Options:
             └─────› Path to .fchunk to be patched
                     (e.g. 'Resources\ScriptsLuaScripts.fchunk')
                     
-                    Note:
+                    NOTE:
                       With this option, the input must be a path
                       to a directory that contains a 'patch.cfg' file
                       with a list of files to be patched.
                       
                       If no output folder is specified, the original
-                      file will be overwritten without warning.
+                      file will be overwritten WITHOUT warning.
 
 Symbols:
     $<DriverSF>     Path to your Driver San Francisco installation.
@@ -660,13 +714,19 @@ Symbols:
 
         static void PrintVersion()
         {
-            var versionLine = $"LuaSF V{typeof(Program).Assembly.GetName().Version}";
+            var assembly = typeof(Program).Assembly;
+            
+            var versionLine = $"LuaSF V{assembly.GetName().Version} by Fireboyd78";
             var separator = String.Empty.PadLeft(versionLine.Length, '=');
+            
+            string[] lines = {
+                separator,
+                versionLine,
+                separator,
+                ""
+            };
 
-            Console.WriteLine(
-$@"{separator}
-{versionLine}
-{separator}" + "\r\n");
+            Console.WriteLine(String.Join(Environment.NewLine, lines));
         }
     }
 }
