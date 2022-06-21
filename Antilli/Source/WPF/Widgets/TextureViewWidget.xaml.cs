@@ -132,7 +132,7 @@ namespace Antilli
                 // free the old texture from the cache!
                 CurrentTexture = null;
 
-                var item = value.Item as TextureTreeItem;
+                var item = value.Item as TextureReference;
 
                 Texture texture = null;
 
@@ -154,14 +154,14 @@ namespace Antilli
             get { return m_hasGlobals ? 1 : 2; }
         }
 
-        public List<TextureTreeItem> Textures
+        public List<TextureReference> Textures
         {
             get
             {
                 if (ModelsFile == null || !ModelsFile.HasModels)
                     return null;
 
-                var textures = new List<TextureTreeItem>();
+                var textures = new List<TextureReference>();
                 int count = 0;
 
                 foreach (var package in ModelsFile.Packages)
@@ -174,7 +174,7 @@ namespace Antilli
                         //if (texture.Width < 64 || texture.Height < 64)
                         //    continue;
 
-                        textures.Add(new TextureTreeItem(count++, texture, true) { Owner = package });
+                        textures.Add(new TextureReference(count++, texture, true) { Owner = package });
                     }
                 }
 
@@ -182,7 +182,7 @@ namespace Antilli
             }
         }
 
-        public List<TextureTreeItem> GlobalTextures
+        public List<TextureReference> GlobalTextures
         {
             get
             {
@@ -191,7 +191,7 @@ namespace Antilli
 
                 var globals = ModelsFile.GlobalTextures;
 
-                var textures = new List<TextureTreeItem>();
+                var textures = new List<TextureReference>();
                 int count = 0;
 
                 foreach (var texture in globals.Textures)
@@ -199,7 +199,7 @@ namespace Antilli
                     //if (texture.Width < 64 || texture.Height < 64)
                     //    continue;
 
-                    textures.Add(new TextureTreeItem(count++, texture, true) { Owner = globals });
+                    textures.Add(new TextureReference(count++, texture, true) { Owner = globals });
                 }
 
                 return textures;

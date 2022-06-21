@@ -46,12 +46,14 @@
                 <RowDefinition Height="25"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
+            <!--
             <Button Content="=&gt;" ToolTip="Clone to Right" Tag="l2r" IsEnabled="{Binding ElementName=ViewLeft, Path=IsFileOpened}"
                     Command="{Binding Path=CloneCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=Tag}"
                     Height="21"
                     Padding="2,0"
                     FontFamily="Consolas"/>
+            -->
             <StackPanel Grid.Row="1" VerticalAlignment="Center">
                 <StackPanel.Resources>
                     <Style TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
@@ -62,7 +64,7 @@
                     </Style>
                 </StackPanel.Resources>
                 <Button Content="&gt;&gt;" ToolTip="Diff Right" Tag="l2r" IsEnabled="{Binding ElementName=ViewLeft, Path=IsFileOpened}"/>
-                <Button Content="&lt;&lt;" ToolTip="Diff Left" Tag="r2l" IsEnabled="{Binding ElementName=ViewRight, Path=IsFileOpened}"/>
+                <!--<Button Content="&lt;&lt;" ToolTip="Diff Left" Tag="r2l" IsEnabled="{Binding ElementName=ViewRight, Path=IsFileOpened}"/>-->
             </StackPanel>
         </Grid>
         <at:TextureViewWidget x:Name="ViewRight" FlowDirection="RightToLeft" Grid.Column="2"/>
@@ -72,7 +74,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding Path=StatusText, FallbackValue='Hello, world!'}" Padding="4,2" Background="WhiteSmoke"/>
+            <TextBlock Name="StatusTextBox" Text="{Binding Path=StatusText, FallbackValue='Hello, world!'}" ToolTip="{Binding Path=StatusText}" Padding="4,2" Background="WhiteSmoke"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left"
                         Grid.Column="2">
                 <StackPanel.Resources>
@@ -94,14 +96,14 @@
                         <Setter Property="Padding" Value="8,0"/>
                     </Style>
                 </StackPanel.Resources>
-                <Button Content="Load Diff..." ToolTip="Load changes from a diff file"
-                        IsEnabled="{Binding Path=AreFilesLoaded}"/>
-                <Button Content="Save Diff..." ToolTip="Save current changes to a diff file"
-                        IsEnabled="{Binding Path=CanSaveDiff}"/>
-                <Button Content="Apply Changes" ToolTip="Apply all current changes"
-                        IsEnabled="{Binding Path=HasChangesPending}"/>
-                <Button Content="Revert Changes" ToolTip="Revert all current changes"
-                        IsEnabled="{Binding Path=CanRevertChanges}"/>
+                <Button Content="Load Diff..." ToolTip="Load changes from a diff file (Ctrl-O)"
+                        IsEnabled="{Binding Path=CanLoadDiff}" Command="{Binding Path=LoadDiffCommand}"/>
+                <Button Content="Save Diff..." ToolTip="Save current changes to a diff file (Ctrl-S)"
+                        IsEnabled="{Binding Path=CanSaveDiff}" Command="{Binding Path=SaveDiffCommand}"/>
+                <Button Content="Apply Changes" ToolTip="Apply all current changes (Ctrl-D)"
+                        IsEnabled="{Binding Path=CanApplyChanges}" Command="{Binding Path=ApplyAllCommand}"/>
+                <Button Content="Revert Changes" ToolTip="Revert all current changes (Ctrl-R)"
+                        IsEnabled="{Binding Path=CanRevertChanges}" Command="{Binding Path=RevertAllCommand}"/>
             </StackPanel>
         </Grid>
     </Grid>

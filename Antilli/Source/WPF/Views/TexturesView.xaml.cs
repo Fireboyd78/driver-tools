@@ -40,7 +40,7 @@ namespace Antilli
             get { return (AT.CurrentState.CanUseGlobals) ? 1 : 2; }
         }
 
-        public List<TextureTreeItem> Textures
+        public List<TextureReference> Textures
         {
             get
             {
@@ -49,17 +49,17 @@ namespace Antilli
                 if (package == null || !package.HasMaterials)
                     return null;
 
-                var textures = new List<TextureTreeItem>();
+                var textures = new List<TextureReference>();
                 int count = 0;
 
                 foreach (var texture in package.Textures)
-                    textures.Add(new TextureTreeItem(count++, texture) { Owner = package });
+                    textures.Add(new TextureReference(count++, texture) { Owner = package });
 
                 return textures;
             }
         }
 
-        public List<TextureTreeItem> GlobalTextures
+        public List<TextureReference> GlobalTextures
         {
             get
             {
@@ -70,11 +70,11 @@ namespace Antilli
 
                 var globals = modelFile.GlobalTextures;
 
-                var textures = new List<TextureTreeItem>();
+                var textures = new List<TextureReference>();
                 int count = 0;
 
                 foreach (var texture in globals.Textures)
-                    textures.Add(new TextureTreeItem(count++, texture) { Owner = globals });
+                    textures.Add(new TextureReference(count++, texture) { Owner = globals });
 
                 return textures;
             }
@@ -86,8 +86,8 @@ namespace Antilli
 
             if (obj != null)
             {
-                if (obj is TextureTreeItem)
-                    TextureViewWidget.SetTexture(((TextureTreeItem)obj).Texture);
+                if (obj is TextureReference)
+                    TextureViewWidget.SetTexture(((TextureReference)obj).Texture);
             }
         }
 
@@ -152,7 +152,7 @@ namespace Antilli
 
         private void ReplaceTexture(object sender, RoutedEventArgs e)
         {
-            var item = ((sender as FrameworkElement).DataContext) as TextureTreeItem;
+            var item = ((sender as FrameworkElement).DataContext) as TextureReference;
 
             if (item != null)
             {
@@ -167,7 +167,7 @@ namespace Antilli
 
         private void ExportTexture(object sender, RoutedEventArgs e)
         {
-            var item = ((sender as FrameworkElement).DataContext) as TextureTreeItem;
+            var item = ((sender as FrameworkElement).DataContext) as TextureReference;
 
             if (item != null)
             {
@@ -208,7 +208,7 @@ namespace Antilli
 
         private bool TrySelectTexture(ListBox list, ITextureData texture)
         {
-            foreach (var item in list.Items.OfType<TextureTreeItem>())
+            foreach (var item in list.Items.OfType<TextureReference>())
             {
                 if (Object.ReferenceEquals(texture, item.Texture))
                 {

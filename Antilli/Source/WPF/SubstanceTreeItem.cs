@@ -42,16 +42,16 @@ namespace Antilli
 
         public IMaterialPackage Owner { get; set; }
 
-        public List<TextureTreeItem> Textures
+        public List<TextureReference> Textures
         {
             get
             {
-                var textures = new List<TextureTreeItem>();
+                var textures = new List<TextureReference>();
 
                 int count = 0;
 
                 foreach (var texture in Substance.Textures)
-                    textures.Add(new TextureTreeItem(count++, texture));
+                    textures.Add(new TextureReference(count++, texture));
 
                 return textures;
             }

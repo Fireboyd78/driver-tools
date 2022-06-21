@@ -201,7 +201,7 @@
     <Compile Include="Source\WPF\PropertyItem.cs" />
     <Compile Include="Source\WPF\RelayCommand.cs" />
     <Compile Include="Source\WPF\SubstanceTreeItem.cs" />
-    <Compile Include="Source\WPF\TextureTreeItem.cs" />
+    <Compile Include="Source\WPF\TextureReference.cs" />
     <ApplicationDefinition Include="Source\App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

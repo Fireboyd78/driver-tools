@@ -28,7 +28,7 @@
             <TextBlock Text="{Binding Path=Name}"/>
         </HierarchicalDataTemplate>
 
-        <DataTemplate DataType="{x:Type at:TextureTreeItem}">
+        <DataTemplate DataType="{x:Type at:TextureReference}">
             <TextBlock Text="{Binding Path=Name}">
                 <TextBlock.ContextMenu>
                     <ContextMenu>

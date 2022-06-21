@@ -110,8 +110,8 @@ namespace Antilli
                 else if (obj is SubstanceTreeItem)
                     MaterialViewWidget.SetSubstance(((SubstanceTreeItem)obj).Substance);
 
-                else if (obj is TextureTreeItem)
-                    MaterialViewWidget.SetTexture(((TextureTreeItem)obj).Texture);
+                else if (obj is TextureReference)
+                    MaterialViewWidget.SetTexture(((TextureReference)obj).Texture);
             }
         }
 
@@ -176,7 +176,7 @@ namespace Antilli
 
         private void ReplaceTexture(object sender, RoutedEventArgs e)
         {
-            var item = ((sender as FrameworkElement).DataContext) as TextureTreeItem;
+            var item = ((sender as FrameworkElement).DataContext) as TextureReference;
 
             if (item != null)
             {
@@ -191,7 +191,7 @@ namespace Antilli
 
         private void ExportTexture(object sender, RoutedEventArgs e)
         {
-            var item = ((sender as FrameworkElement).DataContext) as TextureTreeItem;
+            var item = ((sender as FrameworkElement).DataContext) as TextureReference;
 
             if (item != null)
             {

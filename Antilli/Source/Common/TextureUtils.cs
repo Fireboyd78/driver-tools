@@ -20,6 +20,16 @@ namespace Antilli
         public static bool BuggedAboutDuplicateFiles = false;
         public static bool OverwriteDuplicateFiles = false;
 
+        public static string GetFileExtension(ITextureData texture)
+        {
+            var ext = "biff";
+
+            if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
+                ext = "bin";
+
+            return ext;
+        }
+
         public static void ExportTexture(ITextureData texture)
         {
             var filename = $"{texture.Handle:X8}";
@@ -31,10 +41,7 @@ namespace Antilli
                 filename = uid.ToString("_");
             }
 
-            var ext = "biff";
-
-            if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
-                ext = "bin";
+            var ext = GetFileExtension(texture);
 
             var saveDlg = new SaveFileDialog()
             {
@@ -70,10 +77,7 @@ namespace Antilli
                 if (prefixIndex)
                     filename = $"[{index:D4}]-{filename}";
 
-                var ext = "biff";
-
-                if (!Utils.TryGetImageFormat(texture.Buffer, out ext))
-                    ext = "bin";
+                var ext = GetFileExtension(texture);
 
                 if (!String.IsNullOrEmpty(prefix))
                     filename = $"{prefix}_{filename}";

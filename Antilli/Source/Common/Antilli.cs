@@ -618,6 +618,28 @@ namespace Antilli
             }
         }
 
+        public static string StripExtension(string filename)
+        {
+            var path = Path.GetFileName(filename);
+
+            if (path != null)
+            {
+                int length = path.Length;
+                int idx = -1;
+
+                do
+                {
+                    idx = path.LastIndexOf('.', length - 1);
+                    if (idx != -1)
+                        length = idx;
+                } while (idx != -1);
+
+                return path.Substring(0, length);
+            }
+
+            return null;
+        }
+
         public static string GetDirectory(GameType gameType, bool verify = false)
         {
             string[] names = {
@@ -633,7 +655,26 @@ namespace Antilli
 
             return DSC.Configuration.GetDirectory(name);
         }
-        
+
+        public static OpenFileDialog GetOpenDialog(string title, string filter)
+        {
+            var dlg = new OpenFileDialog()
+            {
+                Title = title,
+
+                Filter = filter,
+
+                CheckFileExists = true,
+                CheckPathExists = true,
+
+                InitialDirectory = Environment.CurrentDirectory,
+
+                ValidateNames = true,
+            };
+
+            return dlg;
+        }
+
         public static OpenFileDialog GetOpenDialog(GameType gameType)
         {
             var dlg = new OpenFileDialog() {
@@ -685,6 +726,24 @@ namespace Antilli
 
                 dlg.Filter = FindFilter(extension, gameType).ToString();
             }
+
+            return dlg;
+        }
+
+        public static SaveFileDialog GetSaveDialog(string title, string ext)
+        {
+            var dlg = new SaveFileDialog()
+            {
+                Title = title,
+
+                AddExtension = true,
+                DefaultExt = ext,
+
+                InitialDirectory = Environment.CurrentDirectory,
+
+                ValidateNames = true,
+                OverwritePrompt = true,
+            };
 
             return dlg;
         }

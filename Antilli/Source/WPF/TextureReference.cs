@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using DSCript;
 using DSCript.Models;
 
 namespace Antilli
 {
-    public class TextureTreeItem
+    public class TextureReference
     {
         protected string BaseName { get; }
         
@@ -39,8 +40,16 @@ namespace Antilli
 
             Name = $"{BaseName} {texName} : {Texture.Width}x{Texture.Height}";
         }
+
+        public TextureReference(TextureReference texRef)
+        {
+            Texture = CopyCatFactory.GetCopy(texRef.Texture, CopyClassType.DeepCopy);
+            BaseName = texRef.BaseName;
+
+            UpdateName();
+        }
         
-        public TextureTreeItem(int id, ITextureData texture, bool noType = false)
+        public TextureReference(int id, ITextureData texture, bool noType = false)
         {
             Texture = texture;
             BaseName = (noType) ? $"[{id + 1}]: " : $"[{id + 1}]: Texture : ";
