@@ -119,6 +119,8 @@ namespace DSCript.Models
             set { Spooler.Version = value; }
         }
 
+        int IDetailProvider.Flags { get; set; }
+
         public int UID { get; set; }
         public int Flags { get; set; }
 
