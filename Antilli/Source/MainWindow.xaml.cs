@@ -137,15 +137,17 @@ namespace Antilli
             SetCurrentFile(null);
         }
 
-        private void LoadDriv3rVehicles(string filename)
+        private void LoadDriv3rVehicles(string filename, string vgtFile = "")
         {
             var vehicleFile = new Driv3rVehiclesFile(filename);
 
-            var city = Driv3r.GetCityFromFileName(filename);
-            var vgtFile = "";
-
-            if (city != Driv3r.City.Unknown)
-                vgtFile = Driv3r.GetVehicleGlobals(city);
+            if (String.IsNullOrEmpty(vgtFile) || !File.Exists(vgtFile))
+            {
+                var city = Driv3r.GetCityFromFileName(filename);
+                
+                if (city != Driv3r.City.Unknown)
+                    vgtFile = Driv3r.GetVehicleGlobals(city);
+            }
 
             if (!File.Exists(vgtFile))
             {
