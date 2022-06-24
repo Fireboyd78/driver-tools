@@ -904,7 +904,7 @@ namespace Antilli
                             OptionToolTip = "Converts the model to the selected format, regardless of settings.",
                         };
 
-                        fmtBox.SelectedIndex = (package.Version == 6) ? 0 : 1;
+                        fmtBox.DefaultSelection = (package.Version == 6) ? 0 : 1;
 
                         if (fmtBox.ShowDialog() ?? false)
                         {

@@ -43,6 +43,8 @@ namespace Antilli
             get { return ItemsBox.SelectedItem as string; }
         }
 
+        public int DefaultSelection { get; set; } = 0;
+
         public int SelectedIndex
         {
             get { return ItemsBox.SelectedIndex; }
@@ -77,7 +79,7 @@ namespace Antilli
                 foreach (var item in items)
                     ItemsBox.Items.Add(item);
 
-                ItemsBox.SelectedIndex = 0;
+                ItemsBox.SelectedIndex = DefaultSelection;
                 ItemsBox.Focus();
             };
 
