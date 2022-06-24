@@ -11,15 +11,27 @@ using DSCript.Models;
 
 namespace DSCript
 {
-    internal sealed class FormattedPath
+    public sealed class FormattedPath
     {
-        private string Path;
+        public string Name { get; }
+        public string Directory { get; set; }
+
+        public string FullPath => Path.Combine(Directory, Name);
+
         public static implicit operator string(FormattedPath path) { return path.ToString(); }
         public static implicit operator FormattedPath(string path) { return new FormattedPath(path); }
-        public string Format(string arg) { return String.Format(Path, arg); }
-        public override string ToString() { return Path; }
-        internal FormattedPath(string fileFormat) { Path = fileFormat; }
-        internal FormattedPath(string fileFormat, params string[] folder) : this(System.IO.Path.Combine(System.IO.Path.Combine(folder), fileFormat)) { }
+        public string Format(string arg) { return String.Format(FullPath, arg); }
+        public string Format(string directory, object arg)
+        {
+            return String.Format(Path.Combine(directory, Name), arg);
+        }
+        public override string ToString() { return FullPath; }
+        internal FormattedPath(string fileFormat) { Name = fileFormat; Directory = String.Empty; }
+        internal FormattedPath(string fileFormat, params string[] folder)
+        {
+            Name = fileFormat;
+            Directory = Path.Combine(folder);
+        }
     }
 
     public sealed class Driv3r
@@ -198,14 +210,14 @@ namespace DSCript
 
         public sealed class Files
         {
-            public static readonly string AnimationLookup           = new FormattedPath("AnimationLookup.txt", Folders.Animations);
-            public static readonly string SkeletonMacroList         = new FormattedPath("MacroList.txt", Folders.Animations);
+            public static readonly FormattedPath AnimationLookup        = new FormattedPath("AnimationLookup.txt", Folders.Animations);
+            public static readonly FormattedPath SkeletonMacroList      = new FormattedPath("MacroList.txt", Folders.Animations);
 
-            public static readonly string MaleSkeletonMacro         = new FormattedPath("male_skeleton.skm", Folders.SkeletonMacros);
-            public static readonly string FemaleSkeletonMacro       = new FormattedPath("female_skeleton.skm", Folders.SkeletonMacros);
+            public static readonly FormattedPath MaleSkeletonMacro      = new FormattedPath("male_skeleton.skm", Folders.SkeletonMacros);
+            public static readonly FormattedPath FemaleSkeletonMacro    = new FormattedPath("female_skeleton.skm", Folders.SkeletonMacros);
 
-            public static readonly string Guns                      = new FormattedPath("Guns.Cpr", Folders.Guns);
-            public static readonly string ParticleEffects           = new FormattedPath("Sfx.pmu", Folders.SFX);
+            public static readonly FormattedPath Guns                   = new FormattedPath("Guns.Cpr", Folders.Guns);
+            public static readonly FormattedPath ParticleEffects        = new FormattedPath("Sfx.pmu", Folders.SFX);
         }
 
         public sealed class Folders
@@ -269,47 +281,47 @@ namespace DSCript
                 public static readonly string Text                  = "Text";
             }
 
-            public sealed class FormattedPaths
+            public sealed class Paths
             {
-                public static readonly string Subtitles             = new FormattedPath("{0}.txt", Folders.FMV);
+                public static readonly FormattedPath Subtitles      = new FormattedPath("{0}.txt", Folders.FMV);
 
-                public static readonly string Speech                = new FormattedPath("IGCS{0}.XA", Folders.Music);
+                public static readonly FormattedPath Speech         = new FormattedPath("IGCS{0}.XA", Folders.Music);
 
-                public static readonly string GUILocale             = new FormattedPath("{0}.txt", Folders.GUI);
-                public static readonly string MissionLocale         = new FormattedPath("mission{0}.txt", Folders.Missions);
+                public static readonly FormattedPath GUILocale      = new FormattedPath("{0}.txt", Folders.GUI);
+                public static readonly FormattedPath MissionLocale  = new FormattedPath("mission{0}.txt", Folders.Missions);
             }
         }
 
-        public sealed class FormattedPaths
+        public sealed class Paths
         {
-            public static readonly string Animations                = new FormattedPath("animation_{0}.ab3", Folders.Animations);
-            public static readonly string AnimationMacros           = new FormattedPath("{0}.anm", Folders.Animations, "macros");
+            public static readonly FormattedPath Animations         = new FormattedPath("animation_{0}.ab3", Folders.Animations);
+            public static readonly FormattedPath AnimationMacros    = new FormattedPath("{0}.anm", Folders.Animations, "macros");
 
-            public static readonly string CityDefinition            = new FormattedPath("{0}.d3c", Folders.Cities);
+            public static readonly FormattedPath CityDefinition     = new FormattedPath("{0}.d3c", Folders.Cities);
 
-            public static readonly string CityDayPC                 = new FormattedPath("{0}_DAY_PC", Folders.Cities);
-            public static readonly string CityNightPC               = new FormattedPath("{0}_NIGHT_PC", Folders.Cities);
+            public static readonly FormattedPath CityDayPC          = new FormattedPath("{0}_DAY_PC", Folders.Cities);
+            public static readonly FormattedPath CityNightPC        = new FormattedPath("{0}_NIGHT_PC", Folders.Cities);
 
-            public static readonly string SoundDefinition           = new FormattedPath("{0}.DAT", Folders.Sounds);
+            public static readonly FormattedPath SoundDefinition    = new FormattedPath("{0}.DAT", Folders.Sounds);
 
-            public static readonly string MissionMood               = new FormattedPath("mood{0}.txt", Folders.Moods);
-            public static readonly string MissionCharacters         = new FormattedPath("mission{0}.dam", Folders.Missions);
-            public static readonly string MissionScript             = new FormattedPath("mission{0}.mpc", Folders.Missions);
-            public static readonly string MissionVehicles           = new FormattedPath("{0}.vvv", Folders.Vehicles);
+            public static readonly FormattedPath MissionMood        = new FormattedPath("mood{0}.txt", Folders.Moods);
+            public static readonly FormattedPath MissionCharacters  = new FormattedPath("mission{0}.dam", Folders.Missions);
+            public static readonly FormattedPath MissionScript      = new FormattedPath("mission{0}.mpc", Folders.Missions);
+            public static readonly FormattedPath MissionVehicles    = new FormattedPath("{0}.vvv", Folders.Vehicles);
 
-            public static readonly string OverlayBin                = new FormattedPath("{0}.bin", Folders.Overlays);
-            public static readonly string OverlayGfx                = new FormattedPath("{0}.gfx", Folders.Overlays);
-            public static readonly string OverlayMap                = new FormattedPath("{0}.map", Folders.Overlays);
+            public static readonly FormattedPath OverlayBin         = new FormattedPath("{0}.bin", Folders.Overlays);
+            public static readonly FormattedPath OverlayGfx         = new FormattedPath("{0}.gfx", Folders.Overlays);
+            public static readonly FormattedPath OverlayMap         = new FormattedPath("{0}.map", Folders.Overlays);
 
-            public static readonly string SaveFile                  = new FormattedPath("D3P_{0}", Folders.Saves);
+            public static readonly FormattedPath SaveFile           = new FormattedPath("D3P_{0}", Folders.Saves);
 
-            public static readonly string SkyFile                   = new FormattedPath("sky_{0}.d3s", Folders.Skies);
+            public static readonly FormattedPath SkyFile            = new FormattedPath("sky_{0}.d3s", Folders.Skies);
 
-            public static readonly string VehicleGlobals            = new FormattedPath("{0}\\CarGlobals{0}.vgt", Folders.Vehicles);
-            public static readonly string SpooledVehicles           = new FormattedPath("{0}.vvs", Folders.Vehicles);
+            public static readonly FormattedPath VehicleGlobals     = new FormattedPath("{0}\\CarGlobals{0}.vgt", Folders.Vehicles);
+            public static readonly FormattedPath SpooledVehicles    = new FormattedPath("{0}.vvs", Folders.Vehicles);
 
-            public static readonly string VehicleConfig             = new FormattedPath("{0}.BO3", Folders.VehicleConfigs);
-            public static readonly string VehicleSounds             = new FormattedPath("{0}.VSB", Folders.Sounds);
+            public static readonly FormattedPath VehicleConfig      = new FormattedPath("{0}.BO3", Folders.VehicleConfigs);
+            public static readonly FormattedPath VehicleSounds      = new FormattedPath("{0}.VSB", Folders.Sounds);
         }
 
         public static readonly string DirectoryKey  = "Driv3r";
@@ -360,9 +372,9 @@ namespace DSCript
             switch (type)
             {
             case CityDefinitionType.CITY_DAY_PC:
-                return String.Format(FormattedPaths.CityDayPC, city);
+                return String.Format(Paths.CityDayPC, city);
             case CityDefinitionType.CITY_NIGHT_PC:
-                return String.Format(FormattedPaths.CityNightPC, city);
+                return String.Format(Paths.CityNightPC, city);
             default:
                 return null;
             }
@@ -426,12 +438,12 @@ namespace DSCript
             if (city == City.Unknown)
                 return null;
 
-            return GetPathFormat(FormattedPaths.Animations, city.ToString().ToLower());
+            return GetPathFormat(Paths.Animations, city.ToString().ToLower());
         }
 
         public static string GetAnimationMacro(string macroName)
         {
-            return GetPathFormat(FormattedPaths.AnimationMacros, macroName);
+            return GetPathFormat(Paths.AnimationMacros, macroName);
         }
 
         public static string GetCityDefinition(City city, CityDefinitionType type)
@@ -440,7 +452,7 @@ namespace DSCript
                 return null;
 
             var folder = GetCityType(city, type);
-            return GetPathFormat(FormattedPaths.CityDefinition, folder);
+            return GetPathFormat(Paths.CityDefinition, folder);
         }
 
         public static string GetCitySuperRegions(City city, CityDefinitionType type)
@@ -466,17 +478,17 @@ namespace DSCript
             if (city == City.Unknown)
                 return null;
 
-            return GetPathFormat(FormattedPaths.SpooledVehicles, city.ToString());
+            return GetPathFormat(Paths.SpooledVehicles, city.ToString());
         }
         
         public static string GetMissionLocale(int missionId, string territory, string locale = "English")
         {
-            return Path.Combine(GetLocalePath(territory, locale), String.Format(Locale.FormattedPaths.MissionLocale, $"{missionId:D2}"));
+            return Path.Combine(GetLocalePath(territory, locale), String.Format(Locale.Paths.MissionLocale, $"{missionId:D2}"));
         }
         
         public static string GetMissionScript(int missionId)
         {
-            return GetPathFormat(FormattedPaths.MissionScript, $"{missionId:D2}");
+            return GetPathFormat(Paths.MissionScript, $"{missionId:D2}");
         }
 
         public static string GetMissionVehicles(City city)
@@ -510,14 +522,14 @@ namespace DSCript
                 break;
             }
 
-            return GetPathFormat(FormattedPaths.MissionVehicles, path);
+            return GetPathFormat(Paths.MissionVehicles, path);
         }
 
         public static string GetMissionVehicles(int missionId)
         {
             var path = String.Format("mission{0}", missionId);
 
-            return GetPathFormat(FormattedPaths.MissionVehicles, path);
+            return GetPathFormat(Paths.MissionVehicles, path);
         }
 
         public static string GetVehicleGlobals(City city)
@@ -525,7 +537,7 @@ namespace DSCript
             if (city == City.Unknown)
                 return null;
 
-            return GetPathFormat(FormattedPaths.VehicleGlobals, city.ToString());
+            return GetPathFormat(Paths.VehicleGlobals, city.ToString());
         }
 
         public static string GetVehicleGlobals(int missionId)
