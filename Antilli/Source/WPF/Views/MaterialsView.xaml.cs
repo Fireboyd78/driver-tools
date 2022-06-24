@@ -1,24 +1,15 @@
-﻿using System;
+﻿using DSCript.Models;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Xml;
-
-using Microsoft.Win32;
-
-using DSCript;
-using DSCript.Models;
 
 namespace Antilli
 {
@@ -323,6 +314,79 @@ namespace Antilli
                 {
                     node.Focus();
                     node.IsExpanded = true;
+                }
+            }
+        }
+
+        private void RemoveSubstance(object sender, RoutedEventArgs e)
+        {
+            var item = ((sender as FrameworkElement).DataContext) as SubstanceTreeItem;
+
+            if (item != null)
+            {
+                var target = item.Substance;
+                var package = item.Owner;
+
+                MaterialDataPC material = null;
+                SubstanceDataPC substance = null;
+
+                foreach (var _material in package.Materials)
+                {
+                    foreach (var _substance in _material.Substances)
+                    {
+                        if (ReferenceEquals(_substance, target))
+                        {
+                            material = _material;
+                            substance = _substance;
+                            break;
+                        }
+                    }
+
+                    if (substance != null)
+                    {
+                        material.Substances.Remove(substance);
+                        break;
+                    }
+                }
+
+                if (substance != null)
+                {
+                    var textures = new List<TextureDataPC>();
+
+                    foreach (var texture in substance.Textures)
+                    {
+                        if (!textures.Contains(texture))
+                            textures.Add(texture);
+                    }
+
+                    package.Substances.Remove(substance);
+
+                    foreach (var texture in textures)
+                        package.Textures.Remove(texture);
+
+                    AT.CurrentState.IsFileDirty = true;
+                    package.NotifyChanges();
+
+                    TreeView tv = null;
+
+                    if (package is IVehiclesFile)
+                    {
+                        tv = GlobalMaterialsList;
+                        NotifyChange("GlobalMaterials");
+                    }
+                    else
+                    {
+                        tv = MaterialsList;
+                        NotifyChange("Materials");
+                    }
+
+                    // reselect the material..
+                    TreeViewItem node = null;
+                    if (TrySelectMaterial(tv, material, out node))
+                    {
+                        node.Focus();
+                        node.IsExpanded = true;
+                    }
                 }
             }
         }

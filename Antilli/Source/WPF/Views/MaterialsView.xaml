@@ -25,7 +25,13 @@
 
         <HierarchicalDataTemplate DataType="{x:Type at:SubstanceTreeItem}"
                                 ItemsSource="{Binding Path=Textures}">
-            <TextBlock Text="{Binding Path=Name}"/>
+            <TextBlock Text="{Binding Path=Name}">
+                <TextBlock.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Remove" Click="RemoveSubstance"/>
+                    </ContextMenu>
+                </TextBlock.ContextMenu>
+            </TextBlock>
         </HierarchicalDataTemplate>
 
         <DataTemplate DataType="{x:Type at:TextureReference}">

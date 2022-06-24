@@ -29,7 +29,7 @@ namespace Antilli
                 int count = 0;
 
                 foreach (var substance in Material.Substances)
-                    substances.Add(new SubstanceTreeItem(++count, substance));
+                    substances.Add(new SubstanceTreeItem(++count, substance) { Owner = Owner });
 
                 return substances;
             }

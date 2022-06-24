@@ -51,7 +51,7 @@ namespace Antilli
                 int count = 0;
 
                 foreach (var texture in Substance.Textures)
-                    textures.Add(new TextureReference(count++, texture));
+                    textures.Add(new TextureReference(count++, texture) { Owner = Owner });
 
                 return textures;
             }
