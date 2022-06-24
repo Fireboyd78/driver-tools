@@ -356,7 +356,8 @@ namespace DSCript.Models
 
             if (Declaration.HasType<Vector4>(VertexUsageType.BlendWeight, 0))
                 vertex.SetData(VertexUsageType.BlendWeight, 0, source.BlendWeight);
-
+            else if (Declaration.HasType<ColorRGBA>(VertexUsageType.BlendWeight, 0))
+                vertex.SetData(VertexUsageType.BlendWeight, 0, (ColorRGBA)source.BlendWeight);
 
             if (Declaration.HasType<ColorRGBA>(VertexUsageType.Color, 0))
                 vertex.SetData(VertexUsageType.Color, 0, source.Color);

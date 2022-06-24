@@ -94,6 +94,8 @@ namespace DSCript.Models
             // Blend weights
             if (m_decl.HasType<Vector4>(VertexUsageType.BlendWeight, 0))
                 vertex.BlendWeight = GetData<Vector4>(VertexUsageType.BlendWeight, 0);
+            else if (m_decl.HasType<ColorRGBA>(VertexUsageType.BlendWeight, 0))
+                vertex.BlendWeight = GetData<ColorRGBA>(VertexUsageType.BlendWeight, 0);
             // Colors
             if (m_decl.HasType<ColorRGBA>(VertexUsageType.Color, 0))
                 vertex.Color = GetData<ColorRGBA>(VertexUsageType.Color, 0);
