@@ -9,11 +9,10 @@ namespace DSCript.Models
         public int VerticesOffset;
 
         public int VertexLength;
-        
-        public int Reserved1;
-        public int Reserved2;
-        public int Reserved3;
 
+        // NB: only relevant to Wii; Xbox/PC this is part of D3DRESOURCE...
+        public int CompressionType;
+        
         // not part of the spec; don't write this!
         // '0xABCDEF' used to mark as uninitialized
         public int Type;
@@ -22,7 +21,13 @@ namespace DSCript.Models
         {
             // Driv3r on PC doesn't support any scaling (value is zero),
             // but the Xbox version (and DPL) has this set to 1 -- hmm!
-            get { return (Reserved2 == 1); }
+            get { return (CompressionType == 1); }
+        }
+
+        public bool HasScaledVertices_Wii
+        {
+            // Wii platform only
+            get { return (CompressionType == 2); }
         }
         
         void IDetail.Serialize(Stream stream, IDetailProvider provider)
@@ -33,14 +38,22 @@ namespace DSCript.Models
 
             stream.Write(VertexLength);
 
-            stream.Write(0);
+            if (provider.Platform == PlatformType.Wii)
+            {
+                // just this, no extra bytes
+                stream.Write(CompressionType);
+            }
+            else
+            {
+                stream.Write(0);
 
-            // Driv3r PC doesn't support scaled vertices :(
-            if (provider.Version != 6)
-                stream.Write(1);
+                // Driv3r PC doesn't support scaled/compressed vertices
+                if (provider.Version != 6)
+                    stream.Write(CompressionType);
 
-            stream.Write(0);
-            stream.Write(0);
+                stream.Write(0);
+                stream.Write(0);
+            }
         }
 
         void IDetail.Deserialize(Stream stream, IDetailProvider provider)
@@ -51,13 +64,20 @@ namespace DSCript.Models
 
             VertexLength = stream.ReadInt32();
 
-            Reserved1 = stream.ReadInt32();
-
-            if (provider.Version != 6)
+            if (provider.Platform == PlatformType.Wii)
+            {
+                // just this, no extra bytes
+                CompressionType = stream.ReadInt32();
+            }
+            else
+            {
                 stream.Position += 4;
 
-            Reserved2 = stream.ReadInt32();
-            Reserved3 = stream.ReadInt32();
+                // Driv3r PC doesn't support scaled/compressed vertices
+                CompressionType = (provider.Version != 6) ? stream.ReadInt32() : -1;
+
+                stream.Position += 8;
+            }
         }
     }
 }

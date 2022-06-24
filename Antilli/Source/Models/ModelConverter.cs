@@ -854,20 +854,8 @@ namespace Antilli
 
             var indices = modelPackage.IndexBuffer.Indices;
 
-            // HACKS: was trying to figure out why DPL kept crashing..
-            // ... it only fucking wants triangle fans!
-#if MARK_HAS_FINISHED_HIS_INCREDIBLE_TRIANGLE_FAN_GENERATOR
-            var convertToTris = (targetVersion == 6);
-            var convertToFans = (targetVersion == 1);
-#elif I_WANNA_MAKE_DPL_LOOK_LIKE_SHIT_AND_SPEW_GARBAGE_AT_ME
-            var convertToTris = (targetVersion == 6);
-            var convertToFans = false;
-#else
-            var convertToTris = true;
-            var convertToFans = false;
-#endif
+            var convertPrims = (version != targetVersion);
 
-            var scaleVerts = (version == 1 && targetVersion == 6);
             var d3Scaling = (version == 6 && targetVersion == 1);
 
             // copy materials
@@ -952,105 +940,188 @@ namespace Antilli
 
                         foreach (var _subModel in _instance.SubModels)
                         {
-#if !OLD_METHOD
-                            var vertexOffset = (gVertexList.Count - vertexBaseOffset); // == num vertices added so far to the model
-
                             var subModel = new SubModel()
                             {
                                 Model = model,
                                 LodInstance = instance,
                                 ModelPackage = resource,
-
-                                PrimitiveType = PrimitiveType.TriangleList,
-
-                                VertexBaseOffset = vertexBaseOffset,
-
-                                VertexOffset = vertexOffset,
-                                IndexOffset = gIndices.Count,
                             };
 
-                            var vertexCount = 0;
-                            var indexCount = 0;
-
-                            var tris = _subModel.CollectVertexTris(ref lookup, ref gVertices, indices, out vertexCount);
-
-                            for (int t = 0; t < tris.Count; t++)
+                            if (convertPrims)
                             {
-                                var tri = tris[t];
-                                var vIdx = gVertices[tri];
-                                
-                                if (!luVertices.ContainsKey(vIdx))
+                                var tris = new List<int>();
+                                var vertices = _subModel.CollectVertices(out tris);
+
+                                var vertexOffset = gVertexList.Count;
+                                var vertexCount = 0;
+                                var indexOffset = gIndices.Count;
+                                var indexCount = (tris.Count / 3);
+
+                                var minIndex = indexOffset;
+                                var maxIndex = 0;
+                                var triFans = (targetVersion == 1 && !_subModel.IsOptimizedFormat);
+
+                                if (triFans)
                                 {
-                                    var vertex = vBuffer.Vertices[vIdx].ToVertex();
+                                    // convert to triangle fans
+                                    var fans = new List<int>();
+#if TRI_LOG
+                                    var lines = new List<String>();
 
-                                    if (!d3Scaling)
-                                        vertex.ApplyScale(modelScale);
-
-                                    gVertexList.Add(vertex);
-                                    luVertices.Add(vIdx, gVertexList.Count - 1);
-                                }
-
-                                gIndices.Add((short)luVertices[vIdx]);
-                                indexCount++;
-                            }
-
-                            subModel.VertexCount = vertexCount;
-                            subModel.IndexCount = indexCount / 3;
-#else
-                            var tris = new List<int>();
-                            var vertices = _subModel.CollectVertices(out tris);
-                            
-                            var vertexOffset = gVertices_DATA.Count;
-                            var vertexCount = 0;
-                            var indexOffset = gIndices.Count;
-                            var indexCount = (tris.Count / 3);
-
-                            if (convertToTris)
-                            {
-                                // convert to triangles
-                                for (int t = 0; t < tris.Count; t++)
-                                {
-                                    var idx = tris[t];
-                                    var vIdx = vertices[idx];
-
-                                    if (!lookup.ContainsKey(vIdx))
-                                    {
-                                        var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
-
-                                        if (!d3Scaling)
-                                            vertex.ApplyScale(modelScale);
-
-                                        lookup.Add(vIdx, (vertexOffset + vertexCount));
-
-                                        gVertices_DATA.Add(vertex);
-                                        vertexCount++;
-                                    }
-
-                                    // append to buffer
-                                    gIndices.Add((short)lookup[vIdx]);
-                                }
-                            }
-                            else if (convertToFans) // unreachable code... not implemented
-                            {
-
-                            }
-                            else if (scaleVerts) // unreachable code... here for reference only
-                            {
-                                // scale all the triangle fans
-                                foreach (var vIdx in vertices)
-                                {
-                                    if (!lookup.ContainsKey(vIdx))
-                                    {
-                                        var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
-
-                                        vertex.ApplyScale(modelScale);
-
-                                        lookup.Add(vIdx, vertexOffset++);
-                                        gVertices_DATA.Add(vertex);
-                                    }
-                                }
-                            }
+                                    lines.Add($"Generating triangle fans...");
 #endif
+                                    // generate fans
+                                    for (int i = 2; i < tris.Count; i += 3)
+                                    {
+                                        var i0 = tris[i - 2];
+                                        var i1 = tris[i - 1];
+                                        var i2 = tris[i];
+
+                                        if (i > 2)
+                                        {
+                                            var i3 = tris[i - 3];
+
+                                            if ((i % 2) != 0)
+                                            {
+                                                fans.Add(i3);
+                                                fans.Add(i0);
+                                                fans.Add(i0);
+                                            }
+                                            else
+                                            {
+                                                fans.Add(i3);
+                                                fans.Add(i3);
+                                                fans.Add(i0);
+                                            }
+                                        }
+
+                                        fans.Add(i0);
+                                        fans.Add(i1);
+                                        fans.Add(i2);
+                                    }
+#if TRI_LOG
+                                    lines.Add($"- {fans.Count} fans, offset is {indexOffset}");
+
+                                    // dump fans
+                                    var tri = 0;
+                                    for (int n = 2; n < fans.Count; n++)
+                                    {
+                                        int f0, f1, f2;
+                                        var info = "";
+                                        var kind = "";
+                                        if ((n % 2) != 0)
+                                        {
+                                            f0 = fans[n];
+                                            f1 = fans[n - 1];
+                                            f2 = fans[n - 2];
+
+                                            info = $"< {f0:D4} {f1:D4} {f2:D4} : ";
+                                        }
+                                        else
+                                        {
+                                            f0 = fans[n - 2];
+                                            f1 = fans[n - 1];
+                                            f2 = fans[n];
+
+                                            info = $"> {f0:D4} {f1:D4} {f2:D4} : ";
+                                        }
+
+                                        if ((f0 != f1) && (f0 != f2) && (f1 != f2))
+                                        {
+                                            kind = $"TRIANGLE {tri++}";
+                                        }
+                                        else
+                                        {
+                                            kind = "DEGENERATE";
+                                        }
+
+                                        lines.Add($"\t{n:D4}: {info}{kind}");
+                                    }
+
+                                    lines.Add("-----------------------------------------------------------------------------");
+#endif
+                                    // get vertices
+                                    for (int v = 0; v < fans.Count; v++)
+                                    {
+                                        var idx = fans[v];
+                                        var vIdx = vertices[idx];
+
+                                        if (!lookup.ContainsKey(vIdx))
+                                        {
+                                            var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
+
+                                            if (!d3Scaling)
+                                                vertex.ApplyScale(modelScale);
+
+                                            lookup.Add(vIdx, (vertexOffset + vertexCount));
+
+                                            gVertexList.Add(vertex);
+                                            vertexCount++;
+                                        }
+
+                                        var index = lookup[vIdx];
+#if TRI_LOG
+                                        lines.Add($"\t{v:D4}={vIdx:D4}: {lookup[vIdx]:D4}");
+#endif
+                                        // append to buffer
+                                        gIndices.Add((short)index);
+                                    }
+
+                                    maxIndex = gIndices.Count - minIndex;
+#if TRI_LOG
+                                    lines.Add("-----------------------------------------------------------------------------");
+                                    lines.Add($"{maxIndex} vertices");
+                                    lines.Add("-----------------------------------------------------------------------------");
+
+                                    File.AppendAllLines("tri_fans_gen.log", lines, Encoding.UTF8);
+#endif
+                                    subModel.PrimitiveType = PrimitiveType.TriangleFan;
+
+                                    subModel.VertexBaseOffset = 0;
+                                    subModel.VertexOffset = 0;
+                                    subModel.VertexCount = maxIndex;
+                                    subModel.IndexOffset = indexOffset * 2;
+                                    subModel.IndexCount = 0;
+
+                                    subModel.IsOptimizedFormat = true;
+                                }
+                                else
+                                {
+                                    // convert to triangles
+                                    for (int t = 0; t < tris.Count; t++)
+                                    {
+                                        var idx = tris[t];
+                                        var vIdx = vertices[idx];
+
+                                        if (!lookup.ContainsKey(vIdx))
+                                        {
+                                            var vertex = _subModel.VertexBuffer.Vertices[vIdx].ToVertex();
+
+                                            if (!d3Scaling)
+                                                vertex.ApplyScale(modelScale);
+
+                                            lookup.Add(vIdx, (vertexOffset + vertexCount));
+
+                                            gVertexList.Add(vertex);
+                                            vertexCount++;
+                                        }
+
+                                        var index = lookup[vIdx];
+
+                                        // append to buffer
+                                        gIndices.Add((short)index);
+                                    }
+
+                                    subModel.PrimitiveType = PrimitiveType.TriangleList;
+
+                                    subModel.VertexOffset = vertexOffset;
+                                    subModel.VertexCount = vertexCount;
+
+                                    subModel.IndexOffset = indexOffset;
+                                    subModel.IndexCount = indexCount;
+                                }
+                            }
+                            
                             var material = _subModel.Material;
 
                             if (fixups)
@@ -1142,40 +1213,9 @@ namespace Antilli
                                 }
                             }
 
-#if !OLD_METHOD
                             subModel.Material = material;
-#else
-                            var subModel = new SubModel() {
-                                Model = model,
-                                LodInstance = instance,
-                                ModelPackage = resource,
 
-                                Material = material,
-                            };
-
-                            if (convertToTris)
-                            {
-                                subModel.PrimitiveType = PrimitiveType.TriangleList;
-
-                                subModel.VertexOffset = vertexOffset;
-                                subModel.VertexCount = vertexCount;
-
-                                subModel.IndexOffset = indexOffset;
-                                subModel.IndexCount = indexCount;
-                            }
-                            else if (convertToFans) // unreachable code... not implemented
-                            {
-                                subModel.PrimitiveType = PrimitiveType.TriangleFan;
-
-                                subModel.VertexCount = vertexCount;
-                                subModel.IndexOffset = indexOffset;
-
-                                // these are ALWAYS zero !!!
-                                subModel.VertexBaseOffset = 0;
-                                subModel.VertexOffset = 0;
-                                subModel.IndexCount = 0;
-                            }
-                            else  // unreachable code... here for reference only
+                            if (!convertPrims)
                             {
                                 subModel.PrimitiveType = _subModel.PrimitiveType;
 
@@ -1187,7 +1227,7 @@ namespace Antilli
                                 subModel.IndexOffset = _subModel.IndexOffset;
                                 subModel.IndexCount = _subModel.IndexCount;
                             }
-#endif
+
                             subModels.Add(subModel);
                             gSubModels.Add(subModel);
                         }
@@ -1201,15 +1241,32 @@ namespace Antilli
                 model.Lods = lods;
             }
 
-            if (convertToTris || convertToFans)
+            //
+            // setup vertex buffer
+            //
+            if (gVertexList.Count != 0)
             {
-                // compile buffers
+                // compile vertex buffer
                 vertexBuffer.SetVertices(gVertexList);
 
                 resource.VertexBuffers = new List<VertexBuffer>() {
                     vertexBuffer
                 };
+            }
+            else
+            {
+                // copy the vertex buffer
+                vBuffer.CopyTo(vertexBuffer);
 
+                resource.VertexBuffers = new List<VertexBuffer>() { vertexBuffer };
+            }
+
+            //
+            // setup index buffer
+            //
+            if (gIndices.Count != 0)
+            {
+                // compile index buffer
                 var indexBuffer = new IndicesHolder()
                 {
                     Indices = gIndices
@@ -1217,36 +1274,9 @@ namespace Antilli
 
                 resource.IndexBuffer = indexBuffer.Compile();
             }
-            else if (scaleVerts) // unreachable code... here for reference only
-            {
-                // re-sort the vertices in their original order
-                var verts = new Vertex[vBuffer.Count];
-
-                for (int v = 0; v < vBuffer.Count; v++)
-                {
-                    var vIdx = lookup[v];
-
-                    verts[v] = gVertexList[vIdx];
-                }
-
-                // set the vertex buffer
-                vertexBuffer.SetVertices(verts.ToList());
-
-                resource.VertexBuffers = new List<VertexBuffer>() { vertexBuffer };
-                resource.IndexBuffer = new IndexBuffer(0)
-                {
-                    Indices = modelPackage.IndexBuffer.Indices
-                };
-
-                // clean up our mess
-                gVertexList.Clear();
-            }
             else
             {
-                // directly copy the vertex buffer
-                vBuffer.CopyTo(vertexBuffer);
-
-                resource.VertexBuffers = new List<VertexBuffer>() { vertexBuffer };
+                // copy the index buffer
                 resource.IndexBuffer = new IndexBuffer(0)
                 {
                     Indices = modelPackage.IndexBuffer.Indices

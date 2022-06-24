@@ -652,29 +652,35 @@ namespace DSCript.Models
 
             stream.Position = detail.SubModelsOffset;
 
-            for (int i = 0; i < detail.SubModelsCount; i++)
+            if (Platform == PlatformType.Wii)
             {
-                var offset = (int)stream.Position;
+                for (int i = 0; i < detail.SubModelsCount; i++)
+                {
+                    var offset = (int)stream.Position;
 
-                var _subModel = this.Deserialize<SubModelInfo>(stream);
+                    var _subModel = this.Deserialize<WiiSubModelInfo>(stream);
 
-                var subModel = new SubModel() {
-                    ModelPackage        = this,
+                    var subModel = new SubModel() { ModelPackage = this };
+                    _subModel.CopyTo(subModel);
 
-                    PrimitiveType       = (PrimitiveType)_subModel.PrimitiveType,
+                    luSubModels.Add(offset, i);
+                    SubModels.Add(subModel);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < detail.SubModelsCount; i++)
+                {
+                    var offset = (int)stream.Position;
 
-                    VertexBaseOffset    = _subModel.VertexBaseOffset,
-                    VertexOffset        = _subModel.VertexOffset,
-                    VertexCount         = _subModel.VertexCount,
+                    var _subModel = this.Deserialize<SubModelInfo>(stream);
 
-                    IndexOffset         = _subModel.IndexOffset,
-                    IndexCount          = _subModel.IndexCount,
+                    var subModel = new SubModel() { ModelPackage = this };
+                    _subModel.CopyTo(subModel);
 
-                    Material            = _subModel.Material,
-                };
-
-                luSubModels.Add(offset, i);
-                SubModels.Add(subModel);
+                    luSubModels.Add(offset, i);
+                    SubModels.Add(subModel);
+                }
             }
 
             //
@@ -1804,11 +1810,36 @@ namespace DSCript.Models
                 throw new InvalidOperationException("Can't save Wii model packages!");
 
             // initialize with no models
-            var detail = new ModelPackageData(Version, UID);
+            var detail = new ModelPackageData(Platform, Version, UID);
 
             if (Models.Count > 0)
             {
-                detail = new ModelPackageData(Version, UID,
+                if (Version == 1 || Version == 9)
+                {
+                    foreach (var subModel in SubModels)
+                    {
+                        if (subModel.IsOptimizedFormat)
+                        {
+                            Flags |= SubModelInfo.FLAG_SmallSubModels;
+
+                            var primType = subModel.PrimitiveType;
+
+                            if (primType == PrimitiveType.TriangleStrip || primType == PrimitiveType.TriangleFan)
+                            {
+                                Flags &= ~SubModelInfo.FLAG_SmallSubModels;
+                                break;
+                            }
+
+                        }
+                    }
+                }
+                else
+                {
+                    // no small submodels in Driv3r
+                    Flags &= ~SubModelInfo.FLAG_SmallSubModels;
+                }
+
+                detail = new ModelPackageData(Platform, Version, Flags, UID,
                     Models.Count, LodInstances.Count, SubModels.Count, IndexBuffer.Indices.Length, VertexBuffers.Count);
             }
 

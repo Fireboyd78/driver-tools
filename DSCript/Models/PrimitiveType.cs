@@ -19,5 +19,10 @@ namespace DSCript.Models
         TriangleList    = 4,
         TriangleStrip   = 5,
         TriangleFan     = 6,
+
+        Wii_PrimType1   = 0 + 128,
+        Wii_PrimType2   = 1 + 128,
+        Wii_PrimType3   = 2 + 128,
+        Wii_PrimType4   = 4 + 128,
     }
 }

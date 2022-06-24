@@ -94,6 +94,8 @@ namespace DSCript.Models
         public Model Model { get; set; }
         public LodInstance LodInstance { get; set; }
         
+        public bool IsOptimizedFormat { get; set; }
+
         public PrimitiveType PrimitiveType { get; set; }
         
         public int VertexBaseOffset { get; set; }
@@ -362,48 +364,51 @@ namespace DSCript.Models
             var index = vertices.Count;
 
             // collect list of vertex indices
-            if (PrimitiveType == PrimitiveType.TriangleFan)
+            if (IsOptimizedFormat)
             {
-                var fans = new List<int>();
-                var indexOffset = (IndexOffset / 2);
-
-                // collect vertices + fans
-                for (int v = 0; v < VertexCount; v++)
+                if (PrimitiveType == PrimitiveType.TriangleFan)
                 {
-                    var offset = indexOffset + v;
-                    var vIdx = (ushort)indices[offset];
+                    var fans = new List<int>();
+                    var indexOffset = (IndexOffset / 2);
 
-                    if (!luVerts.ContainsKey(vIdx))
+                    // collect vertices + fans
+                    for (int v = 0; v < VertexCount; v++)
                     {
-                        vertices.Add(vIdx);
-                        luVerts.Add(vIdx, index++);
+                        var offset = indexOffset + v;
+                        var vIdx = (ushort)indices[offset];
+
+                        if (!luVerts.ContainsKey(vIdx))
+                        {
+                            vertices.Add(vIdx);
+                            luVerts.Add(vIdx, index++);
+                        }
+
+                        fans.Add(vIdx);
                     }
 
-                    fans.Add(vIdx);
-                }
-
-                for (int n = 2; n < fans.Count; n++)
-                {
-                    int f0, f1, f2;
-
-                    if ((n % 2) != 0)
+                    for (int n = 2; n < fans.Count; n++)
                     {
-                        f0 = fans[n];
-                        f1 = fans[n - 1];
-                        f2 = fans[n - 2];
-                    }
-                    else
-                    {
-                        f0 = fans[n - 2];
-                        f1 = fans[n - 1];
-                        f2 = fans[n];
-                    }
+                        int f0, f1, f2;
 
-                    if ((f0 != f1) && (f0 != f2) && (f1 != f2))
-                    {
-                        tris.Add(luVerts[f0]);
-                        tris.Add(luVerts[f1]);
-                        tris.Add(luVerts[f2]);
+                        if ((n % 2) != 0)
+                        {
+                            f0 = fans[n];
+                            f1 = fans[n - 1];
+                            f2 = fans[n - 2];
+                        }
+                        else
+                        {
+                            f0 = fans[n - 2];
+                            f1 = fans[n - 1];
+                            f2 = fans[n];
+                        }
+
+                        if ((f0 != f1) && (f0 != f2) && (f1 != f2))
+                        {
+                            tris.Add(luVerts[f0]);
+                            tris.Add(luVerts[f1]);
+                            tris.Add(luVerts[f2]);
+                        }
                     }
                 }
             }
@@ -527,58 +532,98 @@ namespace DSCript.Models
             var lookup = new Dictionary<int, int>();
             var index = 0;
 
-            if (PrimitiveType == PrimitiveType.TriangleFan)
+            if (IsOptimizedFormat)
             {
+                if (PrimitiveType == PrimitiveType.TriangleFan)
+                {
 #if TRI_FANS_NORMAL
                 var fans = CollectTriangleFans(ref lookup, ref vertices, ref indices, ref index, ref tris);
 #else
-                var fans = new List<int>();
-                var indexOffset = (IndexOffset / 2);
+                    var fans = new List<int>();
+                    var indexOffset = (IndexOffset / 2);
+                    var numVertices = 0;
 
-                var instance = LodInstance;
-                var lod = instance.Parent;
-                var model = lod.Parent;
+                    var instance = LodInstance;
+                    var lod = instance.Parent;
+                    var model = lod.Parent;
+#if TRI_LOG
+                    var lines = new List<String>();
 
-                // collect vertices + fans
-                for (int v = 0; v < VertexCount; v++)
-                {
-                    var offset = indexOffset + v;
-                    var vIdx = (ushort)indices[offset];
-
-                    if (!lookup.ContainsKey(vIdx))
-                    {
-                        vertices.Add(vIdx);
-                        lookup.Add(vIdx, index++);
-                    }
-
-                    fans.Add(lookup[vIdx]);
-                }
-
-                for (int n = 2; n < fans.Count; n++)
-                {
-                    int f0, f1, f2;
-
-                    if ((n % 2) != 0)
-                    {
-                        f0 = fans[n];
-                        f1 = fans[n - 1];
-                        f2 = fans[n - 2];
-                    }
-                    else
-                    {
-                        f0 = fans[n - 2];
-                        f1 = fans[n - 1];
-                        f2 = fans[n];
-                    }
-
-                    if ((f0 != f1) && (f0 != f2) && (f1 != f2))
-                    {
-                        tris.Add(f0);
-                        tris.Add(f1);
-                        tris.Add(f2);
-                    }
-                }
+                    lines.Add($"{VertexCount} fans, offset is {IndexOffset} (/ 2 = {indexOffset})");
 #endif
+                    // collect vertices + fans
+                    for (int v = 0; v < VertexCount; v++)
+                    {
+                        var offset = indexOffset + v;
+                        var vIdx = (ushort)indices[offset];
+
+                        if (!lookup.ContainsKey(vIdx))
+                        {
+                            vertices.Add(vIdx);
+                            lookup.Add(vIdx, index++);
+                            numVertices++;
+                        }
+
+                        fans.Add(lookup[vIdx]);
+#if TRI_LOG
+                        lines.Add($"\t{v:D4}={vIdx:D4}: {lookup[vIdx]:D4}");
+#endif
+                    }
+#if TRI_LOG
+                    lines.Add("-----------------------------------------------------------------------------");
+                    lines.Add($"{numVertices} vertices");
+                    lines.Add("-----------------------------------------------------------------------------");
+#endif
+                    for (int n = 2; n < fans.Count; n++)
+                    {
+                        int f0, f1, f2;
+#if TRI_LOG
+                        var info = "";
+                        var kind = "";
+#endif
+                        if ((n % 2) != 0)
+                        {
+                            f0 = fans[n];
+                            f1 = fans[n - 1];
+                            f2 = fans[n - 2];
+#if TRI_LOG
+                            info = $"< {f0:D4} {f1:D4} {f2:D4} : ";
+#endif
+                        }
+                        else
+                        {
+                            f0 = fans[n - 2];
+                            f1 = fans[n - 1];
+                            f2 = fans[n];
+#if TRI_LOG
+                            info = $"> {f0:D4} {f1:D4} {f2:D4} : ";
+#endif
+                        }
+
+                        if ((f0 != f1) && (f0 != f2) && (f1 != f2))
+                        {
+#if TRI_LOG
+                            kind = $"TRIANGLE {tris.Count / 3}";
+#endif
+                            tris.Add(f0);
+                            tris.Add(f1);
+                            tris.Add(f2);
+                        }
+#if TRI_LOG
+                        else
+                        {
+                            kind = "DEGENERATE";
+                        }
+
+                        lines.Add($"\t{n:D4}: {info}{kind}");
+#endif
+                    }
+#if TRI_LOG
+            lines.Add("-----------------------------------------------------------------------------");
+            File.AppendAllLines("tri_fans2.log", lines, Encoding.UTF8);
+#endif
+#endif
+                }
             }
             else
             {
@@ -622,7 +667,7 @@ namespace DSCript.Models
                     }
 #if TRI_LOG
                     lines.Add("-----------------------------------------------------------------------------");
-                    File.AppendAllLines("tri_lists.log", lines, Encoding.UTF8);
+                    File.AppendAllLines("tri_lists2.log", lines, Encoding.UTF8);
 #endif
                     break;
                 case PrimitiveType.TriangleStrip:
@@ -676,7 +721,7 @@ namespace DSCript.Models
 #if TRI_LOG
                     lines.Add("-----------------------------------------------------------------------------");
 
-                    File.AppendAllLines("tri_strips.log", lines, Encoding.UTF8);
+                    File.AppendAllLines("tri_strips2.log", lines, Encoding.UTF8);
 #endif
                     break;
                 }
