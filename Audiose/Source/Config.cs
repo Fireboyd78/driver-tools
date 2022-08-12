@@ -41,6 +41,7 @@ namespace Audiose
         public static bool Extract { get; set; }
 
         public static bool VAG { get; set; }
+        public static bool XBox { get; set; }
 
         public static IEnumerable<ArgInfo> Args
         {
@@ -110,6 +111,10 @@ namespace Audiose
             "  -vag             Attempt to decode the audio using VAG decoding (PSX/PS2 audio)",
             "                   This MUST be specified if the file you're passing is NOT a BLK/SBK file!",
             "                   If '-stuntman' is already specified, this is not required.",
+            "",
+            "  -xbox            Export all audio in the XBox IMA ADPCM audio format.",
+            "                   Note that some media players don't support playing this format.",
+            "                   * Decoding this type of audio is currently not supported.",
         };
 
         static readonly string[] m_complete_msg = {
@@ -178,6 +183,7 @@ namespace Audiose
 
             switch (ext)
             {
+            case ".dat":
             case ".gsd":
             case ".sp":
                 return FileType.BinaryData;
@@ -246,6 +252,9 @@ namespace Audiose
                         continue;
                     case "vag":
                         VAG = true;
+                        continue;
+                    case "xbox":
+                        XBox = true;
                         continue;
                     }
                 }

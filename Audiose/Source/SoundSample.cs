@@ -15,7 +15,7 @@ namespace Audiose
         public ushort SampleRate;
 
         public byte Flags;
-        public byte Unk_0B;
+        public byte Priority;
 
         public int Unk_0C;
     }
@@ -30,15 +30,28 @@ namespace Audiose
 
         public int Flags { get; set; }
 
-        public int ClearAfter { get; set; }
+        public int Priority { get; set; }
         public int Unknown2 { get; set; }
 
         public byte[] Buffer { get; set; }
 
         public bool IsPS1Format { get; set; }
+        public bool IsXBoxFormat { get; set; }
 
         public static explicit operator AudioFormatChunk(SoundSample sample)
         {
+            if (sample.IsXBoxFormat)
+            {
+                var blockAlign = sample.NumChannels * 0x24;
+                var byteRate = sample.SampleRate * blockAlign >> 6;
+
+                return new AudioFormatChunk(0x69, sample.NumChannels, sample.SampleRate, 4)
+                {
+                    BlockAlign = (short)blockAlign,
+                    ByteRate = (short)byteRate,
+                };
+            }
+
             return new AudioFormatChunk(sample.NumChannels, sample.SampleRate);
         }
 
@@ -63,7 +76,7 @@ namespace Audiose
                 if (!IsPS1Format)
                 {
                     elem.SetAttribute("Flags", $"{Flags:D}");
-                    elem.SetAttribute("ClearAfter", $"{ClearAfter:D}");
+                    elem.SetAttribute("Priority", $"{Priority:D}");
                     elem.SetAttribute("Unk2", $"{Unknown2:D}");
                 }
             }
@@ -90,8 +103,9 @@ namespace Audiose
                     Flags = int.Parse(value);
                     break;
                 case "Unk1": // backwards compat
-                case "ClearAfter":
-                    ClearAfter = int.Parse(value);
+                case "ClearAfter": // ^^^
+                case "Priority":
+                    Priority = int.Parse(value);
                     break;
                 case "Unk2":
                     Unknown2 = int.Parse(value);

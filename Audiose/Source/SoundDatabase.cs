@@ -15,6 +15,8 @@ namespace Audiose
     {
         public const int ID_BK01 = 0x424B3130; // '01KB'
         public const int ID_BK31 = 0x31334B42; // 'BK31'
+        public const int ID_CS11 = 0x31315343; // 'CS11'
+        public const int ID_CS12 = 0x32315343; // 'CS12'
 
         public int Identifier;
         public int NumBanks;
@@ -26,7 +28,7 @@ namespace Audiose
         
         public int ListOffset
         {
-            get { return 8; }
+            get { return (FormatType >= SoundBankFormat.CS11) ? 16 : 8; }
         }
 
         public int ListSize
@@ -52,6 +54,8 @@ namespace Audiose
                 {
                 case ID_BK01: return SoundBankFormat.BK01;
                 case ID_BK31: return SoundBankFormat.BK31;
+                case ID_CS11: return SoundBankFormat.CS11;
+                case ID_CS12: return SoundBankFormat.CS12;
                 }
 
                 return SoundBankFormat.Invalid;
@@ -62,8 +66,10 @@ namespace Audiose
         {
             switch (type)
             {
-            case SoundBankFormat.BK01: return ID_BK01;               
+            case SoundBankFormat.BK01: return ID_BK01;
             case SoundBankFormat.BK31: return ID_BK31;
+            case SoundBankFormat.CS11: return ID_CS11;
+            case SoundBankFormat.CS12: return ID_CS12;
             }
 
             return -1;
@@ -75,6 +81,8 @@ namespace Audiose
             {
             case SoundBankFormat.BK01: return typeof(SoundBankInfo1);
             case SoundBankFormat.BK31: return typeof(SoundBankInfo3);
+            case SoundBankFormat.CS11: return typeof(CharacterSoundBankInfo);
+            case SoundBankFormat.CS12: return typeof(CharacterSoundBankInfo);
             }
             
             throw new InvalidOperationException("Cannot determine sound bank type.");
@@ -103,16 +111,28 @@ namespace Audiose
 
     public class SoundDatabase
     {
+        public Dictionary<int, int> BankMap { get; set; }
+
         public List<SoundBank> Banks { get; set; }
 
         public SoundBankFormat Type { get; set; }
 
         public void UnpackBanks(string outDir)
         {
-            var gsdXml = new XmlDocument();
-            var gsdElem = gsdXml.CreateElement("GameSoundDatabase");
+            var characters = (Type >= SoundBankFormat.CS11);
 
-            gsdElem.SetAttribute("Type", $"{Type:D}");
+            if (characters)
+            {
+                outDir = Path.Combine(Path.GetDirectoryName(outDir), "CharacterSoundData");
+
+                if (!Directory.Exists(outDir))
+                    Directory.CreateDirectory(outDir);
+            }
+
+            var xmlDoc = new XmlDocument();
+            var xmlRoot = xmlDoc.CreateElement("GameSoundDatabase");
+
+            xmlRoot.SetAttribute("Type", $"{Type:D}");
 
             for (int i = 0; i < Banks.Count; i++)
             {
@@ -152,16 +172,31 @@ namespace Audiose
                 }
 
                 // append to GSD xml
-                var bankElem = gsdXml.CreateElement("SoundBank");
+                var bankElem = xmlDoc.CreateElement("SoundBank");
 
                 bankElem.SetAttribute("Index", $"{i:D}");
                 bankElem.SetAttribute("File", Path.Combine(bank.SubDirectory, "bank.xml"));
 
-                gsdElem.AppendChild(bankElem);
+                xmlRoot.AppendChild(bankElem);
             }
 
-            gsdXml.AppendChild(gsdElem);
-            gsdXml.Save(Path.Combine(outDir, "config.xml"));
+            if (BankMap != null)
+            {
+                var bankMapElem = xmlDoc.CreateElement("BankMap");
+                foreach (var bank in BankMap)
+                {
+                    var bankElem = xmlDoc.CreateElement("Bank");
+
+                    bankElem.SetAttribute("Id", $"{bank.Key}");
+                    bankElem.SetAttribute("Index", $"{bank.Value}");
+
+                    bankMapElem.AppendChild(bankElem);
+                }
+                xmlRoot.AppendChild(bankMapElem);
+            }
+
+            xmlDoc.AppendChild(xmlRoot);
+            xmlDoc.Save(Path.Combine(outDir, "config.xml"));
         }
 
         public void LoadXml(string filename)
@@ -171,22 +206,25 @@ namespace Audiose
             var xml = new XmlDocument();
             xml.Load(filename);
 
-            var gsdElem = xml.DocumentElement;
+            var xmlRoot = xml.DocumentElement;
 
-            if ((gsdElem == null) || (gsdElem.Name != "GameSoundDatabase"))
+            if ((xmlRoot == null) || (xmlRoot.Name != "GameSoundDatabase"))
                 throw new InvalidOperationException("Not a GameSoundDatabase node!");
 
-            var type = int.Parse(gsdElem.GetAttribute("Type"));
+            var type = int.Parse(xmlRoot.GetAttribute("Type"));
 
             if (!Enum.IsDefined(typeof(SoundBankFormat), type))
                 throw new InvalidOperationException($"Unknown sound database type '{type}'!");
 
             Type = (SoundBankFormat)type;
 
+            if (Type >= SoundBankFormat.CS11)
+                throw new NotImplementedException("CharacterSoundDatabase saving not quite ready yet, sorry!");
+
             var banks = new List<SoundBank>();
             var bankRefs = new Dictionary<int, SoundBank>();
 
-            foreach (var node in gsdElem.ChildNodes.OfType<XmlElement>())
+            foreach (var node in xmlRoot.ChildNodes.OfType<XmlElement>())
             {
                 var bank = new SoundBank();
 
@@ -298,6 +336,47 @@ namespace Audiose
             }
         }
 
+        private void LoadSoundBankSamples(Stream fs, SoundBank bank, int offset, ISoundBankInfoDetail bankDetail)
+        {
+            for (int s = 0; s < bank.Samples.Capacity; s++)
+            {
+                fs.Position = offset + ((s * bankDetail.SampleSize) + bankDetail.HeaderSize);
+
+                var sampleInfo = fs.Read<SoundSampleInfo>(bankDetail.SampleSize);
+                sampleInfo.Offset += bankDetail.DataOffset;
+
+                var sample = new SoundSample()
+                {
+                    FileName = $"{s:D2}.wav",
+
+                    NumChannels = ((sampleInfo.Flags & bankDetail.SampleChannelFlags) != 0) ? 2 : 1,
+                    SampleRate = sampleInfo.SampleRate,
+
+                    Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
+
+                    Priority = sampleInfo.Priority,
+                    Unknown2 = sampleInfo.Unk_0C,
+
+                    IsXBoxFormat = Config.XBox,
+                };
+
+
+                bank.Samples.Add(sample);
+
+                // retrieve the buffer
+                var buffer = new byte[sampleInfo.Size];
+
+                fs.Position = sampleInfo.Offset;
+                fs.Read(buffer, 0, buffer.Length);
+
+                if (Config.VAG)
+                    buffer = VAG.DecodeSound(buffer);
+
+                // make sure we apply it
+                sample.Buffer = buffer;
+            }
+        }
+
         public void LoadBinary(string filename)
         {
             using (var fs = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -305,99 +384,309 @@ namespace Audiose
                 var header = fs.Read<SoundDatabaseHeader>();
 
                 if (header.FormatType == SoundBankFormat.Invalid)
-                    throw new InvalidOperationException("Not a GSD file!");
+                    throw new InvalidOperationException("Not a GSD/DAT file!");
 
                 Type = header.FormatType;
+
+                var luBankMap = new Dictionary<int, int>();
+                var luBankOffsets = new Dictionary<int, int>();
+                var luBankSubOffsets = new Dictionary<int, List<int>>();
+
+                var bMultiBankSamples = false;
+
+                if (Type >= SoundBankFormat.CS11)
+                {
+                    var unk_08 = fs.ReadInt32(); // 2048
+                    var subBankSize = fs.ReadInt32(); // 0x4800
+
+                    // real number of banks located in separate list
+                    fs.Position = header.NumBanks;
+
+                    var numBanks = fs.ReadInt32();
+                    var bankList = fs.Position;
+
+                    // collect offsets
+                    for (int i = 0; i < numBanks; i++)
+                    {
+                        fs.Position = bankList + (i * 4);
+
+                        var bankIndex = fs.ReadInt32();
+
+                        if (!luBankOffsets.ContainsKey(bankIndex))
+                        {
+                            fs.Position = header.ListOffset + (bankIndex * 4);
+                            var bankOffset = fs.ReadInt32();
+
+                            luBankOffsets.Add(bankIndex, bankOffset);
+                        }
+
+                        luBankMap.Add(i, bankIndex);
+                    }
+
+                    // add a fake final entry
+                    luBankMap.Add(numBanks, -1);
+                    fs.Seek(0, SeekOrigin.End);
+                    luBankOffsets.Add(-1, (int)fs.Position);
+
+                    BankMap = new Dictionary<int, int>();
+
+                    // determine the true number of banks
+                    for (int i = 0; i < numBanks; i++)
+                    {
+                        var bankIndex = luBankMap[i];
+                        var nextIndex = bankIndex + 1;
+
+                        if (!luBankOffsets.ContainsKey(nextIndex))
+                        {
+                            var bankOffset = header.ListOffset + (nextIndex * 4);
+
+                            fs.Position = bankOffset;
+                            var offset = fs.ReadInt32();
+
+                            if (offset != 0)
+                            {
+                                Debug.WriteLine($"bank {i}({bankIndex}) neighbor({nextIndex}) is unreferenced!");
+                                luBankOffsets.Add(nextIndex, offset);
+                            }
+                        }
+
+                        BankMap.Add(i, bankIndex);
+                    }
+
+                    header.NumBanks = luBankOffsets.OrderBy((kv) => kv.Key).Last().Key;
+
+                    if (Type == SoundBankFormat.CS11)
+                    {
+                        // count number of banks/multisamples
+                        for (int i = 0; i < header.NumBanks; i++)
+                        {
+                            if (luBankSubOffsets.ContainsKey(i))
+                                continue;
+
+                            var bankOffset = luBankOffsets[i];
+
+                            var bankCount = 0;
+                            var totalCount = 0;
+
+                            var subOffsets = new List<int>();
+
+                            // figure out how many banks/multisamples there are
+                            do
+                            {
+                                var subOffset = (totalCount * subBankSize);
+                                fs.Position = bankOffset + subOffset;
+
+                                var reserved = fs.ReadInt32();
+
+                                if (reserved != 0)
+                                    throw new Exception("STRANGE CHARACTER SOUND DATA - maybe that wasn't supposed to be zero!");
+
+                                var info = fs.Read<CharacterSoundBankInfo>();
+                                info.DataOffset += bankOffset;
+
+                                if (info.NumSamples > 1)
+                                    throw new Exception("STRANGE CHARACTER SOUND DATA - more than one sample!");
+
+                                if (info.NumSamples != 0)
+                                {
+                                    subOffsets.Add(subOffset);
+                                    bankCount++;
+
+                                    if (subOffsets.Count != bankCount)
+                                        throw new Exception("STRANGE CHARACTER SOUND DATA - empty sub bank in-between non-empty ones!");
+                                }
+
+                                totalCount++;
+                            } while (fs.Position + subBankSize < luBankOffsets[i + 1]);
+
+                            if (totalCount > 48)
+                                throw new Exception("STRANGE CHARACTER SOUND DATA - more than expected sub banks!");
+
+                            luBankSubOffsets.Add(i, subOffsets);
+                        }
+                    }
+                    else
+                    {
+                        // count number of banks/multisamples
+                        for (int i = 0; i < header.NumBanks; i++)
+                        {
+                            if (luBankSubOffsets.ContainsKey(i))
+                                continue;
+
+                            var bankOffset = luBankOffsets[i];
+
+                            var bankCount = 0;
+                            var totalCount = 0;
+
+                            var subOffsets = new List<int>();
+
+                            // figure out how many banks/multisamples there are
+                            do
+                            {
+                                fs.Position = bankOffset + (totalCount * 4);
+
+                                var subOffset = fs.ReadInt32();
+
+                                if (subOffset == 0)
+                                    break;
+
+                                fs.Position = subOffset;
+                                subOffset -= bankOffset;
+
+                                var reserved = fs.ReadInt32();
+
+                                if (reserved != 0)
+                                    throw new Exception("STRANGE CHARACTER SOUND DATA - maybe that wasn't supposed to be zero!");
+
+                                var info = fs.Read<CharacterSoundBankInfo>();
+                                info.DataOffset += bankOffset;
+
+                                if (info.NumSamples > 1)
+                                    throw new Exception("STRANGE CHARACTER SOUND DATA - more than one sample!");
+
+                                if (info.NumSamples != 0)
+                                {
+                                    subOffsets.Add(subOffset);
+                                    bankCount++;
+
+                                    if (subOffsets.Count != bankCount)
+                                        throw new Exception("STRANGE CHARACTER SOUND DATA - empty sub bank in-between non-empty ones!");
+                                }
+
+                                totalCount++;
+                            } while (fs.Position < luBankOffsets[i + 1]);
+
+                            if (totalCount > 56)
+                                throw new Exception("STRANGE CHARACTER SOUND DATA - more than expected sub banks!");
+
+                            luBankSubOffsets.Add(i, subOffsets);
+                        }
+                    }
+
+                    bMultiBankSamples = true;
+                }
+                else
+                {
+                    fs.Position = header.ListOffset;
+
+                    for (int i = 0; i < header.NumBanks; i++)
+                    {
+                        var bankOffset = fs.ReadInt32();
+
+                        luBankOffsets.Add(i, bankOffset);
+                        luBankMap.Add(i, i);
+                    }
+                }
 
                 Banks = new List<SoundBank>(header.NumBanks);
 
                 for (int i = 0; i < header.NumBanks; i++)
                 {
-                    fs.Position = (header.ListOffset + (i * 4));
-
-                    var offset = fs.ReadInt32();
-                    fs.Position = offset;
+                    var bankOffset = luBankOffsets[i];
+                    fs.Position = bankOffset;
 
                     ISoundBankInfoDetail bankDetail = null;
 
-                    if (fs.Position == fs.Length)
+                    if (bMultiBankSamples)
                     {
-                        // completely empty soundbank!
-                        var emptyBank = new SoundBank()
+                        // read CHRSOUND.DAT format
+                        var subOffsets = luBankSubOffsets[i];
+                        
+                        var bank = new SoundBank()
                         {
-                            Index = -1,
+                            Index = i,
+                            SubDirectory = Path.Combine("Banks", $"{i:D2}"),
+                        };
+                        
+                        var subBanks = new List<SoundBank>();
+                        
+                        // load in all sub-banks
+                        foreach (var subOffset in subOffsets)
+                        {
+                            var subBankOffset = bankOffset + subOffset;
+                        
+                            fs.Position = subBankOffset + 4;
+                        
+                            var info = fs.Read<CharacterSoundBankInfo>();
+                            info.DataOffset += subBankOffset;
+                        
+                            var subBank = new SoundBank();
+                        
+                            info.CopyTo(subBank);
+                        
+                            LoadSoundBankSamples(fs, subBank, subBankOffset, info);
+                        
+                            subBanks.Add(subBank);
+                        }
+
+                        bank.Samples = new List<SoundSample>();
+                        
+                        // merge the sub banks into the top-level one
+                        foreach (var subBank in subBanks)
+                        {
+                            bank.Samples.AddRange(subBank.Samples);
+                            subBank.Samples.Clear();
+                        }
+
+                        // fixup samples
+                        for (int s = 0; s < bank.Samples.Count; s++)
+                        {
+                            var sample = bank.Samples[s];
+
+                            sample.FileName = $"{s:D2}.wav";
+
+                            if (Type == SoundBankFormat.CS11)
+                                sample.IsXBoxFormat = true;
+                        }
+
+                        Banks.Add(bank);
+                    }
+                    else
+                    {
+                        // read GSD format
+                        if (fs.Position == fs.Length)
+                        {
+                            // completely empty soundbank!
+                            var emptyBank = new SoundBank()
+                            {
+                                Index = -1,
+                                SubDirectory = Path.Combine("Banks", $"{i:D2}"),
+                            };
+
+                            Banks.Add(emptyBank);
+                            continue;
+                        }
+
+                        switch (Type)
+                        {
+                        case SoundBankFormat.BK01:
+                            var info1 = fs.Read<SoundBankInfo1>();
+                            info1.DataOffset += bankOffset;
+
+                            bankDetail = info1;
+                            break;
+                        case SoundBankFormat.BK31:
+                            var info3 = fs.Read<SoundBankInfo3>();
+                            info3.DataOffset += bankOffset;
+
+                            bankDetail = info3;
+                            break;
+                        }
+
+                        var bank = new SoundBank()
+                        {
+                            Index = i, // may be overridden by copy
                             SubDirectory = Path.Combine("Banks", $"{i:D2}"),
                         };
 
-                        Banks.Add(emptyBank);
-                        continue;
+                        bankDetail.CopyTo(bank);
+
+                        // don't read in duplicates -.-
+                        if (bank.Index == i)
+                            LoadSoundBankSamples(fs, bank, bankOffset, bankDetail);
+
+                        Banks.Add(bank);
                     }
-
-                    switch (Type)
-                    {
-                    case SoundBankFormat.BK01:
-                        var info1 = fs.Read<SoundBankInfo1>();
-                        info1.DataOffset += offset;
-
-                        bankDetail = info1;
-                        break;
-                    case SoundBankFormat.BK31:
-                        var info3 = fs.Read<SoundBankInfo3>();
-                        info3.DataOffset += offset;
-
-                        bankDetail = info3;
-                        break;
-                    }
-
-                    var bank = new SoundBank()
-                    {
-                        Index = i, // may be overridden by copy
-                        SubDirectory = Path.Combine("Banks", $"{i:D2}"),
-                    };
-
-                    bankDetail.CopyTo(bank);
-
-                    // don't read in duplicates -.-
-                    if (bank.Index == i)
-                    {
-                        for (int s = 0; s < bank.Samples.Capacity; s++)
-                        {
-                            fs.Position = offset + ((s * bankDetail.SampleSize) + bankDetail.HeaderSize);
-
-                            var sampleInfo = fs.Read<SoundSampleInfo>(bankDetail.SampleSize);
-                            sampleInfo.Offset += bankDetail.DataOffset;
-
-                            var sample = new SoundSample()
-                            {
-                                FileName = $"{s:D2}.wav",
-
-                                NumChannels = ((sampleInfo.Flags & bankDetail.SampleChannelFlags) != 0) ? 2 : 1,
-                                SampleRate = sampleInfo.SampleRate,
-
-                                Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
-
-                                ClearAfter = sampleInfo.Unk_0B,
-                                Unknown2 = sampleInfo.Unk_0C,
-                            };
-
-
-                            bank.Samples.Add(sample);
-
-                            // retrieve the buffer
-                            var buffer = new byte[sampleInfo.Size];
-
-                            fs.Position = sampleInfo.Offset;
-                            fs.Read(buffer, 0, buffer.Length);
-
-                            if (Config.VAG)
-                                buffer = VAG.DecodeSound(buffer);
-
-                            // make sure we apply it
-                            sample.Buffer = buffer;
-                        }
-                    }
-
-                    Banks.Add(bank);
                 }
             }
         }
@@ -476,7 +765,7 @@ namespace Audiose
                                 Size = sampleSizes[s],
                                 SampleRate = (ushort)sample.SampleRate,
                                 Flags = (byte)sample.Flags,
-                                Unk_0B = (byte)sample.ClearAfter,
+                                Priority = (byte)sample.Priority,
                                 Unk_0C = sample.Unknown2,
                             };
 

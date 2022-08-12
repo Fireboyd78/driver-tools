@@ -78,6 +78,9 @@ namespace Audiose
 
                             switch (id)
                             {
+                            case 0:
+                                // not sure what this is
+                                break;
                             // [VS11] - vehicle sound data
                             case 0x31315356:
                                 {
@@ -87,9 +90,19 @@ namespace Audiose
                                     gsdSize = ms.ReadInt32();
                                 }
                                 break;
-                            // [SS12] - character sound data
-                            case 0x32315353:
-                                {
+                            case 0x3131534D: // [MS11] - mission sound data
+                            case 0x31315353: // [SS11] - character sound data
+                            {
+                                // I forgot what this is
+                                ms.Position += 4;
+
+                                gsdOffset = ms.ReadInt32();
+                                gsdSize = ms.ReadInt32();
+                            }
+                            break;
+                            case 0x3231534D: // [MS12] - mission sound data
+                            case 0x32315353: // [SS12] - character sound data
+                            {
                                     // I forgot what this is
                                     ms.Position += 4;
 
@@ -101,6 +114,7 @@ namespace Audiose
                                 break;
                             // when in doubt, leave it out
                             default:
+                                Debug.WriteLine($"Unknown sound data type '{id:X8}'");
                                 continue;
                             }
                             
@@ -133,8 +147,10 @@ namespace Audiose
 
                                     Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
 
-                                    ClearAfter = sampleInfo.Unk_0B,
+                                    Priority = sampleInfo.Priority,
                                     Unknown2 = sampleInfo.Unk_0C,
+
+                                    IsXBoxFormat = Config.XBox,
                                 };
                                 
                                 bank.Samples.Add(sample);
@@ -144,6 +160,9 @@ namespace Audiose
 
                                 ms.Position = sampleInfo.Offset;
                                 ms.Read(buffer, 0, buffer.Length);
+
+                                if (Config.VAG)
+                                    buffer = VAG.DecodeSound(buffer);
                                 
                                 sample.Buffer = buffer;
                             }

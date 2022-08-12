@@ -11,12 +11,13 @@ namespace Audiose
 
         BK01,
         BK31,
+
+        CS11 = 10,
+        CS12,
     }
 
     public interface ISoundBankInfoDetail
     {
-        SoundBankFormat FormatType { get; }
-
         int HeaderSize { get; }
         int SampleSize { get; }
 
@@ -33,11 +34,6 @@ namespace Audiose
 
     public struct SoundBankInfo1 : ISoundBankInfoDetail
     {
-        SoundBankFormat ISoundBankInfoDetail.FormatType
-        {
-            get { return SoundBankFormat.BK01; }
-        }
-
         int ISoundBankInfoDetail.HeaderSize
         {
             get { return 0xC; }
@@ -87,11 +83,6 @@ namespace Audiose
 
     public struct SoundBankInfo3 : ISoundBankInfoDetail
     {
-        SoundBankFormat ISoundBankInfoDetail.FormatType
-        {
-            get { return SoundBankFormat.BK31; }
-        }
-
         int ISoundBankInfoDetail.HeaderSize
         {
             get { return 0x10; }
@@ -138,6 +129,55 @@ namespace Audiose
         public void CopyTo(SoundBank bank)
         {
             bank.Index = Index;
+            bank.Samples = new List<SoundSample>(NumSamples);
+        }
+    }
+
+    public struct CharacterSoundBankInfo : ISoundBankInfoDetail
+    {
+        int ISoundBankInfoDetail.HeaderSize
+        {
+            get { return 0x10; }
+        }
+
+        int ISoundBankInfoDetail.SampleSize
+        {
+            get { return 0x10; }
+        }
+
+        int ISoundBankInfoDetail.SampleChannelFlags
+        {
+            get { return 0x10; }
+        }
+
+        int ISoundBankInfoDetail.DataOffset
+        {
+            get { return DataOffset; }
+        }
+
+        int ISoundBankInfoDetail.DataSize
+        {
+            get { return DataSize; }
+        }
+
+        public int NumSamples;
+
+        public int DataOffset;
+        public int DataSize;
+
+        void ISoundBankInfoDetail.SetDataInfo(int offset, int size)
+        {
+            DataOffset = offset;
+            DataSize = size;
+        }
+
+        public void Copy(SoundBank bank)
+        {
+            NumSamples = bank.Samples.Count;
+        }
+
+        public void CopyTo(SoundBank bank)
+        {
             bank.Samples = new List<SoundSample>(NumSamples);
         }
     }
