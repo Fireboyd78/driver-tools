@@ -17,7 +17,7 @@ namespace Audiose
         public byte Flags;
         public byte Priority;
 
-        public int Unk_0C;
+        public int LoopPoint;
     }
 
     public class SoundSample : ISerializer<XmlNode>
@@ -31,7 +31,7 @@ namespace Audiose
         public int Flags { get; set; }
 
         public int Priority { get; set; }
-        public int Unknown2 { get; set; }
+        public int LoopPoint { get; set; }
 
         public byte[] Buffer { get; set; }
 
@@ -77,7 +77,7 @@ namespace Audiose
                 {
                     elem.SetAttribute("Flags", $"{Flags:D}");
                     elem.SetAttribute("Priority", $"{Priority:D}");
-                    elem.SetAttribute("Unk2", $"{Unknown2:D}");
+                    elem.SetAttribute("LoopPoint", $"{LoopPoint:D}");
                 }
             }
         }
@@ -107,8 +107,9 @@ namespace Audiose
                 case "Priority":
                     Priority = int.Parse(value);
                     break;
-                case "Unk2":
-                    Unknown2 = int.Parse(value);
+                case "Unk2": // backwards compat
+                case "LoopPoint":
+                    LoopPoint = int.Parse(value);
                     break;
                 }
             }

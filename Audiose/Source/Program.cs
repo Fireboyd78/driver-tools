@@ -148,7 +148,7 @@ namespace Audiose
                                     Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
 
                                     Priority = sampleInfo.Priority,
-                                    Unknown2 = sampleInfo.Unk_0C,
+                                    LoopPoint = sampleInfo.LoopPoint,
 
                                     IsXBoxFormat = Config.XBox,
                                 };

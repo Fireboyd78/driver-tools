@@ -307,24 +307,10 @@ namespace Audiose
                     }
                 }
 
-                banks.Add(bank);
+                banks.Insert(bankIdx, bank);
             }
 
-            var gsdBanks = new SoundBank[banks.Count];
-
-            for (int i = 0; i < gsdBanks.Length; i++)
-            {
-                var bank = banks[i];
-                gsdBanks[bank.Index] = bank;
-            }
-
-            for (int i = 0; i < gsdBanks.Length; i++)
-            {
-                if (gsdBanks[i] == null)
-                    throw new NullReferenceException($"Bank {i} / {gsdBanks.Length} is MISSING! Double check bank index numbers and try again.");
-            }
-
-            Banks = new List<SoundBank>(gsdBanks);
+            Banks = new List<SoundBank>(banks);
 
             // resolve bank references
             foreach (var bankRef in bankRefs)
@@ -355,7 +341,7 @@ namespace Audiose
                     Flags = (sampleInfo.Flags & ~bankDetail.SampleChannelFlags),
 
                     Priority = sampleInfo.Priority,
-                    Unknown2 = sampleInfo.Unk_0C,
+                    LoopPoint = sampleInfo.LoopPoint,
 
                     IsXBoxFormat = Config.XBox,
                 };
@@ -766,7 +752,7 @@ namespace Audiose
                                 SampleRate = (ushort)sample.SampleRate,
                                 Flags = (byte)sample.Flags,
                                 Priority = (byte)sample.Priority,
-                                Unk_0C = sample.Unknown2,
+                                LoopPoint = sample.LoopPoint,
                             };
 
                             if (sample.NumChannels == 2)
