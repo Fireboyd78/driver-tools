@@ -36,8 +36,25 @@ namespace Zartex
 
         public bool DensityOverride { get; set; }
 
-        public int ParkedCarDensity { get; set; }
-        public int AttractorParkedCarDensity { get; set; }
+        /// <summary>The first int after the override flag: ambient traffic density (the game default is 7).</summary>
+        public int TrafficDensity { get; set; }
+
+        /// <summary>The second int: street parked-car density (the game default is 1).</summary>
+        public int StreetParkedCarDensity { get; set; }
+
+        [Obsolete("This is the first int, the traffic density. Use TrafficDensity.")]
+        public int ParkedCarDensity
+        {
+            get { return TrafficDensity; }
+            set { TrafficDensity = value; }
+        }
+
+        [Obsolete("This is the second int, the street parked-car density. Use StreetParkedCarDensity.")]
+        public int AttractorParkedCarDensity
+        {
+            get { return StreetParkedCarDensity; }
+            set { StreetParkedCarDensity = value; }
+        }
 
         public double PingInRadius { get; set; }
         public double PingOutRadius { get; set; }
@@ -58,8 +75,8 @@ namespace Zartex
 
                 sb.AppendLine("-- Density Override Data --");
                 sb.AppendLine("Overrides enabled: {0}", DensityOverride);
-                sb.AppendLine("ParkedCarDensity: {0}", ParkedCarDensity);
-                sb.AppendLine("AttractorParkedCarDensity: {0}", AttractorParkedCarDensity);
+                sb.AppendLine("TrafficDensity: {0}", TrafficDensity);
+                sb.AppendLine("StreetParkedCarDensity: {0}", StreetParkedCarDensity);
                 sb.AppendLine("PingInRadius: {0:F6}", PingInRadius);
                 sb.AppendLine("PingOutRadius: {0:F6}", PingOutRadius);
             }
@@ -71,8 +88,8 @@ namespace Zartex
         {
             using (var f = Spooler.GetMemoryStream())
             {
-                StartPosition[0] = f.ReadFloat();
-                StartPosition[1] = f.ReadFloat();
+                StartPosition[0] = f.ReadSingle();
+                StartPosition[1] = f.ReadSingle();
 
                 CityType = (MissionCityType)f.ReadInt32();
 
@@ -88,18 +105,18 @@ namespace Zartex
                     // value in first byte, rest is padding
                     DensityOverride = ((f.ReadInt32() & 0xFF) == 1) ? true : false;
 
-                    ParkedCarDensity = f.ReadInt32();
-                    AttractorParkedCarDensity = f.ReadInt32();
+                    TrafficDensity = f.ReadInt32();
+                    StreetParkedCarDensity = f.ReadInt32();
 
-                    PingInRadius = f.ReadFloat();
-                    PingOutRadius = f.ReadFloat();
+                    PingInRadius = f.ReadSingle();
+                    PingOutRadius = f.ReadSingle();
                 }
                 else
                 {
                     // this is how the game handles the old format
                     // overrides are still disabled, however
-                    ParkedCarDensity = 7;
-                    AttractorParkedCarDensity = 1;
+                    TrafficDensity = 7;
+                    StreetParkedCarDensity = 1;
 
                     PingInRadius = 130.0;
                     PingOutRadius = 135.0;
@@ -130,8 +147,8 @@ namespace Zartex
                     // combine value and padding into one
                     fM.Write((0xCCCCCC << 8) | ((DensityOverride) ? 1 : 0));
 
-                    fM.Write(ParkedCarDensity);
-                    fM.Write(AttractorParkedCarDensity);
+                    fM.Write(TrafficDensity);
+                    fM.Write(StreetParkedCarDensity);
 
                     fM.WriteFloat(PingInRadius);
                     fM.WriteFloat(PingOutRadius);
